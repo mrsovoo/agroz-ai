@@ -1,0 +1,232 @@
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+:root {
+  --brand-yellow: #fcbd00;
+  --brand-ink: #323232;
+  --brand-green-light: #76b44d;
+  --brand-green: #028e11;
+  --brand-bg: #f2f3f5;
+  --brand-card: #ffffff;
+  --brand-muted: #8a8a8e;
+  --brand-sep: #e6e6ea;
+  --brand-green-soft: #eaf5e1;
+  --brand-yellow-soft: #fff5d0;
+  --brand-red-soft: #ffe4e4;
+}
+
+html,
+body {
+  overscroll-behavior-y: none;
+  background: #e5e6ea;
+  color: var(--brand-ink);
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Display",
+    "SF Pro Text",
+    "Helvetica Neue",
+    Segoe UI,
+    Roboto,
+    Arial,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.01em;
+}
+
+body {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app-shell {
+  max-width: 520px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  background: var(--brand-bg);
+  position: relative;
+  padding-bottom: 88px;
+  padding-top: max(8px, env(safe-area-inset-top));
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.08);
+}
+
+/* iOS-style large title */
+.ios-title {
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--brand-ink);
+  line-height: 1.1;
+}
+.ios-sub {
+  color: var(--brand-muted);
+  font-size: 15px;
+}
+
+/* Cards */
+.ios-card {
+  background: var(--brand-card);
+  border-radius: 24px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px -12px rgba(0, 0, 0, 0.08);
+}
+
+.ios-group {
+  background: var(--brand-card);
+  border-radius: 20px;
+  overflow: hidden;
+}
+.ios-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--brand-sep);
+}
+.ios-row:last-child {
+  border-bottom: 0;
+}
+
+.ios-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 13px;
+  background: #f0f1f4;
+  color: var(--brand-ink);
+}
+.ios-pill.active {
+  background: var(--brand-green);
+  color: #fff;
+}
+.ios-pill.yellow.active {
+  background: var(--brand-yellow);
+  color: var(--brand-ink);
+}
+
+.ios-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  border-radius: 18px;
+  padding: 16px 18px;
+  font-weight: 700;
+  font-size: 16px;
+  background: var(--brand-green);
+  color: #fff;
+  box-shadow: 0 6px 16px -6px rgba(2, 142, 17, 0.5);
+  transition: transform 0.08s ease;
+}
+.ios-btn:active {
+  transform: scale(0.98);
+}
+.ios-btn.secondary {
+  background: #fff;
+  color: var(--brand-ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+.ios-btn.yellow {
+  background: var(--brand-yellow);
+  color: var(--brand-ink);
+  box-shadow: 0 6px 16px -6px rgba(252, 189, 0, 0.7);
+}
+.ios-btn.ink {
+  background: var(--brand-ink);
+  color: #fff;
+}
+.ios-btn.danger {
+  background: #fff;
+  color: #d7263d;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+.ios-btn:disabled {
+  opacity: 0.5;
+}
+
+.ios-input {
+  width: 100%;
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px 18px;
+  font-size: 17px;
+  color: var(--brand-ink);
+  border: 1px solid transparent;
+  outline: none;
+}
+.ios-input:focus {
+  border-color: var(--brand-green-light);
+  box-shadow: 0 0 0 4px rgba(118, 180, 77, 0.18);
+}
+
+.ios-status-bar {
+  height: 44px;
+}
+
+.ios-section-title {
+  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--brand-muted);
+  padding: 0 4px 8px;
+}
+
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  z-index: 0;
+  background: #e5e9ee;
+}
+
+.leaflet-control-attribution {
+  font-size: 10px;
+}
+
+@keyframes map-ping {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.7;
+  }
+  80%,
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+.my-location-dot {
+  position: relative;
+  width: 22px;
+  height: 22px;
+}
+.my-location-dot .core {
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: #2997ff;
+  border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+.my-location-dot .pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(41, 151, 255, 0.35);
+  animation: map-ping 2.2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.leaflet-div-icon {
+  background: transparent;
+  border: 0;
+}
+
+.sheet-handle {
+  width: 40px;
+  height: 5px;
+  border-radius: 999px;
+  background: #d1d1d6;
+  margin: 8px auto 14px;
+}

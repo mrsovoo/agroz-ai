@@ -1,0 +1,86 @@
+import {
+  pgTable,
+  serial,
+  text,
+  varchar,
+  timestamp,
+  doublePrecision,
+  integer,
+  boolean,
+  bigint,
+} from "drizzle-orm/pg-core";
+
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  phone: varchar("phone", { length: 32 }).unique(),
+  telegramId: bigint("telegram_id", { mode: "number" }).unique(),
+  name: varchar("name", { length: 120 }),
+  region: varchar("region", { length: 120 }),
+  district: varchar("district", { length: 120 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const otpCodes = pgTable("otp_codes", {
+  id: serial("id").primaryKey(),
+  phone: varchar("phone", { length: 32 }).notNull(),
+  code: varchar("code", { length: 8 }).notNull(),
+  used: boolean("used").default(false).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const sessions = pgTable("sessions", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  userId: integer("user_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const pharmacies = pgTable("pharmacies", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 200 }).notNull(),
+  kind: varchar("kind", { length: 20 }).notNull().default("agro"), // agro | vet
+  lat: doublePrecision("lat").notNull(),
+  lng: doublePrecision("lng").notNull(),
+  phone: varchar("phone", { length: 32 }).notNull(),
+  address: text("address").notNull(),
+  specialist: varchar("specialist", { length: 120 }),
+  workHours: varchar("work_hours", { length: 60 }).default("09:00 - 18:00"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const medicines = pgTable("medicines", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 160 }).notNull(),
+  type: varchar("type", { length: 20 }).notNull().default("agro"), // agro | vet
+  usage: text("usage"),
+});
+
+export const pharmacyStocks = pgTable("pharmacy_stocks", {
+  id: serial("id").primaryKey(),
+  pharmacyId: integer("pharmacy_id").notNull(),
+  medicineId: integer("medicine_id").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("bor"), // bor | yoq
+  price: integer("price"),
+});
+
+export const diagnoses = pgTable("diagnoses", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id"),
+  category: varchar("category", { length: 20 }).notNull(), // crop | animal
+  inputText: text("input_text"),
+  hasImage: boolean("has_image").default(false).notNull(),
+  diseaseName: text("disease_name").notNull(),
+  solution: text("solution").notNull(),
+  medicines: text("medicines").notNull(), // JSON array of names
+  severity: varchar("severity", { length: 20 }).default("orta"),
+  source: varchar("source", { length: 20 }).default("ai"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const news = pgTable("news", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  tag: varchar("tag", { length: 40 }).default("Umumiy"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
