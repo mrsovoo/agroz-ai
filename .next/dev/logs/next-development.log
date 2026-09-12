@@ -1,8 +1,0 @@
-{"timestamp":"00:00:00.766","source":"Server","level":"LOG","message":""}
-{"timestamp":"00:03:34.187","source":"Server","level":"ERROR","message":"⨯ Error: Failed query: select count(*)::text as count from pharmacies\nparams: "}
-{"timestamp":"00:03:34.563","source":"Browser","level":"ERROR","message":"Encountered a script tag while rendering React component. Scripts inside React components are never executed when rendering on the client. Consider using template tag instead (https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template)."}
-{"timestamp":"00:03:34.563","source":"Browser","level":"ERROR","message":"uncaughtError: Error: Failed query: select count(*)::text as count from pharmacies\nparams: "}
-{"timestamp":"00:03:34.565","source":"Server","level":"ERROR","message":"[browser] \"Encountered a script tag while rendering React component. Scripts inside React components are never executed when rendering on the client. Consider using template tag instead (https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template).\" \"\""}
-{"timestamp":"00:03:34.566","source":"Browser","level":"ERROR","message":"Encountered a script tag while rendering React component. Scripts inside React components are never executed when rendering on the client. Consider using template tag instead (https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template). \"\""}
-{"timestamp":"00:03:34.568","source":"Server","level":"ERROR","message":"[browser] \"Uncaught Error: Failed query: select count(*)::text as count from pharmacies\\nparams: \""}
-{"timestamp":"00:03:34.568","source":"Browser","level":"ERROR","message":"Uncaught Error: Failed query: select count(*)::text as count from pharmacies\nparams: "}

@@ -1,4 +1,12 @@
-# AgroVet AI — Telegram Mini App + Real API Integratsiyasi
+# AgroVet AI — Telegram Mini App + Neon + Vercel Integratsiyasi
+
+## Tezkor production checklist
+
+1. Neon'da PostgreSQL database yarating.
+2. Vercel envga `DATABASE_URL`, `TELEGRAM_BOT_TOKEN`, `OPENAI_API_KEY`, `NEXT_PUBLIC_APP_URL` qo'ying.
+3. Vercel deploy qiling. `vercel-build` avtomatik `npm run db:migrate && next build` bajaradi.
+4. BotFather'da `/newapp` yoki `/setmenubutton` orqali Vercel domenini Telegram Mini App URL sifatida bering.
+5. `/api/health` ochib DB ulanishini tekshiring.
 
 ## 1. Telegram Mini App sifatida ishga tushirish
 
@@ -22,6 +30,8 @@ Ilova allaqachon Telegram WebApp SDK bilan ulangan. Uni `Launch App` tugmasi bil
 | `TELEGRAM_BOT_TOKEN` | initData imzosini tekshirish (xavfsizlik). BotFather beradi. |
 | `OPENAI_API_KEY` | AI tashxis (GPT-4o vision) va ovozni matnga aylantirish (Whisper). |
 | `DATABASE_URL` | PostgreSQL ulanishi. |
+| `OPENAI_BASE_URL` | OpenAI-compatible open-source model endpointi, ixtiyoriy. |
+| `AI_MODEL` | Masalan `Qwen/Qwen2.5-VL-7B-Instruct` yoki `gpt-4o`. |
 
 > `TELEGRAM_BOT_TOKEN` qo'yilmasa, ilova "demo rejimda" ishlaydi (imzo tekshirilmaydi). **Production uchun majburiy qo'ying.**
 

@@ -2,7 +2,8 @@ import { db } from "@/db";
 import { news } from "@/db/schema";
 import { desc } from "drizzle-orm";
 import { ensureSeed } from "@/lib/seed";
-import { Sprout, PawPrint, CalendarDays, Lightbulb } from "lucide-react";
+import WeatherCard from "@/components/WeatherCard";
+import { Sprout, PawPrint, CalendarDays, Lightbulb, Database } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -16,8 +17,23 @@ export default async function NewsPage() {
       </p>
       <h1 className="ios-title">Maslahatlar</h1>
       <p className="mt-1 text-[14px] text-[var(--brand-muted)]">
-        Mavsumiy agro va chorva tavsiyalari
+        Real ob-havo va mavsumiy agro/chorva tavsiyalari
       </p>
+
+      <section className="mt-5">
+        <WeatherCard />
+      </section>
+
+      <div
+        className="mt-4 flex items-start gap-2.5 rounded-[20px] p-4 text-[13px] leading-relaxed"
+        style={{ background: "var(--brand-yellow-soft)", color: "var(--brand-ink)" }}
+      >
+        <Database size={17} className="mt-0.5 shrink-0" />
+        <p>
+          Ob-havo tavsiyasi Open-Meteo real API ma'lumotlari asosida hisoblanadi. Agro va chorva
+          maqolalari esa bazadagi tasdiqlangan mavsumiy tavsiyalardan olinadi.
+        </p>
+      </div>
 
       <ul className="mt-6 space-y-3">
         {items.map((n) => {

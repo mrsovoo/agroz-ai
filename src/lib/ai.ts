@@ -146,6 +146,8 @@ export async function aiDiagnose(params: {
   imageDataUrl?: string | null;
 }): Promise<DiagnosisResult> {
   const key = process.env.OPENAI_API_KEY;
+  const baseUrl = (process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");
+  const model = process.env.AI_MODEL || "gpt-4o";
   const { category, text, imageDataUrl } = params;
   if (!key) return offlineDiagnose(category, text);
 
@@ -161,14 +163,14 @@ export async function aiDiagnose(params: {
   }
 
   try {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    const res = await fetch(`${baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${key}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o",
+        model,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
@@ -199,12 +201,13 @@ export async function aiDiagnose(params: {
 
 export async function transcribeAudio(file: Blob): Promise<string> {
   const key = process.env.OPENAI_API_KEY;
+  const baseUrl = (process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");
   if (!key) return "";
   const form = new FormData();
   form.append("file", file, "audio.webm");
-  form.append("model", "whisper-1");
+  form.append("model", process.env.ASR_MODEL || "whisper-1");
   form.append("language", "uz");
-  const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+  const res = await fetch(`${baseUrl}/audio/transcriptions`, {
     method: "POST",
     headers: { Authorization: `Bearer ${key}` },
     body: form,
