@@ -204,7 +204,6 @@ export default function MapClient() {
     if (!focusId || items.length === 0) return;
     const f = items.find((i) => i.id === Number(focusId));
     if (f) selectPharmacy(f, { smooth: false });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, focusId]);
 
   function selectPharmacy(p: Pharmacy, opts?: { smooth?: boolean }) {

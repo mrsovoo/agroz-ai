@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "functions": {
+    "/api/diagnose": {
+      "maxDuration": 60
+    },
+    "/api/transcribe": {
+      "maxDuration": 60
+    }
+  }
+}

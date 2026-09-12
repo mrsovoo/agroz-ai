@@ -38,6 +38,10 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+.web-top-nav {
+  display: none;
+}
+
 .app-shell {
   max-width: 520px;
   margin: 0 auto;
@@ -229,4 +233,205 @@ body {
   border-radius: 999px;
   background: #d1d1d6;
   margin: 8px auto 14px;
+}
+
+@media (min-width: 900px) {
+  body.is-web {
+    background:
+      linear-gradient(180deg, rgba(252, 189, 0, 0.12), transparent 340px),
+      #f7f8f3;
+  }
+
+  body.is-web .web-top-nav {
+    display: block;
+    position: sticky;
+    top: 0;
+    z-index: 70;
+    border-bottom: 1px solid rgba(50, 50, 50, 0.08);
+    background: rgba(255, 255, 255, 0.9);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    backdrop-filter: blur(18px) saturate(160%);
+  }
+
+  body.is-web .web-top-nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    width: min(1180px, calc(100% - 48px));
+    height: 76px;
+    margin: 0 auto;
+  }
+
+  body.is-web .web-brand,
+  body.is-web .web-links,
+  body.is-web .web-profile-link {
+    display: flex;
+    align-items: center;
+  }
+
+  body.is-web .web-brand {
+    gap: 12px;
+    color: var(--brand-ink);
+  }
+
+  body.is-web .web-brand-mark {
+    display: flex;
+    width: 42px;
+    height: 42px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: var(--brand-green);
+    color: #fff;
+    box-shadow: 0 10px 24px -14px rgba(2, 142, 17, 0.75);
+  }
+
+  body.is-web .web-brand strong,
+  body.is-web .web-brand small {
+    display: block;
+  }
+
+  body.is-web .web-brand strong {
+    font-size: 18px;
+    font-weight: 900;
+    line-height: 1.1;
+  }
+
+  body.is-web .web-brand small {
+    margin-top: 2px;
+    color: var(--brand-muted);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  body.is-web .web-links {
+    gap: 8px;
+  }
+
+  body.is-web .web-links a,
+  body.is-web .web-profile-link {
+    gap: 7px;
+    border-radius: 12px;
+    padding: 10px 13px;
+    color: rgba(50, 50, 50, 0.78);
+    font-size: 14px;
+    font-weight: 800;
+    transition:
+      background 0.15s ease,
+      color 0.15s ease;
+  }
+
+  body.is-web .web-links a:hover,
+  body.is-web .web-profile-link:hover {
+    background: rgba(2, 142, 17, 0.08);
+    color: var(--brand-green);
+  }
+
+  body.is-web .web-profile-link {
+    border: 1px solid rgba(2, 142, 17, 0.16);
+    background: #fff;
+    color: var(--brand-green);
+  }
+
+  body.is-web .mobile-bottom-nav {
+    display: none;
+  }
+
+  body.is-web .app-shell {
+    max-width: none;
+    width: min(1180px, calc(100% - 48px));
+    min-height: calc(100dvh - 76px);
+    margin: 0 auto;
+    padding-top: 28px;
+    padding-bottom: 48px;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  body.is-web main {
+    width: 100%;
+  }
+
+  body.is-web .ios-title {
+    font-size: 46px;
+    letter-spacing: 0;
+  }
+
+  body.is-web .ios-card,
+  body.is-web .ios-group {
+    border: 1px solid rgba(50, 50, 50, 0.08);
+    border-radius: 16px;
+    box-shadow: 0 20px 50px -38px rgba(50, 50, 50, 0.35);
+  }
+
+  body.is-web .ios-btn,
+  body.is-web .ios-input {
+    border-radius: 12px;
+  }
+
+  body.is-web main > .space-y-3,
+  body.is-web main > ul,
+  body.is-web main > section,
+  body.is-web main > div {
+    max-width: 100%;
+  }
+
+  body.is-web main.px-5,
+  body.is-web main.flex {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  body.is-web main > header {
+    align-items: center;
+    gap: 28px;
+    padding-top: 0;
+  }
+
+  body.is-web main > header + div,
+  body.is-web main > header + div + p + div {
+    max-width: 760px;
+  }
+
+  body.is-web main > .mt-5:first-of-type {
+    max-width: 760px;
+  }
+
+  body.is-web main > .space-y-3 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    max-width: 900px;
+  }
+
+  body.is-web main > .space-y-3 > a,
+  body.is-web main > .space-y-3 > div,
+  body.is-web main > .space-y-3 > button,
+  body.is-web main > .space-y-3 > p {
+    grid-column: auto;
+  }
+
+  body.is-web main > .space-y-3 > .relative,
+  body.is-web main > .space-y-3 > button:last-of-type,
+  body.is-web main > .space-y-3 > p {
+    grid-column: 1 / -1;
+  }
+
+  body.is-web main > a.mt-3,
+  body.is-web main > a.mt-6,
+  body.is-web main > a.mt-3.block {
+    max-width: 900px;
+  }
+
+  body.is-web .leaflet-container {
+    min-height: 100%;
+  }
+}
+
+@media (min-width: 900px) and (max-width: 1080px) {
+  body.is-web .web-links a {
+    padding-inline: 9px;
+    font-size: 13px;
+  }
 }
