@@ -39,7 +39,9 @@ birinchi so'rovda aniq xato beradi — shuning uchun `.env`ni to'ldirish shart.
 | O'zgaruvchi | Majburiy | Vazifasi |
 |---|---|---|
 | `DATABASE_URL` | ✅ | PostgreSQL/Neon ulanish satri (`?sslmode=require` bilan) |
-| `TELEGRAM_BOT_TOKEN` | production | `initData` imzosini tekshirish (BotFather beradi) |
+| `TELEGRAM_BOT_TOKEN` | production | `initData` imzosini tekshirish + OTP kodni bot orqali yuborish |
+| `TELEGRAM_WEBHOOK_SECRET` | tavsiya | Bot webhook'ini soxta so'rovlardan himoyalash |
+| `TELEGRAM_BOT_USERNAME` | ✖ | Bot username (`@` siz); bo'sh bo'lsa `getMe` orqali olinadi |
 | `NEXT_PUBLIC_APP_URL` | tavsiya | Sayt domeni (metadata, kanonik havolalar) |
 | `OPENAI_API_KEY` | ✖ | AI tashxis + ovoz (Whisper). Bo'sh bo'lsa offline demo rejim |
 | `OPENAI_BASE_URL`, `AI_MODEL`, `ASR_MODEL` | ✖ | OpenAI-compatible (vLLM, Qwen) endpoint uchun |
@@ -50,13 +52,29 @@ birinchi so'rovda aniq xato beradi — shuning uchun `.env`ni to'ldirish shart.
 
 ## Kirish (OTP) qanday ishlaydi
 
-- Kod **6 xonali**, `crypto.randomInt` bilan generatsiya qilinadi, 5 daqiqa amal qiladi.
-- Bitta kod uchun **5 ta urinish** — tugasa kod bloklanadi.
-- So'rov cheklovlari: IP uchun 10 ta / 10 daqiqa, raqam uchun 3 ta / 10 daqiqa.
-- Kod javobda **faqat** `NODE_ENV !== "production"` yoki `OTP_DEV_MODE=true` bo'lganda qaytadi.
+Kod **6 xonali**, `crypto.randomInt` bilan generatsiya qilinadi. Bitta kod uchun **5 ta urinish**,
+so'rov cheklovlari: IP uchun 10 ta / 10 daqiqa, raqam uchun 3 ta / 10 daqiqa.
 
-Real SMS uchun Eskiz.uz hisobingizdagi `ESKIZ_EMAIL` / `ESKIZ_PASSWORD`ni qo'ying.
-Eskiz moderatsiyasidan o'tgan shablon matni kerak bo'ladi (standart test `from` — `4546`).
+Kod uchta kanaldan biri orqali yetkaziladi (ustuvorlik tartibida):
+
+| Kanal | Qachon ishlaydi | Kod qayerda chiqadi |
+|---|---|---|
+| **1. Telegram bot** | `TELEGRAM_BOT_TOKEN` bor | Bot chatida (nusxa olinadigan) |
+| **2. SMS (Eskiz.uz)** | `ESKIZ_EMAIL`/`ESKIZ_PASSWORD` bor | Telefonda |
+| **3. Dev rejim** | development yoki `OTP_DEV_MODE=true` | API javobida |
+
+### Telegram bot orqali kirish oqimi
+
+1. Foydalanuvchi saytda telefon raqamini kiritadi va **«Tasdiqlash kodini olish»** ni bosadi.
+2. Sayt botga bir martalik havola beradi: `https://t.me/<bot>?start=<token>`.
+3. Foydalanuvchi botda **«Start»** bosadi — bot kodni shu chatga yuboradi (kodni bosib nusxa olish mumkin).
+4. Kodni saytga qaytib kiritadi va tasdiqlaydi.
+5. Shu bilan Telegram hisobi foydalanuvchi profiliga ulanadi — keyin Mini Appga kirsa **o'sha profilga** tushadi.
+
+Xavfsizlik: havola tokeni 24 bayt tasodifiy, 10 daqiqa amal qiladi, bir marta ishlatiladi;
+bot o'z navbatida `TELEGRAM_WEBHOOK_SECRET` bilan tekshiriladi.
+
+> Kod javobda **faqat** development'da yoki `OTP_DEV_MODE=true` bo'lganda qaytadi.
 
 ## Neon Database
 
@@ -80,9 +98,10 @@ Eskiz moderatsiyasidan o'tgan shablon matni kerak bo'ladi (standart test `from` 
    ```bash
    DATABASE_URL=postgresql://...?...sslmode=require
    TELEGRAM_BOT_TOKEN=123456:ABC...
+   TELEGRAM_WEBHOOK_SECRET=<openssl rand -hex 32>
    NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
    OPENAI_API_KEY=sk-...          # ixtiyoriy
-   ESKIZ_EMAIL=...                # ixtiyoriy (real SMS uchun)
+   ESKIZ_EMAIL=...                # ixtiyoriy (SMS kerak bo'lsa)
    ESKIZ_PASSWORD=...
    ```
 3. Deploy qiling. Build bosqichida `npm run db:migrate && next build` bajariladi.
@@ -93,15 +112,20 @@ Eskiz moderatsiyasidan o'tgan shablon matni kerak bo'ladi (standart test `from` 
 > Eslatma: `npm run vercel-build` ichida `drizzle-kit` ishlatiladi, u devDependency —
 > Vercel build paytida devDependencies ham o'rnatiladi, shuning uchun bu ishlaydi.
 
-## Telegram Mini App
+## Telegram Mini App va bot
 
-1. `@BotFather` da bot yarating.
-2. Mini App URL'ini sozlang:
+1. `@BotFather` da bot yarating va tokenini `TELEGRAM_BOT_TOKEN`ga qo'ying.
+2. Botni ilovaga ulang (webhook + menyu tugmasi + `/start` buyrug'i):
+   ```bash
+   npm run telegram:setup
+   ```
+   Skript `.env`dagi `NEXT_PUBLIC_APP_URL` va `TELEGRAM_BOT_TOKEN`dan foydalanadi va
+   botning menyu tugmasini Mini Appga ulaydi.
+3. (Ixtiyoriy) `@BotFather` orqali qo'lda sozlash:
    ```text
-   /newapp        # yoki mavjud bot uchun /setmenubutton
+   /newapp        # yoki /setmenubutton
    ```
    URL: `https://your-app.vercel.app` (faqat HTTPS).
-3. `TELEGRAM_BOT_TOKEN` envga aynan shu bot tokenini qo'ying.
 
 Token bo'lmasa production'da Telegram orqali kirish **ataylab yopiq** (503), chunki
 imzo tekshirilmay istalgan odam boshqa birovning nomidan kirishi mumkin. Vaqtinchalik
@@ -129,10 +153,11 @@ npm run build
 ```text
 src/
   app/                 # App Router: sahifalar va API route'lar
-    api/               # auth, diagnose, transcribe, weather, pharmacies, news, health
+    api/               # auth, telegram/webhook, diagnose, transcribe, weather, pharmacies, news, health
   components/          # UI (DiagnoseForm, MapClient, WeatherCard, navlar...)
   db/                  # Drizzle sxema va lazy pool
-  lib/                 # ai, session, seed, sms, rate-limit, validate, constants
+  lib/                 # ai, session, seed, sms, telegram-bot, rate-limit, validate, constants
+scripts/               # telegram:setup (webhook va menyu tugmasini o'rnatish)
 drizzle/               # SQL migratsiyalar
 docs/INTEGRATION.md    # integratsiya va real ma'lumot manbalari
 ```

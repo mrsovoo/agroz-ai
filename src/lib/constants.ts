@@ -1,7 +1,10 @@
 /** Ilova bo'ylab ishlatiladigan chegaralar va muddatlar. */
 
-/** OTP kod amal qilish muddati (daqiqa). */
+/** SMS orqali yuborilgan kod amal qilish muddati (daqiqa). */
 export const OTP_TTL_MINUTES = 5;
+
+/** Telegram bot orqali olinadigan kod uchun ko'proq vaqt — foydalanuvchi ilovaga o'tib qaytishi kerak. */
+export const BOT_OTP_TTL_MINUTES = 10;
 
 /** Bitta kod uchun maksimal urinish soni — shundan keyin kod kuyadi. */
 export const OTP_MAX_ATTEMPTS = 5;

@@ -26,6 +26,12 @@ export const otpCodes = pgTable("otp_codes", {
   code: varchar("code", { length: 8 }).notNull(),
   used: boolean("used").default(false).notNull(),
   attempts: integer("attempts").default(0).notNull(),
+  /** Telegram bot orqali tasdiqlash uchun bir martalik havola tokeni. */
+  token: varchar("token", { length: 64 }).unique(),
+  /** Kod bot orqali yuborilgan Telegram foydalanuvchisi. */
+  telegramId: bigint("telegram_id", { mode: "number" }),
+  /** Kod botga yuborilgan vaqt (bir marta yuborilganini bilish uchun). */
+  deliveredAt: timestamp("delivered_at"),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

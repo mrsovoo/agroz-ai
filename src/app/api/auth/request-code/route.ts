@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { otpCodes } from "@/db/schema";
 import { and, eq, lt, or } from "drizzle-orm";
-import { randomInt } from "crypto";
+import { randomBytes, randomInt } from "crypto";
 import { clientIp, normalizePhone } from "@/lib/validate";
 import { rateLimit, tooManyRequests } from "@/lib/rate-limit";
 import { sendOtpSms, smsConfigured } from "@/lib/sms";
-import { OTP_LENGTH, OTP_TTL_MINUTES } from "@/lib/constants";
+import { getBotUsername, isBotConfigured, startLink } from "@/lib/telegram-bot";
+import { BOT_OTP_TTL_MINUTES, OTP_LENGTH, OTP_TTL_MINUTES } from "@/lib/constants";
 import { withApiErrors } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,14 @@ function devOtpEnabled(): boolean {
   return process.env.NODE_ENV !== "production" || process.env.OTP_DEV_MODE === "true";
 }
 
+/**
+ * Telefon raqamni tasdiqlash kodini so'rash.
+ *
+ * Ustuvorlik tartibi:
+ *   1. Telegram bot — kod botda chiqadi (bepul, SMS kerak emas).
+ *   2. Eskiz.uz SMS — ESKIZ_EMAIL/PASSWORD bo'lsa.
+ *   3. Dev rejim — kod javobda qaytadi (faqat development yoki OTP_DEV_MODE=true).
+ */
 export const POST = withApiErrors(async (req: Request) => {
   const ip = clientIp(req);
   const ipLimit = rateLimit(`otp:ip:${ip}`, 10, 10 * 60 * 1000);
@@ -30,7 +39,12 @@ export const POST = withApiErrors(async (req: Request) => {
   const phoneLimit = rateLimit(`otp:phone:${phone}`, 3, 10 * 60 * 1000);
   if (!phoneLimit.ok) return tooManyRequests(phoneLimit.retryAfterSeconds);
 
+  const botUsername = isBotConfigured() ? await getBotUsername() : null;
+  const useTelegram = Boolean(botUsername);
+  const ttlMinutes = useTelegram ? BOT_OTP_TTL_MINUTES : OTP_TTL_MINUTES;
+
   const code = String(randomInt(0, 10 ** OTP_LENGTH)).padStart(OTP_LENGTH, "0");
+  const token = useTelegram ? randomBytes(24).toString("hex") : null;
 
   // Shu raqamning eski ishlatilmagan kodlarini va umuman eskirgan kodlarni tozalaymiz.
   await db
@@ -45,9 +59,25 @@ export const POST = withApiErrors(async (req: Request) => {
   await db.insert(otpCodes).values({
     phone,
     code,
-    expiresAt: new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000),
+    token,
+    expiresAt: new Date(Date.now() + ttlMinutes * 60 * 1000),
   });
 
+  // 1) Telegram bot orqali
+  if (useTelegram && token && botUsername) {
+    return NextResponse.json({
+      ok: true,
+      phone,
+      mode: "telegram",
+      token,
+      botUsername,
+      deepLink: startLink(botUsername, token),
+      codeLength: OTP_LENGTH,
+      expiresInMinutes: ttlMinutes,
+    });
+  }
+
+  // 2) SMS orqali
   if (smsConfigured()) {
     const delivered = await sendOtpSms(phone, code);
     if (!delivered) {
@@ -57,21 +87,33 @@ export const POST = withApiErrors(async (req: Request) => {
         { status: 502 },
       );
     }
-    return NextResponse.json({ ok: true, phone });
+    return NextResponse.json({
+      ok: true,
+      phone,
+      mode: "sms",
+      codeLength: OTP_LENGTH,
+      expiresInMinutes: ttlMinutes,
+    });
   }
 
+  // 3) Hech qanday kanal yo'q
   if (!devOtpEnabled()) {
-    // Production'da SMS provayder yo'q — kodni javobda qaytarish xavfsizlik teshigi
-    // bo'lardi, shuning uchun ochiq xato qaytaramiz.
     return NextResponse.json(
       {
         error:
-          "SMS xizmati hali sozlanmagan. ESKIZ_EMAIL va ESKIZ_PASSWORD qo'shing (yoki vaqtincha OTP_DEV_MODE=true qiling).",
+          "Kod yuborish kanali sozlanmagan. TELEGRAM_BOT_TOKEN qo'shing (tavsiya) yoki ESKIZ_EMAIL/ESKIZ_PASSWORD.",
       },
       { status: 503 },
     );
   }
 
   console.warn(`[otp] dev rejim: ${phone} uchun kod ${code}`);
-  return NextResponse.json({ ok: true, phone, devCode: code });
+  return NextResponse.json({
+    ok: true,
+    phone,
+    mode: "dev",
+    devCode: code,
+    codeLength: OTP_LENGTH,
+    expiresInMinutes: ttlMinutes,
+  });
 });

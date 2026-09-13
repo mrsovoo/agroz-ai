@@ -13,7 +13,8 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "telegram:setup": "node scripts/telegram-setup.mjs"
   },
   "dependencies": {
     "dotenv": "17.3.1",

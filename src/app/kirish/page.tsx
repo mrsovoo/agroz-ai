@@ -4,7 +4,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sprout, Phone, KeyRound, UserRound, MapPin, ChevronRight, Loader2, Send } from "lucide-react";
 import { getTelegram, onTelegramReady, type TelegramUser } from "@/lib/telegram";
-import { OTP_LENGTH } from "@/lib/constants";
+import { OTP_LENGTH, OTP_TTL_MINUTES } from "@/lib/constants";
+
+/** Kodni qanday yetkazish rejimi. */
+type DeliveryMode = "telegram" | "sms" | "dev";
 
 const REGIONS = [
   "Toshkent",
@@ -36,11 +39,14 @@ export default function LoginPage() {
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [devCode, setDevCode] = useState("");
+  const [mode, setMode] = useState<DeliveryMode>("dev");
+  const [token, setToken] = useState("");
+  const [deepLink, setDeepLink] = useState("");
+  const [ttlMinutes, setTtlMinutes] = useState(OTP_TTL_MINUTES);
   const [name, setName] = useState("");
   const [region, setRegion] = useState(REGIONS[0]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [smsSent, setSmsSent] = useState(false);
 
   // Telegram SDK kech yuklanishi mumkin — tayyor bo'lganda userni olamiz.
   useEffect(() => onTelegramReady((tg) => setTgUser(tg.initDataUnsafe?.user ?? null)), []);
@@ -54,11 +60,23 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: phoneInput }),
       });
-      const data = (await res.json()) as { phone?: string; devCode?: string; error?: string };
+      const data = (await res.json()) as {
+        phone?: string;
+        mode?: DeliveryMode;
+        token?: string;
+        deepLink?: string;
+        devCode?: string;
+        expiresInMinutes?: number;
+        error?: string;
+      };
       if (!res.ok) throw new Error(data.error ?? "Xatolik");
-      setPhone(data.phone!);
+      setPhone(data.phone ?? "");
+      setMode(data.mode ?? "dev");
+      setToken(data.token ?? "");
+      setDeepLink(data.deepLink ?? "");
       setDevCode(data.devCode ?? "");
-      setSmsSent(!data.devCode);
+      setTtlMinutes(data.expiresInMinutes ?? OTP_TTL_MINUTES);
+      setCode("");
       setStep(2);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Xatolik");
@@ -96,10 +114,13 @@ export default function LoginPage() {
     setBusy(true);
     setError(null);
     try {
+      // Telegram rejimida kod token bo'yicha, aks holda raqam bo'yicha tekshiriladi.
+      const payload =
+        mode === "telegram" ? { token, code, name, region } : { phone, code, name, region };
       const res = await fetch("/api/auth/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, code, name, region }),
+        body: JSON.stringify(payload),
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(data.error ?? "Kod noto'g'ri");
@@ -170,24 +191,45 @@ export default function LoginPage() {
             </div>
             <button onClick={sendCode} disabled={busy || phoneInput.length < 9} className="ios-btn">
               {busy ? <Loader2 size={18} className="animate-spin" /> : null}
-              {busy ? "Yuborilmoqda..." : "SMS kod olish"}
+              {busy ? "Yuborilmoqda..." : "Tasdiqlash kodini olish"}
             </button>
+            <p className="text-center text-[11px] leading-relaxed text-[var(--brand-muted)]">
+              Kod Telegram bot orqali yuboriladi (bepul) yoki SMS orqali.
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="rounded-2xl bg-[var(--brand-yellow-soft)] p-3 text-[13px] font-medium text-[var(--brand-ink)]">
-              {smsSent ? (
-                <>
-                  <b>{phone}</b> raqamiga SMS yuborildi.
-                </>
-              ) : (
-                <>
-                  Demo rejim: <b>{phone}</b> raqami uchun tasdiqlash kodi
-                  <br />
-                  <b className="text-[20px] tracking-[0.3em]">{devCode}</b>
-                </>
-              )}
-            </p>
+            {mode === "telegram" ? (
+              <>
+                <p className="rounded-2xl bg-[var(--brand-yellow-soft)] p-3 text-[13px] font-medium leading-relaxed text-[var(--brand-ink)]">
+                  <b>{phone}</b> raqamini tasdiqlash uchun Telegram botga o&apos;ting. Botda{" "}
+                  <b>«Start»</b> tugmasini bosing — kod shu chatda chiqadi.
+                </p>
+                {deepLink && (
+                  <a
+                    href={deepLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ios-btn"
+                    style={{ background: "#2AABEE" }}
+                  >
+                    <Send size={18} /> Telegram&apos;ni ochib, kodni olish
+                  </a>
+                )}
+                <p className="text-center text-[12px] font-medium text-[var(--brand-muted)]">
+                  Kod {ttlMinutes} daqiqa amal qiladi. Kodni nusxalab pastga yozing.
+                </p>
+              </>
+            ) : mode === "sms" ? (
+              <p className="rounded-2xl bg-[var(--brand-yellow-soft)] p-3 text-[13px] font-medium text-[var(--brand-ink)]">
+                <b>{phone}</b> raqamiga SMS yuborildi. Kod {ttlMinutes} daqiqa amal qiladi.
+              </p>
+            ) : (
+              <p className="rounded-2xl bg-[var(--brand-yellow-soft)] p-3 text-[13px] font-medium text-[var(--brand-ink)]">
+                Demo rejim: <b>{phone}</b> raqami uchun tasdiqlash kodi{" "}
+                <b className="tracking-[0.3em]">{devCode}</b>
+              </p>
+            )}
             <div>
               <label className="mb-1.5 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-widest text-[var(--brand-muted)]">
                 <KeyRound size={12} /> {OTP_LENGTH} xonali kod
@@ -237,8 +279,19 @@ export default function LoginPage() {
               {busy ? "Tasdiqlanmoqda..." : "Kirish"}
               {!busy && <ChevronRight size={18} />}
             </button>
+            {mode === "telegram" && deepLink && (
+              <a
+                href={deepLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block py-1 text-center text-[13px] font-bold"
+                style={{ color: "#2AABEE" }}
+              >
+                Kod chiqmadi? Botni qayta ochish
+              </a>
+            )}
             <button onClick={() => setStep(1)} className="ios-btn secondary">
-              Raqamni o'zgartirish
+              Raqamni o&apos;zgartirish
             </button>
           </div>
         )}
