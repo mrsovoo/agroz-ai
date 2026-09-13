@@ -11,8 +11,14 @@ xaritasi, ob-havoga qarab tavsiyalar va OTP/Telegram orqali kirish.
 - **Telegram Mini App** — `initData` imzosi server tomonda tekshiriladi, mobil ilova uslubidagi UI.
 - **Web sayt** — desktop browserda keng layout va top navigation.
 - **Xarita** — Leaflet + OpenStreetMap; GPS bo'yicha eng yaqin agro/vet dorixonalar,
-  dori mavjudligi, qo'ng'iroq va yo'nalish.
-- **Ob-havo** — Open-Meteo real API asosida purkash/chorva parvarishi tavsiyasi.
+  ularning dorilari, ro'yxatdan o'tgan mutaxassislar, qo'ng'iroq va yo'nalish.
+  Barcha qidiruv **qat'iy 5 km** radius bilan cheklangan.
+- **Maslahatlar** — Open-Meteo real ob-havosi va **turgan hudud** asosida maslahatlar
+  (ekin va chorva uchun alohida) hamda agro/chorvachilik **yangiliklari** real
+  manbalardan (AgroWorld, EastFruit, Kun.uz, Gazeta.uz).
+- **Faol ma'lumot** — platformada faqat real ma'lumot: dorixona/mutaxassis
+  `@agroz_auth_bot` orqali, dorilar esa dorixona egalari tomonidan qo'shiladi.
+  Demo ma'lumot standart holatda butunlay o'chirilgan (`SEED_DEMO_DATA=false`).
 - **Kirish** — Telegram yoki SMS OTP (Eskiz.uz). Sessiyalar bazada, muddati bilan.
 - **Baza** — PostgreSQL (Neon) + Drizzle ORM, migratsiyalar `drizzle/` ichida.
 
@@ -34,6 +40,13 @@ npm run dev
 `http://localhost:3000` oching. `DATABASE_URL` bo'lmasa ilova build bo'ladi, lekin
 birinchi so'rovda aniq xato beradi — shuning uchun `.env`ni to'ldirish shart.
 
+Bazadagi hamma yozuvni tozalash (jadvallar qoladi, migratsiya qayta yuritilmaydi):
+
+```bash
+npm run db:clear          # so'raydi
+npm run db:clear -- --yes # so'ramasdan o'chiradi
+```
+
 ## Muhit o'zgaruvchilari
 
 | O'zgaruvchi | Majburiy | Vazifasi |
@@ -45,6 +58,8 @@ birinchi so'rovda aniq xato beradi — shuning uchun `.env`ni to'ldirish shart.
 | `TELEGRAM_AUTH_BOT_TOKEN` | ✖ | `@agroz_auth_bot` tokeni — mutaxassis/dorixona egalarini ro'yxatdan o'tkazish |
 | `TELEGRAM_AUTH_BOT_USERNAME` | ✖ | Auth bot username (asosiy botdagi havola uchun); default `agroz_auth_bot` |
 | `TELEGRAM_AUTH_WEBHOOK_SECRET` | ✖ | Auth bot webhook'i uchun alohida kalit (bo'sh bo'lsa `TELEGRAM_WEBHOOK_SECRET`) |
+| `NEXT_PUBLIC_TELEGRAM_AUTH_BOT_USERNAME` | ✖ | Xuddi shu username, saytdagi havolalar uchun (default `agroz_auth_bot`) |
+| `SEED_DEMO_DATA` | ✖ | `true` bo'lsa namuna dorixona/dori/maslahat yoziladi. Standart: `false` |
 | `NEXT_PUBLIC_APP_URL` | tavsiya | Sayt domeni (metadata, kanonik havolalar) |
 | `OPENAI_API_KEY` | ✖ | AI tashxis + ovoz (Whisper). Bo'sh bo'lsa offline demo rejim |
 | `OPENAI_BASE_URL`, `AI_MODEL`, `ASR_MODEL` | ✖ | OpenAI-compatible (vLLM, Qwen) endpoint uchun |
@@ -101,6 +116,23 @@ orqali uzatiladi — bot tokeni clientga hech qachon chiqmaydi.
 > tavsiya etilgan dorilar bo'yicha 5 km ichidagi dorixonalar (rasmi va nomi bilan)
 > ko'rsatiladi. Alohida dori katalogi sahifasi yo'q.
 
+## Maslahatlar va yangiliklar (`/yangiliklar`)
+
+Sahifa ikki qismdan iborat:
+
+1. **Hudud uchun maslahatlar** — foydalanuvchi lokatsiyasi olinadi, ob-havo
+   Open-Meteo'dan, hudud nomi OpenStreetMap'dan (1 soat kesh) aniqlanadi. So'ng
+   harorat, shamol, yog'in va namlik + joriy mavsum asosida maslahatlar
+   hisoblanadi (`src/lib/advice.ts`) — ekinlar va chorva uchun alohida.
+2. **Agro va chorvachilik yangiliklari** — real manbalardan yig'iladi
+   (`src/lib/news.ts`): AgroWorld (agro portal), EastFruit, Kun.uz va Gazeta.uz
+   RSS. Sarlavhalar agro/chorva kalit so'zlari bo'yicha filtrlanadi, rus tilidagi
+   yangiliklar tashlab yuboriladi, dublikatlar olib tashlanadi. Natija 30 daqiqaga
+   kesh qilinadi va `Agro`/`Chorvachilik` bo'yicha filtrlanadi.
+
+Birorta manba ishlamasa qolganlari ko'rsatiladi; hammasi ishlamasa sahifada
+ob-havo maslahatlari saqlanib qoladi.
+
 ## Kirish (OTP) qanday ishlaydi
 
 Kod **6 xonali**, `crypto.randomInt` bilan generatsiya qilinadi. Bitta kod uchun **5 ta urinish**,
@@ -151,10 +183,17 @@ bot o'z navbatida `TELEGRAM_WEBHOOK_SECRET` bilan tekshiriladi.
    TELEGRAM_BOT_TOKEN=123456:ABC...
    TELEGRAM_WEBHOOK_SECRET=<openssl rand -hex 32>
    NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
+   # Mutaxassis/dorixona egalarini ro'yxatdan o'tkazuvchi bot (ixtiyoriy)
+   TELEGRAM_AUTH_BOT_TOKEN=8943...:AAG...
+   TELEGRAM_AUTH_BOT_USERNAME=agroz_auth_bot
+   NEXT_PUBLIC_TELEGRAM_AUTH_BOT_USERNAME=agroz_auth_bot
    OPENAI_API_KEY=sk-...          # ixtiyoriy
    ESKIZ_EMAIL=...                # ixtiyoriy (SMS kerak bo'lsa)
    ESKIZ_PASSWORD=...
    ```
+
+   ⚠️ Env o'zgaruvchi qo'shgach **Redeploy** qiling — o'zgarish faqat yangi
+   deployment'da kuchga kiradi.
 3. Deploy qiling. Build bosqichida `npm run db:migrate && next build` bajariladi.
 4. `https://your-app.vercel.app/api/health` ochib DB ulanishini tekshiring
    (`{"ok":true}` qaytishi kerak).
@@ -263,12 +302,13 @@ npm run build
 ```text
 src/
   app/                 # App Router: sahifalar va API route'lar
-    api/               # auth, telegram/webhook, telegram/auth-webhook, diagnose, transcribe, weather, pharmacies, specialists, news, health
+    api/               # auth, telegram/webhook, telegram/auth-webhook, diagnose, transcribe, weather, location, pharmacies, specialists, news, health
     mutaxassislar/     # ro'yxatdan o'tgan mutaxassislar (5 km radius)
-  components/          # UI (DiagnoseForm, MapClient, WeatherCard, navlar...)
+    yangiliklar/       # maslahatlar + agro/chorvachilik yangiliklari
+  components/          # UI (DiagnoseForm, MapClient, WeatherCard, NewsList, navlar...)
   db/                  # Drizzle sxema va lazy pool
-  lib/                 # ai, session, seed, sms, telegram-bot, auth-bot, auth-bot-flow, specialists, geo, rate-limit, validate, constants
-scripts/               # telegram:setup (webhook va menyu tugmasini o'rnatish)
+  lib/                 # ai, session, seed, sms, telegram-bot, auth-bot, auth-bot-flow, specialists, geo, advice, news, geocode, rate-limit, validate, constants
+scripts/               # telegram:setup, telegram:poll, db:clear
 drizzle/               # SQL migratsiyalar
 docs/INTEGRATION.md    # integratsiya va real ma'lumot manbalari
 ```
