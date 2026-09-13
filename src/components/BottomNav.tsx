@@ -6,7 +6,7 @@ import { Home, Map, Lightbulb, UserRound, UsersRound } from "lucide-react";
 
 const items = [
   { href: "/", label: "Asosiy", Icon: Home },
-  { href: "/xarita", label: "Dorixona", Icon: Map },
+  { href: "/xarita", label: "Xarita", Icon: Map },
   { href: "/mutaxassislar", label: "Mutaxassis", Icon: UsersRound },
   { href: "/yangiliklar", label: "Maslahat", Icon: Lightbulb },
   { href: "/profil", label: "Profil", Icon: UserRound },

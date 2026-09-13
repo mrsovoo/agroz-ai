@@ -5,9 +5,9 @@ import MapClient from "@/components/MapClient";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Dorixonalar xaritasi",
+  title: "Xarita",
   description:
-    "GPS bo'yicha eng yaqin agro va veterinariya dorixonalari, dori mavjudligi va yo'nalish.",
+    "GPS bo'yicha eng yaqin agro va veterinariya dorixonalari hamda mutaxassislar — 5 km radius.",
 };
 
 export default function MapPage() {
