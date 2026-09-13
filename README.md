@@ -160,6 +160,23 @@ bot o'z navbatida `TELEGRAM_WEBHOOK_SECRET` bilan tekshiriladi.
    ```
    URL: `https://your-app.vercel.app` (faqat HTTPS).
 
+### Localda botlarni sinash (long-polling)
+
+Telegram webhook faqat **public HTTPS** manzilga ishlaydi, shuning uchun `localhost`da
+webhook o'rnatib bo'lmaydi. Local uchun polling rejimi bor — u `getUpdates` orqali
+update'larni olib, **aynan shu** webhook route'lariga uzatadi (bot mantig'i bir xil):
+
+```bash
+# 1-terminal
+npm run dev
+# 2-terminal
+npm run telegram:poll
+```
+
+Skript `TELEGRAM_BOT_TOKEN` va `TELEGRAM_AUTH_BOT_TOKEN` bor botlarni birga pollaydi.
+Eslatma: polling `deleteWebhook` qiladi — keyin production'ga chiqsangiz
+`npm run telegram:setup` bilan webhook'ni qayta o'rnating.
+
 Token bo'lmasa production'da Telegram orqali kirish **ataylab yopiq** (503), chunki
 imzo tekshirilmay istalgan odam boshqa birovning nomidan kirishi mumkin. Vaqtinchalik
 test uchun `ALLOW_UNVERIFIED_TELEGRAM=true` qo'yish mumkin — keyin o'chirib tashlang.
