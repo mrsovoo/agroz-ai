@@ -1,4 +1,4 @@
-# AgroVet AI
+# Agroz AI
 
 Telegram Mini App va oddiy web sayt sifatida ishlaydigan agro/chorva yordamchisi:
 ekin va chorva kasalliklarini rasm/matn/ovoz orqali tashxislash, yaqin dorixonalar

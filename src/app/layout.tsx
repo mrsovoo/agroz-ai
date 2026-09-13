@@ -4,6 +4,7 @@ import Script from "next/script";
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
 import TelegramInit from "@/components/TelegramInit";
+import WebFooter from "@/components/WebFooter";
 import WebTopNav from "@/components/WebTopNav";
 
 /** Next'ning absolute URL'lar uchun asosiy manzili (OG rasm va h.k.). */
@@ -24,19 +25,19 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   metadataBase: metadataBase(),
   title: {
-    default: "AgroVet AI — Dehqon va chorvador yordamchisi",
-    template: "%s — AgroVet AI",
+    default: "Agroz AI — Dehqon va chorvador yordamchisi",
+    template: "%s — Agroz AI",
   },
   description: DESCRIPTION,
-  applicationName: "AgroVet AI",
+  applicationName: "Agroz AI",
   openGraph: {
     type: "website",
-    siteName: "AgroVet AI",
-    title: "AgroVet AI — Dehqon va chorvador yordamchisi",
+    siteName: "Agroz AI",
+    title: "Agroz AI — Dehqon va chorvador yordamchisi",
     description: DESCRIPTION,
     locale: "uz_UZ",
   },
-  appleWebApp: { capable: true, title: "AgroVet", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "Agroz", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
@@ -96,6 +97,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <TelegramInit />
         <WebTopNav />
         <div className="app-shell">{children}</div>
+        <WebFooter />
         <BottomNav />
       </body>
     </html>

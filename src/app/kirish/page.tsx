@@ -138,19 +138,25 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-[90dvh] flex-col px-5 pt-6">
-      <div className="flex flex-col items-center py-6">
-        <div
-          className="flex h-16 w-16 items-center justify-center rounded-[22px] text-[var(--brand-ink)]"
-          style={{ background: "var(--brand-yellow)" }}
-        >
-          <Sprout size={34} />
+    <main className="flex min-h-[90dvh] flex-col px-5 pt-6 web:justify-center">
+      <div className="web:mx-auto web:grid web:w-full web:max-w-[1040px] web:grid-cols-[minmax(0,1fr)_440px] web:items-center web:gap-16 web:pb-8">
+        <div className="flex flex-col items-center py-6 web:items-start web:py-0">
+          <div
+            className="flex h-16 w-16 items-center justify-center rounded-[22px] text-[var(--brand-ink)] web:h-20 web:w-20 web:rounded-[26px]"
+            style={{ background: "var(--brand-yellow)" }}
+          >
+            <Sprout size={34} />
+          </div>
+          <h1 className="ios-title mt-3 text-center web:mt-5 web:text-left web:text-[52px]">
+            Agroz AI
+          </h1>
+          <p className="ios-sub mt-1 text-center web:mt-2 web:max-w-[380px] web:text-left web:text-[17px]">
+            Dehqon va chorvador yordamchisi. Ekin va chorva kasalliklarini AI orqali aniqlang,
+            yaqin dorixonalardan dori toping.
+          </p>
         </div>
-        <h1 className="ios-title mt-3 text-center">AgroVet AI</h1>
-        <p className="ios-sub mt-1 text-center">Dehqon va chorvador yordamchisi</p>
-      </div>
 
-      <div className="ios-card p-5">
+        <div className="ios-card p-5 web:p-7">
         {tgUser && (
           <div className="mb-4">
             <button
@@ -337,9 +343,10 @@ export default function LoginPage() {
             {error}
           </p>
         )}
+        </div>
       </div>
 
-      <p className="mt-auto pt-6 text-center text-[11px] text-[var(--brand-muted)]">
+      <p className="mt-auto pt-6 text-center text-[11px] text-[var(--brand-muted)] web:pt-2">
         SMS orqali kirishda maxfiylik siyosatiga rozilik bildirasiz.
       </p>
     </main>

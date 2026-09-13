@@ -79,7 +79,7 @@ export function miniAppKeyboard(): InlineKeyboard | undefined {
   const url = appBaseUrl();
   if (!url || !url.startsWith("https://")) return undefined;
   return {
-    inline_keyboard: [[{ text: "🚀 AgroVet AI", web_app: { url } }]],
+    inline_keyboard: [[{ text: "🚀 Agroz AI", web_app: { url } }]],
   };
 }
 
@@ -88,7 +88,7 @@ export function greetingKeyboard(): InlineKeyboard | undefined {
   const url = appBaseUrl();
   if (!url) return undefined;
   const rows: InlineKeyboard["inline_keyboard"] = [];
-  if (url.startsWith("https://")) rows.push([{ text: "🚀 AgroVet AI", web_app: { url } }]);
+  if (url.startsWith("https://")) rows.push([{ text: "🚀 Agroz AI", web_app: { url } }]);
   rows.push([{ text: "🌐 Saytni ochish", url }]);
   return { inline_keyboard: rows };
 }
@@ -123,13 +123,13 @@ export function greetingMessage(name?: string): string {
   return [
     `👋 Salom${name ? `, ${escapeHtml(name)}` : ""}!`,
     "",
-    "Men <b>AgroVet AI</b> — dehqon va chorvador yordamchisiman:",
+    "Men <b>Agroz AI</b> — dehqon va chorvador yordamchisiman:",
     "• 🌿 Ekin kasalligini rasm orqali aniqlash",
     "• 🐄 Chorva kasalliklari bo'yicha tavsiya",
     "• 💊 Yaqin agro/vet dorixonalar xaritasi",
     "• 🌤 Ob-havoga qarab purkash tavsiyasi",
     "",
-    "<b>👇 «AgroVet AI» tugmasini bosing — ilova shu yerda ochiladi.</b>",
+    "<b>👇 «Agroz AI» tugmasini bosing — ilova shu yerda ochiladi.</b>",
     "",
     "🔐 <b>Telefon raqamni tasdiqlash:</b> saytda raqamingizni kiriting va",
     "«Tasdiqlash kodini olish»ni bosing. Havola sizni shu chatga olib keladi va",

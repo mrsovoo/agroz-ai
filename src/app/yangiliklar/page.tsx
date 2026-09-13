@@ -18,31 +18,22 @@ export default async function NewsPage() {
   await ensureSeed();
   const items = await db.select().from(news).orderBy(desc(news.id));
   return (
-    <main className="px-5 pb-6 pt-3">
-      <p className="ios-sub flex items-center gap-1.5">
-        <Lightbulb size={13} className="text-[var(--brand-yellow)]" /> Bilim
-      </p>
-      <h1 className="ios-title">Maslahatlar</h1>
-      <p className="mt-1 text-[14px] text-[var(--brand-muted)]">
-        Real ob-havo va mavsumiy agro/chorva tavsiyalari
-      </p>
-
-      <section className="mt-5">
-        <WeatherCard />
-      </section>
-
-      <div
-        className="mt-4 flex items-start gap-2.5 rounded-[20px] p-4 text-[13px] leading-relaxed"
-        style={{ background: "var(--brand-yellow-soft)", color: "var(--brand-ink)" }}
-      >
-        <Database size={17} className="mt-0.5 shrink-0" />
-        <p>
-          Ob-havo tavsiyasi Open-Meteo real API ma'lumotlari asosida hisoblanadi. Agro va chorva
-          maqolalari esa bazadagi tasdiqlangan mavsumiy tavsiyalardan olinadi.
+    <main className="px-5 pb-6 pt-3 web:grid web:grid-cols-[minmax(0,1fr)_380px] web:items-start web:gap-10">
+      <div>
+        <p className="ios-sub flex items-center gap-1.5">
+          <Lightbulb size={13} className="text-[var(--brand-yellow)]" /> Bilim
         </p>
-      </div>
+        <h1 className="ios-title">Maslahatlar</h1>
+        <p className="mt-1 text-[14px] text-[var(--brand-muted)] web:text-[16px]">
+          Real ob-havo va mavsumiy agro/chorva tavsiyalari
+        </p>
 
-      <ul className="mt-6 space-y-3">
+        <section className="mt-5 web:hidden">
+          <WeatherCard />
+        </section>
+
+        <h2 className="ios-section-title mt-6 web:mt-9">Mavsumiy maslahatlar</h2>
+        <ul className="mt-0 space-y-3 web:grid web:grid-cols-2 web:gap-6 web:space-y-0">
         {items.map((n) => {
           const isChorva = n.tag === "Chorva";
           return (
@@ -76,8 +67,34 @@ export default async function NewsPage() {
               </div>
             </li>
           );
-        })}
-      </ul>
+          })}
+        </ul>
+
+        <div
+          className="mt-4 flex items-start gap-2.5 rounded-[20px] p-4 text-[13px] leading-relaxed web:hidden"
+          style={{ background: "var(--brand-yellow-soft)", color: "var(--brand-ink)" }}
+        >
+          <Database size={17} className="mt-0.5 shrink-0" />
+          <p>
+            Ob-havo tavsiyasi Open-Meteo real API ma&apos;lumotlari asosida hisoblanadi.
+          </p>
+        </div>
+      </div>
+
+      {/* Katta ekranda ob-havo va izoh o'ng ustunda turadi */}
+      <aside className="mt-5 hidden web:mt-0 web:block web:sticky web:top-24">
+        <WeatherCard />
+        <div
+          className="mt-4 flex items-start gap-2.5 rounded-[20px] p-4 text-[13px] leading-relaxed"
+          style={{ background: "var(--brand-yellow-soft)", color: "var(--brand-ink)" }}
+        >
+          <Database size={17} className="mt-0.5 shrink-0" />
+          <p>
+            Ob-havo tavsiyasi Open-Meteo real API ma'lumotlari asosida hisoblanadi. Agro va chorva
+            maqolalari esa bazadagi tasdiqlangan mavsumiy tavsiyalardan olinadi.
+          </p>
+        </div>
+      </aside>
     </main>
   );
 }

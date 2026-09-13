@@ -60,7 +60,7 @@ console.log("✓ Buyruq o'rnatildi: /start");
 
 try {
   await call("setChatMenuButton", {
-    menu_button: { type: "web_app", text: "AgroVet AI", web_app: { url: appUrl } },
+    menu_button: { type: "web_app", text: "Agroz AI", web_app: { url: appUrl } },
   });
   console.log("✓ Menyu tugmasi Mini Appga ulandi");
 } catch (err) {

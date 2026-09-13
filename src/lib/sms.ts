@@ -49,7 +49,7 @@ export async function sendOtpSms(phone: string, code: string): Promise<boolean> 
     form.append("mobile_phone", phone.replace(/\D/g, ""));
     form.append(
       "message",
-      `AgroVet AI tasdiqlash kodi: ${code}. Kod ${OTP_TTL_MINUTES} daqiqa amal qiladi.`,
+      `Agroz AI tasdiqlash kodi: ${code}. Kod ${OTP_TTL_MINUTES} daqiqa amal qiladi.`,
     );
     form.append("from", process.env.ESKIZ_FROM ?? "4546");
     const res = await fetch("https://notify.eskiz.uz/api/message/sms/send", {

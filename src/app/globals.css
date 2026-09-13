@@ -1,6 +1,19 @@
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 
+/*
+ * `web:` varianti — faqat katta ekranda va Telegram bo'lmaganda ishlaydi
+ * (html.is-web klassi layout skripti tomonidan birinchi kadrda qo'yiladi).
+ * Misol: `px-4 web:px-8`, `grid web:grid-cols-3`
+ */
+@custom-variant web {
+  @media (min-width: 900px) {
+    &:where(html.is-web *) {
+      @slot;
+    }
+  }
+}
+
 :root {
   --brand-yellow: #fcbd00;
   --brand-ink: #323232;
@@ -38,7 +51,8 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-.web-top-nav {
+.web-top-nav,
+.web-footer {
   display: none;
 }
 
@@ -283,11 +297,20 @@ body {
   html.is-web .web-top-nav-inner {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 24px;
-    width: min(1180px, calc(100% - 48px));
-    height: 76px;
+    gap: 32px;
+    width: min(1200px, calc(100% - 56px));
+    height: 80px;
     margin: 0 auto;
+  }
+
+  html.is-web .web-links {
+    flex: 1;
+  }
+
+  html.is-web .web-actions {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
   }
 
   html.is-web .web-brand,
@@ -367,11 +390,11 @@ body {
 
   html.is-web .app-shell {
     max-width: none;
-    width: min(1180px, calc(100% - 48px));
-    min-height: calc(100dvh - 76px);
+    width: min(1200px, calc(100% - 56px));
+    min-height: calc(100dvh - 80px);
     margin: 0 auto;
-    padding-top: 28px;
-    padding-bottom: 48px;
+    padding-top: 36px;
+    padding-bottom: 64px;
     background: transparent;
     box-shadow: none;
   }
@@ -397,62 +420,28 @@ body {
     border-radius: 12px;
   }
 
-  html.is-web main > .space-y-3,
-  html.is-web main > ul,
-  html.is-web main > section,
-  html.is-web main > div {
-    max-width: 100%;
-  }
-
+  /* Sahifa layoutlari Tailwind'ning `web:` varianti bilan yoziladi —
+     bu yerda faqat global konteyner va karta uslublari qoladi. */
   html.is-web main.px-5,
   html.is-web main.flex {
     padding-left: 0;
     padding-right: 0;
   }
 
-  html.is-web main > header {
-    align-items: center;
-    gap: 28px;
-    padding-top: 0;
-  }
-
-  html.is-web main > header + div,
-  html.is-web main > header + div + p + div {
-    max-width: 760px;
-  }
-
-  html.is-web main > .mt-5:first-of-type {
-    max-width: 760px;
-  }
-
-  html.is-web main > .space-y-3 {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
-    max-width: 900px;
-  }
-
-  html.is-web main > .space-y-3 > a,
-  html.is-web main > .space-y-3 > div,
-  html.is-web main > .space-y-3 > button,
-  html.is-web main > .space-y-3 > p {
-    grid-column: auto;
-  }
-
-  html.is-web main > .space-y-3 > .relative,
-  html.is-web main > .space-y-3 > button:last-of-type,
-  html.is-web main > .space-y-3 > p {
-    grid-column: 1 / -1;
-  }
-
-  html.is-web main > a.mt-3,
-  html.is-web main > a.mt-6,
-  html.is-web main > a.mt-3.block {
-    max-width: 900px;
-  }
-
   html.is-web .leaflet-container {
     min-height: 100%;
+  }
+
+  /* Interaktiv kartalar uchun yumshoq hover */
+  html.is-web .hover-lift {
+    transition:
+      transform 0.16s ease,
+      box-shadow 0.16s ease;
+  }
+
+  html.is-web .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 26px 60px -42px rgba(2, 142, 17, 0.6);
   }
 }
 
@@ -460,5 +449,138 @@ body {
   html.is-web .web-links a {
     padding-inline: 9px;
     font-size: 13px;
+  }
+
+  html.is-web .web-top-nav-inner {
+    gap: 18px;
+  }
+}
+
+/* ===========================================================================
+   WEB: nav holatlari, brend matni va footer
+   =========================================================================== */
+@media (min-width: 900px) and (min-height: 500px) {
+  html.is-web .web-brand-text strong,
+  html.is-web .web-brand-text small {
+    display: block;
+  }
+
+  html.is-web .web-brand-text strong {
+    font-size: 19px;
+    font-weight: 900;
+    line-height: 1.1;
+  }
+
+  html.is-web .web-brand-text small {
+    margin-top: 2px;
+    color: var(--brand-muted);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  /* Faol (aktiv) havola */
+  html.is-web .web-links a.is-active,
+  html.is-web .web-links a.is-active:hover {
+    background: var(--brand-green);
+    color: #fff;
+    box-shadow: 0 12px 26px -18px rgba(2, 142, 17, 0.95);
+  }
+
+  /* ---- Footer ---- */
+  html.is-web .web-footer {
+    display: block;
+    margin-top: 24px;
+    border-top: 1px solid rgba(50, 50, 50, 0.08);
+    background: rgba(255, 255, 255, 0.72);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+
+  html.is-web .web-footer-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) repeat(2, minmax(0, 1fr));
+    gap: 40px;
+    width: min(1200px, calc(100% - 56px));
+    margin: 0 auto;
+    padding: 44px 0 32px;
+  }
+
+  html.is-web .web-footer-brand {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+
+  html.is-web .web-footer-brand strong {
+    font-size: 18px;
+    font-weight: 900;
+  }
+
+  html.is-web .web-footer-brand p {
+    margin-top: 6px;
+    max-width: 420px;
+    color: var(--brand-muted);
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  html.is-web .web-footer-col h2 {
+    margin-bottom: 12px;
+    color: var(--brand-muted);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  html.is-web .web-footer-col ul {
+    display: grid;
+    gap: 9px;
+    list-style: none;
+  }
+
+  html.is-web .web-footer-col a {
+    color: var(--brand-ink);
+    font-size: 14.5px;
+    font-weight: 600;
+  }
+
+  html.is-web .web-footer-col a:hover {
+    color: var(--brand-green);
+  }
+
+  html.is-web .web-footer-bottom {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    width: min(1200px, calc(100% - 56px));
+    margin: 0 auto;
+    padding: 18px 0 28px;
+    border-top: 1px solid rgba(50, 50, 50, 0.07);
+    color: var(--brand-muted);
+    font-size: 12.5px;
+  }
+
+  /* Kattaroq ekranda matn o'lchamlari */
+  html.is-web .ios-sub {
+    font-size: 16px;
+  }
+
+  html.is-web .ios-section-title {
+    font-size: 13px;
+  }
+
+  html.is-web .ios-card {
+    transition:
+      transform 0.16s ease,
+      box-shadow 0.16s ease,
+      border-color 0.16s ease;
+  }
+
+  html.is-web a:hover > .ios-card,
+  html.is-web a:hover > .ios-group {
+    border-color: rgba(2, 142, 17, 0.22);
+    box-shadow: 0 26px 60px -42px rgba(2, 142, 17, 0.6);
+    transform: translateY(-2px);
   }
 }

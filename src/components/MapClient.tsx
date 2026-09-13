@@ -306,8 +306,9 @@ export default function MapClient() {
         )}
       </div>
 
+      <div className="web:grid web:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] web:items-start web:gap-8 web:px-5 web:pt-2">
       {/* Map */}
-      <div className="relative mx-5 mt-4 overflow-hidden rounded-[24px] shadow-sm" style={{ height: 360 }}>
+      <div className="relative mx-5 mt-4 h-[360px] overflow-hidden rounded-[24px] shadow-sm web:sticky web:top-24 web:mx-0 web:mt-0 web:h-[620px]">
         <div ref={containerRef} className="h-full w-full" />
         {!mapReady && (
           <div className="absolute inset-0 flex items-center justify-center bg-[#e8ecf1]">
@@ -330,8 +331,9 @@ export default function MapClient() {
         </div>
       </div>
 
+      <div className="web:min-w-0">
       {/* List header */}
-      <div className="mt-5 flex items-center justify-between px-5">
+      <div className="mt-5 flex items-center justify-between px-5 web:mt-0 web:px-0">
         <p className="text-[13px] font-bold text-[var(--brand-muted)]">
           {loading ? "Yuklanmoqda..." : `${items.length} ta nuqta topildi`}
         </p>
@@ -345,7 +347,10 @@ export default function MapClient() {
         )}
       </div>
 
-      <ul ref={listRef} className="mx-5 mb-4 mt-2 space-y-3">
+      <ul
+        ref={listRef}
+        className="mx-5 mb-4 mt-2 space-y-3 web:mx-0 web:mt-3 web:max-h-[calc(100dvh-270px)] web:overflow-y-auto web:pr-2 web:[scrollbar-gutter:stable]"
+      >
         {items.slice(0, 30).map((p) => {
           const isSelected = selected?.id === p.id;
           return (
@@ -450,6 +455,8 @@ export default function MapClient() {
           </li>
         )}
       </ul>
+      </div>
+      </div>
 
       {/* Bottom sheet */}
       {selected && (

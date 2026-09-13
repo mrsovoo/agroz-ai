@@ -1,4 +1,4 @@
-# AgroVet AI — Telegram Mini App + Neon + Vercel Integratsiyasi
+# Agroz AI — Telegram Mini App + Neon + Vercel Integratsiyasi
 
 ## Tezkor production checklist
 
@@ -22,7 +22,7 @@ Ilova allaqachon Telegram WebApp SDK bilan ulangan. Uni `Launch App` tugmasi bil
    ```
    /setmenubutton
    ```
-3. **URL** sifatida o'zingizning joylashtirilgan domeningizni kiriting (masalan `https://agrovet.uz`).
+3. **URL** sifatida o'zingizning joylashtirilgan domeningizni kiriting (masalan `https://agroz-ai.vercel.app`).
 
 ### Muhim muhit o'zgaruvchilari (`.env`)
 | O'zgaruvchi | Nima uchun |
