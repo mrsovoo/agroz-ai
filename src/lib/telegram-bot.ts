@@ -83,13 +83,22 @@ export function miniAppKeyboard(): InlineKeyboard | undefined {
   };
 }
 
-/** Salomlashish uchun: Mini App + sayt tugmalari. */
+/** `@agroz_auth_bot` username (ro'yxatdan o'tish havolasi uchun). */
+export function authBotUsername(): string {
+  const fromEnv = process.env.TELEGRAM_AUTH_BOT_USERNAME?.trim().replace(/^@/, "");
+  return fromEnv || "agroz_auth_bot";
+}
+
+/** Salomlashish uchun: Mini App + sayt + ro'yxatdan o'tish tugmalari. */
 export function greetingKeyboard(): InlineKeyboard | undefined {
   const url = appBaseUrl();
   if (!url) return undefined;
   const rows: InlineKeyboard["inline_keyboard"] = [];
   if (url.startsWith("https://")) rows.push([{ text: "🚀 Agroz AI", web_app: { url } }]);
   rows.push([{ text: "🌐 Saytni ochish", url }]);
+  rows.push([
+    { text: "📋 Mutaxassis bo'lib ro'yxatdan o'tish", url: `https://t.me/${authBotUsername()}` },
+  ]);
   return { inline_keyboard: rows };
 }
 
@@ -134,6 +143,10 @@ export function greetingMessage(name?: string): string {
     "🔐 <b>Telefon raqamni tasdiqlash:</b> saytda raqamingizni kiriting va",
     "«Tasdiqlash kodini olish»ni bosing. Havola sizni shu chatga olib keladi va",
     "tasdiqlash kodi shu yerda chiqadi.",
+    "",
+    "📋 <b>Mutaxassis yoki dorixona egasimisiz?</b> Pastdagi tugma orqali",
+    `<b>@${escapeHtml(authBotUsername())}</b> botida ro'yxatdan o'ting — profilingiz Agroz AI`,
+    "xaritasida 5 km radius ichida ko'rinadi.",
   ].join("\n");
 }
 

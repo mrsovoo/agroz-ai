@@ -91,3 +91,42 @@ export const news = pgTable("news", {
   tag: varchar("tag", { length: 40 }).default("Umumiy"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+/**
+ * `@agroz_auth_bot` orqali ro'yxatdan o'tgan mutaxassislar va dorixona egalari.
+ * Har bir Telegram hisobi uchun bitta profil — qayta yuborilsa yangilanadi.
+ */
+export const specialists = pgTable("specialists", {
+  id: serial("id").primaryKey(),
+  telegramId: bigint("telegram_id", { mode: "number" }).unique().notNull(),
+  name: varchar("name", { length: 120 }).notNull(),
+  phone: varchar("phone", { length: 32 }).notNull(),
+  /** specialist — alohida mutaxassis, pharmacy — dorixona egasi. */
+  role: varchar("role", { length: 20 }).notNull().default("specialist"),
+  /** Mutaxassislik (agronom, veterinar...) yoki dorixona turi (agro, vet). */
+  specialty: varchar("specialty", { length: 160 }),
+  /** Dorixona nomi — faqat role=pharmacy uchun. */
+  organization: varchar("organization", { length: 200 }),
+  address: text("address").notNull(),
+  lat: doublePrecision("lat").notNull(),
+  lng: doublePrecision("lng").notNull(),
+  workHours: varchar("work_hours", { length: 60 }).default("09:00 - 18:00"),
+  /** Admin bloklagan profillar qidiruvda chiqmaydi. */
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+/**
+ * Bot suhbatining holati (multi-step ro'yxatdan o'tish).
+ * Serverless muhitda xotira saqlanmaydi — shuning uchun holat bazada saqlanadi.
+ */
+export const botStates = pgTable("bot_states", {
+  telegramId: bigint("telegram_id", { mode: "number" }).primaryKey(),
+  /** Qaysi bot oqimi: auth — ro'yxatdan o'tish. */
+  flow: varchar("flow", { length: 20 }).notNull().default("auth"),
+  step: varchar("step", { length: 40 }).notNull(),
+  /** Yig'ilgan javoblar (JSON). */
+  data: text("data"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});

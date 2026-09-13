@@ -15,6 +15,7 @@ import {
   Sparkles,
   ShieldCheck,
   Newspaper,
+  UsersRound,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -162,6 +163,27 @@ export default async function HomePage() {
           </div>
         </Link>
       </div>
+
+      {/* @agroz_auth_bot orqali ro'yxatdan o'tgan mutaxassislar */}
+      <Link href="/mutaxassislar" className="mt-3 block web:mt-6">
+        <div className="hover-lift flex items-center gap-4 rounded-[24px] border border-black/5 bg-white p-4 shadow-sm transition-transform active:scale-[0.98] web:p-5">
+          <span
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px]"
+            style={{ background: "#dbeafe", color: "#2563eb" }}
+          >
+            <UsersRound size={24} />
+          </span>
+          <div className="flex-1">
+            <p className="text-[16px] font-black text-[var(--brand-ink)]">
+              Mutaxassislar va dorixona egalari
+            </p>
+            <p className="text-[13px] text-[var(--brand-muted)]">
+              5 km ichidagi eng yaqin mutaxassisni toping — ro&apos;yxatdan o&apos;tish @agroz_auth_bot orqali
+            </p>
+          </div>
+          <ChevronRight size={20} className="shrink-0 text-[var(--brand-muted)]" />
+        </div>
+      </Link>
 
       {/* Katta ekranda qo'shimcha kontekst */}
       <div className="mt-6 hidden web:grid web:grid-cols-3 web:gap-6">

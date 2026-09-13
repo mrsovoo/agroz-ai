@@ -19,7 +19,8 @@ import {
 
 type Stock = { medicine: string; status: string; price: number | null };
 
-type Pharmacy = {
+type Place = {
+  /** Dorixona id'lari bilan to'qnashmasligi uchun mutaxassislar manfiy id oladi. */
   id: number;
   name: string;
   kind: string;
@@ -33,13 +34,29 @@ type Pharmacy = {
   stock: Stock[];
 };
 
+type Specialist = {
+  id: number;
+  name: string;
+  phone: string;
+  role: string;
+  specialty: string | null;
+  organization: string | null;
+  address: string;
+  lat: number;
+  lng: number;
+  workHours: string | null;
+  distanceKm: number | null;
+};
+
 const GLYPH = {
   agro: '<path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/><path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z"/>',
   vet: '<circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/>',
+  specialist:
+    '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>',
 };
 
-function pinSvg(kind: "agro" | "vet", hasWanted: boolean) {
-  const color = kind === "vet" ? "#b45309" : "#028e11";
+function pinSvg(kind: "agro" | "vet" | "specialist", hasWanted: boolean) {
+  const color = kind === "vet" ? "#b45309" : kind === "specialist" ? "#2563eb" : "#028e11";
   return `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="52" viewBox="0 0 36 46" style="filter:drop-shadow(0 5px 8px rgba(0,0,0,0.35))">
     <path d="M18 1C8.6 1 1 8.6 1 18c0 12.3 15.1 26.1 16.3 27.2a1.1 1.1 0 0 0 1.4 0C19.9 44.1 35 30.3 35 18 35 8.6 27.4 1 18 1z" fill="${color}" stroke="#fff" stroke-width="2"/>
     <svg x="8" y="7" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${GLYPH[kind]}</svg>
@@ -60,8 +77,8 @@ export default function MapClient() {
   const focusId = search.get("focus");
 
   const [kind, setKind] = useState(kindParam);
-  const [items, setItems] = useState<Pharmacy[]>([]);
-  const [selected, setSelected] = useState<Pharmacy | null>(null);
+  const [places, setPlaces] = useState<Place[]>([]);
+  const [selected, setSelected] = useState<Place | null>(null);
   const [coords, setCoords] = useState<{ lat: number; lng: number; accuracy?: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [locError, setLocError] = useState<string | null>(null);
@@ -104,25 +121,47 @@ export default function MapClient() {
     );
   }, []);
 
-  // ---- Fetch pharmacies ----
+  // ---- Fetch dorixonalar + mutaxassislar ----
+  // Ikkisi bitta xaritada ko'rsatiladi; filtrlar esa client tomonda qo'llanadi.
   useEffect(() => {
-    const params = new URLSearchParams();
+    const pharmacyParams = new URLSearchParams();
+    const specialistParams = new URLSearchParams();
     if (coords) {
-      params.set("lat", String(coords.lat));
-      params.set("lng", String(coords.lng));
+      for (const p of [pharmacyParams, specialistParams]) {
+        p.set("lat", String(coords.lat));
+        p.set("lng", String(coords.lng));
+      }
     }
-    if (kind !== "all") params.set("kind", kind);
-    meds.forEach((m) => params.append("med", m));
+    meds.forEach((m) => pharmacyParams.append("med", m));
     // Eski so'rov javobi yangisini bosib ketmasligi uchun "cancelled" bayrog'i.
     let cancelled = false;
     setLoading(true);
-    fetch(`/api/pharmacies?${params.toString()}`)
-      .then((r) => r.json())
-      .then((d: { items?: Pharmacy[] }) => {
-        if (!cancelled) setItems(Array.isArray(d?.items) ? d.items : []);
-      })
-      .catch(() => {
-        if (!cancelled) setItems([]);
+    Promise.all([
+      fetch(`/api/pharmacies?${pharmacyParams.toString()}`)
+        .then((r) => r.json())
+        .then((d: { items?: Place[] }) => (Array.isArray(d?.items) ? d.items : []))
+        .catch(() => [] as Place[]),
+      fetch(`/api/specialists?${specialistParams.toString()}`)
+        .then((r) => r.json())
+        .then((d: { items?: Specialist[] }) => (Array.isArray(d?.items) ? d.items : []))
+        .catch(() => [] as Specialist[]),
+    ])
+      .then(([pharmacies, specialists]) => {
+        if (cancelled) return;
+        const mapped: Place[] = specialists.map((s) => ({
+          id: -s.id,
+          name: s.organization ?? s.name,
+          kind: "specialist",
+          lat: s.lat,
+          lng: s.lng,
+          phone: s.phone,
+          address: s.address,
+          specialist: s.specialty ?? s.name,
+          workHours: s.workHours,
+          distanceKm: s.distanceKm,
+          stock: [],
+        }));
+        setPlaces([...pharmacies, ...mapped]);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -130,7 +169,13 @@ export default function MapClient() {
     return () => {
       cancelled = true;
     };
-  }, [coords, kind, meds]);
+  }, [coords, meds]);
+
+  // Tanlangan tur bo'yicha filtr (kind=all bo'lsa hammasi).
+  const items = useMemo(
+    () => (kind === "all" ? places : places.filter((p) => p.kind === kind)),
+    [places, kind],
+  );
 
   // ---- Init Leaflet map once ----
   useEffect(() => {
@@ -197,9 +242,10 @@ export default function MapClient() {
       markersRef.current = [];
       items.forEach((p) => {
         const hasWanted = meds.length > 0 && p.stock.some((s) => s.status === "bor");
+        const pinKind = p.kind === "vet" ? "vet" : p.kind === "specialist" ? "specialist" : "agro";
         const icon = L.divIcon({
           className: "",
-          html: pinSvg(p.kind === "vet" ? "vet" : "agro", hasWanted),
+          html: pinSvg(pinKind, hasWanted),
           iconSize: [40, 52],
           iconAnchor: [20, 50],
         });
@@ -221,7 +267,7 @@ export default function MapClient() {
     if (f) selectPharmacy(f, { smooth: false });
   }, [items, focusId]);
 
-  function selectPharmacy(p: Pharmacy, opts?: { smooth?: boolean }) {
+  function selectPharmacy(p: Place, opts?: { smooth?: boolean }) {
     setSelected(p);
     mapRef.current?.flyTo([p.lat, p.lng], 15, { duration: 0.55 });
     setTimeout(() => {
@@ -243,7 +289,7 @@ export default function MapClient() {
     );
   }
 
-  function openDirections(p: Pharmacy) {
+  function openDirections(p: Place) {
     const ua = navigator.userAgent;
     const apple = /iPad|iPhone|iPod/.test(ua);
     const origin = coords ? `${coords.lat},${coords.lng}` : "";
@@ -259,8 +305,10 @@ export default function MapClient() {
       <div className="px-5 pt-3">
         <div className="flex items-start justify-between">
           <div>
-            <p className="ios-sub">Geo-qidiruv</p>
-            <h1 className="ios-title">Dorixonalar</h1>
+            <p className="ios-sub">Geo-qidiruv · 5 km</p>
+            <h1 className="ios-title">
+              {kind === "specialist" ? "Mutaxassislar" : "Dorixonalar"}
+            </h1>
             {meds.length > 0 && (
               <p className="mt-1 text-[13px] font-medium text-[var(--brand-green)]">
                 Qidirilmoqda: <b>{meds.join(", ")}</b>
@@ -281,6 +329,7 @@ export default function MapClient() {
             { v: "all", l: "Hammasi" },
             { v: "agro", l: "Agro" },
             { v: "vet", l: "Veterinar" },
+            { v: "specialist", l: "Mutaxassis" },
           ].map((f) => {
             const active = kind === f.v;
             return (
@@ -294,6 +343,7 @@ export default function MapClient() {
               >
                 {f.v === "agro" && <Sprout size={14} />}
                 {f.v === "vet" && <PawPrint size={14} />}
+                {f.v === "specialist" && <UserRound size={14} />}
                 {f.l}
               </button>
             );
@@ -367,12 +417,23 @@ export default function MapClient() {
                   <div
                     className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px]"
                     style={{
-                      background:
-                        p.kind === "vet" ? "var(--brand-yellow-soft)" : "var(--brand-green-soft)",
-                      color: p.kind === "vet" ? "var(--brand-ink)" : "var(--brand-green)",
+                      background: "var(--brand-green-soft)",
+                      color: "var(--brand-green)",
+                      ...(p.kind === "vet"
+                        ? { background: "var(--brand-yellow-soft)", color: "var(--brand-ink)" }
+                        : {}),
+                      ...(p.kind === "specialist"
+                        ? { background: "#dbeafe", color: "#2563eb" }
+                        : {}),
                     }}
                   >
-                    {p.kind === "vet" ? <PawPrint size={20} /> : <Sprout size={20} />}
+                    {p.kind === "vet" ? (
+                      <PawPrint size={20} />
+                    ) : p.kind === "specialist" ? (
+                      <UserRound size={20} />
+                    ) : (
+                      <Sprout size={20} />
+                    )}
                   </div>
                   <div>
                     <p className="text-[16px] font-bold leading-tight text-[var(--brand-ink)]">
@@ -474,12 +535,23 @@ export default function MapClient() {
               <div
                 className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px]"
                 style={{
-                  background:
-                    selected.kind === "vet" ? "var(--brand-yellow-soft)" : "var(--brand-green-soft)",
-                  color: selected.kind === "vet" ? "var(--brand-ink)" : "var(--brand-green)",
+                  background: "var(--brand-green-soft)",
+                  color: "var(--brand-green)",
+                  ...(selected.kind === "vet"
+                    ? { background: "var(--brand-yellow-soft)", color: "var(--brand-ink)" }
+                    : {}),
+                  ...(selected.kind === "specialist"
+                    ? { background: "#dbeafe", color: "#2563eb" }
+                    : {}),
                 }}
               >
-                {selected.kind === "vet" ? <PawPrint size={22} /> : <Sprout size={22} />}
+                {selected.kind === "vet" ? (
+                  <PawPrint size={22} />
+                ) : selected.kind === "specialist" ? (
+                  <UserRound size={22} />
+                ) : (
+                  <Sprout size={22} />
+                )}
               </div>
               <div className="flex-1">
                 <p className="text-[18px] font-black leading-tight text-[var(--brand-ink)]">

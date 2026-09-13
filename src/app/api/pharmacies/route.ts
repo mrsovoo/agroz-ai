@@ -4,18 +4,9 @@ import { medicines, pharmacies, pharmacyStocks } from "@/db/schema";
 import { eq, ilike, or, inArray } from "drizzle-orm";
 import { ensureSeed } from "@/lib/seed";
 import { withApiErrors } from "@/lib/api";
+import { clampRadiusKm, distanceKm, parseCoords, roundKm } from "@/lib/geo";
 
 export const dynamic = "force-dynamic";
-
-function distanceKm(aLat: number, aLng: number, bLat: number, bLng: number) {
-  const R = 6371;
-  const dLat = ((bLat - aLat) * Math.PI) / 180;
-  const dLng = ((bLng - aLng) * Math.PI) / 180;
-  const s =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((aLat * Math.PI) / 180) * Math.cos((bLat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(s));
-}
 
 export type PharmacyDto = {
   id: number;
@@ -34,8 +25,9 @@ export type PharmacyDto = {
 export const GET = withApiErrors(async (req: Request) => {
   await ensureSeed();
   const url = new URL(req.url);
-  const lat = parseFloat(url.searchParams.get("lat") ?? "");
-  const lng = parseFloat(url.searchParams.get("lng") ?? "");
+  const coords = parseCoords(url.searchParams.get("lat"), url.searchParams.get("lng"));
+  // Yaqin atrof qidiruvi 5 km bilan cheklangan — undan uzoq nuqtalar qaytarilmaydi.
+  const radiusKm = clampRadiusKm(url.searchParams.get("radius"));
   const kind = url.searchParams.get("kind");
   const meds = url.searchParams.getAll("med").filter(Boolean);
 
@@ -68,7 +60,6 @@ export const GET = withApiErrors(async (req: Request) => {
     }
   }
 
-  const hasCoords = Number.isFinite(lat) && Number.isFinite(lng);
   const items: PharmacyDto[] = filtered
     .map((p) => ({
       id: p.id,
@@ -80,15 +71,17 @@ export const GET = withApiErrors(async (req: Request) => {
       address: p.address,
       specialist: p.specialist,
       workHours: p.workHours,
-      distanceKm: hasCoords ? Math.round(distanceKm(lat, lng, p.lat, p.lng) * 10) / 10 : null,
+      distanceKm: coords ? roundKm(distanceKm(coords.lat, coords.lng, p.lat, p.lng)) : null,
       stock: stockMap.get(p.id) ?? [],
     }))
+    // Koordinata bo'lsa faqat radius ichidagilar qoladi (masofa noma'lum bo'lsa — hammasi).
+    .filter((p) => p.distanceKm === null || p.distanceKm <= radiusKm)
     .sort((a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999));
 
-  // Dorixonalar ro'yxati tez o'zgarmaydi — CDN'da 5 daqiqa keshlaymiz.
-  // Kuchsiz internetda qayta ochishlar deyarli bir zumda bo'ladi.
   return NextResponse.json(
-    { items },
+    { items, radiusKm },
+    // Dorixonalar ro'yxati tez o'zgarmaydi — CDN'da 5 daqiqa keshlaymiz.
+    // Kuchsiz internetda qayta ochishlar deyarli bir zumda bo'ladi.
     { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" } },
   );
 });

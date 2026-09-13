@@ -42,6 +42,9 @@ birinchi so'rovda aniq xato beradi — shuning uchun `.env`ni to'ldirish shart.
 | `TELEGRAM_BOT_TOKEN` | production | `initData` imzosini tekshirish + OTP kodni bot orqali yuborish |
 | `TELEGRAM_WEBHOOK_SECRET` | tavsiya | Bot webhook'ini soxta so'rovlardan himoyalash |
 | `TELEGRAM_BOT_USERNAME` | ✖ | Bot username (`@` siz); bo'sh bo'lsa `getMe` orqali olinadi |
+| `TELEGRAM_AUTH_BOT_TOKEN` | ✖ | `@agroz_auth_bot` tokeni — mutaxassis/dorixona egalarini ro'yxatdan o'tkazish |
+| `TELEGRAM_AUTH_BOT_USERNAME` | ✖ | Auth bot username (asosiy botdagi havola uchun); default `agroz_auth_bot` |
+| `TELEGRAM_AUTH_WEBHOOK_SECRET` | ✖ | Auth bot webhook'i uchun alohida kalit (bo'sh bo'lsa `TELEGRAM_WEBHOOK_SECRET`) |
 | `NEXT_PUBLIC_APP_URL` | tavsiya | Sayt domeni (metadata, kanonik havolalar) |
 | `OPENAI_API_KEY` | ✖ | AI tashxis + ovoz (Whisper). Bo'sh bo'lsa offline demo rejim |
 | `OPENAI_BASE_URL`, `AI_MODEL`, `ASR_MODEL` | ✖ | OpenAI-compatible (vLLM, Qwen) endpoint uchun |
@@ -49,6 +52,35 @@ birinchi so'rovda aniq xato beradi — shuning uchun `.env`ni to'ldirish shart.
 | `OTP_DEV_MODE` | ✖ | `true` bo'lsa SMS yo'q bo'lganda ham kod API javobida qaytadi |
 | `ALLOW_UNVERIFIED_TELEGRAM` | ✖ | Bot tokeni yo'q bo'lsa ham imzosiz Telegram kirishga ruxsat |
 | `PGSSL`, `PGPOOL_MAX`, `COOKIE_SECURE` | ✖ | DB/cookie nozik sozlamalari |
+
+## Mutaxassislar va dorixona egalari (`@agroz_auth_bot`)
+
+Alohida bot (`TELEGRAM_AUTH_BOT_TOKEN`) mutaxassis va dorixona egalarini
+ro'yxatdan o'tkazadi. Har bir Telegram hisobi uchun **bitta profil** saqlanadi,
+qayta o'tilsa ma'lumotlar yangilanadi.
+
+Ro'yxatdan o'tish bosqichlari (`/royxatdan_otish`):
+
+1. **Turi** — mutaxassis yoki dorixona egasi (inline tugmalar)
+2. **Ism-familiya** — matn
+3. **Telefon** — «📱 Telefon raqamni yuborish» tugmasi yoki qo'lda `+998XXXXXXXXX`
+4. **Lokatsiya** — «📍 Lokatsiyani yuborish» (xaritada ko'rinish uchun)
+5. **Manzil** — matn
+6. **Mutaxassislik** — tayyor variantlar (Agronom, Veterinar, Zootexnik, Bog'bon) yoki o'zi yozadi;
+   dorixona egasi uchun avval dorixona nomi, keyin turi (agro/vet)
+7. **Tasdiqlash** — ✅ / ❌
+
+Saqlangan profillar `/api/specialists` orqali olinadi va platformada ko'rinadi:
+
+- **`/mutaxassislar`** — yaqin atrofdagi mutaxassislar ro'yxati (qo'ng'iroq + yo'nalish)
+- **`/xarita`** — umumiy xarita; «Mutaxassis» filtri bilan
+
+> **5 km qoidasi:** yaqin atrof qidiruvida radius qat'iy cheklangan —
+> `MAX_NEARBY_RADIUS_KM = 5`. Dorixonalar ham (`/api/pharmacies`), mutaxassislar ham
+> (`/api/specialists`) shu radiusdan uzoqni qaytarmaydi; `radius` parametri 5 km dan
+> oshirilmaydi.
+
+Bot buyruqlari: `/start`, `/royxatdan_otish`, `/malumotlarim`, `/bekor`, `/yordam`.
 
 ## Kirish (OTP) qanday ishlaydi
 
@@ -120,7 +152,8 @@ bot o'z navbatida `TELEGRAM_WEBHOOK_SECRET` bilan tekshiriladi.
    npm run telegram:setup
    ```
    Skript `.env`dagi `NEXT_PUBLIC_APP_URL` va `TELEGRAM_BOT_TOKEN`dan foydalanadi va
-   botning menyu tugmasini Mini Appga ulaydi.
+   botning menyu tugmasini Mini Appga ulaydi. `TELEGRAM_AUTH_BOT_TOKEN` bo'lsa,
+   `@agroz_auth_bot` webhook'i (`/api/telegram/auth-webhook`) ham shu skriptda ulanadi.
 3. (Ixtiyoriy) `@BotFather` orqali qo'lda sozlash:
    ```text
    /newapp        # yoki /setmenubutton
@@ -153,10 +186,11 @@ npm run build
 ```text
 src/
   app/                 # App Router: sahifalar va API route'lar
-    api/               # auth, telegram/webhook, diagnose, transcribe, weather, pharmacies, news, health
+    api/               # auth, telegram/webhook, telegram/auth-webhook, diagnose, transcribe, weather, pharmacies, specialists, news, health
+    mutaxassislar/     # ro'yxatdan o'tgan mutaxassislar (5 km radius)
   components/          # UI (DiagnoseForm, MapClient, WeatherCard, navlar...)
   db/                  # Drizzle sxema va lazy pool
-  lib/                 # ai, session, seed, sms, telegram-bot, rate-limit, validate, constants
+  lib/                 # ai, session, seed, sms, telegram-bot, auth-bot, auth-bot-flow, specialists, geo, rate-limit, validate, constants
 scripts/               # telegram:setup (webhook va menyu tugmasini o'rnatish)
 drizzle/               # SQL migratsiyalar
 docs/INTEGRATION.md    # integratsiya va real ma'lumot manbalari

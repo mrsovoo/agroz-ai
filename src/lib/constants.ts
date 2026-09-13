@@ -23,3 +23,12 @@ export const MAX_AUDIO_BYTES = 8 * 1024 * 1024;
 
 /** Tashxis tavsifi maksimal uzunligi. */
 export const MAX_DIAGNOSIS_TEXT = 2000;
+
+/** Yaqin atrofdagi qidiruv uchun standart radius (km). */
+export const NEARBY_RADIUS_KM = 5;
+
+/**
+ * Yaqin atrof qidiruvining qat'iy chegarasi (km).
+ * Mutaxassis ham, dorixona ham faqat shu radius ichida ko'rsatiladi.
+ */
+export const MAX_NEARBY_RADIUS_KM = 5;
