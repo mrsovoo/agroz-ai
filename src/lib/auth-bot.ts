@@ -125,6 +125,14 @@ export const PHARMACY_TYPE_KEYBOARD: InlineKeyboard = {
   ],
 };
 
+/** Lokatsiyadan topilgan manzilni tasdiqlash yoki qo'lda yozish. */
+export const ADDRESS_CONFIRM_KEYBOARD: InlineKeyboard = {
+  inline_keyboard: [
+    [{ text: "✅ Manzil to'g'ri", callback_data: "ad:ok" }],
+    [{ text: "✏️ O'zim yozaman", callback_data: "ad:edit" }],
+  ],
+};
+
 export const CONFIRM_KEYBOARD: InlineKeyboard = {
   inline_keyboard: [
     [{ text: "✅ Tasdiqlash", callback_data: "c:ok" }],
@@ -216,6 +224,18 @@ export function askAddress(): string {
     "🏠 <b>Manzilni yozing.</b>",
     "",
     "Masalan: <i>Toshkent sh., Chilonzor t., Bunyodkor ko'chasi 45</i>",
+  ].join("\n");
+}
+
+/** Lokatsiya bo'yicha avtomatik topilgan manzilni tasdiqlash so'rovi. */
+export function askAddressConfirm(address: string): string {
+  return [
+    "📍 <b>Manzilingiz aniqlandi:</b>",
+    "",
+    `<b>${escapeHtml(address)}</b>`,
+    "",
+    "Shu manzil to'g'rimi? Tasdiqlasangiz, ro'yxatdan o'tish davom etadi.",
+    "Agar noto'g'ri bo'lsa — «✏️ O'zim yozaman»ni bosing.",
   ].join("\n");
 }
 

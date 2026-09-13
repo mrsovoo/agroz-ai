@@ -64,11 +64,13 @@ Ro'yxatdan o'tish bosqichlari (`/royxatdan_otish`):
 1. **Turi** — mutaxassis yoki dorixona egasi (inline tugmalar)
 2. **Ism-familiya** — matn
 3. **Telefon** — «📱 Telefon raqamni yuborish» tugmasi yoki qo'lda `+998XXXXXXXXX`
-4. **Lokatsiya** — «📍 Lokatsiyani yuborish» (xaritada ko'rinish uchun)
-5. **Manzil** — matn
-6. **Mutaxassislik** — tayyor variantlar (Agronom, Veterinar, Zootexnik, Bog'bon) yoki o'zi yozadi;
+4. **Lokatsiya** — «📍 Lokatsiyani yuborish». Bot koordinatadan manzilni **avtomatik**
+   aniqlaydi (OpenStreetMap Nominatim, lotin o'zbekcha) va matn ko'rinishida yuborib
+   tasdiqlashni so'raydi: «✅ Manzil to'g'ri» yoki «✏️ O'zim yozaman».
+   Aniqlanmasa — manzil qo'lda so'raladi (oqim to'xtamaydi).
+5. **Mutaxassislik** — tayyor variantlar (Agronom, Veterinar, Zootexnik, Bog'bon) yoki o'zi yozadi;
    dorixona egasi uchun avval dorixona nomi, keyin turi (agro/vet)
-7. **Tasdiqlash** — ✅ / ❌
+6. **Tasdiqlash** — ✅ / ❌ → profil tanlangan **rol bo'yicha** saqlanadi va platformada ko'rinadi
 
 Saqlangan profillar `/api/specialists` orqali olinadi va platformada ko'rinadi:
 

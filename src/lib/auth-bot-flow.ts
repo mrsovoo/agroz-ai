@@ -19,12 +19,14 @@ import {
 import {
   PHARMACY_TYPE_KEYBOARD,
   SPECIALTY_KEYBOARD,
+  ADDRESS_CONFIRM_KEYBOARD,
   CONFIRM_KEYBOARD,
   NEXT_STEP_KEYBOARD,
   ROLE_KEYBOARD,
   answerCallbackQuery,
   appKeyboard,
   askAddress,
+  askAddressConfirm,
   askLocation,
   askName,
   askOrganization,
@@ -47,6 +49,7 @@ import {
   sendAuthMessage,
   welcomeMessage,
 } from "@/lib/auth-bot";
+import { reverseGeocode } from "@/lib/geocode";
 
 export type AuthBotUpdate = {
   message?: {
@@ -71,6 +74,7 @@ type Step =
   | "phone"
   | "location"
   | "address"
+  | "address_confirm"
   | "specialty"
   | "specialty_text"
   | "organization"
@@ -280,6 +284,28 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
       return;
     }
 
+    // Lokatsiyadan avtomatik topilgan manzilni tasdiqlash.
+    if (data === "ad:ok") {
+      if (!draft.address) {
+        await setState(telegramId, "address", draft);
+        await answerCallbackQuery(query.id);
+        await sendAuthMessage(chatId, askAddress());
+        return;
+      }
+      await answerCallbackQuery(query.id);
+      await advanceAfterAddress(chatId, telegramId, draft);
+      return;
+    }
+
+    // Foydalanuvchi manzilni qo'lda yozishni tanladi.
+    if (data === "ad:edit") {
+      delete draft.address;
+      await setState(telegramId, "address", draft);
+      await answerCallbackQuery(query.id);
+      await sendAuthMessage(chatId, askAddress());
+      return;
+    }
+
     // Dorixona turi.
     if (data.startsWith("pt:")) {
       const value = data.slice(3);
@@ -353,6 +379,20 @@ async function handleText(
       const address = cleanText(text, 300);
       if (!address) {
         await sendAuthMessage(chatId, askAddress());
+        return;
+      }
+      draft.address = address;
+      await advanceAfterAddress(chatId, telegramId, draft);
+      return;
+    }
+
+    // Foydalanuvchi tasdiqlash o'rniga manzilni yozib yubordi — shu matn qabul qilinadi.
+    case "address_confirm": {
+      const address = cleanText(text, 300);
+      if (!address) {
+        await sendAuthMessage(chatId, askAddressConfirm(draft.address ?? ""), {
+          inline: ADDRESS_CONFIRM_KEYBOARD,
+        });
         return;
       }
       draft.address = address;
@@ -448,6 +488,19 @@ async function handleLocation(
   const draft = state.draft;
   draft.lat = lat;
   draft.lng = lng;
+
+  // Manzilni avtomatik aniqlaymiz — foydalanuvchi qo'lda yozib o'tirmasin.
+  const detected = await reverseGeocode(lat as number, lng as number);
+  if (detected) {
+    draft.address = detected;
+    await setState(telegramId, "address_confirm", draft);
+    await sendAuthMessage(chatId, askAddressConfirm(detected), {
+      inline: ADDRESS_CONFIRM_KEYBOARD,
+    });
+    return;
+  }
+
+  // Aniqlanmasa — qo'lda so'raymiz (oqim to'xtamaydi).
   await setState(telegramId, "address", draft);
   await clearReplyKeyboard(chatId, askAddress());
 }

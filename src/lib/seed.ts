@@ -92,6 +92,15 @@ let seeded = false;
 /** Seed paytida parallel cold start'larni to'sish uchun advisory lock kaliti. */
 const SEED_LOCK_KEY = 771_204;
 
+/**
+ * Demo dorixonalar faqat `SEED_DEMO_DATA=true` bo'lganda yoziladi.
+ * Standart holatda o'chirilgan: platformada faqat **real** ma'lumot ko'rinadi —
+ * dorixonalar va mutaxassislar `@agroz_auth_bot` orqali ro'yxatdan o'tadi.
+ */
+function demoDataEnabled(): boolean {
+  return process.env.SEED_DEMO_DATA === "true";
+}
+
 export async function ensureSeed() {
   if (seeded) return;
   try {
@@ -108,6 +117,16 @@ async function seedInTransaction() {
   // qolganlari navbatda turadi (aks holda ma'lumot ikki marta yozilardi).
   await db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(${SEED_LOCK_KEY})`);
+
+    // Maslahatlar — kontent, manzil emas; bo'sh bo'lsa bir marta yoziladi.
+    const newsRows = await tx.execute<{ count: string }>(
+      sql`select count(*)::text as count from news`,
+    );
+    if (Number(newsRows.rows[0]?.count ?? "0") === 0) {
+      await tx.insert(news).values(NEWS);
+    }
+
+    if (!demoDataEnabled()) return;
 
     const rows = await tx.execute<{ count: string }>(
       sql`select count(*)::text as count from pharmacies`,
@@ -137,6 +156,5 @@ async function seedInTransaction() {
       }
     }
     if (stockRows.length > 0) await tx.insert(pharmacyStocks).values(stockRows);
-    await tx.insert(news).values(NEWS);
   });
 }

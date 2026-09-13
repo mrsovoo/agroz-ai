@@ -194,7 +194,14 @@ export async function aiDiagnose(params: {
       prevention: String(parsed.prevention ?? ""),
       source: "ai",
     };
-  } catch {
+  } catch (err) {
+    // Xatoni jim yutish mumkin emas: kalit/model noto'g'ri bo'lsa foydalanuvchi
+    // "real" deb demo javob olib qolardi. Logga aniq sabab yozamiz.
+    console.error("[ai] tashxis so'rovi bajarilmadi:", {
+      baseUrl,
+      model,
+      error: err instanceof Error ? err.message : String(err),
+    });
     return offlineDiagnose(category, text);
   }
 }

@@ -9,13 +9,13 @@ import {
   Stethoscope,
   ClipboardList,
   Pill,
-  MapPin,
   RotateCcw,
   ShieldAlert,
   FileText,
   Cpu,
 } from "lucide-react";
 import TelegramBackButton from "@/components/TelegramBackButton";
+import NearbyHelp from "@/components/NearbyHelp";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -52,11 +52,8 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
   } catch {
     meds = [];
   }
-  const qs = new URLSearchParams();
-  qs.set("kind", d.category === "crop" ? "agro" : "vet");
-  meds.forEach((m) => qs.append("med", m));
-  const mapHref = `/xarita?${qs.toString()}`;
   const sev = severityStyle[d.severity ?? "orta"] ?? severityStyle.orta;
+  const category: "crop" | "animal" = d.category === "animal" ? "animal" : "crop";
 
   return (
     <main className="px-5 pb-6">
@@ -157,12 +154,9 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
             </ul>
           </section>
 
-          <Link href={mapHref} className="mt-4 block">
-            <button className="ios-btn yellow" style={{ padding: "18px", fontSize: 17 }}>
-              <MapPin size={20} />
-              Yaqin atrofdan dori topish
-            </button>
-          </Link>
+          {/* AI tavsiya qilgan dorilarni yaqin dorixonalardan topish va kerak bo'lsa
+              yaqin atrofdagi mutaxassisni ko'rsatish. */}
+          <NearbyHelp category={category} medicines={meds} severity={d.severity ?? null} />
 
           <Link href={`/tashxis/${d.category}`} className="mt-3 block">
             <button className="ios-btn secondary">
