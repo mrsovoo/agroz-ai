@@ -16,6 +16,9 @@ import {
   ShieldCheck,
   Newspaper,
   UsersRound,
+  Tractor,
+  Wheat,
+  Lock,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -162,6 +165,39 @@ export default async function HomePage() {
             <ChevronRight size={22} className="web:hidden" />
           </div>
         </Link>
+
+        {/* Tez kunda qo'shiladigan bo'limlar — qulflangan holda ko'rsatiladi */}
+        {[
+          {
+            title: "Mening fermam",
+            desc: "Chorva, yem va xo'jalik hisobi",
+            Icon: Tractor,
+          },
+          {
+            title: "Mening ekinim",
+            desc: "Ekin maydonlari va hosil nazorati",
+            Icon: Wheat,
+          },
+        ].map(({ title, desc, Icon }) => (
+          <div
+            key={title}
+            aria-disabled="true"
+            className="relative cursor-not-allowed select-none"
+          >
+            <div className="flex h-full items-center gap-4 rounded-[28px] border border-dashed border-black/15 bg-white/55 p-5 web:flex-col web:items-start web:p-7">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[20px] bg-slate-200/80 text-slate-400">
+                <Icon size={30} />
+              </div>
+              <div className="flex-1 web:mt-1">
+                <p className="text-[20px] font-black text-[var(--brand-ink)]/70">{title}</p>
+                <p className="text-[14px] text-[var(--brand-muted)]">{desc}</p>
+              </div>
+              <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-slate-800 px-3 py-1.5 text-[11px] font-bold text-white">
+                <Lock size={12} /> Tez kunda
+              </span>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* @agroz_auth_bot orqali ro'yxatdan o'tgan mutaxassislar */}
