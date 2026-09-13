@@ -82,7 +82,24 @@ Saqlangan profillar `/api/specialists` orqali olinadi va platformada ko'rinadi:
 > (`/api/specialists`) shu radiusdan uzoqni qaytarmaydi; `radius` parametri 5 km dan
 > oshirilmaydi.
 
-Bot buyruqlari: `/start`, `/royxatdan_otish`, `/malumotlarim`, `/bekor`, `/yordam`.
+Bot buyruqlari: `/start`, `/royxatdan_otish`, `/dori_qoshish`, `/malumotlarim`,
+`/bekor`, `/yordam`.
+
+### Dorixona uchun dori qo'shish
+
+Dorixona egasi ro'yxatdan o'tgach `/dori_qoshish` buyrug'i bilan dori qo'shadi:
+
+1. Dorining **rasmini** yuboradi (eng katta o'lchamdagi variant olinadi)
+2. Dorining **nomini** yozadi
+3. Bot rasmni nomi bilan qaytarib, **«✅ Tasdiqlash»**ni so'raydi
+4. Tasdiqlansa dori platformaga qo'shiladi
+
+Dori rasmi Telegram `file_id` sifatida saqlanadi va saytda `/api/medicines/<id>/photo`
+orqali uzatiladi — bot tokeni clientga hech qachon chiqmaydi.
+
+> Dorilar ro'yxati **faqat tashxis qo'yilgandan keyin** ko'rinadi: natija sahifasida
+> tavsiya etilgan dorilar bo'yicha 5 km ichidagi dorixonalar (rasmi va nomi bilan)
+> ko'rsatiladi. Alohida dori katalogi sahifasi yo'q.
 
 ## Kirish (OTP) qanday ishlaydi
 
@@ -182,6 +199,47 @@ Eslatma: polling `deleteWebhook` qiladi — keyin production'ga chiqsangiz
 Token bo'lmasa production'da Telegram orqali kirish **ataylab yopiq** (503), chunki
 imzo tekshirilmay istalgan odam boshqa birovning nomidan kirishi mumkin. Vaqtinchalik
 test uchun `ALLOW_UNVERIFIED_TELEGRAM=true` qo'yish mumkin — keyin o'chirib tashlang.
+
+## Bepul AI modellari (agro/chorva tashxisi uchun)
+
+Tashxis **rasm** talab qiladi, shuning uchun faqat vision modellari yaroqli.
+Loyiha OpenAI-mos API bilan ishlaydi — provayderni almashtirish uchun faqat
+`OPENAI_API_KEY`, `OPENAI_BASE_URL`, `AI_MODEL` o'zgaradi (kod tegmaysan).
+
+| Provayder | Model | Bepul limit | Rasm | Izoh |
+|---|---|---|---|---|
+| **Google AI Studio** | `gemini-3.8-flash` | ~15 req/daq, 100–1000/kun | ✅ | Eng sifatli bepul vision, o'zbekcha yaxshi |
+| **Groq** | `llama-4-scout` | 30 req/daq, 1000/kun | ✅ | Eng tez; ma'lumot o'qitilmaydi |
+| **OpenRouter** | turli `:free` vision modellari | 50/kun, 20/daq | ✅ | Eng keng tanlov |
+| **Cloudflare Workers AI** | Llama 4 Scout va b. | 10 000 neuron/kun | ✅ | Edge'da ishlaydi |
+
+### Gemini (bepul) ulash
+```bash
+OPENAI_API_KEY=<Gemini kaliti>
+OPENAI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+AI_MODEL=gemini-3.8-flash
+```
+Kalit: https://aistudio.google.com/apikey
+
+### Muhim: aniqroq >80% uchun
+
+Umumiy vision LLM'lar agro/chorvada **yaxshi, lekin mukammal emas**. Yuqori
+aniqlik uchun maxsus o'qitilgan modellar bor (PlantVillage asosida):
+
+- `linkanjarad/mobilenet_v2_1.0_224-plant-disease-identification` (HuggingFace, bepul)
+- `wambugu71/crop_leaf_diseases_vit` — ViT, o'simlik barglari uchun
+- PlantVillage to'plamida o'qitilgan CNN'lar ~**94–95%** aniqlik beradi (38 kasallik sinfi)
+
+Bunday modellar **faqat tasniflaydi** (o'simlik bargi, O'zbekiston dorilari yo'q).
+Shuning uchun to'liq yechim — **gibrid**: dastlab maxsus tasniflagich, ishonch past
+bo'lsa LLM + mutaxassisga yo'naltirish.
+
+### Ishonch darajasi va mutaxassisga yo'naltirish
+
+AI javobida `confidence` (0–100) qaytaradi. `CONFIDENCE_THRESHOLD = 80` dan past
+bo'lsa — natija sahifasida qizil ogohlantirish chiqadi va **5 km ichidagi
+mutaxassislar** tavsiya etiladi. Offlayn (kalitsiz) rejimda ishonch ataylab 40–60
+darajada qo'yiladi, shunda foydalanuvchi har doim mutaxassisga yo'naltiriladi.
 
 ## Tavsiya etilgan open-source AI
 

@@ -119,6 +119,7 @@ async function setupAuthBot() {
     commands: [
       { command: "start", description: "Boshlash" },
       { command: "royxatdan_otish", description: "Ro'yxatdan o'tish / ma'lumotlarni yangilash" },
+      { command: "dori_qoshish", description: "Dorixonaga dori qo'shish (rasm + nom)" },
       { command: "malumotlarim", description: "Profilimni ko'rish" },
       { command: "bekor", description: "Jarayonni to'xtatish" },
       { command: "yordam", description: "Yordam" },

@@ -21,6 +21,8 @@ export const GET = withApiErrors(async (req: Request) => {
     lng: coords?.lng ?? null,
     radiusKm,
     role: url.searchParams.get("role"),
+    // Tashxisdan keyin tavsiya etilgan dorilar bo'yicha filtrlash uchun.
+    meds: url.searchParams.getAll("med").filter(Boolean),
   });
 
   return NextResponse.json(

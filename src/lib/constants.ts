@@ -32,3 +32,9 @@ export const NEARBY_RADIUS_KM = 5;
  * Mutaxassis ham, dorixona ham faqat shu radius ichida ko'rsatiladi.
  */
 export const MAX_NEARBY_RADIUS_KM = 5;
+
+/**
+ * AI tashxisi shu foizdan past ishonch bilan qaytsa — foydalanuvchi
+ * mutaxassisga yo'naltiriladi.
+ */
+export const CONFIDENCE_THRESHOLD = 80;

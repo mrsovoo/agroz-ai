@@ -156,7 +156,12 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
 
           {/* AI tavsiya qilgan dorilarni yaqin dorixonalardan topish va kerak bo'lsa
               yaqin atrofdagi mutaxassisni ko'rsatish. */}
-          <NearbyHelp category={category} medicines={meds} severity={d.severity ?? null} />
+          <NearbyHelp
+            category={category}
+            medicines={meds}
+            severity={d.severity ?? null}
+            confidence={d.confidence ?? null}
+          />
 
           <Link href={`/tashxis/${d.category}`} className="mt-3 block">
             <button className="ios-btn secondary">

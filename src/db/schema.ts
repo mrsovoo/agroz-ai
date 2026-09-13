@@ -80,6 +80,8 @@ export const diagnoses = pgTable("diagnoses", {
   solution: text("solution").notNull(),
   medicines: text("medicines").notNull(), // JSON array of names
   severity: varchar("severity", { length: 20 }).default("orta"),
+  /** AI ishonch darajasi (0-100). 80 dan past bo'lsa mutaxassis tavsiya etiladi. */
+  confidence: integer("confidence"),
   source: varchar("source", { length: 20 }).default("ai"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -115,6 +117,21 @@ export const specialists = pgTable("specialists", {
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+/**
+ * Dorixona egalari bot orqali qo'shgan dorilar (rasm + nom).
+ * Platformada **faqat tashxis qo'yilgandan keyin** tavsiya sifatida ko'rinadi.
+ */
+export const specialistMedicines = pgTable("specialist_medicines", {
+  id: serial("id").primaryKey(),
+  /** `specialists.id` — dorixona egasi (role=pharmacy). */
+  specialistId: integer("specialist_id").notNull(),
+  name: varchar("name", { length: 160 }).notNull(),
+  /** Telegram `file_id` — rasm bot tokenisiz, o'z API'miz orqali uzatiladi. */
+  photoFileId: varchar("photo_file_id", { length: 300 }),
+  status: varchar("status", { length: 20 }).notNull().default("bor"), // bor | yoq
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 /**

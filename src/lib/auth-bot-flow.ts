@@ -11,6 +11,8 @@ import { botStates } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { cleanText, normalizePhone } from "@/lib/validate";
 import {
+  addMedicine,
+  countMedicines,
   getSpecialistByTelegramId,
   isSpecialistRole,
   upsertSpecialist,
@@ -21,6 +23,7 @@ import {
   SPECIALTY_KEYBOARD,
   ADDRESS_CONFIRM_KEYBOARD,
   CONFIRM_KEYBOARD,
+  MEDICINE_CONFIRM_KEYBOARD,
   NEXT_STEP_KEYBOARD,
   ROLE_KEYBOARD,
   answerCallbackQuery,
@@ -28,6 +31,8 @@ import {
   askAddress,
   askAddressConfirm,
   askLocation,
+  askMedicineName,
+  askMedicinePhoto,
   askName,
   askOrganization,
   askPharmacyType,
@@ -43,10 +48,15 @@ import {
   invalidLocationMessage,
   invalidPhoneMessage,
   locationKeyboard,
+  medicineConfirmCaption,
+  medicineSavedMessage,
+  needRegistrationMessage,
+  onlyPharmacyMessage,
   profileMessage,
   roleQuestion,
   savedMessage,
   sendAuthMessage,
+  sendAuthPhoto,
   welcomeMessage,
 } from "@/lib/auth-bot";
 import { reverseGeocode } from "@/lib/geocode";
@@ -59,6 +69,7 @@ export type AuthBotUpdate = {
     from?: { id?: number; first_name?: string; last_name?: string; username?: string };
     contact?: { phone_number?: string; user_id?: number; first_name?: string };
     location?: { latitude?: number; longitude?: number };
+    photo?: { file_id?: string; width?: number; height?: number }[];
   };
   callback_query?: {
     id: string;
@@ -79,7 +90,11 @@ type Step =
   | "specialty_text"
   | "organization"
   | "pharmacy_type"
-  | "confirm";
+  | "confirm"
+  // Dorixona uchun dori qo'shish oqimi.
+  | "med_photo"
+  | "med_name"
+  | "med_confirm";
 
 type Draft = {
   role?: SpecialistRole;
@@ -90,6 +105,9 @@ type Draft = {
   address?: string;
   specialty?: string;
   organization?: string;
+  /** Dori qo'shish uchun vaqtinchalik maydonlar. */
+  medPhotoFileId?: string;
+  medName?: string;
 };
 
 type StateRow = typeof botStates.$inferSelect;
@@ -163,6 +181,12 @@ export async function handleAuthBotUpdate(update: AuthBotUpdate): Promise<void> 
       return;
     }
 
+    // 2b) Dori rasmi — dorixona egasi dori qo'shayotganda.
+    if (message?.photo && message.photo.length > 0) {
+      await handleMedicinePhoto(chatId, telegramId, message.photo);
+      return;
+    }
+
     // 3) Buyruqlar.
     if (text.startsWith("/")) {
       await handleCommand(chatId, telegramId, firstName, text);
@@ -192,6 +216,11 @@ async function handleCommand(
 
   if (command === "/royxatdan_otish") {
     await startRegistration(chatId, telegramId);
+    return;
+  }
+
+  if (command === "/dori_qoshish") {
+    await startMedicineAdd(chatId, telegramId);
     return;
   }
 
@@ -227,6 +256,22 @@ async function startRegistration(chatId: number, telegramId: number): Promise<vo
   await clearState(telegramId);
   await setState(telegramId, "role", {});
   await sendAuthMessage(chatId, roleQuestion(), { inline: ROLE_KEYBOARD });
+}
+
+/** Dorixona egasi dori qo'shishni boshlaydi (faqat role=pharmacy uchun). */
+async function startMedicineAdd(chatId: number, telegramId: number): Promise<void> {
+  const profile = await getSpecialistByTelegramId(telegramId);
+  if (!profile) {
+    await sendAuthMessage(chatId, needRegistrationMessage(), { inline: NEXT_STEP_KEYBOARD });
+    return;
+  }
+  if (profile.role !== "pharmacy") {
+    await sendAuthMessage(chatId, onlyPharmacyMessage());
+    return;
+  }
+  await clearState(telegramId);
+  await setState(telegramId, "med_photo", {});
+  await sendAuthMessage(chatId, askMedicinePhoto());
 }
 
 // ---------------------------------------------------------------------------
@@ -281,6 +326,26 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
       await setState(telegramId, step, draft);
       await answerCallbackQuery(query.id);
       await sendSummary(chatId, telegramId, draft);
+      return;
+    }
+
+    // Dorini tasdiqlash yoki bekor qilish.
+    if (data === "m:ok") {
+      await answerCallbackQuery(query.id);
+      const saved = await saveMedicine(telegramId, draft);
+      if (!saved) {
+        await sendAuthMessage(chatId, needRegistrationMessage(), { inline: NEXT_STEP_KEYBOARD });
+        return;
+      }
+      await clearState(telegramId);
+      await sendAuthMessage(chatId, medicineSavedMessage(saved.name, saved.total));
+      return;
+    }
+
+    if (data === "m:no") {
+      await answerCallbackQuery(query.id);
+      await clearState(telegramId);
+      await sendAuthMessage(chatId, cancelMessage());
       return;
     }
 
@@ -412,6 +477,39 @@ async function handleText(
       return;
     }
 
+    case "med_name": {
+      const name = cleanText(text, 160);
+      if (!name) {
+        await sendAuthMessage(chatId, askMedicineName());
+        return;
+      }
+      draft.medName = name;
+      await setState(telegramId, "med_confirm", draft);
+      const caption = medicineConfirmCaption(name);
+      const sent = draft.medPhotoFileId
+        ? await sendAuthPhoto(chatId, draft.medPhotoFileId, caption, {
+            inline: MEDICINE_CONFIRM_KEYBOARD,
+          })
+        : false;
+      // Rasm yuborilmasa ham, tasdiqlash so'raladi — oqim to'xtamaydi.
+      if (!sent) {
+        await sendAuthMessage(chatId, caption, { inline: MEDICINE_CONFIRM_KEYBOARD });
+      }
+      return;
+    }
+
+    case "med_photo":
+      await sendAuthMessage(chatId, askMedicinePhoto());
+      return;
+
+    case "med_confirm":
+      await sendAuthMessage(
+        chatId,
+        medicineConfirmCaption(draft.medName ?? ""),
+        { inline: MEDICINE_CONFIRM_KEYBOARD },
+      );
+      return;
+
     case "organization": {
       const organization = cleanText(text, 200);
       if (!organization) {
@@ -503,6 +601,47 @@ async function handleLocation(
   // Aniqlanmasa — qo'lda so'raymiz (oqim to'xtamaydi).
   await setState(telegramId, "address", draft);
   await clearReplyKeyboard(chatId, askAddress());
+}
+
+async function handleMedicinePhoto(
+  chatId: number,
+  telegramId: number,
+  photos: { file_id?: string; width?: number; height?: number }[],
+): Promise<void> {
+  const state = await getState(telegramId);
+  if (!state || state.step !== "med_photo") {
+    await sendAuthMessage(chatId, helpMessage(), { inline: NEXT_STEP_KEYBOARD });
+    return;
+  }
+  // Eng katta o'lchamdagi variant eng aniq rasm bo'ladi.
+  const best = [...photos].sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0];
+  if (!best?.file_id) {
+    await sendAuthMessage(chatId, askMedicinePhoto());
+    return;
+  }
+  const draft = state.draft;
+  draft.medPhotoFileId = best.file_id;
+  await setState(telegramId, "med_name", draft);
+  await sendAuthMessage(chatId, askMedicineName());
+}
+
+/** Dori tasdiqlanganda saqlaydi. Profil topilmasa `null`. */
+async function saveMedicine(
+  telegramId: number,
+  draft: Draft,
+): Promise<{ name: string; total: number } | null> {
+  const name = draft.medName?.trim();
+  if (!name) return null;
+  const profile = await getSpecialistByTelegramId(telegramId);
+  if (!profile || profile.role !== "pharmacy") return null;
+
+  await addMedicine({
+    specialistId: profile.id,
+    name,
+    photoFileId: draft.medPhotoFileId ?? null,
+  });
+  const total = await countMedicines(profile.id);
+  return { name, total };
 }
 
 async function advanceAfterAddress(chatId: number, telegramId: number, draft: Draft): Promise<void> {

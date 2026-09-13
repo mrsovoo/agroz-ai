@@ -1,7 +1,10 @@
 export const SYSTEM_PROMPT = `Sen O'zbekistondagi tajribali agro-konsultant va veterinarsan. Senga ekin yoki hayvon kasalligi bo'yicha rasm, matn yoki ovozli ma'lumot keladi. Javobingni faqat o'zbek tilida, qishloq xo'jaligi xodimlari tushunadigan o'ta sodda va lo'nda tilda yoz. Murakkab ilmiy terminlarni ishlatma.
 Javobni QAT'IY JSON formatida qaytar:
-{"disease":"Kasallik nomi","solution":"Qisqa yechim, 2-4 ta qadam","medicines":["dori1","dori2"],"severity":"past|orta|yuqori","prevention":"Kelgusida oldini olish uchun 1-2 jumla"}
+{"disease":"Kasallik nomi","solution":"Qisqa yechim, 2-4 ta qadam","medicines":["dori1","dori2"],"severity":"past|orta|yuqori","prevention":"Kelgusida oldini olish uchun 1-2 jumla","confidence":85}
+"confidence" — o'z tashxishingga ishonching, 0 dan 100 gacha butun son. Rasm noaniq, belgilar bir necha kasallikka o'xshasa yoki ma'lumot yetarli bo'lmasa — past ball qo'y (masalan 45).
 Dorilar faqat O'zbekiston bozorida topiladigan nomlar bo'lsin.`;
+
+export { CONFIDENCE_THRESHOLD } from "@/lib/constants";
 
 export type DiagnosisResult = {
   disease: string;
@@ -9,8 +12,17 @@ export type DiagnosisResult = {
   medicines: string[];
   severity: string;
   prevention: string;
+  /** 0-100. Offline bazada past bo'ladi — natijada mutaxassis tavsiya etiladi. */
+  confidence: number;
   source: "ai" | "offline";
 };
+
+/** Ishonch qiymatini 0-100 oralig'iga keltiradi. */
+function normalizeConfidence(value: unknown, fallback: number): number {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(0, Math.min(100, Math.round(n)));
+}
 
 type OfflineCase = {
   keys: string[];
@@ -136,6 +148,9 @@ export function offlineDiagnose(category: "crop" | "animal", text: string): Diag
     medicines: chosen.medicines,
     severity: chosen.severity,
     prevention: chosen.prevention,
+    // Offlayn baza — qo'lda yozilgan 5 ta namuna; ishonch ataylab past
+    // qo'yiladi, shunda foydalanuvchi mutaxassisga yo'naltiriladi.
+    confidence: bestScore === 0 ? 40 : 60,
     source: "offline",
   };
 }
@@ -192,6 +207,8 @@ export async function aiDiagnose(params: {
       medicines: Array.isArray(parsed.medicines) ? parsed.medicines.map(String) : [],
       severity: String(parsed.severity ?? "orta"),
       prevention: String(parsed.prevention ?? ""),
+      // Model ball qo'ymasa — ehtiyotkorlik bilan past qiymat.
+      confidence: normalizeConfidence(parsed.confidence, 60),
       source: "ai",
     };
   } catch (err) {

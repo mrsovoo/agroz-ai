@@ -77,6 +77,23 @@ export async function clearReplyKeyboard(chatId: number, text: string): Promise<
   });
 }
 
+/** Rasm yuborish (dori rasmini tasdiqlash uchun). */
+export async function sendAuthPhoto(
+  chatId: number,
+  fileId: string,
+  caption: string,
+  options?: { inline?: InlineKeyboard },
+): Promise<boolean> {
+  const result = await callAuthBot<{ message_id?: number }>("sendPhoto", {
+    chat_id: chatId,
+    photo: fileId,
+    caption,
+    parse_mode: "HTML",
+    ...(options?.inline ? { reply_markup: options.inline } : {}),
+  });
+  return result !== null;
+}
+
 export async function answerCallbackQuery(id: string, text?: string): Promise<void> {
   await callAuthBot("answerCallbackQuery", {
     callback_query_id: id,
@@ -122,6 +139,14 @@ export const PHARMACY_TYPE_KEYBOARD: InlineKeyboard = {
       { text: "🌾 Agro dorixona", callback_data: "pt:agro" },
       { text: "🩺 Vet dorixona", callback_data: "pt:vet" },
     ],
+  ],
+};
+
+/** Dorini tasdiqlash yoki bekor qilish. */
+export const MEDICINE_CONFIRM_KEYBOARD: InlineKeyboard = {
+  inline_keyboard: [
+    [{ text: "✅ Tasdiqlash", callback_data: "m:ok" }],
+    [{ text: "❌ Bekor qilish", callback_data: "m:no" }],
   ],
 };
 
@@ -361,9 +386,70 @@ export function helpMessage(): string {
     "🤖 <b>Buyruqlar</b>",
     "",
     "/royxatdan_otish — ro'yxatdan o'tish yoki ma'lumotlarni yangilash",
+    "/dori_qoshish — dorixonaga dori qo'shish (rasm + nom)",
     "/malumotlarim — profilingizni ko'rish",
     "/bekor — jarayonni to'xtatish",
     "/yordam — shu yordam xabari",
+  ].join("\n");
+}
+
+// ---------------------------------------------------------------------------
+// Dorixona uchun dori qo'shish
+// ---------------------------------------------------------------------------
+
+export function needRegistrationMessage(): string {
+  return [
+    "ℹ️ <b>Avval ro'yxatdan o'ting.</b>",
+    "",
+    "Dori qo'shish uchun dorixona egasi sifatida ro'yxatdan o'tishingiz kerak.",
+    "Buyruq: <b>/royxatdan_otish</b>",
+  ].join("\n");
+}
+
+export function onlyPharmacyMessage(): string {
+  return [
+    "ℹ️ Bu bo'lim faqat <b>dorixona egalari</b> uchun.",
+    "",
+    "Ro'yxatdan o'tishda «🏪 Dorixona egasiman»ni tanlang.",
+  ].join("\n");
+}
+
+export function askMedicinePhoto(): string {
+  return [
+    "💊 <b>Dorining rasmini yuboring.</b>",
+    "",
+    "Dorining qutisi yoki flakoni aniq ko'rinadigan qilib rasmga oling.",
+    "Keyin nomini yozasiz va tasdiqlaysiz.",
+  ].join("\n");
+}
+
+export function askMedicineName(): string {
+  return [
+    "✍️ <b>Dorining nomini yozing.</b>",
+    "",
+    "Masalan: <i>Ridomil Gold</i>, <i>Ivermektin 1%</i>",
+  ].join("\n");
+}
+
+export function medicineConfirmCaption(name: string): string {
+  return [
+    "💊 <b>Shu dorini qo'shamizmi?</b>",
+    "",
+    `Nomi: <b>${escapeHtml(name)}</b>`,
+    "",
+    "Tasdiqlasangiz, dori platformaga qo'shiladi va tashxis bo'yicha",
+    "tavsiya qilinganda ko'rinadi.",
+  ].join("\n");
+}
+
+export function medicineSavedMessage(name: string, total: number): string {
+  return [
+    "✅ <b>Dori qo'shildi!</b>",
+    "",
+    `<b>${escapeHtml(name)}</b> dorixonangiz ro'yxatiga kirdi.`,
+    `Jami dorilar: <b>${total}</b> ta.`,
+    "",
+    "Yana qo'shish uchun: <b>/dori_qoshish</b>",
   ].join("\n");
 }
 

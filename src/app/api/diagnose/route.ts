@@ -61,6 +61,7 @@ export const POST = withApiErrors(async (req: Request) => {
         .join("\n\n"),
       medicines: JSON.stringify(result.medicines),
       severity: result.severity,
+      confidence: result.confidence,
       source: result.source,
     })
     .returning({ id: diagnoses.id });
