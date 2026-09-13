@@ -1,18 +1,27 @@
 "use client";
 
 import { useEffect } from "react";
-import { onTelegramReady } from "@/lib/telegram";
+import { getTelegram, isTelegramUserAgent, onTelegramReady } from "@/lib/telegram";
+
+/** Keng ekranmi — globals.css'dagi media query bilan aynan bir xil shart. */
+function isWideScreen(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.innerWidth >= 900 && window.innerHeight >= 500;
+}
 
 /**
  * Telegram Mini App muhitini ishga tushiradi:
- * - ready() signali va expand() (to'liq ekran)
- * - brend ranglari (header/background)
- * - layout klassini tasdiqlash (birinchi kadrda skript qo'ygan klassni tuzatadi)
+ * - ready() / expand() / brend ranglari
+ * - layout klassini ikki tomonga ham tuzatadi (birinchi kadrda skript qo'ygan
+ *   klass noto'g'ri bo'lib qolsa):
+ *     Telegram aniqlandi        → mobil ilova ko'rinishi
+ *     Telegram yo'q + keng ekran → web sayt ko'rinishi
  */
 export default function TelegramInit() {
   useEffect(() => {
-    return onTelegramReady((tg) => {
-      const root = document.documentElement;
+    const root = document.documentElement;
+
+    const stopWaiting = onTelegramReady((tg) => {
       root.classList.add("is-telegram");
       root.classList.remove("is-web");
 
@@ -26,6 +35,20 @@ export default function TelegramInit() {
         /* ignore */
       }
     });
+
+    // Telegram SDK yuklanmasa (yoki tashqi brauzerda Telegram havolasidan
+    // ochilgan bo'lsa) keng ekranda web ko'rinishga qaytaramiz.
+    const timer = window.setTimeout(() => {
+      if (isWideScreen() && !getTelegram() && !isTelegramUserAgent()) {
+        root.classList.add("is-web");
+        root.classList.remove("is-telegram");
+      }
+    }, 1500);
+
+    return () => {
+      stopWaiting();
+      window.clearTimeout(timer);
+    };
   }, []);
 
   return null;

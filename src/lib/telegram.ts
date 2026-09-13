@@ -50,10 +50,30 @@ export type TelegramWebApp = {
   };
 };
 
-export function getTelegram(): TelegramWebApp | null {
+/**
+ * MUHIM: `telegram-web-app.js` skripti oddiy brauzerda ham `window.Telegram.WebApp`
+ * obyektini yaratadi — faqat `initData` bo'sh bo'ladi. Shuning uchun "Telegram
+ * ichidamizmi?" degan savolga obyekt borligi emas, haqiqiy sessiya ma'lumoti
+ * (initData / user / query_id) javob beradi.
+ */
+export function hasTelegramSession(tg: TelegramWebApp | null): boolean {
+  if (!tg) return false;
+  if (typeof tg.initData === "string" && tg.initData.length > 0) return true;
+  const unsafe = tg.initDataUnsafe ?? {};
+  return Boolean(unsafe.user || unsafe.query_id || unsafe.start_param);
+}
+
+/** Telegram SDK obyekti (tashqi brauzerda ham mavjud bo'lishi mumkin). */
+export function getTelegramSdk(): TelegramWebApp | null {
   if (typeof window === "undefined") return null;
   const w = window as unknown as { Telegram?: { WebApp?: TelegramWebApp } };
   return w.Telegram?.WebApp ?? null;
+}
+
+/** Faqat haqiqiy Telegram Mini App sessiyasida obyekt qaytaradi. */
+export function getTelegram(): TelegramWebApp | null {
+  const tg = getTelegramSdk();
+  return hasTelegramSession(tg) ? tg : null;
 }
 
 export function isTelegram(): boolean {

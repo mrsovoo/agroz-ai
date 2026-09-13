@@ -262,7 +262,7 @@ body {
   margin: 8px auto 14px;
 }
 
-@media (min-width: 900px) {
+@media (min-width: 900px) and (min-height: 500px) {
   html.is-web {
     background:
       linear-gradient(180deg, rgba(252, 189, 0, 0.12), transparent 340px),

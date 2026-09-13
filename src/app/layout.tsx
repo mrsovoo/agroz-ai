@@ -50,25 +50,30 @@ export const viewport: Viewport = {
 /**
  * Birinchi kadrdan oldin ishlaydigan aniqlash skripti.
  *
- * Muammo: avval `is-web` klassi faqat JS yuklangandan keyin qo'shilardi — sekin
- * internetda foydalanuvchi avval mobil, keyin web ko'rinishini ko'rardi (sakrash).
- * Endi klass HTML'ning o'zida, rasm chizilishidan oldin qo'yiladi:
- *   - Telegram ichida (yoki tor ekranda) → mobil ilova ko'rinishi
- *   - keng ekranda, Telegram bo'lmasa        → web sayt ko'rinishi
+ * Qoida:
+ *   - Telegram Mini App ichida (telefon, planshet yoki Telegram Desktop oynasi) → MOBIL ILOVA ko'rinishi
+ *   - oddiy brauzerda, keng va baland ekranda (>= 900x500)                    → WEB SAYT ko'rinishi
+ *   - oddiy brauzerda, tor ekranda (telefon brauzeri, yotiq holat ham)         → mobil ko'rinish
+ *
+ * Klass HTML'ning o'zida, rasm chizilishidan oldin qo'yiladi — shuning uchun
+ * sekin internetda ham ko'rinish sakramaydi (avval JS yuklanishini kutardi).
+ * Telegram SDK kech yuklansa ham Telegram'ni uchta belgidan biri orqali taniymiz:
+ * UA, `document.referrer` (Telegram Web iframe'i) yoki `window.Telegram`.
  */
 const LAYOUT_DETECT_SCRIPT = `
 (function () {
   try {
     var ua = navigator.userAgent || "";
+    var ref = document.referrer || "";
     var tg = window.Telegram && window.Telegram.WebApp;
-    var inTelegram = !!(tg && tg.initData !== undefined) || /Telegram/i.test(ua);
-    var wide = Math.min(window.innerWidth || 0, screen.width || 0) >= 900;
-    var isWeb = !inTelegram && wide;
-    var root = document.documentElement;
-    root.classList.add(isWeb ? "is-web" : "is-telegram");
-    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.colorScheme === "dark") {
-      root.classList.add("tg-dark");
-    }
+    // SDK tashqi brauzerda ham yuklanadi — haqiqiy belgi: initData/user/query_id.
+    var session = !!(tg && ((tg.initData && tg.initData.length) || (tg.initDataUnsafe && (tg.initDataUnsafe.user || tg.initDataUnsafe.query_id))));
+    var refTelegram = /(^|\\/\\/)([a-z0-9-]+\\.)*telegram\\.(org|me|dev)\\//i.test(ref);
+    var inTelegram = session || /Telegram/i.test(ua) || refTelegram;
+    // Keng va baland ekran (telefon yotiq holatda ham mobil ko'rinishda qoladi).
+    // CSS media query bilan aynan bir xil shart: min-width 900px + min-height 500px.
+    var wide = (window.innerWidth || 0) >= 900 && (window.innerHeight || 0) >= 500;
+    document.documentElement.classList.add(!inTelegram && wide ? "is-web" : "is-telegram");
   } catch (e) {
     document.documentElement.classList.add("is-telegram");
   }
