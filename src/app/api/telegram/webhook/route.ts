@@ -1,9 +1,12 @@
 import { db } from "@/db";
 import { otpCodes } from "@/db/schema";
-import { and, eq, gt } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import {
+  alreadyVerifiedMessage,
   codeMessage,
+  errorMessage,
   expiredLinkMessage,
+  greetingKeyboard,
   greetingMessage,
   isBotConfigured,
   miniAppKeyboard,
@@ -23,7 +26,10 @@ type TelegramUpdate = {
 
 /**
  * Telegram bot webhook.
- * Telegram bu manzilga yangilanishlarni yuboradi (`npm run telegram:setup` bilan ulanadi).
+ *
+ * Saytdan kelgan havola: `https://t.me/<bot>?start=<token>`
+ * Foydalanuvchi «Start» bosganda kod shu chatga yuboriladi.
+ * Webhook `npm run telegram:setup` bilan ulanadi.
  */
 export async function POST(req: Request) {
   if (!isBotConfigured()) {
@@ -47,18 +53,34 @@ export async function POST(req: Request) {
   const text = message?.text?.trim() ?? "";
   const [command, ...rest] = text.split(/\s+/);
   const payload = rest.join(" ").trim();
+  const fromId = message?.from?.id ?? chatId;
   const firstName = message?.from?.first_name;
 
-  // /start <token> — sayt so'ragan kodni yuboramiz.
-  if (isStart(command) && payload) {
-    const delivered = await deliverCode(chatId, payload, message?.from?.id ?? chatId);
-    if (delivered) return Response.json({ ok: true });
-    await sendMessage(chatId, expiredLinkMessage(), { keyboard: miniAppKeyboard() });
+  try {
+    // /start <token> — sayt so'ragan kodni yuboramiz.
+    if (isStart(command) && payload) {
+      const state = await deliverCode(chatId, payload, fromId);
+      if (state === "sent") return Response.json({ ok: true });
+
+      const fallback =
+        state === "already"
+          ? alreadyVerifiedMessage()
+          : state === "used"
+            ? expiredLinkMessage()
+            : expiredLinkMessage();
+      await sendMessage(chatId, fallback, { keyboard: miniAppKeyboard() });
+      return Response.json({ ok: true });
+    }
+
+    // Oddiy /start yoki boshqa matn — salomlashish va Mini App tugmasi.
+    await sendMessage(chatId, greetingMessage(firstName), { keyboard: greetingKeyboard() });
+    return Response.json({ ok: true });
+  } catch (err) {
+    // Bot hech qachon jim qolmasligi kerak — xato bo'lsa ham javob yuboramiz.
+    console.error("[bot] webhook xatosi:", err);
+    await sendMessage(chatId, errorMessage(), { keyboard: greetingKeyboard() });
     return Response.json({ ok: true });
   }
-
-  await sendMessage(chatId, greetingMessage(firstName), { keyboard: miniAppKeyboard() });
-  return Response.json({ ok: true });
 }
 
 function isStart(command: string | undefined): boolean {
@@ -67,21 +89,18 @@ function isStart(command: string | undefined): boolean {
   return command === "/start" || command.startsWith("/start@");
 }
 
-/** Bir martalik token bo'yicha kodni Telegram foydalanuvchisiga yuboradi. */
-async function deliverCode(chatId: number, token: string, fromId: number): Promise<boolean> {
-  const rows = await db
-    .select()
-    .from(otpCodes)
-    .where(
-      and(eq(otpCodes.token, token), eq(otpCodes.used, false), gt(otpCodes.expiresAt, new Date())),
-    )
-    .limit(1);
+type DeliveryState = "sent" | "already" | "used" | "invalid";
 
+/** Bir martalik token bo'yicha kodni Telegram foydalanuvchisiga yuboradi. */
+async function deliverCode(chatId: number, token: string, fromId: number): Promise<DeliveryState> {
+  const rows = await db.select().from(otpCodes).where(eq(otpCodes.token, token)).limit(1);
   const row = rows[0];
-  if (!row) return false;
+  if (!row) return "invalid";
+  if (row.used) return "already";
+  if (row.expiresAt.getTime() < Date.now()) return "used";
 
   // Kim so'raganini yozib qo'yamiz: tasdiqlangandan keyin shu Telegram hisobini
-  // foydalanuvchiga ulaymiz va "tasdiqlandi" xabarini yuboramiz.
+  // foydalanuvchi profiliga ulaymiz va "tasdiqlandi" xabarini yuboramiz.
   await db
     .update(otpCodes)
     .set({ telegramId: fromId, deliveredAt: row.deliveredAt ?? new Date() })
@@ -90,5 +109,5 @@ async function deliverCode(chatId: number, token: string, fromId: number): Promi
   await sendMessage(chatId, codeMessage(row.code, row.phone, BOT_OTP_TTL_MINUTES), {
     keyboard: miniAppKeyboard(),
   });
-  return true;
+  return "sent";
 }

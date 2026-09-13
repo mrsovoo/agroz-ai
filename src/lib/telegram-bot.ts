@@ -69,13 +69,28 @@ export async function getBotUsername(): Promise<string | null> {
   return cachedUsername;
 }
 
+/** Bot chatiga o'tish havolasi (kod shu chatda chiqadi). */
+export function botChatLink(botUsername: string | null): string | null {
+  return botUsername ? `https://t.me/${botUsername}` : null;
+}
+
 /** Mini App tugmasi: faqat HTTPS manzilda ishlaydi. */
 export function miniAppKeyboard(): InlineKeyboard | undefined {
   const url = appBaseUrl();
   if (!url || !url.startsWith("https://")) return undefined;
   return {
-    inline_keyboard: [[{ text: "📱 Mini Appni ochish", web_app: { url } }]],
+    inline_keyboard: [[{ text: "🚀 AgroVet AI", web_app: { url } }]],
   };
+}
+
+/** Salomlashish uchun: Mini App + sayt tugmalari. */
+export function greetingKeyboard(): InlineKeyboard | undefined {
+  const url = appBaseUrl();
+  if (!url) return undefined;
+  const rows: InlineKeyboard["inline_keyboard"] = [];
+  if (url.startsWith("https://")) rows.push([{ text: "🚀 AgroVet AI", web_app: { url } }]);
+  rows.push([{ text: "🌐 Saytni ochish", url }]);
+  return { inline_keyboard: rows };
 }
 
 // ---------------------------------------------------------------------------
@@ -114,8 +129,11 @@ export function greetingMessage(name?: string): string {
     "• 💊 Yaqin agro/vet dorixonalar xaritasi",
     "• 🌤 Ob-havoga qarab purkash tavsiyasi",
     "",
-    "Saytdan kirish uchun: saytda telefon raqamingizni kiriting va",
-    "«Telegram orqali kod olish» tugmasini bosing — havola sizni shu yerga olib keladi.",
+    "<b>👇 «AgroVet AI» tugmasini bosing — ilova shu yerda ochiladi.</b>",
+    "",
+    "🔐 <b>Telefon raqamni tasdiqlash:</b> saytda raqamingizni kiriting va",
+    "«Tasdiqlash kodini olish»ni bosing. Havola sizni shu chatga olib keladi va",
+    "tasdiqlash kodi shu yerda chiqadi.",
   ].join("\n");
 }
 
@@ -127,11 +145,29 @@ export function expiredLinkMessage(): string {
   ].join("\n");
 }
 
+export function alreadyVerifiedMessage(): string {
+  return [
+    "✅ Bu havola allaqachon ishlatilgan.",
+    "",
+    "Agar yana tasdiqlash kerak bo'lsa, saytda yangi kod so'rang.",
+    "Ilovani ochish uchun pastdagi tugmani bosing.",
+  ].join("\n");
+}
+
 export function verifiedMessage(): string {
   return [
     "✅ <b>Raqamingiz tasdiqlandi!</b>",
     "",
     "Endi saytda ishlashda davom etishingiz yoki Mini Appni ochishingiz mumkin.",
+  ].join("\n");
+}
+
+/** Bot ichida kutilmagan xato bo'lganda yuboriladigan xabar. */
+export function errorMessage(): string {
+  return [
+    "⚠️ <b>Xatolik yuz berdi.</b>",
+    "",
+    "Iltimos, bir ozdan so'ng botga qaytadan <b>/start</b> yuboring yoki saytda yangi kod so'rang.",
   ].join("\n");
 }
 

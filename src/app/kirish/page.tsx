@@ -7,7 +7,7 @@ import { getTelegram, onTelegramReady, type TelegramUser } from "@/lib/telegram"
 import { OTP_LENGTH, OTP_TTL_MINUTES } from "@/lib/constants";
 
 /** Kodni qanday yetkazish rejimi. */
-type DeliveryMode = "telegram" | "sms" | "dev";
+type DeliveryMode = "telegram" | "bot" | "sms" | "dev";
 
 const REGIONS = [
   "Toshkent",
@@ -42,6 +42,7 @@ export default function LoginPage() {
   const [mode, setMode] = useState<DeliveryMode>("dev");
   const [token, setToken] = useState("");
   const [deepLink, setDeepLink] = useState("");
+  const [chatLink, setChatLink] = useState("");
   const [ttlMinutes, setTtlMinutes] = useState(OTP_TTL_MINUTES);
   const [name, setName] = useState("");
   const [region, setRegion] = useState(REGIONS[0]);
@@ -58,13 +59,15 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/request-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: phoneInput }),
+        // Mini App ichida bo'lsak initData yuboramiz — kod to'g'ridan-to'g'ri chatga ketadi.
+        body: JSON.stringify({ phone: phoneInput, initData: getTelegram()?.initData }),
       });
       const data = (await res.json()) as {
         phone?: string;
         mode?: DeliveryMode;
         token?: string;
         deepLink?: string;
+        chatLink?: string;
         devCode?: string;
         expiresInMinutes?: number;
         error?: string;
@@ -74,6 +77,7 @@ export default function LoginPage() {
       setMode(data.mode ?? "dev");
       setToken(data.token ?? "");
       setDeepLink(data.deepLink ?? "");
+      setChatLink(data.chatLink ?? "");
       setDevCode(data.devCode ?? "");
       setTtlMinutes(data.expiresInMinutes ?? OTP_TTL_MINUTES);
       setCode("");
@@ -199,7 +203,28 @@ export default function LoginPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {mode === "telegram" ? (
+            {mode === "bot" ? (
+              <>
+                <p className="rounded-2xl bg-[var(--brand-yellow-soft)] p-3 text-[13px] font-medium leading-relaxed text-[var(--brand-ink)]">
+                  ✅ Kod <b>Telegram botimizga</b> yuborildi. Chatni ochib kodni nusxalab,
+                  pastdagi maydonga yozing.
+                </p>
+                {chatLink && (
+                  <a
+                    href={chatLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ios-btn"
+                    style={{ background: "#2AABEE" }}
+                  >
+                    <Send size={18} /> Telegram chatni ochish
+                  </a>
+                )}
+                <p className="text-center text-[12px] font-medium text-[var(--brand-muted)]">
+                  Kod {ttlMinutes} daqiqa amal qiladi.
+                </p>
+              </>
+            ) : mode === "telegram" ? (
               <>
                 <p className="rounded-2xl bg-[var(--brand-yellow-soft)] p-3 text-[13px] font-medium leading-relaxed text-[var(--brand-ink)]">
                   <b>{phone}</b> raqamini tasdiqlash uchun Telegram botga o&apos;ting. Botda{" "}
@@ -288,6 +313,17 @@ export default function LoginPage() {
                 style={{ color: "#2AABEE" }}
               >
                 Kod chiqmadi? Botni qayta ochish
+              </a>
+            )}
+            {mode === "bot" && chatLink && (
+              <a
+                href={chatLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block py-1 text-center text-[13px] font-bold"
+                style={{ color: "#2AABEE" }}
+              >
+                Kod kelmadimi? Botga qayta o&apos;tish
               </a>
             )}
             <button onClick={() => setStep(1)} className="ios-btn secondary">
