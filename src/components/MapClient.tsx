@@ -15,9 +15,13 @@ import {
   MapPin,
   Loader2,
   UserRound,
+  Pill,
+  RefreshCw,
 } from "lucide-react";
+import { AUTH_BOT_URL } from "@/lib/constants";
 
 type Stock = { medicine: string; status: string; price: number | null };
+type Medicine = { id: number; name: string; status: string; hasPhoto: boolean };
 
 type Place = {
   /** Dorixona id'lari bilan to'qnashmasligi uchun mutaxassislar manfiy id oladi. */
@@ -32,7 +36,17 @@ type Place = {
   workHours: string | null;
   distanceKm: number | null;
   stock: Stock[];
+  /** Dorixona egasi bot orqali qo'shgan dorilar (rasmi bilan). */
+  medicines: Medicine[];
 };
+
+/** Filtr tugmalari va xarita sarlavhasi bir joyda — nomlar chalkashmasligi uchun. */
+const KINDS: { v: string; l: string; title: string }[] = [
+  { v: "all", l: "Hammasi", title: "Xarita" },
+  { v: "agro", l: "Agro", title: "Agro dorixonalar" },
+  { v: "vet", l: "Veterinar", title: "Veterinariya dorixonalari" },
+  { v: "specialist", l: "Mutaxassis", title: "Mutaxassislar" },
+];
 
 type Specialist = {
   id: number;
@@ -46,6 +60,7 @@ type Specialist = {
   lng: number;
   workHours: string | null;
   distanceKm: number | null;
+  medicines?: Medicine[];
 };
 
 const GLYPH = {
@@ -148,20 +163,29 @@ export default function MapClient() {
     ])
       .then(([pharmacies, specialists]) => {
         if (cancelled) return;
+        // Ro'yxatdan o'tgan dorixona egalari ham "dorixona" bo'lib chiqadi —
+        // ularning turi (agro/vet) mutaxassislik maydonida saqlanadi.
         const mapped: Place[] = specialists.map((s) => ({
           id: -s.id,
           name: s.organization ?? s.name,
-          kind: "specialist",
+          kind: s.role === "pharmacy" ? (s.specialty === "vet" ? "vet" : "agro") : "specialist",
           lat: s.lat,
           lng: s.lng,
           phone: s.phone,
           address: s.address,
-          specialist: s.specialty ?? s.name,
+          specialist:
+            s.role === "pharmacy"
+              ? `${s.specialty === "vet" ? "Veterinariya" : "Agro"} dorixonasi · ${s.name}`
+              : (s.specialty ?? s.name),
           workHours: s.workHours,
           distanceKm: s.distanceKm,
           stock: [],
+          medicines: s.medicines ?? [],
         }));
-        setPlaces([...pharmacies, ...mapped]);
+        setPlaces([
+          ...pharmacies.map((p) => ({ ...p, medicines: p.medicines ?? [] })),
+          ...mapped,
+        ]);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -307,7 +331,7 @@ export default function MapClient() {
           <div>
             <p className="ios-sub">Geo-qidiruv · 5 km</p>
             <h1 className="ios-title">
-              {kind === "specialist" ? "Mutaxassislar" : "Dorixonalar"}
+              {(KINDS.find((k) => k.v === kind) ?? KINDS[0]).title}
             </h1>
             {meds.length > 0 && (
               <p className="mt-1 text-[13px] font-medium text-[var(--brand-green)]">
@@ -325,12 +349,7 @@ export default function MapClient() {
         </div>
 
         <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-          {[
-            { v: "all", l: "Hammasi" },
-            { v: "agro", l: "Agro" },
-            { v: "vet", l: "Veterinar" },
-            { v: "specialist", l: "Mutaxassis" },
-          ].map((f) => {
+          {KINDS.map((f) => {
             const active = kind === f.v;
             return (
               <button
@@ -348,6 +367,25 @@ export default function MapClient() {
               </button>
             );
           })}
+        </div>
+
+        {/* Xaritadagi belgilar izohi — nima ko'rinayotganini tushuntiradi */}
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 px-1 text-[11.5px] font-bold text-[var(--brand-muted)]">
+          {[
+            { c: "#028e11", l: "Agro dorixona", show: true },
+            { c: "#b45309", l: "Veterinariya dorixonasi", show: true },
+            { c: "#2563eb", l: "Mutaxassis", show: true },
+          ]
+            .filter((x) => x.show)
+            .map((x) => (
+              <span key={x.l} className="flex items-center gap-1.5">
+                <span
+                  className="h-2.5 w-2.5 rounded-full ring-1 ring-black/10"
+                  style={{ background: x.c }}
+                />
+                {x.l}
+              </span>
+            ))}
         </div>
         {locError && (
           <p className="mt-2 rounded-2xl bg-[var(--brand-yellow-soft)] p-2.5 px-3 text-[12px] font-medium text-[var(--brand-ink)]">
@@ -488,6 +526,40 @@ export default function MapClient() {
                 </div>
               )}
 
+              {/* Dorixona egasi bot orqali qo'shgan dorilar — rasmi bilan */}
+              {p.medicines.length > 0 && (
+                <div className="mt-2.5 flex gap-2 overflow-x-auto pb-1">
+                  {p.medicines.slice(0, 8).map((m) => (
+                    <div key={m.id} className="w-[64px] shrink-0">
+                      {m.hasPhoto ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={`/api/medicines/${m.id}/photo`}
+                          alt={m.name}
+                          className="h-[64px] w-[64px] rounded-xl object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div
+                          className="flex h-[64px] w-[64px] items-center justify-center rounded-xl"
+                          style={{ background: "var(--brand-green-soft)", color: "var(--brand-green)" }}
+                        >
+                          <Pill size={20} />
+                        </div>
+                      )}
+                      <p className="mt-1 line-clamp-2 text-[10.5px] font-semibold leading-tight text-[var(--brand-ink)]">
+                        {m.name}
+                      </p>
+                    </div>
+                  ))}
+                  {p.medicines.length > 8 && (
+                    <div className="flex h-[64px] w-[64px] shrink-0 items-center justify-center rounded-xl bg-slate-100 text-[12px] font-bold text-slate-600">
+                      +{p.medicines.length - 8}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="mt-3 flex gap-2">
                 <a
                   href={`tel:${p.phone.replace(/\s/g, "")}`}
@@ -511,8 +583,57 @@ export default function MapClient() {
           );
         })}
         {!loading && items.length === 0 && (
-          <li className="ios-card p-6 text-center text-[14px] text-[var(--brand-muted)]">
-            Hech narsa topilmadi
+          <li className="ios-card px-5 py-7 text-center">
+            <span
+              className="mx-auto flex h-14 w-14 items-center justify-center rounded-full"
+              style={{
+                background:
+                  kind === "specialist"
+                    ? "#dbeafe"
+                    : kind === "vet"
+                      ? "var(--brand-yellow-soft)"
+                      : "var(--brand-green-soft)",
+                color:
+                  kind === "specialist"
+                    ? "#2563eb"
+                    : kind === "vet"
+                      ? "var(--brand-ink)"
+                      : "var(--brand-green)",
+              }}
+            >
+              {kind === "specialist" ? (
+                <UserRound size={26} />
+              ) : kind === "vet" ? (
+                <PawPrint size={26} />
+              ) : (
+                <Sprout size={26} />
+              )}
+            </span>
+            <p className="mt-3 text-[16px] font-black text-[var(--brand-ink)]">
+              {meds.length > 0
+                ? "Bu dorilar 5 km ichida topilmadi"
+                : "5 km ichida hozircha ma'lumot yo'q"}
+            </p>
+            <p className="mt-1.5 text-[13.5px] leading-relaxed text-[var(--brand-muted)]">
+              Xaritada faqat <b>real</b> ro&apos;yxatdan o&apos;tgan dorixonalar, ularning dorilari
+              va mutaxassislar ko&apos;rinadi. Siz ham qo&apos;shilishingiz mumkin —
+              ro&apos;yxatdan o&apos;tish bir daqiqada bot orqali bo&apos;ladi.
+            </p>
+            <a
+              href={AUTH_BOT_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3 text-[14px] font-bold text-white"
+              style={{ background: "var(--brand-green)" }}
+            >
+              <Phone size={15} /> Bot orqali ro&apos;yxatdan o&apos;tish
+            </a>
+            <button
+              onClick={centerMe}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--brand-ink)] py-3 text-[14px] font-bold text-white"
+            >
+              <RefreshCw size={15} /> Joylashuvni yangilash
+            </button>
           </li>
         )}
       </ul>

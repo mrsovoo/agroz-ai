@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { LocateFixed, Loader2, MapPin, Navigation, Phone, Stethoscope, Store, Map, UserRound } from "lucide-react";
+import { LocateFixed, Loader2, MapPin, Navigation, Phone, Stethoscope, Store, Map, UserRound, Pill } from "lucide-react";
+import { AUTH_BOT_URL, AUTH_BOT_USERNAME } from "@/lib/constants";
+
+type Medicine = { id: number; name: string; status: string; hasPhoto: boolean };
 
 type Specialist = {
   id: number;
@@ -16,6 +19,8 @@ type Specialist = {
   lng: number;
   workHours: string | null;
   distanceKm: number | null;
+  /** Dorixona egalari qo'shgan dorilar. */
+  medicines?: Medicine[];
 };
 
 const FILTERS = [
@@ -207,6 +212,14 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
                         <MapPin size={13} className="mt-0.5 shrink-0" />
                         <span className="line-clamp-2">{s.address}</span>
                       </p>
+                      {isPharmacy && (s.medicines?.length ?? 0) > 0 && (
+                        <p
+                          className="mt-1.5 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold"
+                          style={{ background: "var(--brand-green-soft)", color: "var(--brand-green)" }}
+                        >
+                          <Pill size={11} /> {s.medicines!.length} ta dori ro&apos;yxatda
+                        </p>
+                      )}
                     </div>
                   </div>
                   {s.distanceKm !== null && (
@@ -238,10 +251,37 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
             );
           })}
           {visible.length === 0 && (
-            <li className="ios-card p-6 text-center text-[14px] text-[var(--brand-muted)]">
-              {items.length === 0
-                ? "Hozircha yaqin atrofda ro'yxatdan o'tgan mutaxassis yo'q."
-                : "Bu turdagi natija topilmadi."}
+            <li className="ios-card px-5 py-7 text-center">
+              <span
+                className="mx-auto flex h-14 w-14 items-center justify-center rounded-full"
+                style={{ background: "var(--brand-green-soft)", color: "var(--brand-green)" }}
+              >
+                {role === "pharmacy" ? <Store size={26} /> : <UserRound size={26} />}
+              </span>
+              <p className="mt-3 text-[16px] font-black text-[var(--brand-ink)]">
+                {items.length === 0
+                  ? "5 km ichida hozircha hech kim yo'q"
+                  : "Bu turdagi natija topilmadi"}
+              </p>
+              <p className="mt-1.5 text-[13.5px] leading-relaxed text-[var(--brand-muted)]">
+                Mutaxassislar va dorixona egalari ro&apos;yxatdan o&apos;tgach shu yerda ko&apos;rinadi.
+                Ro&apos;yxatdan o&apos;tish bir daqiqada — ism, telefon va joylashuv yetarli.
+              </p>
+              <a
+                href={AUTH_BOT_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3 text-[14px] font-bold text-white"
+                style={{ background: "var(--brand-green)" }}
+              >
+                <Phone size={15} /> @{AUTH_BOT_USERNAME} orqali ro&apos;yxatdan o&apos;tish
+              </a>
+              <button
+                onClick={refreshLocation}
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--brand-ink)] py-3 text-[14px] font-bold text-white"
+              >
+                <LocateFixed size={15} /> Joylashuvni yangilash
+              </button>
             </li>
           )}
         </ul>

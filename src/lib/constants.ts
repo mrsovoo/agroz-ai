@@ -38,3 +38,17 @@ export const MAX_NEARBY_RADIUS_KM = 5;
  * mutaxassisga yo'naltiriladi.
  */
 export const CONFIDENCE_THRESHOLD = 80;
+
+/**
+ * `@agroz_auth_bot` — mutaxassis va dorixona egalarini ro'yxatdan o'tkazuvchi bot.
+ * Client komponentlarda ham kerak, shuning uchun `NEXT_PUBLIC_` o'zgaruvchisidan
+ * o'qiladi (build paytida kodga singdiriladi).
+ */
+export const AUTH_BOT_USERNAME = (
+  process.env.NEXT_PUBLIC_TELEGRAM_AUTH_BOT_USERNAME ?? "agroz_auth_bot"
+)
+  .trim()
+  .replace(/^@/, "");
+
+/** Ro'yxatdan o'tish havolasi (`t.me/...`). */
+export const AUTH_BOT_URL = `https://t.me/${AUTH_BOT_USERNAME}`;

@@ -14,7 +14,7 @@ import {
   Store,
   Pill,
 } from "lucide-react";
-import { CONFIDENCE_THRESHOLD } from "@/lib/constants";
+import { AUTH_BOT_URL, AUTH_BOT_USERNAME, CONFIDENCE_THRESHOLD } from "@/lib/constants";
 
 type Stock = { medicine: string; status: string; price: number | null };
 type Medicine = { id: number; name: string; status: string; hasPhoto: boolean };
@@ -232,9 +232,25 @@ export default function NearbyHelp({
             <Loader2 className="animate-spin text-[var(--brand-green)]" size={22} />
           </div>
         ) : topPharmacies.length === 0 ? (
-          <p className="p-4 text-[14px] text-[var(--brand-muted)]">
-            {kind === "agro" ? "Agro" : "Veterinariya"} dorixona 5 km ichida topilmadi.
-          </p>
+          <div className="p-4">
+            <p className="text-[14px] font-bold text-[var(--brand-ink)]">
+              {kind === "agro" ? "Agro" : "Veterinariya"} dorixona 5 km ichida topilmadi
+            </p>
+            <p className="mt-1 text-[13px] leading-relaxed text-[var(--brand-muted)]">
+              Dorixonalar faqat real ro&apos;yxatdan o&apos;tgan egalardan yig&apos;iladi. Dorixona
+              egasi bo&apos;lsangiz, <b>@{AUTH_BOT_USERNAME}</b> orqali qo&apos;shiling — dorilaringiz
+              rasmi bilan shu yerda ko&apos;rinadi.
+            </p>
+            <a
+              href={AUTH_BOT_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-[13px] font-bold text-white"
+              style={{ background: "var(--brand-green)" }}
+            >
+              <Store size={14} /> Dorixonani qo&apos;shish
+            </a>
+          </div>
         ) : (
           <ul>
             {topPharmacies.map((p) => (
@@ -368,9 +384,24 @@ export default function NearbyHelp({
                 <Loader2 className="animate-spin text-[var(--brand-green)]" size={22} />
               </div>
             ) : topSpecialists.length === 0 ? (
-              <p className="p-4 text-[14px] text-[var(--brand-muted)]">
-                5 km ichida ro&apos;yxatdan o&apos;tgan mutaxassis topilmadi.
-              </p>
+              <div className="p-4">
+                <p className="text-[14px] font-bold text-[var(--brand-ink)]">
+                  5 km ichida ro&apos;yxatdan o&apos;tgan mutaxassis topilmadi
+                </p>
+                <p className="mt-1 text-[13px] leading-relaxed text-[var(--brand-muted)]">
+                  Agronom, veterinar yoki zootexnik bo&apos;lsangiz, <b>@{AUTH_BOT_USERNAME}</b> orqali
+                  ro&apos;yxatdan o&apos;tib mijozlarga ko&apos;rinishingiz mumkin.
+                </p>
+                <a
+                  href={AUTH_BOT_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-[13px] font-bold text-white"
+                  style={{ background: "var(--brand-green)" }}
+                >
+                  <UserRound size={14} /> Ro&apos;yxatdan o&apos;tish
+                </a>
+              </div>
             ) : (
               <ul>
                 {topSpecialists.map((s) => (

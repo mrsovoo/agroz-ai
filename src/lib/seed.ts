@@ -93,9 +93,10 @@ let seeded = false;
 const SEED_LOCK_KEY = 771_204;
 
 /**
- * Demo dorixonalar faqat `SEED_DEMO_DATA=true` bo'lganda yoziladi.
- * Standart holatda o'chirilgan: platformada faqat **real** ma'lumot ko'rinadi —
- * dorixonalar va mutaxassislar `@agroz_auth_bot` orqali ro'yxatdan o'tadi.
+ * Demo ma'lumot (dorixonalar, dorilar, maslahatlar) faqat `SEED_DEMO_DATA=true`
+ * bo'lganda yoziladi. Standart holatda o'chirilgan: platformada faqat **real**
+ * ma'lumot ko'rinadi — dorixonalar va mutaxassislar `@agroz_auth_bot` orqali,
+ * dorilar esa dorixona egalari tomonidan qo'shiladi.
  */
 function demoDataEnabled(): boolean {
   return process.env.SEED_DEMO_DATA === "true";
@@ -113,20 +114,23 @@ export async function ensureSeed() {
 }
 
 async function seedInTransaction() {
+  // Demo ma'lumot o'chirilgan (standart holat) — bazaga umuman hech narsa
+  // yozilmaydi. Platformadagi hamma ma'lumot faqat real foydalanuvchidan:
+  // dorixonalar/mutaxassislar `@agroz_auth_bot`, dorilar esa dorixona egasidan.
+  if (!demoDataEnabled()) return;
+
   // Tranzaksiya ichidagi advisory lock — bir vaqtda faqat bitta instance seed qiladi,
   // qolganlari navbatda turadi (aks holda ma'lumot ikki marta yozilardi).
   await db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(${SEED_LOCK_KEY})`);
 
-    // Maslahatlar — kontent, manzil emas; bo'sh bo'lsa bir marta yoziladi.
+    // Namuna maslahatlar — faqat demo rejimida (SEED_DEMO_DATA=true).
     const newsRows = await tx.execute<{ count: string }>(
       sql`select count(*)::text as count from news`,
     );
     if (Number(newsRows.rows[0]?.count ?? "0") === 0) {
       await tx.insert(news).values(NEWS);
     }
-
-    if (!demoDataEnabled()) return;
 
     const rows = await tx.execute<{ count: string }>(
       sql`select count(*)::text as count from pharmacies`,

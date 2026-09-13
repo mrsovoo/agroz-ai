@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { locationAdvice, shortAdvice, weatherLevel } from "@/lib/advice";
 
 export const dynamic = "force-dynamic";
 
@@ -11,26 +12,11 @@ type OpenMeteo = {
   };
 };
 
-function levelOf(temp: number, wind: number, rain: number, humidity: number) {
-  if (wind >= 5 || rain > 0.3) return "danger";
-  if (temp >= 33 || temp <= 3) return "warning";
-  if (humidity >= 80) return "caution";
-  return "ok";
-}
-
-function advice(temp: number, wind: number, rain: number, humidity: number) {
-  if (wind >= 5) return "Bugun dori sepmang — shamol kuchli, dori nishonga tushmaydi.";
-  if (rain > 0.3) return "Yomg'ir bor — purkash samarasiz, yomg'irdan keyin 1 kun kuting.";
-  if (temp >= 33) return "Jazirama issiq — hayvonlarga soya va toza suv bering, purkashni kechqurun qiling.";
-  if (humidity >= 80) return "Namlik yuqori — zamburug' kasalliklari xavfi bor, profilaktika purkash qiling.";
-  if (temp <= 3) return "Sovuq — ekinlarni sovuqdan himoya qiling, molxonani isiting.";
-  return "Ob-havo qulay — purkash va dala ishlari uchun yaxshi kun.";
-}
-
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const lat = parseFloat(url.searchParams.get("lat") ?? "41.3111");
   const lng = parseFloat(url.searchParams.get("lng") ?? "69.2797");
+  const month = new Date().getUTCMonth() + 1;
 
   try {
     const res = await fetch(
@@ -40,31 +26,38 @@ export async function GET(req: Request) {
     if (!res.ok) throw new Error("weather");
     const json = (await res.json()) as OpenMeteo;
     const c = json.current ?? {};
-    const temp = Math.round(c.temperature_2m ?? 22);
-    const wind = Math.round((c.wind_speed_10m ?? 2) * 10) / 10;
-    const humidity = Math.round(c.relative_humidity_2m ?? 45);
-    const rain = c.precipitation ?? 0;
+    const snapshot = {
+      temp: Math.round(c.temperature_2m ?? 22),
+      wind: Math.round((c.wind_speed_10m ?? 2) * 10) / 10,
+      humidity: Math.round(c.relative_humidity_2m ?? 45),
+      rain: c.precipitation ?? 0,
+      month,
+    };
     return NextResponse.json(
       {
         ok: true,
-        temp,
-        wind,
-        humidity,
-        rain,
-        level: levelOf(temp, wind, rain, humidity),
-        advice: advice(temp, wind, rain, humidity),
+        ...snapshot,
+        level: weatherLevel(snapshot),
+        advice: shortAdvice(snapshot),
+        // Hudud va mavsumga qarab to'liq maslahatlar (maslahatlar sahifasida).
+        tips: locationAdvice(snapshot),
       },
       { headers: { "Cache-Control": "public, s-maxage=900, stale-while-revalidate=1800" } },
     );
   } catch {
-    return NextResponse.json({
-      ok: false,
+    const fallback = {
       temp: 24,
       wind: 2.5,
       humidity: 45,
       rain: 0,
+      month,
+    };
+    return NextResponse.json({
+      ok: false,
+      ...fallback,
       level: "caution",
       advice: "Ob-havo ma'lumoti yangilanmadi. Dala ishlarida ehtiyot bo'ling.",
+      tips: locationAdvice(fallback),
     });
   }
 }
