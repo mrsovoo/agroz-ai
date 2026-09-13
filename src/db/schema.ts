@@ -25,6 +25,7 @@ export const otpCodes = pgTable("otp_codes", {
   phone: varchar("phone", { length: 32 }).notNull(),
   code: varchar("code", { length: 8 }).notNull(),
   used: boolean("used").default(false).notNull(),
+  attempts: integer("attempts").default(0).notNull(),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

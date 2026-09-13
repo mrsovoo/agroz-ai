@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { medicines, pharmacies, pharmacyStocks } from "@/db/schema";
 import { eq, ilike, or, inArray } from "drizzle-orm";
 import { ensureSeed } from "@/lib/seed";
+import { withApiErrors } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,7 @@ export type PharmacyDto = {
   stock: { medicine: string; status: string; price: number | null }[];
 };
 
-export async function GET(req: Request) {
+export const GET = withApiErrors(async (req: Request) => {
   await ensureSeed();
   const url = new URL(req.url);
   const lat = parseFloat(url.searchParams.get("lat") ?? "");
@@ -84,10 +85,15 @@ export async function GET(req: Request) {
     }))
     .sort((a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999));
 
-  return NextResponse.json({ items });
-}
+  // Dorixonalar ro'yxati tez o'zgarmaydi — CDN'da 5 daqiqa keshlaymiz.
+  // Kuchsiz internetda qayta ochishlar deyarli bir zumda bo'ladi.
+  return NextResponse.json(
+    { items },
+    { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" } },
+  );
+});
 
-export async function POST(req: Request) {
+export const POST = withApiErrors(async (req: Request) => {
   const body = (await req.json()) as { id?: number };
   if (!body.id) return NextResponse.json({ error: "id kerak" }, { status: 400 });
   const rows = await db
@@ -103,4 +109,4 @@ export async function POST(req: Request) {
       price: r.pharmacy_stocks.price,
     })),
   });
-}
+});

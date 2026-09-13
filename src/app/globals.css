@@ -169,6 +169,33 @@ body {
   height: 44px;
 }
 
+/* Yuklanish skeleti (loading.tsx) — kuchsiz qurilmalarda ham yengil */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: #e3e4e8;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+  animation: skeleton-sweep 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-sweep {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation: none;
+  }
+}
+
 .ios-section-title {
   text-transform: uppercase;
   font-size: 12px;
@@ -236,13 +263,13 @@ body {
 }
 
 @media (min-width: 900px) {
-  body.is-web {
+  html.is-web {
     background:
       linear-gradient(180deg, rgba(252, 189, 0, 0.12), transparent 340px),
       #f7f8f3;
   }
 
-  body.is-web .web-top-nav {
+  html.is-web .web-top-nav {
     display: block;
     position: sticky;
     top: 0;
@@ -253,7 +280,7 @@ body {
     backdrop-filter: blur(18px) saturate(160%);
   }
 
-  body.is-web .web-top-nav-inner {
+  html.is-web .web-top-nav-inner {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -263,19 +290,19 @@ body {
     margin: 0 auto;
   }
 
-  body.is-web .web-brand,
-  body.is-web .web-links,
-  body.is-web .web-profile-link {
+  html.is-web .web-brand,
+  html.is-web .web-links,
+  html.is-web .web-profile-link {
     display: flex;
     align-items: center;
   }
 
-  body.is-web .web-brand {
+  html.is-web .web-brand {
     gap: 12px;
     color: var(--brand-ink);
   }
 
-  body.is-web .web-brand-mark {
+  html.is-web .web-brand-mark {
     display: flex;
     width: 42px;
     height: 42px;
@@ -287,30 +314,30 @@ body {
     box-shadow: 0 10px 24px -14px rgba(2, 142, 17, 0.75);
   }
 
-  body.is-web .web-brand strong,
-  body.is-web .web-brand small {
+  html.is-web .web-brand strong,
+  html.is-web .web-brand small {
     display: block;
   }
 
-  body.is-web .web-brand strong {
+  html.is-web .web-brand strong {
     font-size: 18px;
     font-weight: 900;
     line-height: 1.1;
   }
 
-  body.is-web .web-brand small {
+  html.is-web .web-brand small {
     margin-top: 2px;
     color: var(--brand-muted);
     font-size: 12px;
     font-weight: 700;
   }
 
-  body.is-web .web-links {
+  html.is-web .web-links {
     gap: 8px;
   }
 
-  body.is-web .web-links a,
-  body.is-web .web-profile-link {
+  html.is-web .web-links a,
+  html.is-web .web-profile-link {
     gap: 7px;
     border-radius: 12px;
     padding: 10px 13px;
@@ -322,23 +349,23 @@ body {
       color 0.15s ease;
   }
 
-  body.is-web .web-links a:hover,
-  body.is-web .web-profile-link:hover {
+  html.is-web .web-links a:hover,
+  html.is-web .web-profile-link:hover {
     background: rgba(2, 142, 17, 0.08);
     color: var(--brand-green);
   }
 
-  body.is-web .web-profile-link {
+  html.is-web .web-profile-link {
     border: 1px solid rgba(2, 142, 17, 0.16);
     background: #fff;
     color: var(--brand-green);
   }
 
-  body.is-web .mobile-bottom-nav {
+  html.is-web .mobile-bottom-nav {
     display: none;
   }
 
-  body.is-web .app-shell {
+  html.is-web .app-shell {
     max-width: none;
     width: min(1180px, calc(100% - 48px));
     min-height: calc(100dvh - 76px);
@@ -349,88 +376,88 @@ body {
     box-shadow: none;
   }
 
-  body.is-web main {
+  html.is-web main {
     width: 100%;
   }
 
-  body.is-web .ios-title {
+  html.is-web .ios-title {
     font-size: 46px;
     letter-spacing: 0;
   }
 
-  body.is-web .ios-card,
-  body.is-web .ios-group {
+  html.is-web .ios-card,
+  html.is-web .ios-group {
     border: 1px solid rgba(50, 50, 50, 0.08);
     border-radius: 16px;
     box-shadow: 0 20px 50px -38px rgba(50, 50, 50, 0.35);
   }
 
-  body.is-web .ios-btn,
-  body.is-web .ios-input {
+  html.is-web .ios-btn,
+  html.is-web .ios-input {
     border-radius: 12px;
   }
 
-  body.is-web main > .space-y-3,
-  body.is-web main > ul,
-  body.is-web main > section,
-  body.is-web main > div {
+  html.is-web main > .space-y-3,
+  html.is-web main > ul,
+  html.is-web main > section,
+  html.is-web main > div {
     max-width: 100%;
   }
 
-  body.is-web main.px-5,
-  body.is-web main.flex {
+  html.is-web main.px-5,
+  html.is-web main.flex {
     padding-left: 0;
     padding-right: 0;
   }
 
-  body.is-web main > header {
+  html.is-web main > header {
     align-items: center;
     gap: 28px;
     padding-top: 0;
   }
 
-  body.is-web main > header + div,
-  body.is-web main > header + div + p + div {
+  html.is-web main > header + div,
+  html.is-web main > header + div + p + div {
     max-width: 760px;
   }
 
-  body.is-web main > .mt-5:first-of-type {
+  html.is-web main > .mt-5:first-of-type {
     max-width: 760px;
   }
 
-  body.is-web main > .space-y-3 {
+  html.is-web main > .space-y-3 {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
     max-width: 900px;
   }
 
-  body.is-web main > .space-y-3 > a,
-  body.is-web main > .space-y-3 > div,
-  body.is-web main > .space-y-3 > button,
-  body.is-web main > .space-y-3 > p {
+  html.is-web main > .space-y-3 > a,
+  html.is-web main > .space-y-3 > div,
+  html.is-web main > .space-y-3 > button,
+  html.is-web main > .space-y-3 > p {
     grid-column: auto;
   }
 
-  body.is-web main > .space-y-3 > .relative,
-  body.is-web main > .space-y-3 > button:last-of-type,
-  body.is-web main > .space-y-3 > p {
+  html.is-web main > .space-y-3 > .relative,
+  html.is-web main > .space-y-3 > button:last-of-type,
+  html.is-web main > .space-y-3 > p {
     grid-column: 1 / -1;
   }
 
-  body.is-web main > a.mt-3,
-  body.is-web main > a.mt-6,
-  body.is-web main > a.mt-3.block {
+  html.is-web main > a.mt-3,
+  html.is-web main > a.mt-6,
+  html.is-web main > a.mt-3.block {
     max-width: 900px;
   }
 
-  body.is-web .leaflet-container {
+  html.is-web .leaflet-container {
     min-height: 100%;
   }
 }
 
 @media (min-width: 900px) and (max-width: 1080px) {
-  body.is-web .web-links a {
+  html.is-web .web-links a {
     padding-inline: 9px;
     font-size: 13px;
   }

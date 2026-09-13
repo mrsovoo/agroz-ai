@@ -4,22 +4,35 @@ import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { verifyInitData } from "@/lib/tg-auth";
 import { createSession } from "@/lib/session";
+import { cleanText } from "@/lib/validate";
+import { withApiErrors } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(req: Request) {
-  const body = (await req.json()) as { initData?: string; name?: string; region?: string };
+export const POST = withApiErrors(async (req: Request) => {
+  const body = (await req.json().catch(() => ({}))) as {
+    initData?: string;
+    name?: string;
+    region?: string;
+    district?: string;
+  };
   const initData = body.initData ?? "";
   if (!initData) {
     return NextResponse.json({ error: "Telegram ma'lumoti topilmadi" }, { status: 400 });
   }
 
-  // Agar bot token o'rnatilgan bo'lsa, imzoni tekshiramiz
   const token = process.env.TELEGRAM_BOT_TOKEN;
-  if (token) {
-    if (!verifyInitData(initData, token)) {
-      return NextResponse.json({ error: "Imzo tekshiruvi muvaffaqiyatsiz" }, { status: 401 });
+  if (!token) {
+    // Imzo tekshirilmasa istalgan odam istalgan telegram_id bilan kirishi mumkin.
+    // Shuning uchun production'da bu yo'l ataylab yopiq.
+    if (process.env.NODE_ENV === "production" && process.env.ALLOW_UNVERIFIED_TELEGRAM !== "true") {
+      return NextResponse.json(
+        { error: "Telegram orqali kirish sozlanmagan (TELEGRAM_BOT_TOKEN yo'q)" },
+        { status: 503 },
+      );
     }
+  } else if (!verifyInitData(initData, token)) {
+    return NextResponse.json({ error: "Imzo tekshiruvi muvaffaqiyatsiz" }, { status: 401 });
   }
 
   const params = new URLSearchParams(initData);
@@ -34,36 +47,33 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "Foydalanuvchi ma'lumoti xato" }, { status: 400 });
   }
+
   const telegramId = Number(tgUser.id);
-  if (!Number.isFinite(telegramId)) {
+  if (!Number.isSafeInteger(telegramId) || telegramId <= 0) {
     return NextResponse.json({ error: "Telegram ID xato" }, { status: 400 });
   }
 
   const fullName = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ");
+  const name = cleanText(body.name, 120) ?? cleanText(fullName, 120);
+  const region = cleanText(body.region, 120);
+  const district = cleanText(body.district, 120);
 
-  const existing = await db
-    .select()
-    .from(users)
-    .where(eq(users.telegramId, telegramId))
-    .limit(1);
+  const existing = await db.select().from(users).where(eq(users.telegramId, telegramId)).limit(1);
   let user = existing[0];
 
   if (!user) {
     const inserted = await db
       .insert(users)
-      .values({
-        telegramId,
-        name: fullName || body.name || null,
-        region: body.region ?? null,
-      })
+      .values({ telegramId, name, region, district })
       .returning();
     user = inserted[0];
-  } else if ((body.name && !user.name) || (body.region && !user.region)) {
+  } else if (name || region || district) {
     const updated = await db
       .update(users)
       .set({
-        name: user.name ?? body.name ?? null,
-        region: user.region ?? body.region ?? null,
+        name: user.name ?? name,
+        region: user.region ?? region,
+        district: user.district ?? district,
       })
       .where(eq(users.id, user.id))
       .returning();
@@ -71,5 +81,5 @@ export async function POST(req: Request) {
   }
 
   await createSession(user.id);
-  return NextResponse.json({ ok: true, user });
-}
+  return NextResponse.json({ ok: true });
+});

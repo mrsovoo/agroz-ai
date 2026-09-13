@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { diagnoses } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { getCurrentUser } from "@/lib/session";
 import {
   ChevronLeft,
   Stethoscope,
@@ -15,8 +16,14 @@ import {
   Cpu,
 } from "lucide-react";
 import TelegramBackButton from "@/components/TelegramBackButton";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Tashxis natijasi",
+  description: "AI tashxisi, tavsiya etilgan yechim va dorilar ro'yxati.",
+};
 
 const severityStyle: Record<string, { bg: string; text: string; label: string }> = {
   past: { bg: "var(--brand-green-soft)", text: "var(--brand-green)", label: "Yengil" },
@@ -32,6 +39,12 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
   const rows = await db.select().from(diagnoses).where(eq(diagnoses.id, numericId)).limit(1);
   const d = rows[0];
   if (!d) notFound();
+
+  // Boshqa foydalanuvchining tashxis tarixini ID bo'yicha ko'rishning oldini olamiz.
+  if (d.userId !== null) {
+    const user = await getCurrentUser();
+    if (!user || user.id !== d.userId) notFound();
+  }
 
   let meds: string[] = [];
   try {

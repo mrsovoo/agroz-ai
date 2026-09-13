@@ -25,6 +25,8 @@ export type TelegramWebApp = {
   setBackgroundColor?: (color: string) => void;
   enableClosingConfirmation?: () => void;
   disableClosingConfirmation?: () => void;
+  disableVerticalSwipes?: () => void;
+  isExpanded?: boolean;
   HapticFeedback?: {
     impactOccurred: (style: "light" | "medium" | "heavy" | "rigid" | "soft") => void;
     notificationOccurred: (type: "error" | "success" | "warning") => void;
@@ -68,4 +70,57 @@ export function haptic(style: "light" | "medium" | "heavy" = "light") {
   } catch {
     /* noop */
   }
+}
+
+/** User-Agent bo'yicha Telegram ichida ochilganini aniqlash (SDK hali yuklanmagan bo'lishi mumkin). */
+export function isTelegramUserAgent(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /Telegram/i.test(navigator.userAgent || "");
+}
+
+/**
+ * Telegram SDK kech (async) yuklanadi — shuning uchun tayyor bo'lishini kutamiz.
+ * To'g'ridan-to'g'ri `getTelegram()` chaqirish sekin internetda null qaytarishi mumkin.
+ * Qaytarilgan funksiya kutishni to'xtatadi (komponent unmount bo'lganda chaqiriladi).
+ */
+export function onTelegramReady(
+  cb: (tg: TelegramWebApp) => void | (() => void),
+  timeoutMs = 6000,
+): () => void {
+  if (typeof window === "undefined") return () => {};
+
+  let stopped = false;
+  let timer: number | undefined;
+  let cbCleanup: void | (() => void);
+
+  const stop = () => {
+    if (stopped) return;
+    stopped = true;
+    if (timer !== undefined) window.clearInterval(timer);
+    if (typeof cbCleanup === "function") cbCleanup();
+  };
+
+  const existing = getTelegram();
+  if (existing) {
+    cbCleanup = cb(existing);
+    return stop;
+  }
+
+  const startedAt = Date.now();
+  timer = window.setInterval(() => {
+    const tg = getTelegram();
+    if (!tg) {
+      // SDK hech qachon yuklanmasa (masalan, telegram.org bloklangan) kutishni to'xtatamiz.
+      if (Date.now() - startedAt > timeoutMs && timer !== undefined) {
+        window.clearInterval(timer);
+      }
+      return;
+    }
+    if (timer !== undefined) window.clearInterval(timer);
+    timer = undefined;
+    if (stopped) return;
+    cbCleanup = cb(tg);
+  }, 100);
+
+  return stop;
 }

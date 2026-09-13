@@ -89,39 +89,54 @@ function stockStatus(pharmacyId: number, medicineId: number) {
 
 let seeded = false;
 
+/** Seed paytida parallel cold start'larni to'sish uchun advisory lock kaliti. */
+const SEED_LOCK_KEY = 771_204;
+
 export async function ensureSeed() {
   if (seeded) return;
-  const rows = await db.execute<{ count: string }>(
-    sql`select count(*)::text as count from pharmacies`,
-  );
-  const count = Number(rows.rows[0]?.count ?? "0");
-  if (count > 0) {
+  try {
+    await seedInTransaction();
     seeded = true;
-    return;
+  } catch (err) {
+    // Baza vaqtincha ishlamasa ham sahifalar ochilishi kerak.
+    console.error("[seed] boshlang'ich ma'lumotlarni yozib bo'lmadi:", err);
   }
+}
 
-  const insertedPharmacies = await db
-    .insert(pharmacies)
-    .values(PHARMACIES.map((p) => ({ ...p, specialist: p.specialist ?? null })))
-    .returning({ id: pharmacies.id });
+async function seedInTransaction() {
+  // Tranzaksiya ichidagi advisory lock — bir vaqtda faqat bitta instance seed qiladi,
+  // qolganlari navbatda turadi (aks holda ma'lumot ikki marta yozilardi).
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(${SEED_LOCK_KEY})`);
 
-  const insertedMedicines = await db
-    .insert(medicines)
-    .values(MEDICINES)
-    .returning({ id: medicines.id });
+    const rows = await tx.execute<{ count: string }>(
+      sql`select count(*)::text as count from pharmacies`,
+    );
+    if (Number(rows.rows[0]?.count ?? "0") > 0) return;
 
-  const stockRows: { pharmacyId: number; medicineId: number; status: string; price: number }[] = [];
-  for (const p of insertedPharmacies) {
-    for (const m of insertedMedicines) {
-      stockRows.push({
-        pharmacyId: p.id,
-        medicineId: m.id,
-        status: stockStatus(p.id, m.id),
-        price: 20000 + ((p.id * m.id * 3700) % 180000),
-      });
+    const insertedPharmacies = await tx
+      .insert(pharmacies)
+      .values(PHARMACIES.map((p) => ({ ...p, specialist: p.specialist ?? null })))
+      .returning({ id: pharmacies.id });
+
+    const insertedMedicines = await tx
+      .insert(medicines)
+      .values(MEDICINES)
+      .returning({ id: medicines.id });
+
+    const stockRows: { pharmacyId: number; medicineId: number; status: string; price: number }[] =
+      [];
+    for (const p of insertedPharmacies) {
+      for (const m of insertedMedicines) {
+        stockRows.push({
+          pharmacyId: p.id,
+          medicineId: m.id,
+          status: stockStatus(p.id, m.id),
+          price: 20000 + ((p.id * m.id * 3700) % 180000),
+        });
+      }
     }
-  }
-  await db.insert(pharmacyStocks).values(stockRows);
-  await db.insert(news).values(NEWS);
-  seeded = true;
+    if (stockRows.length > 0) await tx.insert(pharmacyStocks).values(stockRows);
+    await tx.insert(news).values(NEWS);
+  });
 }

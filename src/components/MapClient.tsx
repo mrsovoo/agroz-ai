@@ -75,14 +75,22 @@ export default function MapClient() {
   const listRef = useRef<HTMLUListElement | null>(null);
   const hasCenteredRef = useRef(false);
 
-  // ---- Geolocation (initial + watch) ----
+  // ---- Geolocation: bir marta o'qish ----
+  // watchPosition kuchsiz telefonlarda GPS'ni doimiy ishlatib, batareyani yeydi va
+  // har o'zgarishda API'ga so'rov yuborardi. Endi faqat bir marta olamiz; aniqroq
+  // joylashuv kerak bo'lsa "mening joyim" tugmasi bor.
   useEffect(() => {
-    if (!navigator.geolocation) {
+    const fallback = () => {
       setCoords({ lat: 41.3111, lng: 69.2797 });
-      setLocError("Lokatsiya o'chiq — Toshkent ko'rsatilmoqda");
+      setLocError("Lokatsiya ruxsati berilmagan — Toshkent ko'rsatilmoqda");
+    };
+
+    if (!navigator.geolocation) {
+      fallback();
       return;
     }
-    const watchId = navigator.geolocation.watchPosition(
+
+    navigator.geolocation.getCurrentPosition(
       (pos) => {
         setCoords({
           lat: pos.coords.latitude,
@@ -91,13 +99,9 @@ export default function MapClient() {
         });
         setLocError(null);
       },
-      () => {
-        setCoords((c) => c ?? { lat: 41.3111, lng: 69.2797 });
-        setLocError("Lokatsiya ruxsati berilmagan — Toshkent ko'rsatilmoqda");
-      },
-      { enableHighAccuracy: true, maximumAge: 30000, timeout: 10000 },
+      fallback,
+      { maximumAge: 5 * 60 * 1000, timeout: 8000, enableHighAccuracy: false },
     );
-    return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
   // ---- Fetch pharmacies ----
@@ -109,12 +113,23 @@ export default function MapClient() {
     }
     if (kind !== "all") params.set("kind", kind);
     meds.forEach((m) => params.append("med", m));
+    // Eski so'rov javobi yangisini bosib ketmasligi uchun "cancelled" bayrog'i.
+    let cancelled = false;
     setLoading(true);
     fetch(`/api/pharmacies?${params.toString()}`)
       .then((r) => r.json())
-      .then((d: { items: Pharmacy[] }) => setItems(d.items))
-      .catch(() => setItems([]))
-      .finally(() => setLoading(false));
+      .then((d: { items?: Pharmacy[] }) => {
+        if (!cancelled) setItems(Array.isArray(d?.items) ? d.items : []);
+      })
+      .catch(() => {
+        if (!cancelled) setItems([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [coords, kind, meds]);
 
   // ---- Init Leaflet map once ----

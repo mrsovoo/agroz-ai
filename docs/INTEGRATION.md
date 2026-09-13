@@ -30,10 +30,11 @@ Ilova allaqachon Telegram WebApp SDK bilan ulangan. Uni `Launch App` tugmasi bil
 | `TELEGRAM_BOT_TOKEN` | initData imzosini tekshirish (xavfsizlik). BotFather beradi. |
 | `OPENAI_API_KEY` | AI tashxis (GPT-4o vision) va ovozni matnga aylantirish (Whisper). |
 | `DATABASE_URL` | PostgreSQL ulanishi. |
+| `ESKIZ_EMAIL` / `ESKIZ_PASSWORD` | Real SMS yuborish (Eskiz.uz). Bo'lmasa OTP dev rejimda. |
 | `OPENAI_BASE_URL` | OpenAI-compatible open-source model endpointi, ixtiyoriy. |
 | `AI_MODEL` | Masalan `Qwen/Qwen2.5-VL-7B-Instruct` yoki `gpt-4o`. |
 
-> `TELEGRAM_BOT_TOKEN` qo'yilmasa, ilova "demo rejimda" ishlaydi (imzo tekshirilmaydi). **Production uchun majburiy qo'ying.**
+> `TELEGRAM_BOT_TOKEN` qo'yilmasa, **production'da Telegram orqali kirish yopiq (503)** — imzo tekshirilmay turib kirishga ruxsat berish xavfli. Faqat vaqtinchalik test uchun `ALLOW_UNVERIFIED_TELEGRAM=true` qo'yish mumkin, keyin albatta o'chirib tashlang.
 
 ### HTTPS talabi
 Telegram Mini App faqat **HTTPS** bilan ishlaydi. Vercel, Netlify yoki Cloudflare Pages'da joylashtirishingiz mumkin.
@@ -60,9 +61,15 @@ Telegram Mini App faqat **HTTPS** bilan ishlaydi. Vercel, Netlify yoki Cloudflar
 - **Google Maps API** — Directions (yo'nalish) uchun.
 
 ### 📱 SMS (OTP) — real SMS yuborish uchun
-Hozir kod test rejimida javobda qaytadi. Real SMS uchun:
-- **Eskiz.uz** — O'zbekistondagi eng mashhur SMS provayder (o'zbek tilidagi API, arzon).
-- **SMS Gateway** alternativlari: Mobizon, SMSC.uz.
+**Eskiz.uz allaqachon ulangan** (`src/lib/sms.ts`). `ESKIZ_EMAIL`, `ESKIZ_PASSWORD`
+(va kerak bo'lsa `ESKIZ_FROM`) envlarini qo'ysangiz, kod real SMS orqali ketadi.
+Eskiz panelida yuboriladigan matn moderatsiyadan o'tgan shablon bilan mos bo'lishi kerak; test uchun `from=4546` ishlaydi.
+
+SMS provayder sozlanmagan bo'lsa:
+- development'da kod API javobida `devCode` sifatida qaytadi;
+- production'da endpoint 503 qaytaradi (yoki ataylab `OTP_DEV_MODE=true` qiling).
+
+Alternativ provayderlar: Mobizon, SMSC.uz — `src/lib/sms.ts` ichidagi funksiyaga qo'shish kifoya.
 
 ### 💊 Dorixonalar va dorilar bazasi (eng muhim real data)
 Hozirgi seed ma'lumotlar (20 dorixona) demo. Real ma'lumot yig'ish manbalari:

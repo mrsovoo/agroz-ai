@@ -44,15 +44,18 @@ export async function GET(req: Request) {
     const wind = Math.round((c.wind_speed_10m ?? 2) * 10) / 10;
     const humidity = Math.round(c.relative_humidity_2m ?? 45);
     const rain = c.precipitation ?? 0;
-    return NextResponse.json({
-      ok: true,
-      temp,
-      wind,
-      humidity,
-      rain,
-      level: levelOf(temp, wind, rain, humidity),
-      advice: advice(temp, wind, rain, humidity),
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        temp,
+        wind,
+        humidity,
+        rain,
+        level: levelOf(temp, wind, rain, humidity),
+        advice: advice(temp, wind, rain, humidity),
+      },
+      { headers: { "Cache-Control": "public, s-maxage=900, stale-while-revalidate=1800" } },
+    );
   } catch {
     return NextResponse.json({
       ok: false,

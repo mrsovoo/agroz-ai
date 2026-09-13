@@ -4,8 +4,15 @@ import { desc } from "drizzle-orm";
 import { ensureSeed } from "@/lib/seed";
 import WeatherCard from "@/components/WeatherCard";
 import { Sprout, PawPrint, CalendarDays, Lightbulb, Database } from "lucide-react";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Maslahatlar",
+  description:
+    "Ob-havoga qarab purkash tavsiyalari va mavsumiy agro/chorva bo'yicha foydali maslahatlar.",
+};
 
 export default async function NewsPage() {
   await ensureSeed();

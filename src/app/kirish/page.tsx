@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sprout, Phone, KeyRound, UserRound, MapPin, ChevronRight, Loader2, Send } from "lucide-react";
-import { getTelegram, getTelegramUser } from "@/lib/telegram";
+import { getTelegram, onTelegramReady, type TelegramUser } from "@/lib/telegram";
+import { OTP_LENGTH } from "@/lib/constants";
 
 const REGIONS = [
   "Toshkent",
@@ -27,7 +28,9 @@ function normalize(v: string) {
 
 export default function LoginPage() {
   const router = useRouter();
-  const tgUser = getTelegramUser();
+  // Telegram obyekti faqat brauzerda mavjud — shuning uchun mount'dan keyin o'qiymiz
+  // (aks holda SSR va client HTML'i mos kelmay, hydration xatosi chiqadi).
+  const [tgUser, setTgUser] = useState<TelegramUser | null>(null);
   const [step, setStep] = useState<1 | 2>(1);
   const [phoneInput, setPhoneInput] = useState("");
   const [phone, setPhone] = useState("");
@@ -37,6 +40,10 @@ export default function LoginPage() {
   const [region, setRegion] = useState(REGIONS[0]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [smsSent, setSmsSent] = useState(false);
+
+  // Telegram SDK kech yuklanishi mumkin — tayyor bo'lganda userni olamiz.
+  useEffect(() => onTelegramReady((tg) => setTgUser(tg.initDataUnsafe?.user ?? null)), []);
 
   async function sendCode() {
     setBusy(true);
@@ -51,6 +58,7 @@ export default function LoginPage() {
       if (!res.ok) throw new Error(data.error ?? "Xatolik");
       setPhone(data.phone!);
       setDevCode(data.devCode ?? "");
+      setSmsSent(!data.devCode);
       setStep(2);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Xatolik");
@@ -168,21 +176,31 @@ export default function LoginPage() {
         ) : (
           <div className="space-y-3">
             <p className="rounded-2xl bg-[var(--brand-yellow-soft)] p-3 text-[13px] font-medium text-[var(--brand-ink)]">
-              {phone} raqamiga SMS yuborildi.
-              <br />
-              <b>Demo kod:</b> {devCode}
+              {smsSent ? (
+                <>
+                  <b>{phone}</b> raqamiga SMS yuborildi.
+                </>
+              ) : (
+                <>
+                  Demo rejim: <b>{phone}</b> raqami uchun tasdiqlash kodi
+                  <br />
+                  <b className="text-[20px] tracking-[0.3em]">{devCode}</b>
+                </>
+              )}
             </p>
             <div>
               <label className="mb-1.5 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-widest text-[var(--brand-muted)]">
-                <KeyRound size={12} /> 4 xonali kod
+                <KeyRound size={12} /> {OTP_LENGTH} xonali kod
               </label>
               <input
                 value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                onChange={(e) =>
+                  setCode(e.target.value.replace(/\D/g, "").slice(0, OTP_LENGTH))
+                }
                 inputMode="numeric"
-                maxLength={4}
-                placeholder="••••"
-                className="ios-input text-center text-[28px] font-black tracking-[0.8em]"
+                maxLength={OTP_LENGTH}
+                placeholder={"•".repeat(OTP_LENGTH)}
+                className="ios-input text-center text-[28px] font-black tracking-[0.5em]"
               />
             </div>
             <div>
@@ -210,7 +228,11 @@ export default function LoginPage() {
                 ))}
               </select>
             </div>
-            <button onClick={verify} disabled={busy || code.length !== 4} className="ios-btn">
+            <button
+              onClick={verify}
+              disabled={busy || code.length !== OTP_LENGTH}
+              className="ios-btn"
+            >
               {busy ? <Loader2 size={18} className="animate-spin" /> : null}
               {busy ? "Tasdiqlanmoqda..." : "Kirish"}
               {!busy && <ChevronRight size={18} />}

@@ -3,6 +3,22 @@ import DiagnoseForm from "@/components/DiagnoseForm";
 import { notFound } from "next/navigation";
 import { ChevronLeft, Info, Sprout, PawPrint } from "lucide-react";
 import TelegramBackButton from "@/components/TelegramBackButton";
+import type { Metadata } from "next";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ category: string }>;
+}): Promise<Metadata> {
+  const { category } = await params;
+  const isCrop = category === "crop";
+  return {
+    title: isCrop ? "Ekin tashxisi" : "Chorva tashxisi",
+    description: isCrop
+      ? "Ekin kasalligini rasm, matn yoki ovoz orqali yuboring va AI tashxisini oling."
+      : "Chorva va parranda kasalliklarini rasm, matn yoki ovoz orqali yuboring.",
+  };
+}
 
 export default async function DiagnosePage({
   params,

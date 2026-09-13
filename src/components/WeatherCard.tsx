@@ -28,9 +28,10 @@ export default function WeatherCard() {
       const q = lat && lng ? `?lat=${lat}&lng=${lng}` : "";
       fetch(`/api/weather${q}`)
         .then((r) => r.json())
-        .then((d: Weather) => setW(d))
+        .then((d: Weather) => setW(typeof d?.temp === "number" ? d : null))
         .catch(() => setW(null));
     };
+
     if (typeof navigator !== "undefined" && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -41,7 +42,9 @@ export default function WeatherCard() {
           setPlace("Toshkent");
           load();
         },
-        { timeout: 6000 },
+        // Kuchsiz qurilmalar uchun: GPS'ni uzoq ushlamaymiz, keshdagi joylashuv
+        // bo'lsa darhol ishlatamiz va ob-havoni ko'rsatishni kechiktirmaymiz.
+        { timeout: 8000, maximumAge: 15 * 60 * 1000, enableHighAccuracy: false },
       );
     } else {
       setPlace("Toshkent");
