@@ -149,6 +149,7 @@ async function setupAuthBot() {
       { command: "royxatdan_otish", description: "Ro'yxatdan o'tish / ma'lumotlarni yangilash" },
       { command: "dori_qoshish", description: "Dorixonaga dori qo'shish (rasm + nom)" },
       { command: "malumotlarim", description: "Profilimni ko'rish" },
+      { command: "yangiliklar", description: "Agro va chorvachilik yangiliklari" },
       { command: "bekor", description: "Jarayonni to'xtatish" },
       { command: "yordam", description: "Yordam" },
     ],

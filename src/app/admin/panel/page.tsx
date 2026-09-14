@@ -400,7 +400,7 @@ export default function AdminPanelPage() {
                 if (!s) return null;
                 const placeholder =
                   s.source === "db"
-                    ? s.preview ?? ""
+                    ? `saqlangan: ${s.preview}`
                     : s.source === "env"
                       ? `env: ${s.preview}`
                       : "kiritilmagan";
@@ -427,10 +427,13 @@ export default function AdminPanelPage() {
                 );
               })}
             </div>
+            <p className="mt-2 text-xs text-slate-500">
+              Faqat to&apos;ldirilgan maydonlar saqlanadi — bo&apos;sh qoldirsangiz eski qiymat o&apos;zgarmaydi.
+            </p>
             <button
               onClick={() => saveSettings(group.keys)}
               disabled={busy}
-              className="mt-4 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+              className="mt-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
             >
               Saqlash
             </button>

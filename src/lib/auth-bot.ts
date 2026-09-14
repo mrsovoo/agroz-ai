@@ -396,6 +396,7 @@ export function helpMessage(): string {
     "/royxatdan_otish — ro'yxatdan o'tish yoki ma'lumotlarni yangilash",
     "/dori_qoshish — dorixonaga dori qo'shish (rasm + nom)",
     "/malumotlarim — profilingizni ko'rish",
+    "/yangiliklar — agro va chorvachilik yangiliklari",
     "/bekor — jarayonni to'xtatish",
     "/yordam — shu yordam xabari",
   ].join("\n");

@@ -58,8 +58,10 @@ import {
   sendAuthMessage,
   sendAuthPhoto,
   welcomeMessage,
+  escapeHtml,
 } from "@/lib/auth-bot";
 import { reverseGeocode } from "@/lib/geocode";
+import { getNewsFeed } from "@/lib/news";
 
 export type AuthBotUpdate = {
   message?: {
@@ -242,6 +244,42 @@ async function handleCommand(
 
   if (command === "/yordam" || command === "/help") {
     await sendAuthMessage(chatId, helpMessage());
+    return;
+  }
+
+  // /yangiliklar — real manbalardan agro/chorvachilik yangiliklari.
+  if (command === "/yangiliklar") {
+    try {
+      const items = await getNewsFeed(6);
+      if (items.length === 0) {
+        await sendAuthMessage(
+          chatId,
+          "📰 Hozircha yangiliklar topilmadi. Birozdan so'ng qayta urinib ko'ring.",
+        );
+        return;
+      }
+      const lines = ["📰 <b>Agro va chorvachilik yangiliklari</b>", ""];
+      items.forEach((n, i) => {
+        const date = new Date(n.publishedAt);
+        const dateStr = Number.isFinite(date.getTime())
+          ? ` · ${date.getMonth() + 1}.${date.getDate()}`
+          : "";
+        lines.push(
+          `${i + 1}. <b>${escapeHtml(n.title.slice(0, 140))}</b>`,
+          `   ${escapeHtml(n.source)}${dateStr} · ${n.tag}`,
+        );
+        if (n.link) lines.push(`   ${n.link}`);
+        lines.push("");
+      });
+      lines.push("🔄 Manbalar: AgroWorld, EastFruit, Kun.uz, Gazeta.uz");
+      await sendAuthMessage(chatId, lines.join("\n"));
+    } catch (newsErr) {
+      console.error("[auth-bot] yangiliklar xatosi:", newsErr);
+      await sendAuthMessage(
+        chatId,
+        "⚠️ Yangiliklarni olishda xatolik. Birozdan so'ng qayta urinib ko'ring.",
+      );
+    }
     return;
   }
 

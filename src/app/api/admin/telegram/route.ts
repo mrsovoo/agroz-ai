@@ -136,6 +136,7 @@ export async function POST(req: Request) {
               { command: "royxatdan_otish", description: "Ro'yxatdan o'tish / yangilash" },
               { command: "dori_qoshish", description: "Dori qo'shish (rasm + nom)" },
               { command: "malumotlarim", description: "Profilimni ko'rish" },
+              { command: "yangiliklar", description: "Agro va chorvachilik yangiliklari" },
               { command: "bekor", description: "Jarayonni to'xtatish" },
               { command: "yordam", description: "Yordam" },
             ]
