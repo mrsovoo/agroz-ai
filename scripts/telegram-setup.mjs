@@ -101,9 +101,12 @@ async function setupMainBot() {
   console.log(`✓ Asosiy webhook: ${webhookUrl}`);
 
   await call("setMyCommands", {
-    commands: [{ command: "start", description: "Boshlash / tasdiqlash kodini olish" }],
+    commands: [
+      { command: "start", description: "Boshlash / tasdiqlash kodini olish" },
+      { command: "yangiliklar", description: "Agro va chorvachilik yangiliklari" },
+    ],
   });
-  console.log("✓ Buyruq o'rnatildi: /start");
+  console.log("✓ Buyruqlar o'rnatildi: /start, /yangiliklar");
 
   try {
     await call("setChatMenuButton", {

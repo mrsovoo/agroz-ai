@@ -17,6 +17,7 @@ import {
   UserRound,
   Pill,
   RefreshCw,
+  Lock,
 } from "lucide-react";
 import { AUTH_BOT_URL } from "@/lib/constants";
 
@@ -35,6 +36,10 @@ type Place = {
   specialist: string | null;
   workHours: string | null;
   distanceKm: number | null;
+  /** Radiusdan tashqarida — yo'nalish o'rniga qulf chiqadi. */
+  locked?: boolean;
+  ratingAvg?: number | null;
+  ratingCount?: number;
   stock: Stock[];
   /** Dorixona egasi bot orqali qo'shgan dorilar (rasmi bilan). */
   medicines: Medicine[];
@@ -60,6 +65,9 @@ type Specialist = {
   lng: number;
   workHours: string | null;
   distanceKm: number | null;
+  locked: boolean;
+  ratingAvg: number | null;
+  ratingCount: number;
   medicines?: Medicine[];
 };
 
@@ -179,6 +187,9 @@ export default function MapClient() {
               : (s.specialty ?? s.name),
           workHours: s.workHours,
           distanceKm: s.distanceKm,
+          locked: s.locked,
+          ratingAvg: s.ratingAvg,
+          ratingCount: s.ratingCount,
           stock: [],
           medicines: s.medicines ?? [],
         }));
@@ -700,6 +711,25 @@ export default function MapClient() {
               )}
             </div>
 
+            {selected.ratingAvg != null && (selected.ratingCount ?? 0) > 0 && (
+              <p className="mt-1 flex items-center gap-1 text-[12px] font-bold text-[#b8860b]">
+                ★ {selected.ratingAvg.toFixed(1)}
+                <span className="text-[var(--brand-muted)]">({selected.ratingCount ?? 0} ovoz)</span>
+              </p>
+            )}
+
+            {selected.locked && (
+              <p
+                className="mt-2 flex items-start gap-2 rounded-2xl p-2.5 px-3 text-[12px] font-medium"
+                style={{ background: "var(--brand-yellow-soft)", color: "var(--brand-ink)" }}
+              >
+                <Lock size={14} className="mt-0.5 shrink-0" />
+                <span>
+                  Bu joy sizdan 5 km dan uzoq — yo&apos;nalish o&apos;rniga telefon orqali bog&apos;laning.
+                </span>
+              </p>
+            )}
+
             {selected.stock.length > 0 && (
               <div className="mt-4 max-h-[200px] overflow-y-auto rounded-2xl bg-[var(--brand-bg)] p-2">
                 {selected.stock.map((s) => (
@@ -728,12 +758,21 @@ export default function MapClient() {
               >
                 <Phone size={17} /> {selected.phone}
               </a>
-              <button
-                onClick={() => openDirections(selected)}
-                className="flex items-center justify-center gap-1.5 rounded-2xl bg-[var(--brand-yellow)] px-5 py-4 text-[15px] font-bold text-[var(--brand-ink)]"
-              >
-                <Navigation size={16} /> Boraman
-              </button>
+              {selected.locked ? (
+                <div
+                  className="flex items-center justify-center gap-1.5 rounded-2xl px-5 py-4 text-[14px] font-bold text-[var(--brand-muted)]"
+                  style={{ background: "var(--brand-bg)" }}
+                >
+                  <Lock size={15} /> Uzoq
+                </div>
+              ) : (
+                <button
+                  onClick={() => openDirections(selected)}
+                  className="flex items-center justify-center gap-1.5 rounded-2xl bg-[var(--brand-yellow)] px-5 py-4 text-[15px] font-bold text-[var(--brand-ink)]"
+                >
+                  <Navigation size={16} /> Boraman
+                </button>
+              )}
             </div>
             <button
               onClick={() => setSelected(null)}

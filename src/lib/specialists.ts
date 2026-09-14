@@ -5,8 +5,8 @@
  */
 
 import { db } from "@/db";
-import { specialistMedicines, specialists } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { specialistMedicines, specialistRatings, specialists } from "@/db/schema";
+import { and, eq, sql } from "drizzle-orm";
 import { clampRadiusKm, distanceKm, roundKm } from "@/lib/geo";
 
 export const SPECIALIST_ROLES = ["specialist", "pharmacy"] as const;
@@ -48,6 +48,15 @@ export type SpecialistDto = {
   lng: number;
   workHours: string | null;
   distanceKm: number | null;
+  /**
+   * `true` — foydalanuvchi radiusidan tashqarida: ko'rinadi, lekin qulflangan
+   * holatda (yo'nalish o'rniga qo'ng'iroq tavsiya etiladi).
+   */
+  locked: boolean;
+  /** Reyting: 1–5 yulduz o'rtachasi (ovoz bo'lmasa null). */
+  ratingAvg: number | null;
+  /** Reyting ovozlari soni. */
+  ratingCount: number;
   medicines: MedicineDto[];
 };
 
@@ -130,8 +139,12 @@ export async function getMedicineById(id: number) {
 /**
  * Faol mutaxassis/dorixona egalarini qaytaradi.
  *
- * - `coords` berilsa — faqat radius ichidagilar (radius 5 km dan oshmaydi).
+ * - `coords` berilsa — masofa hisoblanadi va `locked` belgilanadi: radius
+ *   ichidagilar ochiq, tashqaridagilar ham RO'YXATDA QOLADI lekin qulflangan
+ *   holatda ko'rinadi (mijoz telefon qilishi mumkin).
  * - `meds` berilsa — faqat shu dorilarga ega dorixonalar qoladi.
+ * - Saralash: avval ochiq (masofa bo'yicha), keyin qulflanganlar (reyting,
+ *   keyin masofa bo'yicha).
  */
 export async function listSpecialists(opts: {
   lat?: number | null;
@@ -141,13 +154,28 @@ export async function listSpecialists(opts: {
   meds?: string[];
 }): Promise<SpecialistDto[]> {
   const rows = await db.select().from(specialists).where(eq(specialists.isActive, true));
-  const medicineRows = await db.select().from(specialistMedicines);
+  const [medicineRows, ratingRows] = await Promise.all([
+    db.select().from(specialistMedicines),
+    db
+      .select({
+        specialistId: specialistRatings.specialistId,
+        avg: sql<number>`avg(${specialistRatings.stars})::float`,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(specialistRatings)
+      .groupBy(specialistRatings.specialistId),
+  ]);
 
   const bySpecialist = new Map<number, MedicineDto[]>();
   for (const m of medicineRows) {
     const list = bySpecialist.get(m.specialistId) ?? [];
     list.push({ id: m.id, name: m.name, status: m.status, hasPhoto: Boolean(m.photoFileId) });
     bySpecialist.set(m.specialistId, list);
+  }
+
+  const ratingBySpecialist = new Map<number, { avg: number; count: number }>();
+  for (const r of ratingRows) {
+    ratingBySpecialist.set(r.specialistId, { avg: Number(r.avg), count: r.count });
   }
 
   const role = opts.role && isSpecialistRole(opts.role) ? opts.role : null;
@@ -170,7 +198,7 @@ export async function listSpecialists(opts: {
     typeof opts.lng === "number" &&
     Number.isFinite(opts.lng);
 
-  const withMedicines = (s: (typeof filtered)[number], distance: number | null): SpecialistDto => ({
+  const withMeta = (s: (typeof filtered)[number], distance: number | null, locked: boolean): SpecialistDto => ({
     id: s.id,
     name: s.name,
     phone: s.phone,
@@ -182,17 +210,78 @@ export async function listSpecialists(opts: {
     lng: s.lng,
     workHours: s.workHours,
     distanceKm: distance,
+    locked,
+    ratingAvg: ratingBySpecialist.get(s.id)?.avg ?? null,
+    ratingCount: ratingBySpecialist.get(s.id)?.count ?? 0,
     medicines: bySpecialist.get(s.id) ?? [],
   });
 
-  if (!hasCoords) return filtered.map((s) => withMedicines(s, null));
+  if (!hasCoords) {
+    // Lokatsiyasiz: reyting bo'yicha (ko'p ovozli va yuqori), keyin yangi qo'shilganlar.
+    return filtered
+      .map((s) => withMeta(s, null, false))
+      .sort((a, b) => (b.ratingAvg ?? 0) - (a.ratingAvg ?? 0) || b.ratingCount - a.ratingCount);
+  }
 
   const lat = opts.lat as number;
   const lng = opts.lng as number;
   const radiusKm = clampRadiusKm(opts.radiusKm);
 
-  return filtered
-    .map((s) => withMedicines(s, roundKm(distanceKm(lat, lng, s.lat, s.lng))))
-    .filter((s) => (s.distanceKm ?? Infinity) <= radiusKm)
+  const withDistance = filtered.map((s) => {
+    const d = roundKm(distanceKm(lat, lng, s.lat, s.lng));
+    return withMeta(s, d, d > radiusKm);
+  });
+
+  const open = withDistance
+    .filter((s) => !s.locked)
     .sort((a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999));
+  const locked = withDistance
+    .filter((s) => s.locked)
+    .sort(
+      (a, b) =>
+        (b.ratingAvg ?? 0) - (a.ratingAvg ?? 0) ||
+        b.ratingCount - a.ratingCount ||
+        (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999),
+    );
+  return [...open, ...locked];
+}
+
+// ---------------------------------------------------------------------------
+// Reyting (1–5 yulduz)
+// ---------------------------------------------------------------------------
+
+/**
+ * Mijoz ovozini saqlaydi. Bir mijoz (anonim kalit) bir mutaxassisdga bitta ovoz —
+ * qayta bersa yangilanadi. Yangi o'rtachani qaytaradi.
+ */
+export async function rateSpecialist(
+  specialistId: number,
+  raterKey: string,
+  stars: number,
+): Promise<{ avg: number; count: number } | null> {
+  const clamped = Math.max(1, Math.min(5, Math.round(stars)));
+  const exists = await db
+    .select({ id: specialists.id })
+    .from(specialists)
+    .where(and(eq(specialists.id, specialistId), eq(specialists.isActive, true)))
+    .limit(1);
+  if (!exists[0]) return null;
+
+  await db
+    .insert(specialistRatings)
+    .values({ specialistId, raterKey, stars: clamped, createdAt: new Date() })
+    .onConflictDoUpdate({
+      target: [specialistRatings.specialistId, specialistRatings.raterKey],
+      set: { stars: clamped },
+    });
+
+  const agg = await db
+    .select({
+      avg: sql<number>`avg(${specialistRatings.stars})::float`,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(specialistRatings)
+    .where(eq(specialistRatings.specialistId, specialistId));
+  const row = agg[0];
+  return row ? { avg: Number(row.avg), count: row.count } : null;
 }

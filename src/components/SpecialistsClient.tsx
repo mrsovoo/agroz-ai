@@ -2,7 +2,20 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { LocateFixed, Loader2, MapPin, Navigation, Phone, Stethoscope, Store, Map, UserRound, Pill } from "lucide-react";
+import {
+  LocateFixed,
+  Loader2,
+  Lock,
+  MapPin,
+  Navigation,
+  Phone,
+  Stethoscope,
+  Store,
+  Map,
+  UserRound,
+  Pill,
+  Star,
+} from "lucide-react";
 import { AUTH_BOT_URL, AUTH_BOT_USERNAME } from "@/lib/constants";
 
 type Medicine = { id: number; name: string; status: string; hasPhoto: boolean };
@@ -19,7 +32,10 @@ type Specialist = {
   lng: number;
   workHours: string | null;
   distanceKm: number | null;
-  /** Dorixona egalari qo'shgan dorilar. */
+  /** Radiusdan tashqarida — ko'rinadi, lekin qulflangan. */
+  locked: boolean;
+  ratingAvg: number | null;
+  ratingCount: number;
   medicines?: Medicine[];
 };
 
@@ -28,6 +44,25 @@ const FILTERS = [
   { v: "specialist", l: "Mutaxassislar" },
   { v: "pharmacy", l: "Dorixona egalari" },
 ];
+
+function Stars({ avg, count }: { avg: number | null; count: number }) {
+  if (!avg || count === 0) {
+    return (
+      <span className="text-[11.5px] font-semibold text-[var(--brand-muted)]">
+        ★ Hali reyting yo&apos;q
+      </span>
+    );
+  }
+  const full = Math.round(avg);
+  return (
+    <span className="inline-flex items-center gap-1 text-[11.5px] font-bold text-[#b8860b]">
+      <Star size={11} fill="currentColor" className="text-[#fcbd00]" />
+      {avg.toFixed(1)}
+      <span className="text-[var(--brand-muted)]">({count})</span>
+      <span className="tracking-tight text-[#fcbd00]">{"★".repeat(full)}</span>
+    </span>
+  );
+}
 
 export default function SpecialistsClient({ initialRole = "all" }: { initialRole?: string }) {
   const [role, setRole] = useState(
@@ -89,6 +124,7 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
     () => (role === "all" ? items : items.filter((s) => s.role === role)),
     [items, role],
   );
+  const openCount = visible.filter((s) => !s.locked).length;
 
   // Qayta joylashuvni o'qish — ro'yxat avtomatik yangilanadi.
   function refreshLocation() {
@@ -112,6 +148,24 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
     window.open(url, "_blank", "noopener");
   }
 
+  async function submitRating(s: Specialist, stars: number) {
+    const res = await fetch("/api/specialists/rate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ specialistId: s.id, stars }),
+    });
+    if (res.ok) {
+      const json = (await res.json()) as { ratingAvg: number; ratingCount: number };
+      setItems((list) =>
+        list.map((x) =>
+          x.id === s.id
+            ? { ...x, ratingAvg: json.ratingAvg, ratingCount: json.ratingCount }
+            : x,
+        ),
+      );
+    }
+  }
+
   return (
     <div className="px-5 pb-6">
       <div className="flex items-start justify-between pt-3">
@@ -119,7 +173,8 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
           <p className="ios-sub">Yaqin atrofdagi yordam</p>
           <h1 className="ios-title">Mutaxassislar</h1>
           <p className="mt-1 text-[13px] font-medium text-[var(--brand-muted)]">
-            Faqat {radiusKm ?? 5} km ichidagi mutaxassis va dorixona egalari
+            {radiusKm ?? 5} km ichida: <b className="text-[var(--brand-green)]">{openCount} ta ochiq</b>
+            {" · "}qolganlari masofadan qo&apos;ng&apos;iroq uchun
           </p>
         </div>
         <button
@@ -177,8 +232,13 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
         <ul className="mt-2 space-y-3 web:grid web:grid-cols-2 web:gap-4 web:space-y-0">
           {visible.map((s) => {
             const isPharmacy = s.role === "pharmacy";
+            const inRange = !s.locked;
             return (
-              <li key={s.id} className="rounded-[22px] bg-white p-4 shadow-sm">
+              <li
+                key={s.id}
+                className="rounded-[22px] bg-white p-4 shadow-sm"
+                style={s.locked ? { opacity: 0.92 } : undefined}
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
                     <div
@@ -212,6 +272,9 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
                         <MapPin size={13} className="mt-0.5 shrink-0" />
                         <span className="line-clamp-2">{s.address}</span>
                       </p>
+                      <div className="mt-1.5">
+                        <Stars avg={s.ratingAvg} count={s.ratingCount} />
+                      </div>
                       {isPharmacy && (s.medicines?.length ?? 0) > 0 && (
                         <p
                           className="mt-1.5 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold"
@@ -222,30 +285,77 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
                       )}
                     </div>
                   </div>
-                  {s.distanceKm !== null && (
-                    <span
-                      className="shrink-0 rounded-full px-2.5 py-1 text-[12px] font-bold text-white"
-                      style={{ background: "var(--brand-green)" }}
-                    >
-                      {s.distanceKm.toFixed(1)} km
-                    </span>
-                  )}
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    {s.distanceKm !== null && (
+                      <span
+                        className="rounded-full px-2.5 py-1 text-[12px] font-bold text-white"
+                        style={{
+                          background: inRange ? "var(--brand-green)" : "var(--brand-muted)",
+                        }}
+                      >
+                        {s.distanceKm.toFixed(1)} km
+                      </span>
+                    )}
+                    {s.locked && (
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-bold"
+                        style={{ background: "var(--brand-red-soft)", color: "#d7263d" }}
+                      >
+                        <Lock size={10} /> {radiusKm ?? 5} km dan uzoq
+                      </span>
+                    )}
+                  </div>
                 </div>
 
+                {/* Telefon har doim ko'rinadi — mijoz masofadan ham qo'ng'iroq qilishi mumkin. */}
                 <div className="mt-3 flex gap-2">
                   <a
                     href={`tel:${s.phone.replace(/\s/g, "")}`}
                     className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl py-3 text-[14px] font-bold text-white"
                     style={{ background: "var(--brand-green)" }}
                   >
-                    <Phone size={15} /> Qo&apos;ng&apos;iroq
+                    <Phone size={15} /> {s.phone}
                   </a>
-                  <button
-                    onClick={() => openDirections(s)}
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-[var(--brand-ink)] py-3 text-[14px] font-bold text-white"
-                  >
-                    <Navigation size={14} /> Yo&apos;nalish
-                  </button>
+                  {inRange ? (
+                    <button
+                      onClick={() => openDirections(s)}
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-[var(--brand-ink)] py-3 text-[14px] font-bold text-white"
+                    >
+                      <Navigation size={14} /> Yo&apos;nalish
+                    </button>
+                  ) : (
+                    <div
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl py-3 text-[13px] font-bold text-[var(--brand-muted)]"
+                      style={{ background: "var(--brand-bg)" }}
+                      title="Yo'nalish faqat 5 km ichida ishlaydi"
+                    >
+                      <Lock size={13} /> Yo&apos;nalish yopiq
+                    </div>
+                  )}
+                </div>
+
+                {/* Reyting berish — bitta ovoz, qayta bossa yangilanadi. */}
+                <div className="mt-2.5 flex items-center justify-between rounded-2xl bg-[var(--brand-bg)] px-3 py-2">
+                  <span className="text-[12px] font-semibold text-[var(--brand-muted)]">
+                    Reytingingizni bering:
+                  </span>
+                  <div className="flex gap-0.5">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <button
+                        key={n}
+                        onClick={() => submitRating(s, n)}
+                        aria-label={`${n} yulduz`}
+                        className="p-0.5 text-[#d1d1d6] transition hover:scale-110 hover:text-[#fcbd00] active:scale-95"
+                      >
+                        <Star
+                          size={16}
+                          fill={
+                            s.ratingAvg && Math.round(s.ratingAvg) >= n ? "currentColor" : "none"
+                          }
+                        />
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </li>
             );
@@ -260,7 +370,7 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
               </span>
               <p className="mt-3 text-[16px] font-black text-[var(--brand-ink)]">
                 {items.length === 0
-                  ? "5 km ichida hozircha hech kim yo'q"
+                  ? "Hozircha ro'yxatdan o'tganlar yo'q"
                   : "Bu turdagi natija topilmadi"}
               </p>
               <p className="mt-1.5 text-[13.5px] leading-relaxed text-[var(--brand-muted)]">

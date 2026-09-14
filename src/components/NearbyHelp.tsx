@@ -13,6 +13,8 @@ import {
   Map,
   Store,
   Pill,
+  Lock,
+  Star,
 } from "lucide-react";
 import { AUTH_BOT_URL, AUTH_BOT_USERNAME, CONFIDENCE_THRESHOLD } from "@/lib/constants";
 
@@ -28,6 +30,9 @@ type Pharmacy = {
   phone: string;
   address: string;
   distanceKm: number | null;
+  locked?: boolean;
+  ratingAvg?: number | null;
+  ratingCount?: number;
   stock: Stock[];
 };
 
@@ -42,6 +47,9 @@ type Specialist = {
   lat: number;
   lng: number;
   distanceKm: number | null;
+  locked: boolean;
+  ratingAvg: number | null;
+  ratingCount: number;
   medicines: Medicine[];
 };
 
@@ -54,6 +62,9 @@ type PharmacyEntry = {
   lat: number;
   lng: number;
   distanceKm: number | null;
+  locked?: boolean;
+  ratingAvg?: number | null;
+  ratingCount?: number;
   medicines: Medicine[];
   stock: Stock[];
   registered: boolean;
@@ -152,6 +163,9 @@ export default function NearbyHelp({
         lat: s.lat,
         lng: s.lng,
         distanceKm: s.distanceKm,
+        locked: s.locked,
+        ratingAvg: s.ratingAvg,
+        ratingCount: s.ratingCount,
         medicines: s.medicines ?? [],
         stock: [] as Stock[],
         registered: true,
@@ -164,18 +178,26 @@ export default function NearbyHelp({
       lat: p.lat,
       lng: p.lng,
       distanceKm: p.distanceKm,
+      locked: p.locked,
+      ratingAvg: p.ratingAvg,
+      ratingCount: p.ratingCount,
       medicines: [] as Medicine[],
       stock: p.stock ?? [],
       registered: false,
     }));
-    return [...registered, ...legacy].sort(
-      (a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999),
-    );
+    // Ochiqlar masofa bo'yicha, qulflanganlar reyting bo'yicha keyinda.
+    return [...registered, ...legacy].sort((a, b) => {
+      if (!!a.locked !== !!b.locked) return a.locked ? 1 : -1;
+      if (a.locked) {
+        return (b.ratingAvg ?? 0) - (a.ratingAvg ?? 0) || (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999);
+      }
+      return (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999);
+    });
   }, [specialists, pharmacies]);
 
-  const topPharmacies = pharmacyEntries.slice(0, 3);
-  // Mutaxassislar ro'yxati — dorixona egalarisiz.
-  const topSpecialists = specialists.filter((s) => s.role !== "pharmacy").slice(0, 3);
+  const topPharmacies = pharmacyEntries.slice(0, 4);
+  // Mutaxassislar ro'yxati — dorixona egalarisiz; masofadan ham ko'rinadi (locked).
+  const topSpecialists = specialists.filter((s) => s.role !== "pharmacy").slice(0, 4);
 
   const anyMedicineAvailable = pharmacyEntries.some(
     (p) =>
@@ -193,6 +215,18 @@ export default function NearbyHelp({
 
   const mapQuery = new URLSearchParams({ kind });
   medicines.forEach((m) => mapQuery.append("med", m));
+
+  function starsRow(avg: number | null, count: number) {
+    if (!avg || count === 0) {
+      return <span className="text-[11px] font-semibold text-[var(--brand-muted)]">★ Reyting yo&apos;q</span>;
+    }
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#b8860b]">
+        <Star size={10} fill="currentColor" className="text-[#fcbd00]" /> {avg.toFixed(1)}
+        <span className="text-[var(--brand-muted)]">({count})</span>
+      </span>
+    );
+  }
 
   return (
     <div>
@@ -222,9 +256,16 @@ export default function NearbyHelp({
         </div>
       )}
 
+      {/* Tavsiya etilgan dorilar (tashxis natijasidan) — dori bor dorixonalar oldinda */}
+      {medicines.length > 0 && (
+        <p className="ios-section-title mt-5 flex items-center gap-1.5">
+          <Pill size={14} /> Tavsiya etilgan dorilar: {medicines.join(", ")}
+        </p>
+      )}
+
       {/* Yaqin dorixonalar */}
-      <p className="ios-section-title mt-5 flex items-center gap-1.5">
-        <MapPin size={14} /> Yaqin dorixonalar (5 km)
+      <p className="ios-section-title mt-3 flex items-center gap-1.5">
+        <MapPin size={14} /> Dorixonalar ({topPharmacies.length > 0 ? "yaqin atrof" : "5 km"})
       </p>
       <section className="ios-card">
         {loading ? (
@@ -234,7 +275,7 @@ export default function NearbyHelp({
         ) : topPharmacies.length === 0 ? (
           <div className="p-4">
             <p className="text-[14px] font-bold text-[var(--brand-ink)]">
-              {kind === "agro" ? "Agro" : "Veterinariya"} dorixona 5 km ichida topilmadi
+              Hozircha ro&apos;yxatdan o&apos;tgan dorixona yo&apos;q
             </p>
             <p className="mt-1 text-[13px] leading-relaxed text-[var(--brand-muted)]">
               Dorixonalar faqat real ro&apos;yxatdan o&apos;tgan egalardan yig&apos;iladi. Dorixona
@@ -253,7 +294,9 @@ export default function NearbyHelp({
           </div>
         ) : (
           <ul>
-            {topPharmacies.map((p) => (
+            {topPharmacies.map((p) => {
+              const inRange = !p.locked;
+              return (
               <li
                 key={p.key}
                 className="border-b border-[var(--brand-sep)] px-4 py-3.5 last:border-b-0"
@@ -272,16 +315,27 @@ export default function NearbyHelp({
                         <MapPin size={12} className="mt-0.5 shrink-0" />
                         <span className="line-clamp-1">{p.address}</span>
                       </p>
+                      <div className="mt-1">{starsRow(p.ratingAvg ?? null, p.ratingCount ?? 0)}</div>
                     </div>
                   </div>
-                  {p.distanceKm !== null && (
-                    <span
-                      className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold text-white"
-                      style={{ background: "var(--brand-green)" }}
-                    >
-                      {p.distanceKm.toFixed(1)} km
-                    </span>
-                  )}
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    {p.distanceKm !== null && (
+                      <span
+                        className="rounded-full px-2 py-0.5 text-[11px] font-bold text-white"
+                        style={{ background: inRange ? "var(--brand-green)" : "var(--brand-muted)" }}
+                      >
+                        {p.distanceKm.toFixed(1)} km
+                      </span>
+                    )}
+                    {!inRange && (
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold"
+                        style={{ background: "var(--brand-red-soft)", color: "#d7263d" }}
+                      >
+                        <Lock size={9} /> uzoqda
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Bot orqali qo'shilgan dorilar — rasmi bilan */}
@@ -339,17 +393,27 @@ export default function NearbyHelp({
                   >
                     <Phone size={13} /> Qo&apos;ng&apos;iroq
                   </a>
-                  <a
-                    href={directionsUrl(p.lat, p.lng, coords)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-ink)] py-2.5 text-[13px] font-bold text-white"
-                  >
-                    <Navigation size={13} /> Yo&apos;nalish
-                  </a>
+                  {inRange ? (
+                    <a
+                      href={directionsUrl(p.lat, p.lng, coords)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-ink)] py-2.5 text-[13px] font-bold text-white"
+                    >
+                      <Navigation size={13} /> Yo&apos;nalish
+                    </a>
+                  ) : (
+                    <div
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2.5 text-[12px] font-bold text-[var(--brand-muted)]"
+                      style={{ background: "var(--brand-bg)" }}
+                    >
+                      <Lock size={12} /> Yo&apos;nalish yopiq
+                    </div>
+                  )}
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </section>
@@ -360,7 +424,7 @@ export default function NearbyHelp({
         </button>
       </Link>
 
-      {/* Mutaxassis tavsiyasi */}
+      {/* Mutaxassis tavsiyasi — jiddiy holatda doim ko'rinadi */}
       {(needsSpecialist || topSpecialists.length > 0) && (
         <>
           <p className="ios-section-title mt-6 flex items-center gap-1.5">
@@ -404,7 +468,9 @@ export default function NearbyHelp({
               </div>
             ) : (
               <ul>
-                {topSpecialists.map((s) => (
+                {topSpecialists.map((s) => {
+                  const inRange = !s.locked;
+                  return (
                   <li
                     key={s.id}
                     className="border-b border-[var(--brand-sep)] px-4 py-3.5 last:border-b-0"
@@ -424,19 +490,31 @@ export default function NearbyHelp({
                           <p className="text-[12.5px] text-[var(--brand-muted)]">
                             {s.specialty ?? "Mutaxassis"}
                           </p>
-                          <p className="mt-0.5 line-clamp-1 text-[12px] text-[var(--brand-muted)]">
-                            {s.address}
+                          <p className="mt-0.5 flex items-start gap-1 text-[12px] text-[var(--brand-muted)]">
+                            <MapPin size={11} className="mt-0.5 shrink-0" />
+                            <span className="line-clamp-1">{s.address}</span>
                           </p>
+                          <div className="mt-1">{starsRow(s.ratingAvg, s.ratingCount)}</div>
                         </div>
                       </div>
-                      {s.distanceKm !== null && (
-                        <span
-                          className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold text-white"
-                          style={{ background: "var(--brand-green)" }}
-                        >
-                          {s.distanceKm.toFixed(1)} km
-                        </span>
-                      )}
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        {s.distanceKm !== null && (
+                          <span
+                            className="rounded-full px-2 py-0.5 text-[11px] font-bold text-white"
+                            style={{ background: inRange ? "var(--brand-green)" : "var(--brand-muted)" }}
+                          >
+                            {s.distanceKm.toFixed(1)} km
+                          </span>
+                        )}
+                        {!inRange && (
+                          <span
+                            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold"
+                            style={{ background: "var(--brand-red-soft)", color: "#d7263d" }}
+                          >
+                            <Lock size={9} /> uzoqda
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="mt-2.5 flex gap-2">
                       <a
@@ -446,17 +524,27 @@ export default function NearbyHelp({
                       >
                         <Phone size={13} /> Qo&apos;ng&apos;iroq
                       </a>
-                      <a
-                        href={directionsUrl(s.lat, s.lng, coords)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-ink)] py-2.5 text-[13px] font-bold text-white"
-                      >
-                        <Navigation size={13} /> Yo&apos;nalish
-                      </a>
+                      {inRange ? (
+                        <a
+                          href={directionsUrl(s.lat, s.lng, coords)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-ink)] py-2.5 text-[13px] font-bold text-white"
+                        >
+                          <Navigation size={13} /> Yo&apos;nalish
+                        </a>
+                      ) : (
+                        <div
+                          className="flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2.5 text-[12px] font-bold text-[var(--brand-muted)]"
+                          style={{ background: "var(--brand-bg)" }}
+                        >
+                          <Lock size={12} /> Yo&apos;nalish yopiq
+                        </div>
+                      )}
                     </div>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             )}
           </section>

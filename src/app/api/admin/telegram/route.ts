@@ -139,7 +139,10 @@ export async function POST(req: Request) {
               { command: "bekor", description: "Jarayonni to'xtatish" },
               { command: "yordam", description: "Yordam" },
             ]
-          : [{ command: "start", description: "Boshlash / kod olish" }],
+          : [
+              { command: "start", description: "Boshlash / kod olish" },
+              { command: "yangiliklar", description: "Agro va chorvachilik yangiliklari" },
+            ],
       });
       return Response.json({ ok: true, message: `Webhook ulandi: ${baseUrl}${webhookPath}` });
     }

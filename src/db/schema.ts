@@ -8,6 +8,7 @@ import {
   integer,
   boolean,
   bigint,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
@@ -133,6 +134,26 @@ export const specialistMedicines = pgTable("specialist_medicines", {
   status: varchar("status", { length: 20 }).notNull().default("bor"), // bor | yoq
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+/**
+ * Mutaxassis/dorixona reytingi (1–5 yulduz).
+ * Bir mijoz (IP asosida anonim kalit) bir mutaxassisdga faqat bitta ovoz beradi —
+ * qayta bossa ovozi yangilanadi.
+ */
+export const specialistRatings = pgTable(
+  "specialist_ratings",
+  {
+    id: serial("id").primaryKey(),
+    /** `specialists.id`. */
+    specialistId: integer("specialist_id").notNull(),
+    /** Anonim mijoz kaliti (IP hash) — takroriy ovozlarning oldini oladi. */
+    raterKey: varchar("rater_key", { length: 64 }).notNull(),
+    /** 1–5 yulduz. */
+    stars: integer("stars").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [uniqueIndex("specialist_ratings_uniq").on(table.specialistId, table.raterKey)],
+);
 
 /**
  * Bot suhbatining holati (multi-step ro'yxatdan o'tish).

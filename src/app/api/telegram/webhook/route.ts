@@ -14,6 +14,8 @@ import {
 } from "@/lib/telegram-bot";
 import { BOT_OTP_TTL_MINUTES } from "@/lib/constants";
 import { telegramWebhookSecret } from "@/lib/settings";
+import { getNewsFeed } from "@/lib/news";
+import { escapeHtml } from "@/lib/tg-escape";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +61,43 @@ export async function POST(req: Request) {
   const firstName = message?.from?.first_name;
 
   try {
+    // /yangiliklar — real manbalardan agro/chorvachilik yangiliklari.
+    if (command === "/yangiliklar") {
+      try {
+        const items = await getNewsFeed(6);
+        if (items.length === 0) {
+          await sendMessage(
+            chatId,
+            "📰 Hozircha yangiliklar topilmadi. Birozdan so'ng qayta urinib ko'ring.",
+            { keyboard: greetingKeyboard() },
+          );
+          return Response.json({ ok: true });
+        }
+        const lines = ["📰 <b>Agro va chorvachilik yangiliklari</b>", ""];
+        items.forEach((n, i) => {
+          const date = new Date(n.publishedAt);
+          const dateStr = Number.isFinite(date.getTime())
+            ? ` · ${date.getMonth() + 1}.${date.getDate()}`
+            : "";
+          lines.push(
+            `${i + 1}. <b>${escapeHtml(n.title.slice(0, 140))}</b>`,
+            `   ${escapeHtml(n.source)}${dateStr} · ${n.tag}`,
+          );
+          if (n.link) lines.push(`   ${n.link}`);
+          lines.push("");
+        });
+        lines.push("🔄 Manbalar: AgroWorld, EastFruit, Kun.uz, Gazeta.uz");
+        await sendMessage(chatId, lines.join("\n"), { keyboard: greetingKeyboard() });
+      } catch (newsErr) {
+        console.error("[bot] yangiliklar xatosi:", newsErr);
+        await sendMessage(
+          chatId,
+          "⚠️ Yangiliklarni olishda xatolik. Birozdan so'ng /yangiliklar ni qayta yuboring.",
+        );
+      }
+      return Response.json({ ok: true });
+    }
+
     // /start <token> — sayt so'ragan kodni yuboramiz.
     if (isStart(command) && payload) {
       const state = await deliverCode(chatId, payload, fromId);
@@ -75,7 +114,11 @@ export async function POST(req: Request) {
     }
 
     // Oddiy /start yoki boshqa matn — salomlashish va Mini App tugmasi.
-    await sendMessage(chatId, greetingMessage(firstName), { keyboard: greetingKeyboard() });
+    const greeting = greetingMessage(firstName).replace(
+      "🔐 <b>Telefon raqamni tasdiqlash:</b>",
+      "📰 <b>Yangiliklar:</b> /yangiliklar buyrug'i bilan agro va chorvachilik\nyangiliklarini real manbalardan o'qishingiz mumkin.\n\n🔐 <b>Telefon raqamni tasdiqlash:</b>",
+    );
+    await sendMessage(chatId, greeting, { keyboard: greetingKeyboard() });
     return Response.json({ ok: true });
   } catch (err) {
     // Bot hech qachon jim qolmasligi kerak — xato bo'lsa ham javob yuboramiz.
