@@ -6,6 +6,7 @@ import { verifyInitData } from "@/lib/tg-auth";
 import { createSession } from "@/lib/session";
 import { cleanText } from "@/lib/validate";
 import { withApiErrors } from "@/lib/api";
+import { telegramBotToken } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,7 @@ export const POST = withApiErrors(async (req: Request) => {
     return NextResponse.json({ error: "Telegram ma'lumoti topilmadi" }, { status: 400 });
   }
 
-  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const token = await telegramBotToken();
   if (!token) {
     // Imzo tekshirilmasa istalgan odam istalgan telegram_id bilan kirishi mumkin.
     // Shuning uchun production'da bu yo'l ataylab yopiq.

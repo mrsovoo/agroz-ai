@@ -1,3 +1,5 @@
+import { aiApiKey, aiBaseUrl, aiModel, asrModel } from "@/lib/settings";
+
 export const SYSTEM_PROMPT = `Sen O'zbekistondagi tajribali agro-konsultant va veterinarsan. Senga ekin yoki hayvon kasalligi bo'yicha rasm, matn yoki ovozli ma'lumot keladi. Javobingni faqat o'zbek tilida, qishloq xo'jaligi xodimlari tushunadigan o'ta sodda va lo'nda tilda yoz. Murakkab ilmiy terminlarni ishlatma.
 Javobni QAT'IY JSON formatida qaytar:
 {"disease":"Kasallik nomi","solution":"Qisqa yechim, 2-4 ta qadam","medicines":["dori1","dori2"],"severity":"past|orta|yuqori","prevention":"Kelgusida oldini olish uchun 1-2 jumla","confidence":85}
@@ -160,9 +162,10 @@ export async function aiDiagnose(params: {
   text: string;
   imageDataUrl?: string | null;
 }): Promise<DiagnosisResult> {
-  const key = process.env.OPENAI_API_KEY;
-  const baseUrl = (process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");
-  const model = process.env.AI_MODEL || "gpt-4o";
+  // Kalit/endpoint/model admin panel orqali ham sozlanadi (DB > env).
+  const key = await aiApiKey();
+  const baseUrl = ((await aiBaseUrl()) || "https://api.openai.com/v1").replace(/\/$/, "");
+  const model = (await aiModel()) || "gemini-3.8-flash";
   const { category, text, imageDataUrl } = params;
   if (!key) return offlineDiagnose(category, text);
 
@@ -224,12 +227,12 @@ export async function aiDiagnose(params: {
 }
 
 export async function transcribeAudio(file: Blob): Promise<string> {
-  const key = process.env.OPENAI_API_KEY;
-  const baseUrl = (process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");
+  const key = await aiApiKey();
+  const baseUrl = ((await aiBaseUrl()) || "https://api.openai.com/v1").replace(/\/$/, "");
   if (!key) return "";
   const form = new FormData();
   form.append("file", file, "audio.webm");
-  form.append("model", process.env.ASR_MODEL || "whisper-1");
+  form.append("model", (await asrModel()) || "whisper-1");
   form.append("language", "uz");
   const res = await fetch(`${baseUrl}/audio/transcriptions`, {
     method: "POST",

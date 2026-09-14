@@ -1,10 +1,12 @@
 /**
  * `@agroz_auth_bot` — mutaxassislar va dorixona egalarini ro'yxatdan o'tkazuvchi bot.
  *
- * Asosiy `TELEGRAM_BOT_TOKEN`dan (kirish/OTP uchun) ajratilgan: bu bot faqat
- * ro'yxatdan o'tkazish va profil yangilash bilan shug'ullanadi. Shuning uchun
- * token ham alohida — `TELEGRAM_AUTH_BOT_TOKEN`.
+ * Asosiy botdan (kirish/OTP uchun) ajratilgan: bu bot faqat ro'yxatdan o'tkazish
+ * va profil yangilash bilan shug'ullanadi. Token alohida — admin panel orqali
+ * ham yangilanadi (DB'dagi qiymat env'dan ustun turadi).
  */
+
+import { telegramAuthBotToken } from "@/lib/settings";
 
 const API_BASE = "https://api.telegram.org";
 
@@ -19,20 +21,26 @@ export type ReplyKeyboard = {
   remove_keyboard?: boolean;
 };
 
+/** Sinxron env tokeni — dori rasmi proxy'sida ishlatiladi. */
 export function authBotToken(): string | null {
   const token = process.env.TELEGRAM_AUTH_BOT_TOKEN?.trim();
   return token ? token : null;
 }
 
-export function isAuthBotConfigured(): boolean {
-  return authBotToken() !== null;
+/** Token: DB (admin panel) > env. */
+export async function resolveAuthBotToken(): Promise<string | null> {
+  return telegramAuthBotToken();
+}
+
+export async function isAuthBotConfigured(): Promise<boolean> {
+  return (await resolveAuthBotToken()) !== null;
 }
 
 export async function callAuthBot<T>(
   method: string,
   payload?: Record<string, unknown>,
 ): Promise<T | null> {
-  const token = authBotToken();
+  const token = await resolveAuthBotToken();
   if (!token) return null;
   try {
     const res = await fetch(`${API_BASE}/bot${token}/${method}`, {

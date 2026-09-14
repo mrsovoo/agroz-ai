@@ -147,3 +147,21 @@ export const botStates = pgTable("bot_states", {
   data: text("data"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+/**
+ * Admin panel orqali boshqariladigan dinamik sozlashlar (bot tokenlari, AI kalitlari,
+ * SMS ma'lumotlari va h.k.). Bu yerda yozilgan qiymat `.env` dagi qiymatdan ustun turadi.
+ * Tokenlar hech qachon clientga chiqmaydi — admin panelida faqat oxirgi 4 belgi ko'rsatiladi.
+ */
+export const appSettings = pgTable("app_settings", {
+  key: varchar("key", { length: 100 }).primaryKey(),
+  value: text("value"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+/** Admin panel sessiyalari (`/admin/panel` uchun login/parol bilan kiriladi). */
+export const adminSessions = pgTable("admin_sessions", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+});

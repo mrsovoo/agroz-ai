@@ -1,5 +1,5 @@
 import { getMedicineById } from "@/lib/specialists";
-import { authBotToken } from "@/lib/auth-bot";
+import { resolveAuthBotToken } from "@/lib/auth-bot";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +17,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   const medicine = await getMedicineById(numericId);
   if (!medicine?.photoFileId) return new Response("not found", { status: 404 });
 
-  const token = authBotToken();
+  const token = await resolveAuthBotToken();
   if (!token) return new Response("bot sozlanmagan", { status: 503 });
 
   try {

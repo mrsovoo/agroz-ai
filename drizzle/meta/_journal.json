@@ -43,6 +43,13 @@
       "when": 1789291111439,
       "tag": "0005_deep_rawhide_kid",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789371045090,
+      "tag": "0006_worthless_lily_hollister",
+      "breakpoints": true
     }
   ]
 }
