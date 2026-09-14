@@ -181,22 +181,34 @@ export async function aiDiagnose(params: {
   }
 
   try {
-    const res = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${key}`,
-      },
-      body: JSON.stringify({
-        model,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content },
-        ],
-        max_tokens: 700,
-      }),
-    });
+    // 503/429 (model band / limit) holatlarda 1 marta qayta urinish —
+    // Gemini bepul modelda tez-tez uchraydi.
+    let res: Response | null = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const r = await fetch(`${baseUrl}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${key}`,
+        },
+        body: JSON.stringify({
+          model,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content },
+          ],
+          max_tokens: 700,
+        }),
+        signal: AbortSignal.timeout(45_000),
+      });
+      if (r.ok || (r.status !== 503 && r.status !== 429)) {
+        res = r;
+        break;
+      }
+      if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+    if (!res) throw new Error("AI javob bermadi (503/429)");
     if (!res.ok) throw new Error(`OpenAI ${res.status}`);
     const json = (await res.json()) as {
       choices?: { message?: { content?: string } }[];

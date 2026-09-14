@@ -9,6 +9,24 @@ import { specialistMedicines, specialistRatings, specialists } from "@/db/schema
 import { and, eq, sql } from "drizzle-orm";
 import { clampRadiusKm, distanceKm, roundKm } from "@/lib/geo";
 
+/**
+ * Tajriba va reytingga qarab tavsiya radiusi: asos 5 km, yuqori ishonchda
+ * tajribali mutaxassislar uchun 15 km gacha kengayadi.
+ */
+export function recommendationRadiusKm(opts: {
+  confidence: number | null;
+  severity: string | null;
+}): number {
+  const confidence = opts.confidence ?? 0;
+  const severe = opts.severity === "yuqori";
+  // Yuqori ishonch yoki jiddiy holat — tajribalilarga 15 km gacha.
+  if (confidence >= 80 || severe) return 15;
+  // O'rta ishonch — 10 km.
+  if (confidence >= 60) return 10;
+  // Past ishonch — standart 5 km.
+  return 5;
+}
+
 export const SPECIALIST_ROLES = ["specialist", "pharmacy"] as const;
 export type SpecialistRole = (typeof SPECIALIST_ROLES)[number];
 
@@ -22,6 +40,11 @@ export type SpecialistInput = {
   phone: string;
   role: SpecialistRole;
   specialty: string | null;
+  education?: string | null;
+  bio?: string | null;
+  /** crop | animal | both — kimga yordam beradi. */
+  helpsWith?: "crop" | "animal" | "both";
+  experienceYears?: number | null;
   organization: string | null;
   address: string;
   lat: number;
@@ -34,6 +57,10 @@ export type MedicineDto = {
   name: string;
   status: string;
   hasPhoto: boolean;
+  /** crop | animal | general — kim uchun. */
+  type: string;
+  /** Nima uchun ishlatiladi (mijozga ko'rinadi). */
+  usage: string | null;
 };
 
 export type SpecialistDto = {
@@ -42,6 +69,14 @@ export type SpecialistDto = {
   phone: string;
   role: string;
   specialty: string | null;
+  /** Qayerda o'qigan/tamomlagan. */
+  education: string | null;
+  /** Qisqa bio: nimalarni biladi, qanday yordam beradi. */
+  bio: string | null;
+  /** crop | animal | both — kimga yordam beradi. */
+  helpsWith: string;
+  /** Tajriba yillari. */
+  experienceYears: number | null;
   organization: string | null;
   address: string;
   lat: number;
@@ -68,6 +103,10 @@ export async function upsertSpecialist(input: SpecialistInput) {
     phone: input.phone,
     role: input.role,
     specialty: input.specialty,
+    education: input.education ?? null,
+    bio: input.bio ?? null,
+    helpsWith: input.helpsWith ?? "both",
+    experienceYears: input.experienceYears ?? null,
     organization: input.organization,
     address: input.address,
     lat: input.lat,
@@ -84,6 +123,50 @@ export async function upsertSpecialist(input: SpecialistInput) {
   return rows[0];
 }
 
+/**
+ * Profilingizni o'chirish — foydalanuvchining o'zi o'chiradi.
+ * Jadvaldan butunlay o'chiriladi (qayta ro'yxatdan o'tsa yangi profil yaratiladi).
+ * Dorixonaning dorilari ham o'chadi.
+ */
+export async function deleteSpecialist(telegramId: number): Promise<boolean> {
+  const profile = await getSpecialistByTelegramId(telegramId);
+  if (!profile) return false;
+  await db.delete(specialistMedicines).where(eq(specialistMedicines.specialistId, profile.id));
+  await db.delete(specialists).where(eq(specialists.id, profile.id));
+  return true;
+}
+
+/** Dorixonaning bittа dorini o'chirish. Egalik telegramId orqali tekshiriladi. */
+export async function deleteMedicine(
+  telegramId: number,
+  medicineId: number,
+): Promise<boolean> {
+  const profile = await getSpecialistByTelegramId(telegramId);
+  if (!profile || profile.role !== "pharmacy") return false;
+  const rows = await db
+    .delete(specialistMedicines)
+    .where(
+      and(
+        eq(specialistMedicines.id, medicineId),
+        eq(specialistMedicines.specialistId, profile.id),
+      ),
+    )
+    .returning({ id: specialistMedicines.id });
+  return rows.length > 0;
+}
+
+/** Dorixonaning barcha dorilari (o'chirish ro'yxati uchun). */
+export async function listMedicines(telegramId: number) {
+  const profile = await getSpecialistByTelegramId(telegramId);
+  if (!profile || profile.role !== "pharmacy") return null;
+  const rows = await db
+    .select()
+    .from(specialistMedicines)
+    .where(eq(specialistMedicines.specialistId, profile.id))
+    .orderBy(specialistMedicines.id);
+  return { profile, medicines: rows };
+}
+
 export async function getSpecialistByTelegramId(telegramId: number) {
   const rows = await db
     .select()
@@ -97,11 +180,15 @@ export async function getSpecialistByTelegramId(telegramId: number) {
 // Dorilar (faqat dorixona egalari qo'shadi)
 // ---------------------------------------------------------------------------
 
-/** Dorixonaga yangi dori qo'shadi (rasm Telegram file_id sifatida saqlanadi). */
+/**
+ * Dorixonaga yangi dori qo'shadi (rasm Telegram file_id, turi va ishlatilishi bilan).
+ */
 export async function addMedicine(params: {
   specialistId: number;
   name: string;
   photoFileId: string | null;
+  type?: "crop" | "animal" | "general";
+  usage?: string | null;
 }) {
   const rows = await db
     .insert(specialistMedicines)
@@ -109,6 +196,8 @@ export async function addMedicine(params: {
       specialistId: params.specialistId,
       name: params.name,
       photoFileId: params.photoFileId,
+      type: params.type ?? "general",
+      usage: params.usage ?? null,
       status: "bor",
     })
     .returning();
@@ -169,7 +258,14 @@ export async function listSpecialists(opts: {
   const bySpecialist = new Map<number, MedicineDto[]>();
   for (const m of medicineRows) {
     const list = bySpecialist.get(m.specialistId) ?? [];
-    list.push({ id: m.id, name: m.name, status: m.status, hasPhoto: Boolean(m.photoFileId) });
+    list.push({
+      id: m.id,
+      name: m.name,
+      status: m.status,
+      hasPhoto: Boolean(m.photoFileId),
+      type: m.type,
+      usage: m.usage,
+    });
     bySpecialist.set(m.specialistId, list);
   }
 
@@ -204,6 +300,10 @@ export async function listSpecialists(opts: {
     phone: s.phone,
     role: s.role,
     specialty: s.specialty,
+    education: s.education,
+    bio: s.bio,
+    helpsWith: s.helpsWith ?? "both",
+    experienceYears: s.experienceYears ?? null,
     organization: s.organization,
     address: s.address,
     lat: s.lat,
@@ -229,7 +329,14 @@ export async function listSpecialists(opts: {
 
   const withDistance = filtered.map((s) => {
     const d = roundKm(distanceKm(lat, lng, s.lat, s.lng));
-    return withMeta(s, d, d > radiusKm);
+    // Tajribali (5+ yil) va reytingi yaxshi (4+) mutaxassislar uchun radius 3 barobar.
+    const extended =
+      radiusKm < 15 &&
+      (s.experienceYears ?? 0) >= 5 &&
+      (ratingBySpecialist.get(s.id)?.count ?? 0) > 0 &&
+      (ratingBySpecialist.get(s.id)?.avg ?? 0) >= 4;
+    const limit = extended ? Math.min(radiusKm * 3, 15) : radiusKm;
+    return withMeta(s, d, d > limit);
   });
 
   const open = withDistance

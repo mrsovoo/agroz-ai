@@ -106,15 +106,23 @@ export const specialists = pgTable("specialists", {
   phone: varchar("phone", { length: 32 }).notNull(),
   /** specialist — alohida mutaxassis, pharmacy — dorixona egasi. */
   role: varchar("role", { length: 20 }).notNull().default("specialist"),
-  /** Mutaxassislik (agronom, veterinar...) yoki dorixona turi (agro, vet). */
+  /** Mutaxassislik (agronom, veterinar...) yoki dorixona turi (agro, vet, umumiy). */
   specialty: varchar("specialty", { length: 160 }),
+  /** Qayerda o'qigan/tamomlagan (OTM, kollej, kurslar). */
+  education: varchar("education", { length: 300 }),
+  /** Qisqa bio: nimalarni biladi, qanday yordam beradi. */
+  bio: varchar("bio", { length: 500 }),
+  /** Kimga yordam beradi: crop — ekin, animal — chorva, both — ikkalasi. */
+  helpsWith: varchar("helps_with", { length: 20 }).default("both"),
+  /** Tajriba yillari — tavsiya algoritmi tajribaga qarab radius kengaytiradi. */
+  experienceYears: integer("experience_years"),
   /** Dorixona nomi — faqat role=pharmacy uchun. */
   organization: varchar("organization", { length: 200 }),
   address: text("address").notNull(),
   lat: doublePrecision("lat").notNull(),
   lng: doublePrecision("lng").notNull(),
   workHours: varchar("work_hours", { length: 60 }).default("09:00 - 18:00"),
-  /** Admin bloklagan profillar qidiruvda chiqmaydi. */
+  /** Admin bloklagan yoki o'zining o'chirgan profillar qidiruvda chiqmaydi. */
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -131,6 +139,10 @@ export const specialistMedicines = pgTable("specialist_medicines", {
   name: varchar("name", { length: 160 }).notNull(),
   /** Telegram `file_id` — rasm bot tokenisiz, o'z API'miz orqali uzatiladi. */
   photoFileId: varchar("photo_file_id", { length: 300 }),
+  /** Kim uchun: crop — ekin/o'simlik, animal — hayvon, general — umumiy. */
+  type: varchar("type", { length: 20 }).notNull().default("general"),
+  /** Nima uchun ishlatiladi (qisqa tavsif, mijozga ko'rinadi). */
+  usage: varchar("usage", { length: 300 }),
   status: varchar("status", { length: 20 }).notNull().default("bor"), // bor | yoq
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

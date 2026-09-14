@@ -57,6 +57,20 @@
       "when": 1789373699282,
       "tag": "0007_loud_ogun",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789376668108,
+      "tag": "0008_thin_ikaris",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1789376940287,
+      "tag": "0009_fuzzy_paper_doll",
+      "breakpoints": true
     }
   ]
 }

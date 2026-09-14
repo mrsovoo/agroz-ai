@@ -13,8 +13,11 @@ import { cleanText, normalizePhone } from "@/lib/validate";
 import {
   addMedicine,
   countMedicines,
+  deleteMedicine,
+  deleteSpecialist,
   getSpecialistByTelegramId,
   isSpecialistRole,
+  listMedicines,
   upsertSpecialist,
   type SpecialistRole,
 } from "@/lib/specialists";
@@ -24,6 +27,10 @@ import {
   ADDRESS_CONFIRM_KEYBOARD,
   CONFIRM_KEYBOARD,
   MEDICINE_CONFIRM_KEYBOARD,
+  MEDICINE_CANCEL_KEYBOARD,
+  MEDICINE_DONE_KEYBOARD,
+  MEDICINE_TYPE_KEYBOARD,
+  MEDICINE_TYPE_LABELS,
   NEXT_STEP_KEYBOARD,
   ROLE_KEYBOARD,
   answerCallbackQuery,
@@ -31,8 +38,9 @@ import {
   askAddress,
   askAddressConfirm,
   askLocation,
-  askMedicineName,
   askMedicinePhoto,
+  askMedicineType,
+  askMedicineUsage,
   askName,
   askOrganization,
   askPharmacyType,
@@ -49,7 +57,20 @@ import {
   invalidPhoneMessage,
   locationKeyboard,
   medicineConfirmCaption,
+  medicineNameTooShortMessage,
+  medicineStepIndicator,
+  medicineIntroMessage,
+  photoReceivedMessage,
+  pharmacyNextStepMessage,
   medicineSavedMessage,
+  medicineDeletedMessage,
+  medicinesListMessage,
+  medicinesListKeyboard,
+  noMedicinesMessage,
+  profileDeletedMessage,
+  profileDeleteCanceledMessage,
+  askProfileDelete,
+  PROFILE_DELETE_KEYBOARD,
   needRegistrationMessage,
   onlyPharmacyMessage,
   profileMessage,
@@ -93,9 +114,11 @@ type Step =
   | "organization"
   | "pharmacy_type"
   | "confirm"
-  // Dorixona uchun dori qo'shish oqimi.
+  // Dorixona uchun dori qo'shish oqimi (5 bosqich).
   | "med_photo"
   | "med_name"
+  | "med_type"
+  | "med_usage"
   | "med_confirm";
 
 type Draft = {
@@ -110,6 +133,9 @@ type Draft = {
   /** Dori qo'shish uchun vaqtinchalik maydonlar. */
   medPhotoFileId?: string;
   medName?: string;
+  /** crop | animal | general */
+  medType?: string;
+  medUsage?: string;
 };
 
 type StateRow = typeof botStates.$inferSelect;
@@ -236,6 +262,40 @@ async function handleCommand(
     return;
   }
 
+  // Profil o'chirish — tasdiqlash bilan.
+  if (command === "/profilni_ochirish") {
+    const profile = await getSpecialistByTelegramId(telegramId);
+    if (!profile) {
+      await sendAuthMessage(chatId, needRegistrationMessage(), { inline: NEXT_STEP_KEYBOARD });
+      return;
+    }
+    await sendAuthMessage(chatId, askProfileDelete(profile.name, profile.role), {
+      inline: PROFILE_DELETE_KEYBOARD,
+    });
+    return;
+  }
+
+  // Dorilar ro'yxati va o'chirish (faqat dorixona egasi).
+  if (command === "/dorilarim") {
+    const data = await listMedicines(telegramId);
+    if (!data) {
+      await sendAuthMessage(chatId, needRegistrationMessage(), { inline: NEXT_STEP_KEYBOARD });
+      return;
+    }
+    if (data.profile.role !== "pharmacy") {
+      await sendAuthMessage(chatId, onlyPharmacyMessage(data.profile.role));
+      return;
+    }
+    if (data.medicines.length === 0) {
+      await sendAuthMessage(chatId, noMedicinesMessage());
+      return;
+    }
+    await sendAuthMessage(chatId, medicinesListMessage(data.medicines), {
+      inline: medicinesListKeyboard(data.medicines),
+    });
+    return;
+  }
+
   if (command === "/bekor") {
     await clearState(telegramId);
     await sendAuthMessage(chatId, cancelMessage());
@@ -296,7 +356,10 @@ async function startRegistration(chatId: number, telegramId: number): Promise<vo
   await sendAuthMessage(chatId, roleQuestion(), { inline: ROLE_KEYBOARD });
 }
 
-/** Dorixona egasi dori qo'shishni boshlaydi (faqat role=pharmacy uchun). */
+/**
+ * Dorixona egasi dori qo'shishni boshlaydi (faqat role=pharmacy uchun).
+ * Har bir etap aniq ko'rsatiladi: 1/3 rasm → 2/3 nom → 3/3 tasdiqlash.
+ */
 async function startMedicineAdd(chatId: number, telegramId: number): Promise<void> {
   const profile = await getSpecialistByTelegramId(telegramId);
   if (!profile) {
@@ -304,12 +367,21 @@ async function startMedicineAdd(chatId: number, telegramId: number): Promise<voi
     return;
   }
   if (profile.role !== "pharmacy") {
-    await sendAuthMessage(chatId, onlyPharmacyMessage());
+    await sendAuthMessage(chatId, onlyPharmacyMessage(profile.role));
     return;
   }
   await clearState(telegramId);
   await setState(telegramId, "med_photo", {});
-  await sendAuthMessage(chatId, askMedicinePhoto());
+  await sendAuthMessage(
+    chatId,
+    medicineIntroMessage(profile.organization ?? profile.name, await countMedicines(profile.id)),
+  );
+}
+
+/** Dori jarayonini bekor qilib, boshlash uchun taklif bilan qaytadi. */
+async function cancelMedicineFlow(chatId: number, telegramId: number): Promise<void> {
+  await clearState(telegramId);
+  await sendAuthMessage(chatId, cancelMessage(), { inline: NEXT_STEP_KEYBOARD });
 }
 
 // ---------------------------------------------------------------------------
@@ -367,7 +439,25 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
       return;
     }
 
-    // Dorini tasdiqlash yoki bekor qilish.
+    // Dori turi tanlandi (mt:crop | mt:animal | mt:general).
+    if (data.startsWith("mt:")) {
+      const value = data.slice(3);
+      if (value !== "crop" && value !== "animal" && value !== "general") {
+        await answerCallbackQuery(query.id);
+        return;
+      }
+      draft.medType = value;
+      await setState(telegramId, "med_usage", draft);
+      await answerCallbackQuery(query.id);
+      await sendAuthMessage(
+        chatId,
+        `${medicineStepIndicator("usage")}\n\n${askMedicineUsage()}`,
+        { inline: MEDICINE_CANCEL_KEYBOARD },
+      );
+      return;
+    }
+
+    // Dorini tasdiqlash / qayta boshlash / bekor qilish / yana qo'shish.
     if (data === "m:ok") {
       await answerCallbackQuery(query.id);
       const saved = await saveMedicine(telegramId, draft);
@@ -375,15 +465,48 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
         await sendAuthMessage(chatId, needRegistrationMessage(), { inline: NEXT_STEP_KEYBOARD });
         return;
       }
+      const savedProfile = await getSpecialistByTelegramId(telegramId);
       await clearState(telegramId);
-      await sendAuthMessage(chatId, medicineSavedMessage(saved.name, saved.total));
+      await sendAuthMessage(chatId, medicineSavedMessage(saved.name, saved.total), {
+        inline: {
+          inline_keyboard: [
+            [{ text: "➕ Yana dori qo'shish", callback_data: "m:again" }],
+            ...(savedProfile
+              ? appKeyboard()?.inline_keyboard ?? []
+              : []),
+          ],
+        },
+      });
+      return;
+    }
+
+    // Tasdiqlashda xato bo'lsa — boshidan qayta boshlash taklifi.
+    if (data === "m:restart") {
+      await answerCallbackQuery(query.id);
+      await startMedicineAdd(chatId, telegramId);
+      return;
+    }
+
+    // Saqlagandan keyin «Yana dori qo'shish».
+    if (data === "m:again") {
+      await answerCallbackQuery(query.id);
+      await startMedicineAdd(chatId, telegramId);
+      return;
+    }
+
+    // Saqlagandan keyin «Profilimni ko'rish».
+    if (data === "m:profile") {
+      await answerCallbackQuery(query.id);
+      const profile = await getSpecialistByTelegramId(telegramId);
+      if (profile) {
+        await sendAuthMessage(chatId, profileMessage(profile), { inline: appKeyboard() });
+      }
       return;
     }
 
     if (data === "m:no") {
       await answerCallbackQuery(query.id);
-      await clearState(telegramId);
-      await sendAuthMessage(chatId, cancelMessage());
+      await cancelMedicineFlow(chatId, telegramId);
       return;
     }
 
@@ -409,10 +532,11 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
       return;
     }
 
-    // Dorixona turi.
+    // Dorixona turi: agro | vet | general (umumiy — ikkala turdagi dorilar ham).
     if (data.startsWith("pt:")) {
       const value = data.slice(3);
-      draft.specialty = value === "vet" ? "Vet dorixona" : "Agro dorixona";
+      draft.specialty =
+        value === "vet" ? "Vet dorixona" : value === "general" ? "Umumiy dorixona" : "Agro dorixona";
       step = "confirm";
       await setState(telegramId, step, draft);
       await answerCallbackQuery(query.id);
@@ -428,7 +552,60 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
         return;
       }
       await clearState(telegramId);
-      await sendAuthMessage(chatId, savedMessage(saved.name), { inline: appKeyboard() });
+      // Dorixona egasi bo'lsa — keyingi qadam sifatida dori qo'shish taklif qilinadi.
+      const isPharmacy = saved.role === "pharmacy";
+      await sendAuthMessage(chatId, savedMessage(saved.name), {
+        inline: {
+          inline_keyboard: [
+            ...(isPharmacy ? [[{ text: "💊 Dorilar qo'shish", callback_data: "m:start" }]] : []),
+            ...(appKeyboard()?.inline_keyboard ?? []),
+          ],
+        },
+      });
+      return;
+    }
+
+    // Ro'yxatdan o'tishdan keyingi «Dorilar qo'shish» tugmasi.
+    if (data === "m:start") {
+      await answerCallbackQuery(query.id);
+      await startMedicineAdd(chatId, telegramId);
+      return;
+    }
+
+    // Profil o'chirish tasdiqlash.
+    if (data === "pd:yes") {
+      await answerCallbackQuery(query.id);
+      const deleted = await deleteSpecialist(telegramId);
+      await sendAuthMessage(
+        chatId,
+        deleted ? profileDeletedMessage() : errorMessage(),
+      );
+      return;
+    }
+    if (data === "pd:no") {
+      await answerCallbackQuery(query.id);
+      await sendAuthMessage(chatId, profileDeleteCanceledMessage());
+      return;
+    }
+
+    // Dori o'chirish (md:<id>).
+    if (data.startsWith("md:")) {
+      await answerCallbackQuery(query.id);
+      const medId = Number(data.slice(3));
+      if (!Number.isSafeInteger(medId)) return;
+      const deleted = await deleteMedicine(telegramId, medId);
+      if (!deleted) {
+        await sendAuthMessage(chatId, errorMessage());
+        return;
+      }
+      const rest = await listMedicines(telegramId);
+      const total = rest?.medicines.length ?? 0;
+      await sendAuthMessage(chatId, medicineDeletedMessage(`Dori #${medId}`, total));
+      if (total > 0 && rest) {
+        await sendAuthMessage(chatId, medicinesListMessage(rest.medicines), {
+          inline: medicinesListKeyboard(rest.medicines),
+        });
+      }
       return;
     }
 
@@ -516,34 +693,73 @@ async function handleText(
     }
 
     case "med_name": {
+      // Juda qisqa nomlar rad etiladi (masalan bitta harf).
       const name = cleanText(text, 160);
-      if (!name) {
-        await sendAuthMessage(chatId, askMedicineName());
+      if (!name || name.replace(/\s/g, "").length < 2) {
+        await sendAuthMessage(chatId, medicineNameTooShortMessage(), {
+          inline: MEDICINE_CANCEL_KEYBOARD,
+        });
         return;
       }
       draft.medName = name;
+      await setState(telegramId, "med_type", draft);
+      await sendAuthMessage(
+        chatId,
+        `${medicineStepIndicator("type")}\n\n${askMedicineType()}`,
+        { inline: MEDICINE_TYPE_KEYBOARD },
+      );
+      return;
+    }
+
+    case "med_usage": {
+      // /skip yoki /o'tkaz yozilsa — usage bo'sh qoladi.
+      const skip = text === "/skip" || text === "/otkaz";
+      const usage = skip ? null : cleanText(text, 300);
+      if (!skip && !usage) {
+        await sendAuthMessage(chatId, askMedicineUsage(), { inline: MEDICINE_CANCEL_KEYBOARD });
+        return;
+      }
+      draft.medUsage = usage ?? undefined;
       await setState(telegramId, "med_confirm", draft);
-      const caption = medicineConfirmCaption(name);
+      const typeLabel = draft.medType ? MEDICINE_TYPE_LABELS[draft.medType] : undefined;
+      const caption = `${medicineStepIndicator("confirm")}\n\n${medicineConfirmCaption(
+        draft.medName ?? "",
+        draft.organization,
+        typeLabel,
+        usage,
+      )}`;
       const sent = draft.medPhotoFileId
         ? await sendAuthPhoto(chatId, draft.medPhotoFileId, caption, {
             inline: MEDICINE_CONFIRM_KEYBOARD,
           })
         : false;
-      // Rasm yuborilmasa ham, tasdiqlash so'raladi — oqim to'xtamaydi.
       if (!sent) {
         await sendAuthMessage(chatId, caption, { inline: MEDICINE_CONFIRM_KEYBOARD });
       }
       return;
     }
 
+    case "med_type":
+      // Turi tanlanmagan — klaviaturani qayta ko'rsatamiz.
+      await sendAuthMessage(
+        chatId,
+        `${medicineStepIndicator("type")}\n\n${askMedicineType()}`,
+        { inline: MEDICINE_TYPE_KEYBOARD },
+      );
+      return;
+
     case "med_photo":
-      await sendAuthMessage(chatId, askMedicinePhoto());
+      // Hali rasm yuborilmagan — qayta so'raymiz (bekor qilish imkoni bilan).
+      await sendAuthMessage(chatId, `${medicineStepIndicator("photo")}\n\n${askMedicinePhoto()}`, {
+        inline: MEDICINE_CANCEL_KEYBOARD,
+      });
       return;
 
     case "med_confirm":
+      // Nom yozilgan, tasdiqlash kutilmoqda — tugmalarni qayta ko'rsatamiz.
       await sendAuthMessage(
         chatId,
-        medicineConfirmCaption(draft.medName ?? ""),
+        `${medicineStepIndicator("confirm")}\n\n${medicineConfirmCaption(draft.medName ?? "", draft.organization)}`,
         { inline: MEDICINE_CONFIRM_KEYBOARD },
       );
       return;
@@ -654,16 +870,20 @@ async function handleMedicinePhoto(
   // Eng katta o'lchamdagi variant eng aniq rasm bo'ladi.
   const best = [...photos].sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0];
   if (!best?.file_id) {
-    await sendAuthMessage(chatId, askMedicinePhoto());
+    await sendAuthMessage(chatId, askMedicinePhoto(), { inline: MEDICINE_CANCEL_KEYBOARD });
     return;
   }
   const draft = state.draft;
   draft.medPhotoFileId = best.file_id;
   await setState(telegramId, "med_name", draft);
-  await sendAuthMessage(chatId, askMedicineName());
+  await sendAuthMessage(
+    chatId,
+    `${medicineStepIndicator("name")}\n\n${photoReceivedMessage()}`,
+    { inline: MEDICINE_CANCEL_KEYBOARD },
+  );
 }
 
-/** Dori tasdiqlanganda saqlaydi. Profil topilmasa `null`. */
+/** Dori tasdiqlanganda saqlaydi (turi va ishlatilishi bilan). Profil topilmasa `null`. */
 async function saveMedicine(
   telegramId: number,
   draft: Draft,
@@ -673,10 +893,17 @@ async function saveMedicine(
   const profile = await getSpecialistByTelegramId(telegramId);
   if (!profile || profile.role !== "pharmacy") return null;
 
+  const medType =
+    draft.medType === "crop" || draft.medType === "animal" || draft.medType === "general"
+      ? draft.medType
+      : "general";
+
   await addMedicine({
     specialistId: profile.id,
     name,
     photoFileId: draft.medPhotoFileId ?? null,
+    type: medType,
+    usage: draft.medUsage ?? null,
   });
   const total = await countMedicines(profile.id);
   return { name, total };
@@ -743,9 +970,10 @@ function requiredMissing(draft: Draft): { step: Step; question: string } | null 
 async function saveDraft(
   telegramId: number,
   draft: Draft,
-): Promise<{ name: string } | null> {
+): Promise<{ name: string; role: SpecialistRole } | null> {
   if (requiredMissing(draft)) return null;
-  const role: SpecialistRole = isSpecialistRole(draft.role) ? draft.role : "specialist";
+  const role: SpecialistRole =
+    draft.role === "pharmacy" || draft.role === "specialist" ? draft.role : "specialist";
   const saved = await upsertSpecialist({
     telegramId,
     name: draft.name as string,
@@ -758,6 +986,8 @@ async function saveDraft(
     lng: draft.lng as number,
     workHours: "09:00 - 18:00",
   });
-  return saved ? { name: saved.name } : null;
+  return saved
+    ? { name: saved.name, role: saved.role === "pharmacy" ? "pharmacy" : "specialist" }
+    : null;
 }
 

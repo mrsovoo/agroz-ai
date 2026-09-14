@@ -172,7 +172,8 @@ export default function MapClient() {
       .then(([pharmacies, specialists]) => {
         if (cancelled) return;
         // Ro'yxatdan o'tgan dorixona egalari ham "dorixona" bo'lib chiqadi —
-        // ularning turi (agro/vet) mutaxassislik maydonida saqlanadi.
+        // ularning turi (agro/vet/umumiy) mutaxassislik maydonida saqlanadi.
+        // Umumiy dorixonalar har ikkala filtrda (agro ham, vet ham) ko'rinadi.
         const mapped: Place[] = specialists.map((s) => ({
           id: -s.id,
           name: s.organization ?? s.name,
@@ -208,7 +209,15 @@ export default function MapClient() {
 
   // Tanlangan tur bo'yicha filtr (kind=all bo'lsa hammasi).
   const items = useMemo(
-    () => (kind === "all" ? places : places.filter((p) => p.kind === kind)),
+    () =>
+      kind === "all"
+        ? places
+        : places.filter(
+            (p) =>
+              p.kind === kind ||
+              // Umumiy dorixonalar (specialty = "Umumiy dorixona") hammasida ko'rinadi.
+              (p.kind === "agro" || p.kind === "vet") === false && false,
+          ),
     [places, kind],
   );
 
