@@ -42,6 +42,12 @@ type Specialist = {
   phone: string;
   role: string;
   specialty: string | null;
+  /** Qayerda o'qigan/tamomlagan. */
+  education: string | null;
+  /** Qisqa bio: nimalarni biladi. */
+  bio: string | null;
+  /** Tajriba yillari. */
+  experienceYears: number | null;
   organization: string | null;
   address: string;
   lat: number;
@@ -494,10 +500,30 @@ export default function NearbyHelp({
                             <MapPin size={11} className="mt-0.5 shrink-0" />
                             <span className="line-clamp-1">{s.address}</span>
                           </p>
+                          {/* Ta'lim, tajriba va bio — mijozga mutaxassis haqida to'liq ma'lumot. */}
+                          {s.education && (
+                            <p className="mt-0.5 line-clamp-1 text-[11.5px] text-[var(--brand-muted)]" title={s.education}>
+                              🎓 {s.education}
+                            </p>
+                          )}
+                          {s.bio && (
+                            <p className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-[var(--brand-ink)]/80" title={s.bio}>
+                              {s.bio}
+                            </p>
+                          )}
                           <div className="mt-1">{starsRow(s.ratingAvg, s.ratingCount)}</div>
                         </div>
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1">
+                        {s.experienceYears !== null && s.experienceYears > 0 && (
+                          <span
+                            className="rounded-full px-2 py-0.5 text-[10.5px] font-bold"
+                            style={{ background: "var(--brand-bg)", color: "var(--brand-ink)" }}
+                            title="Tajriba yillari"
+                          >
+                            🏅 {s.experienceYears} yil
+                          </span>
+                        )}
                         {s.distanceKm !== null && (
                           <span
                             className="rounded-full px-2 py-0.5 text-[11px] font-bold text-white"

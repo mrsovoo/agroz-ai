@@ -26,6 +26,14 @@ type Specialist = {
   phone: string;
   role: string;
   specialty: string | null;
+  /** Qayerda o'qigan/tamomlagan. */
+  education: string | null;
+  /** Qisqa bio: nimalarni biladi, qanday yordam beradi. */
+  bio: string | null;
+  /** crop | animal | both — kimga yordam beradi. */
+  helpsWith: string;
+  /** Tajriba yillari. */
+  experienceYears: number | null;
   organization: string | null;
   address: string;
   lat: number;
@@ -283,9 +291,38 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
                           <Pill size={11} /> {s.medicines!.length} ta dori ro&apos;yxatda
                         </p>
                       )}
+                      {/* Mutaxassislik tafsilotlari — mijoz kimga murojaat qilayotganini bilishi kerak. */}
+                      {!isPharmacy && (s.helpsWith === "crop" || s.helpsWith === "animal" || s.helpsWith === "both") && (
+                        <p className="mt-1.5 text-[12px] font-semibold text-[var(--brand-muted)]">
+                          {s.helpsWith === "crop"
+                            ? "🌱 Ekin bo'yicha yordam beradi"
+                            : s.helpsWith === "animal"
+                              ? "🐄 Chorva bo'yicha yordam beradi"
+                              : "🌱🐄 Ekin va chorva bo'yicha"}
+                        </p>
+                      )}
+                      {s.education && (
+                        <p className="mt-1 line-clamp-1 text-[12px] text-[var(--brand-muted)]" title={s.education}>
+                          🎓 {s.education}
+                        </p>
+                      )}
+                      {s.bio && (
+                        <p className="mt-1 line-clamp-2 text-[12.5px] leading-snug text-[var(--brand-ink)]/80" title={s.bio}>
+                          {s.bio}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
+                    {s.experienceYears !== null && s.experienceYears > 0 && (
+                      <span
+                        className="rounded-full px-2.5 py-1 text-[11.5px] font-bold"
+                        style={{ background: "var(--brand-bg)", color: "var(--brand-ink)" }}
+                        title="Tajriba yillari"
+                      >
+                        🏅 {s.experienceYears} yil
+                      </span>
+                    )}
                     {s.distanceKm !== null && (
                       <span
                         className="rounded-full px-2.5 py-1 text-[12px] font-bold text-white"

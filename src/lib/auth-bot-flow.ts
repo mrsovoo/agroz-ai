@@ -38,6 +38,11 @@ import {
   askAddress,
   askAddressConfirm,
   askLocation,
+  askEducation,
+  askExperience,
+  askBio,
+  askHelpsWith,
+  HELPS_WITH_KEYBOARD,
   askMedicinePhoto,
   askMedicineType,
   askMedicineUsage,
@@ -113,6 +118,10 @@ type Step =
   | "specialty_text"
   | "organization"
   | "pharmacy_type"
+  | "helps_with"
+  | "education"
+  | "experience"
+  | "bio"
   | "confirm"
   // Dorixona uchun dori qo'shish oqimi (5 bosqich).
   | "med_photo"
@@ -130,6 +139,11 @@ type Draft = {
   address?: string;
   specialty?: string;
   organization?: string;
+  /** crop | animal | both — kimga yordam beradi (mutaxassis). */
+  helpsWith?: "crop" | "animal" | "both";
+  education?: string;
+  experienceYears?: number;
+  bio?: string;
   /** Dori qo'shish uchun vaqtinchalik maydonlar. */
   medPhotoFileId?: string;
   medName?: string;
@@ -432,10 +446,11 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
         return;
       }
       draft.specialty = value.slice(0, 160);
-      step = "confirm";
+      // Mutaxassis uchun keyingi bosqich — kimga yordam beradi.
+      step = "helps_with";
       await setState(telegramId, step, draft);
       await answerCallbackQuery(query.id);
-      await sendSummary(chatId, telegramId, draft);
+      await sendAuthMessage(chatId, askHelpsWith(), { inline: HELPS_WITH_KEYBOARD });
       return;
     }
 
@@ -537,10 +552,26 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
       const value = data.slice(3);
       draft.specialty =
         value === "vet" ? "Vet dorixona" : value === "general" ? "Umumiy dorixona" : "Agro dorixona";
+      // Dorixona uchun keyingi bosqich — tasdiqlash.
       step = "confirm";
       await setState(telegramId, step, draft);
       await answerCallbackQuery(query.id);
       await sendSummary(chatId, telegramId, draft);
+      return;
+    }
+
+    // Kimga yordam beradi (mutaxassis): hw:crop | hw:animal | hw:both.
+    if (data.startsWith("hw:")) {
+      const value = data.slice(3);
+      if (value !== "crop" && value !== "animal" && value !== "both") {
+        await answerCallbackQuery(query.id);
+        return;
+      }
+      draft.helpsWith = value;
+      step = "education";
+      await setState(telegramId, step, draft);
+      await answerCallbackQuery(query.id);
+      await sendAuthMessage(chatId, askEducation());
       return;
     }
 
@@ -687,6 +718,52 @@ async function handleText(
         return;
       }
       draft.specialty = specialty;
+      await setState(telegramId, "helps_with", draft);
+      await sendAuthMessage(chatId, askHelpsWith(), { inline: HELPS_WITH_KEYBOARD });
+      return;
+    }
+
+    case "helps_with":
+      await sendAuthMessage(chatId, askHelpsWith(), { inline: HELPS_WITH_KEYBOARD });
+      return;
+
+    case "education": {
+      // /skip — ta'limni o'tkazib yuborish.
+      const skip = text === "/skip";
+      const education = skip ? null : cleanText(text, 300);
+      if (!skip && !education) {
+        await sendAuthMessage(chatId, askEducation());
+        return;
+      }
+      draft.education = education ?? undefined;
+      await setState(telegramId, "experience", draft);
+      await sendAuthMessage(chatId, askExperience());
+      return;
+    }
+
+    case "experience": {
+      // /skip — tajribani o'tkazib yuborish.
+      const skip = text === "/skip";
+      const years = skip ? null : Number(text.replace(/[^0-9]/g, ""));
+      if (!skip && (!Number.isFinite(years) || (years as number) < 0 || (years as number) > 80)) {
+        await sendAuthMessage(chatId, askExperience());
+        return;
+      }
+      draft.experienceYears = years ?? undefined;
+      await setState(telegramId, "bio", draft);
+      await sendAuthMessage(chatId, askBio());
+      return;
+    }
+
+    case "bio": {
+      // /skip — bio'ni o'tkazib yuborish.
+      const skip = text === "/skip";
+      const bio = skip ? null : cleanText(text, 500);
+      if (!skip && !bio) {
+        await sendAuthMessage(chatId, askBio());
+        return;
+      }
+      draft.bio = bio ?? undefined;
       await setState(telegramId, "confirm", draft);
       await sendSummary(chatId, telegramId, draft);
       return;
@@ -980,6 +1057,10 @@ async function saveDraft(
     phone: draft.phone as string,
     role,
     specialty: draft.specialty ?? null,
+    education: draft.education ?? null,
+    bio: draft.bio ?? null,
+    helpsWith: draft.helpsWith ?? "both",
+    experienceYears: draft.experienceYears ?? null,
     organization: draft.organization ?? null,
     address: draft.address as string,
     lat: draft.lat as number,
