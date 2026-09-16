@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createHash, randomBytes } from "crypto";
 import { db } from "@/db";
 import { diagnoses } from "@/db/schema";
 import { aiDiagnose } from "@/lib/ai";
@@ -48,6 +49,14 @@ export const POST = withApiErrors(async (req: Request) => {
 
   const result = await aiDiagnose({ category, text, imageDataUrl });
 
+  // Anonim tashxis (userId=null) faqat imzolangan token bilan ko'riladi: bazada
+  // tokenning SHA-256 hash'i saqlanadi, o'zi esa bir marta API javobida qaytadi.
+  // ID'ni bilgan istalgan odam boshqaning tashxisini sanab ko'ra olmaydi.
+  const viewToken = user ? null : randomBytes(24).toString("hex");
+  const viewHash = viewToken
+    ? createHash("sha256").update(viewToken).digest("hex")
+    : null;
+
   const inserted = await db
     .insert(diagnoses)
     .values({
@@ -63,8 +72,17 @@ export const POST = withApiErrors(async (req: Request) => {
       severity: result.severity,
       confidence: result.confidence,
       source: result.source,
+      viewHash,
     })
     .returning({ id: diagnoses.id });
 
-  return NextResponse.json({ ok: true, id: inserted[0].id, result });
+  const response: {
+    ok: boolean;
+    id: number;
+    result: typeof result;
+    viewToken?: string;
+  } = { ok: true, id: inserted[0].id, result };
+  if (viewToken) response.viewToken = viewToken;
+
+  return NextResponse.json(response);
 });

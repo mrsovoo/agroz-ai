@@ -239,12 +239,14 @@ export function roleQuestion(): string {
   return ["🧑‍🔬 <b>Kim sifatida ro'yxatdan o'tasiz?</b>", "", "Kerakli variantni tanlang."].join("\n");
 }
 
-export function askName(): string {
-  return [
+export function askName(prefill?: string): string {
+  const base = [
     "✍️ <b>Ism va familiyangizni yozing.</b>",
     "",
     "Masalan: <i>Alisher Qodirov</i>",
-  ].join("\n");
+  ];
+  if (prefill) base.push("", `Hozirgi qiymat: <b>${escapeHtml(prefill)}</b> — o'zgartirmasangiz shu qoladi.`);
+  return base.join("\n");
 }
 
 export function askPhone(): string {
@@ -321,12 +323,15 @@ export function askPharmacyType(): string {
   ].join("\n");
 }
 
-export function askWorkHours(): string {
-  return [
+export function askWorkHours(prefill?: string): string {
+  const base = [
     "🕘 <b>Ish vaqtini yozing.</b>",
     "",
     "Masalan: <i>09:00 - 18:00</i> yoki <i>24/7</i>",
-  ].join("\n");
+    "O'tkazib yuborish uchun <i>/skip</i> yozing (standart: 09:00 - 18:00).",
+  ];
+  if (prefill) base.push("", `Hozirgi qiymat: <b>${escapeHtml(prefill)}</b>`);
+  return base.join("\n");
 }
 
 export function confirmSummary(data: {
@@ -466,32 +471,85 @@ export function profileDeleteCanceledMessage(): string {
   return "✅ Profil o'chirilmadi — barcha ma'lumotlar saqlanib qoldi.";
 }
 
-/** Dorilar ro'yxati — o'chirish tugmalari bilan. */
-export function medicinesListMessage(items: { id: number; name: string; type: string }[]): string {
+/** Dorilar ro'yxati — status, narx va boshqaruv havolalari bilan. */
+export function medicinesListMessage(
+  items: { id: number; name: string; type: string; status: string; price?: number | null }[],
+): string {
   const lines = ["💊 <b>Dorilaringiz</b>", ""];
   if (items.length === 0) {
     lines.push("Hozircha dori qo'shilmagan.", "", "Qo'shish: /dori_qoshish");
     return lines.join("\n");
   }
   for (const m of items) {
-    const t =
-      m.type === "crop" ? "🌱" : m.type === "animal" ? "🐄" : "📦";
+    const t = m.type === "crop" ? "🌱" : m.type === "animal" ? "🐄" : "📦";
+    const status = m.status === "bor" ? "✅ Bor" : "❌ Yo'q";
+    const price = m.price ? ` · ${formatSum(m.price)}` : "";
     lines.push(`${t} <b>${escapeHtml(m.name)}</b>`);
+    lines.push(`   ${status}${price}`);
   }
-  lines.push("", "O'chirish uchun tugmani bosing:");
+  lines.push("", "Dori ustiga bossangiz — bor/yo'q, narx, o'chirish.");
   return lines.join("\n");
 }
 
-export function medicinesListKeyboard(items: { id: number; name: string }[]): InlineKeyboard {
+export function medicinesListKeyboard(
+  items: { id: number; name: string; status: string }[],
+): InlineKeyboard {
   return {
     inline_keyboard: [
-      ...items.slice(0, 10).map((m) => [
-        { text: `🗑 ${m.name.slice(0, 30)}`, callback_data: `md:${m.id}` },
+      ...items.slice(0, 15).map((m) => [
+        {
+          text: `${m.status === "bor" ? "✅" : "❌"} ${m.name.slice(0, 28)}`,
+          callback_data: `mm:${m.id}`,
+        },
       ]),
       [{ text: "➕ Dori qo'shish", callback_data: "m:start" }],
     ],
   };
 }
+
+/** Bitta dori boshqaruvi klaviaturasi (bor/yoq, narx, o'chirish). */
+export function medicineManageKeyboard(m: {
+  id: number;
+  status: string;
+}): InlineKeyboard {
+  return {
+    inline_keyboard: [
+      [
+        m.status === "bor"
+          ? { text: "❌ Yo'q deb belgilash", callback_data: `ms:${m.id}:yoq` }
+          : { text: "✅ Bor deb belgilash", callback_data: `ms:${m.id}:bor` },
+        { text: "💰 Narx", callback_data: `mp:set:${m.id}` },
+      ],
+      [{ text: "🗑 O'chirish", callback_data: `md:${m.id}` }],
+      [{ text: "⬅️ Ro'yxatga qaytish", callback_data: "m:list" }],
+    ],
+  };
+}
+
+/** Bitta dori boshqarish xabari. */
+export function medicineManageMessage(m: {
+  name: string;
+  type: string;
+  status: string;
+  price?: number | null;
+  usage?: string | null;
+}): string {
+  const t = m.type === "crop" ? "🌱" : m.type === "animal" ? "🐄" : "📦";
+  return [
+    `${t} <b>${escapeHtml(m.name)}</b>`,
+    "",
+    `Holat: <b>${m.status === "bor" ? "✅ Bor" : "❌ Yo'q"}</b>`,
+    m.price ? `Narx: <b>${formatSum(m.price)}</b>` : "Narx: kiritilmagan",
+    ...(m.usage ? [`Nima uchun: ${escapeHtml(m.usage)}`] : []),
+    "",
+    "Kerakli amalni tanlang:",
+  ].join("\n");
+}
+
+/** Narx kiritish rejimida ko'rinadigan bekor tugmasi. */
+export const MEDICINE_PRICE_CANCEL_KEYBOARD: InlineKeyboard = {
+  inline_keyboard: [[{ text: "❌ Bekor qilish", callback_data: "m:list" }]],
+};
 
 export function medicineDeletedMessage(name: string, total: number): string {
   return [`🗑 <b>${escapeHtml(name)}</b> o'chirildi.`, `📦 Qoldi: <b>${total}</b> ta`].join("\n");
@@ -582,10 +640,8 @@ export function medicineIntroMessage(pharmacyName: string, total: number): strin
     `🏪 Dorixona: <b>${escapeHtml(pharmacyName)}</b>`,
     `📦 Hozirgi dorilar: <b>${total}</b> ta`,
     "",
-    "<b>3 ta bosqich:</b>",
-    "1️⃣ Dorining <b>rasmini</b> yuboring",
-    "2️⃣ Dorining <b>nomini</b> yozing",
-    "3️⃣ <b>Tasdiqlang</b> — dori platformaga chiqadi",
+    "<b>6 ta bosqich:</b>",
+    "1️⃣ Rasm → 2️⃣ Nomi → 3️⃣ Turi → 4️⃣ Nima uchun → 5️⃣ Narx → 6️⃣ Tasdiqlash",
     "",
     "📸 Endi dorining rasmini yuboring.",
   ].join("\n");
@@ -639,13 +695,13 @@ export const MEDICINE_TYPE_LABELS: Record<string, string> = {
   general: "📦 Umumiy",
 };
 
-/** Dori bosqichi indikatori: «📌 Bosqich 1/5 · Rasm ▰▱▱▱▱» ko'rinishida. */
-export function medicineStepIndicator(step: "photo" | "name" | "type" | "usage" | "confirm"): string {
-  const map = { photo: 1, name: 2, type: 3, usage: 4, confirm: 5 } as const;
-  const labels = { photo: "Rasm", name: "Nomi", type: "Turi", usage: "Nima uchun", confirm: "Tasdiqlash" } as const;
+/** Dori bosqichi indikatori: «📌 Bosqich 1/6 · Rasm ▰▱▱▱▱▱» ko'rinishida. */
+export function medicineStepIndicator(step: "photo" | "name" | "type" | "usage" | "price" | "confirm"): string {
+  const map = { photo: 1, name: 2, type: 3, usage: 4, price: 5, confirm: 6 } as const;
+  const labels = { photo: "Rasm", name: "Nomi", type: "Turi", usage: "Nima uchun", price: "Narx", confirm: "Tasdiqlash" } as const;
   const n = map[step];
-  const bar = "▰".repeat(n) + "▱".repeat(5 - n);
-  return `📌 <b>Bosqich ${n}/5</b> ${bar} · ${labels[step]}`;
+  const bar = "▰".repeat(n) + "▱".repeat(6 - n);
+  return `📌 <b>Bosqich ${n}/6</b> ${bar} · ${labels[step]}`;
 }
 
 /** Kim uchun ekanini tanlash (dori turi). */
@@ -662,11 +718,42 @@ export const MEDICINE_TYPE_KEYBOARD: InlineKeyboard = {
   ],
 };
 
+/** Narx bosqichi: narxsiz saqlash imkoni ham bor. */
+export const MEDICINE_PRICE_SKIP_KEYBOARD: InlineKeyboard = {
+  inline_keyboard: [
+    [{ text: "💰 Narxsiz saqlash", callback_data: "mp:skip" }],
+    [{ text: "❌ Bekor qilish", callback_data: "m:no" }],
+  ],
+};
+
+/** Narxni so'm ko'rinishida formatlaydi: 45000 → "45 000 so'm". */
+export function formatSum(value: number): string {
+  return `${value.toLocaleString("ru-RU").replace(/\u00a0/g, " ")} so'm`;
+}
+
+export function askMedicinePrice(): string {
+  return [
+    "💰 <b>Dorining narxini yozing (so'mda).</b>",
+    "",
+    "Faqat raqam: masalan <i>45000</i> yoki <i>45 000</i>",
+    "Narx yozmasangiz — «💰 Narxsiz saqlash»ni bosing, keyin /dorilarim orqali",
+    "qo'shishingiz mumkin.",
+  ].join("\n");
+}
+
+export function invalidPriceMessage(): string {
+  return [
+    "❗️ Narx noto'g'ri. Faqat raqam yozing (masalan <i>45000</i>)",
+    "yoki «💰 Narxsiz saqlash»ni bosing.",
+  ].join("\n");
+}
+
 export function medicineConfirmCaption(
   name: string,
   pharmacyName?: string,
   typeLabel?: string,
   usage?: string | null,
+  price?: number | null,
 ): string {
   return [
     "🧾 <b>Tasdiqlash</b>",
@@ -674,6 +761,7 @@ export function medicineConfirmCaption(
     `💊 Dori nomi: <b>${escapeHtml(name)}</b>`,
     ...(typeLabel ? [`🧭 Turi: ${escapeHtml(typeLabel)}`] : []),
     ...(usage ? [`🩺 Nima uchun: ${escapeHtml(usage)}`] : []),
+    ...(price ? [`💰 Narx: <b>${formatSum(price)}</b>`] : ["💰 Narx: kiritilmagan"]),
     ...(pharmacyName ? [`🏪 Dorixona: ${escapeHtml(pharmacyName)}`] : []),
     "",
     "Tasdiqlasangiz, dori platformaga chiqadi va tashxis qo'ygan",
@@ -689,11 +777,12 @@ export function medicineNameTooShortMessage(): string {
   ].join("\n");
 }
 
-export function medicineSavedMessage(name: string, total: number): string {
+export function medicineSavedMessage(name: string, total: number, price?: number | null): string {
   return [
     "✅ <b>Dori qo'shildi!</b>",
     "",
     `💊 <b>${escapeHtml(name)}</b> — dorixonangiz ro'yxatida.`,
+    ...(price ? [`💰 Narx: <b>${formatSum(price)}</b>`] : []),
     `📦 Jami dorilar: <b>${total}</b> ta`,
     "",
     "🧑‍🌾 Endi mijoz tashxis qo'yib, shu dori tavsiya etilsa —",
@@ -725,6 +814,19 @@ export function invalidPhoneMessage(): string {
     "",
     "Iltimos, pastdagi tugma orqali yuboring yoki <code>+998XXXXXXXXX</code>",
     "formatida yozing.",
+  ].join("\n");
+}
+
+/** Telefon raqam boshqa profilga band bo'lsa. */
+export function phoneTakenMessage(ownerName: string, ownerRole: string): string {
+  const roleLabel = ownerRole === "pharmacy" ? "dorixona egasi" : "mutaxassis";
+  return [
+    "❗️ <b>Bu telefon raqam allaqachon band.</b>",
+    "",
+    `Raqam <b>${escapeHtml(ownerName)}</b> (${roleLabel}) profiliga ulangan.`,
+    "",
+    "Bir raqam — bitta profil. Agar bu sizning profilingiz bo'lsa, o'sha Telegram",
+    "hisobidan kiring yoki boshqa raqam yuboring.",
   ].join("\n");
 }
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { createHash } from "crypto";
 import { db } from "@/db";
 import { diagnoses } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -31,8 +32,15 @@ const severityStyle: Record<string, { bg: string; text: string; label: string }>
   yuqori: { bg: "var(--brand-red-soft)", text: "#d7263d", label: "Jiddiy" },
 };
 
-export default async function ResultPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ResultPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ t?: string }>;
+}) {
   const { id } = await params;
+  const { t: viewToken } = await searchParams;
   const numericId = Number(id);
   if (!Number.isFinite(numericId)) notFound();
 
@@ -40,10 +48,16 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
   const d = rows[0];
   if (!d) notFound();
 
-  // Boshqa foydalanuvchining tashxis tarixini ID bo'yicha ko'rishning oldini olamiz.
+  // Himoya: tashxis egasiga tegishli bo'lsa (userId bor) — faqat o'zi ko'radi.
+  // Anonim tashxis (userId=null) — faqat to'g'ri view token bilan (API tashxis
+  // qo'yganda qaytargan token), aks holda 404. ID'ni sanab boshqaning tashxisini
+  // ko'rishning imkoni yo'q.
   if (d.userId !== null) {
     const user = await getCurrentUser();
     if (!user || user.id !== d.userId) notFound();
+  } else {
+    const hash = createHash("sha256").update(viewToken ?? "").digest("hex");
+    if (!viewToken || hash !== d.viewHash) notFound();
   }
 
   let meds: string[] = [];

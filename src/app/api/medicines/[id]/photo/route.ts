@@ -4,6 +4,40 @@ import { resolveAuthBotToken } from "@/lib/auth-bot";
 export const dynamic = "force-dynamic";
 
 /**
+ * Telegram getFile javobini qisqa muddatga keshlaymiz: file_path bir necha soat
+ * o'zgarmaydi, shuning uchun har bir rasm so'rovida Telegram'ga qayta murojaat
+ * qilish shart emas (file/bot/<token>/<path> havolasi o'zi ishlayveradi).
+ */
+const fileCache = new Map<string, { path: string; expires: number }>();
+const FILE_TTL_MS = 30 * 60 * 1000; // 30 daqiqa
+const FILE_CACHE_MAX = 500;
+
+async function cachedFilePath(token: string, fileId: string): Promise<string | null> {
+  const cached = fileCache.get(fileId);
+  if (cached && cached.expires > Date.now()) return cached.path;
+
+  try {
+    const res = await fetch(
+      `https://api.telegram.org/bot${token}/getFile?file_id=${encodeURIComponent(fileId)}`,
+      { cache: "no-store" },
+    );
+    const json = (await res.json()) as { ok?: boolean; result?: { file_path?: string } };
+    const filePath = json.result?.file_path;
+    if (!json.ok || !filePath) return null;
+
+    // Kesh o'sib ketmasligi uchun eng eskisini o'chiramiz.
+    if (fileCache.size >= FILE_CACHE_MAX) {
+      const oldest = fileCache.keys().next().value;
+      if (oldest !== undefined) fileCache.delete(oldest);
+    }
+    fileCache.set(fileId, { path: filePath, expires: Date.now() + FILE_TTL_MS });
+    return filePath;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Dori rasmini Telegram'dan uzatadi.
  *
  * Rasm `file_id` sifatida saqlanadi; bot tokeni **hech qachon** clientga
@@ -21,13 +55,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   if (!token) return new Response("bot sozlanmagan", { status: 503 });
 
   try {
-    const fileRes = await fetch(
-      `https://api.telegram.org/bot${token}/getFile?file_id=${encodeURIComponent(medicine.photoFileId)}`,
-      { cache: "no-store" },
-    );
-    const fileJson = (await fileRes.json()) as { ok?: boolean; result?: { file_path?: string } };
-    const filePath = fileJson.result?.file_path;
-    if (!fileJson.ok || !filePath) return new Response("not found", { status: 404 });
+    const filePath = await cachedFilePath(token, medicine.photoFileId);
+    if (!filePath) return new Response("not found", { status: 404 });
 
     const imgRes = await fetch(`https://api.telegram.org/file/bot${token}/${filePath}`, {
       cache: "no-store",

@@ -113,9 +113,11 @@ export default function DiagnoseForm({ category }: { category: "crop" | "animal"
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ category, text, imageDataUrl: image }),
       });
-      const data = (await res.json()) as { id?: number; error?: string };
+      // Anonim (kirmagan) foydalanuvchi uchun server bir martalik ko'rish tokeni
+      // qaytaradi — natija sahifasi faqat shu token bilan ochiladi.
+      const data = (await res.json()) as { id?: number; viewToken?: string; error?: string };
       if (!res.ok || !data.id) throw new Error(data.error ?? "Xatolik");
-      router.push(`/natija/${data.id}`);
+      router.push(data.viewToken ? `/natija/${data.id}?t=${data.viewToken}` : `/natija/${data.id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Tahlil qilib bo'lmadi");
       setLoading(false);

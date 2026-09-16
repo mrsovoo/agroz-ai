@@ -61,6 +61,8 @@ export type MedicineDto = {
   type: string;
   /** Nima uchun ishlatiladi (mijozga ko'rinadi). */
   usage: string | null;
+  /** Narx so'mda — dorixona egasi yozgan bo'lsa ko'rinadi. */
+  price: number | null;
 };
 
 export type SpecialistDto = {
@@ -155,6 +157,30 @@ export async function deleteMedicine(
   return rows.length > 0;
 }
 
+/**
+ * Telefon raqam boshqa Telegram hisobida band emasligini tekshiradi.
+ * Bir odam ikkita hisobdan ikkita profil yaratib mijozlarni chalg'itmasligi uchun.
+ * `excludeTelegramId` — tahrirlashda o'zining eski hisobini hisobga olmaymiz.
+ */
+export async function findPhoneOwner(
+  phone: string,
+  excludeTelegramId?: number,
+): Promise<{ telegramId: number; name: string; role: string } | null> {
+  const rows = await db
+    .select({
+      telegramId: specialists.telegramId,
+      name: specialists.name,
+      role: specialists.role,
+    })
+    .from(specialists)
+    .where(eq(specialists.phone, phone))
+    .limit(1);
+  const row = rows[0];
+  if (!row) return null;
+  if (excludeTelegramId !== undefined && row.telegramId === excludeTelegramId) return null;
+  return row;
+}
+
 /** Dorixonaning barcha dorilari (o'chirish ro'yxati uchun). */
 export async function listMedicines(telegramId: number) {
   const profile = await getSpecialistByTelegramId(telegramId);
@@ -189,6 +215,8 @@ export async function addMedicine(params: {
   photoFileId: string | null;
   type?: "crop" | "animal" | "general";
   usage?: string | null;
+  /** Narx so'mda (ixtiyoriy). */
+  price?: number | null;
 }) {
   const rows = await db
     .insert(specialistMedicines)
@@ -198,18 +226,61 @@ export async function addMedicine(params: {
       photoFileId: params.photoFileId,
       type: params.type ?? "general",
       usage: params.usage ?? null,
+      price: params.price ?? null,
       status: "bor",
     })
     .returning();
   return rows[0];
 }
 
+/** Dorining bor/yoq statusini almashtiradi. Egalik tekshiriladi. */
+export async function setMedicineStatus(
+  telegramId: number,
+  medicineId: number,
+  status: "bor" | "yoq",
+): Promise<boolean> {
+  const profile = await getSpecialistByTelegramId(telegramId);
+  if (!profile || profile.role !== "pharmacy") return false;
+  const rows = await db
+    .update(specialistMedicines)
+    .set({ status })
+    .where(
+      and(
+        eq(specialistMedicines.id, medicineId),
+        eq(specialistMedicines.specialistId, profile.id),
+      ),
+    )
+    .returning({ id: specialistMedicines.id });
+  return rows.length > 0;
+}
+
+/** Dorining narxini yangilaydi (null — narx olib tashlanadi). Egalik tekshiriladi. */
+export async function setMedicinePrice(
+  telegramId: number,
+  medicineId: number,
+  price: number | null,
+): Promise<boolean> {
+  const profile = await getSpecialistByTelegramId(telegramId);
+  if (!profile || profile.role !== "pharmacy") return false;
+  const rows = await db
+    .update(specialistMedicines)
+    .set({ price })
+    .where(
+      and(
+        eq(specialistMedicines.id, medicineId),
+        eq(specialistMedicines.specialistId, profile.id),
+      ),
+    )
+    .returning({ id: specialistMedicines.id });
+  return rows.length > 0;
+}
+
 export async function countMedicines(specialistId: number): Promise<number> {
   const rows = await db
-    .select({ id: specialistMedicines.id })
+    .select({ count: sql<number>`count(*)::int` })
     .from(specialistMedicines)
     .where(eq(specialistMedicines.specialistId, specialistId));
-  return rows.length;
+  return Number(rows[0]?.count ?? 0);
 }
 
 export async function getMedicineById(id: number) {
@@ -265,6 +336,7 @@ export async function listSpecialists(opts: {
       hasPhoto: Boolean(m.photoFileId),
       type: m.type,
       usage: m.usage,
+      price: m.price ?? null,
     });
     bySpecialist.set(m.specialistId, list);
   }
@@ -329,7 +401,8 @@ export async function listSpecialists(opts: {
 
   const withDistance = filtered.map((s) => {
     const d = roundKm(distanceKm(lat, lng, s.lat, s.lng));
-    // Tajribali (5+ yil) va reytingi yaxshi (4+) mutaxassislar uchun radius 3 barobar.
+    // Tajribali (5+ yil) va reytingi yaxshi (4+) mutaxassislar uchun radius kengayadi
+    // (lekin 25 km dan oshmaydi).
     const extended =
       radiusKm < 15 &&
       (s.experienceYears ?? 0) >= 5 &&

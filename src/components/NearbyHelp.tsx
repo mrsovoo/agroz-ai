@@ -19,7 +19,12 @@ import {
 import { AUTH_BOT_URL, AUTH_BOT_USERNAME, CONFIDENCE_THRESHOLD } from "@/lib/constants";
 
 type Stock = { medicine: string; status: string; price: number | null };
-type Medicine = { id: number; name: string; status: string; hasPhoto: boolean };
+type Medicine = { id: number; name: string; status: string; hasPhoto: boolean; price?: number | null };
+
+/** Narxni qisqa ko'rinishda: 45000 → "45 000". */
+function shortSum(value: number): string {
+  return new Intl.NumberFormat("ru-RU").format(value).replace(/\u00a0/g, " ");
+}
 
 type Pharmacy = {
   id: number;
@@ -354,7 +359,7 @@ export default function NearbyHelp({
                           <img
                             src={`/api/medicines/${m.id}/photo`}
                             alt={m.name}
-                            className="h-[68px] w-[68px] rounded-xl object-cover"
+                            className={`h-[68px] w-[68px] rounded-xl object-cover ${m.status !== "bor" ? "opacity-40 grayscale" : ""}`}
                             loading="lazy"
                           />
                         ) : (
@@ -368,6 +373,13 @@ export default function NearbyHelp({
                         <p className="mt-1 line-clamp-2 text-[10.5px] font-semibold leading-tight text-[var(--brand-ink)]">
                           {m.name}
                         </p>
+                        {m.price ? (
+                          <p className="text-[10px] font-bold text-[var(--brand-green)]">
+                            {shortSum(m.price)} so&apos;m
+                          </p>
+                        ) : m.status !== "bor" ? (
+                          <p className="text-[10px] font-bold text-[#d7263d]">Yo&apos;q</p>
+                        ) : null}
                       </div>
                     ))}
                   </div>

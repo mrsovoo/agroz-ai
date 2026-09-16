@@ -19,7 +19,7 @@ import {
   RefreshCw,
   Lock,
 } from "lucide-react";
-import { AUTH_BOT_URL } from "@/lib/constants";
+import { AUTH_BOT_URL, RADIUS_OPTIONS } from "@/lib/constants";
 
 type Stock = { medicine: string; status: string; price: number | null };
 type Medicine = { id: number; name: string; status: string; hasPhoto: boolean };
@@ -106,6 +106,7 @@ export default function MapClient() {
   const [loading, setLoading] = useState(true);
   const [locError, setLocError] = useState<string | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const [radiusKm, setRadiusKm] = useState<number>(5);
 
   const mapRef = useRef<LeafletMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
@@ -153,6 +154,7 @@ export default function MapClient() {
       for (const p of [pharmacyParams, specialistParams]) {
         p.set("lat", String(coords.lat));
         p.set("lng", String(coords.lng));
+        p.set("radius", String(radiusKm));
       }
     }
     meds.forEach((m) => pharmacyParams.append("med", m));
@@ -205,7 +207,7 @@ export default function MapClient() {
     return () => {
       cancelled = true;
     };
-  }, [coords, meds]);
+  }, [coords, meds, radiusKm]);
 
   // Tanlangan tur bo'yicha filtr (kind=all bo'lsa hammasi).
   const items = useMemo(
@@ -349,7 +351,7 @@ export default function MapClient() {
       <div className="px-5 pt-3">
         <div className="flex items-start justify-between">
           <div>
-            <p className="ios-sub">Geo-qidiruv · 5 km</p>
+            <p className="ios-sub">Geo-qidiruv · {radiusKm} km</p>
             <h1 className="ios-title">
               {(KINDS.find((k) => k.v === kind) ?? KINDS[0]).title}
             </h1>
@@ -387,6 +389,23 @@ export default function MapClient() {
               </button>
             );
           })}
+        </div>
+
+        {/* Radius tanlash — 5 km bo'sh bo'lsa 10/25 km ga kengaytirish mumkin. */}
+        <div className="mt-2 flex items-center gap-2 overflow-x-auto pb-1">
+          <span className="shrink-0 text-[12px] font-bold text-[var(--brand-muted)]">Radius:</span>
+          {RADIUS_OPTIONS.map((r) => (
+            <button
+              key={r}
+              onClick={() => setRadiusKm(r)}
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-bold transition active:scale-95 ${
+                radiusKm === r ? "text-white" : "bg-white text-[var(--brand-ink)] shadow-sm"
+              }`}
+              style={radiusKm === r ? { background: "var(--brand-ink)" } : undefined}
+            >
+              {r} km
+            </button>
+          ))}
         </div>
 
         {/* Xaritadagi belgilar izohi — nima ko'rinayotganini tushuntiradi */}
@@ -631,8 +650,8 @@ export default function MapClient() {
             </span>
             <p className="mt-3 text-[16px] font-black text-[var(--brand-ink)]">
               {meds.length > 0
-                ? "Bu dorilar 5 km ichida topilmadi"
-                : "5 km ichida hozircha ma'lumot yo'q"}
+                ? `Bu dorilar ${radiusKm} km ichida topilmadi`
+                : `${radiusKm} km ichida hozircha ma'lumot yo'q`}
             </p>
             <p className="mt-1.5 text-[13.5px] leading-relaxed text-[var(--brand-muted)]">
               Xaritada faqat <b>real</b> ro&apos;yxatdan o&apos;tgan dorixonalar, ularning dorilari

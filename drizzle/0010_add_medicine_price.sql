@@ -1,0 +1,1 @@
+ALTER TABLE "specialist_medicines" ADD COLUMN "price" integer;

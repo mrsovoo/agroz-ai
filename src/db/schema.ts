@@ -84,6 +84,12 @@ export const diagnoses = pgTable("diagnoses", {
   /** AI ishonch darajasi (0-100). 80 dan past bo'lsa mutaxassis tavsiya etiladi. */
   confidence: integer("confidence"),
   source: varchar("source", { length: 20 }).default("ai"),
+  /**
+   * Anonim tashxisni ko'rish tokeni hash'i (SHA-256). Token API javobida
+   * bir marta qaytariladi va faqat shu hash bilan moslashganda sahifa ochiladi —
+   * ID'ni bilgan istalgan odam boshqaning tashxisini ko'ra olmaydi.
+   */
+  viewHash: varchar("view_hash", { length: 64 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -144,6 +150,8 @@ export const specialistMedicines = pgTable("specialist_medicines", {
   /** Nima uchun ishlatiladi (qisqa tavsif, mijozga ko'rinadi). */
   usage: varchar("usage", { length: 300 }),
   status: varchar("status", { length: 20 }).notNull().default("bor"), // bor | yoq
+  /** Narx so'mda (ixtiyoriy) — dorixona egasi yozadi, mijozga ko'rinadi. */
+  price: integer("price"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

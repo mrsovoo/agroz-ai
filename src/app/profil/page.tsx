@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { diagnoses } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
 import LogoutButton from "@/components/LogoutButton";
+import ProfileEdit from "@/components/ProfileEdit";
 import { Sprout, PawPrint, Phone, MapPin, ChevronRight, History, Sparkles } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -74,6 +75,8 @@ export default async function ProfilePage() {
             </div>
           </div>
         </section>
+
+        <ProfileEdit name={user.name} region={user.region} district={user.district} />
 
         <LogoutButton />
       </div>

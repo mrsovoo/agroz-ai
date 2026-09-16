@@ -16,9 +16,14 @@ import {
   Pill,
   Star,
 } from "lucide-react";
-import { AUTH_BOT_URL, AUTH_BOT_USERNAME } from "@/lib/constants";
+import { AUTH_BOT_URL, AUTH_BOT_USERNAME, RADIUS_OPTIONS } from "@/lib/constants";
 
-type Medicine = { id: number; name: string; status: string; hasPhoto: boolean };
+type Medicine = { id: number; name: string; status: string; hasPhoto: boolean; price?: number | null };
+
+/** Narxni qisqa ko'rinishda: 45000 → "45 000". */
+function shortSum(value: number): string {
+  return new Intl.NumberFormat("ru-RU").format(value).replace(/\u00a0/g, " ");
+}
 
 type Specialist = {
   id: number;
@@ -79,6 +84,7 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
   const [items, setItems] = useState<Specialist[]>([]);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [radiusKm, setRadiusKm] = useState<number | null>(null);
+  const [selectedRadius, setSelectedRadius] = useState<number>(5);
   const [loading, setLoading] = useState(true);
   const [locError, setLocError] = useState<string | null>(null);
 
@@ -107,6 +113,7 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
     if (coords) {
       params.set("lat", String(coords.lat));
       params.set("lng", String(coords.lng));
+      params.set("radius", String(selectedRadius));
     }
     let cancelled = false;
     setLoading(true);
@@ -126,7 +133,7 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
     return () => {
       cancelled = true;
     };
-  }, [coords]);
+  }, [coords, selectedRadius]);
 
   const visible = useMemo(
     () => (role === "all" ? items : items.filter((s) => s.role === role)),
@@ -212,6 +219,26 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
         })}
       </div>
 
+      {/* Radius tanlash — qishloqda 5 km kam bo'lsa kengaytirish mumkin. */}
+      <div className="mt-2.5 flex items-center gap-2 overflow-x-auto pb-1">
+        <span className="shrink-0 text-[12px] font-bold text-[var(--brand-muted)]">Radius:</span>
+        {RADIUS_OPTIONS.map((r) => {
+          const active = selectedRadius === r;
+          return (
+            <button
+              key={r}
+              onClick={() => setSelectedRadius(r)}
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-bold transition active:scale-95 ${
+                active ? "text-white" : "bg-white text-[var(--brand-ink)] shadow-sm"
+              }`}
+              style={active ? { background: "var(--brand-ink)" } : undefined}
+            >
+              {r} km
+            </button>
+          );
+        })}
+      </div>
+
       {locError && (
         <p className="mt-2 rounded-2xl bg-[var(--brand-yellow-soft)] p-2.5 px-3 text-[12px] font-medium text-[var(--brand-ink)]">
           {locError}
@@ -284,12 +311,26 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
                         <Stars avg={s.ratingAvg} count={s.ratingCount} />
                       </div>
                       {isPharmacy && (s.medicines?.length ?? 0) > 0 && (
-                        <p
-                          className="mt-1.5 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold"
-                          style={{ background: "var(--brand-green-soft)", color: "var(--brand-green)" }}
-                        >
-                          <Pill size={11} /> {s.medicines!.length} ta dori ro&apos;yxatda
-                        </p>
+                        <>
+                          <p
+                            className="mt-1.5 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold"
+                            style={{ background: "var(--brand-green-soft)", color: "var(--brand-green)" }}
+                          >
+                            <Pill size={11} /> {s.medicines!.length} ta dori ro&apos;yxatda
+                          </p>
+                          {/* Narxi bor dorilar — mijoz narxni oldindan biladi. */}
+                          {s.medicines!
+                            .filter((m) => m.price && m.status === "bor")
+                            .slice(0, 3)
+                            .map((m) => (
+                              <p
+                                key={m.id}
+                                className="mt-1 line-clamp-1 text-[11.5px] font-semibold text-[var(--brand-ink)]/75"
+                              >
+                                💊 {m.name} — {shortSum(m.price!)} so&apos;m
+                              </p>
+                            ))}
+                        </>
                       )}
                       {/* Mutaxassislik tafsilotlari — mijoz kimga murojaat qilayotganini bilishi kerak. */}
                       {!isPharmacy && (s.helpsWith === "crop" || s.helpsWith === "animal" || s.helpsWith === "both") && (
