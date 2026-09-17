@@ -1,20 +1,23 @@
 "use client";
 
 /**
- * Dorilar bozori — platformadagi barcha ro'yxatdan o'tgan dorixonalar dorilari.
+ * Agro Bozor — platformadagi barcha ro'yxatdan o'tgan dorixonalar dorilari.
  *
- * • Ekin / hayvon bo'limlari (dori `type` maydoni bo'yicha)
- * • Radius: 5/10/25 km — foydalanuvchi joylashuvidan
+ * • Bo'limlar: Hammasi / 🌱 Ekin uchun / 🐄 Hayvonlar uchun (dori `type` maydoni)
+ * • Qidiruv: dori nomi, qo'llanishi va dorixona nomi bo'yicha
+ * • Radius: 5/10/25/50 km — foydalanuvchi joylashuvidan
+ * • Kartochka: rasm tepada, ostida dori nomi, narxi va dorixona nomi
  * • Savat: bir vaqtda bitta dorixona dorilari; buyurtma Telegram orqali
  *   dorixona egasiga yetib boradi, holatini mijoz telefon raqami bilan kuzatadi
+ * • ❤️ Yoqtirilganlar: brauzerda (localStorage) saqlanadi, alohida ro'yxatda
  * • Reyting: yetkazilgan buyurtmani 1–5 yulduz bilan baholash — qancha yaxshi
  *   baholansa, dorixona reytingi shuncha oshadi
  */
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import {
   Check,
+  Heart,
   Loader2,
   Lock,
   MapPin,
@@ -22,10 +25,12 @@ import {
   Phone,
   Pill,
   Plus,
+  Search,
   ShoppingCart,
   Sprout,
   Star,
   Store,
+  Syringe,
   Trash2,
   X,
 } from "lucide-react";
@@ -58,10 +63,56 @@ type Pharmacy = {
   medicines: Medicine[];
 };
 
+/** Kartochka — dori + uning dorixonasi (grid'da flat ko'rsatiladi). */
+type Card = { pharmacy: Pharmacy; medicine: Medicine };
+
 type CartLine = { medicine: Medicine; qty: number };
+
+/** Yoqtirilganlar kaliti: dorixona + dori juftligi. */
+type FavKey = { pharmacyId: number; medicineId: number };
+
+const FAV_STORAGE_KEY = "agroz:favorites:v1";
 
 function shortSum(value: number): string {
   return new Intl.NumberFormat("ru-RU").format(value).replace(/\u00a0/g, " ");
+}
+
+function favKeyId(f: FavKey): string {
+  return `${f.pharmacyId}:${f.medicineId}`;
+}
+
+function loadFavorites(): FavKey[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(FAV_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((x) => {
+        const o = x as { pharmacyId?: unknown; medicineId?: unknown };
+        const pharmacyId = Number(o?.pharmacyId);
+        const medicineId = Number(o?.medicineId);
+        if (!Number.isSafeInteger(pharmacyId) || !Number.isSafeInteger(medicineId)) return null;
+        return { pharmacyId, medicineId };
+      })
+      .filter((x): x is FavKey => x !== null)
+      .slice(0, 200);
+  } catch {
+    return [];
+  }
+}
+
+function TypeIcon({ type, size = 30 }: { type: string; size?: number }) {
+  if (type === "animal") return <Syringe size={size} />;
+  if (type === "crop") return <Sprout size={size} />;
+  return <Pill size={size} />;
+}
+
+function typeBadge(type: string): { label: string; bg: string; color: string } {
+  if (type === "crop") return { label: "🌱 Ekin", bg: "var(--brand-green-soft)", color: "var(--brand-green)" };
+  if (type === "animal") return { label: "🐄 Hayvon", bg: "var(--brand-yellow-soft)", color: "var(--brand-ink)" };
+  return { label: "📦 Umumiy", bg: "#ccfbf1", color: "#0d9488" };
 }
 
 export default function MarketClient() {
@@ -73,6 +124,13 @@ export default function MarketClient() {
 
   // Bo'limlar: all | crop | animal
   const [section, setSection] = useState<"all" | "crop" | "animal">("all");
+  // Qidiruv
+  const [query, setQuery] = useState("");
+
+  // Yoqtirilganlar (localStorage)
+  const [favorites, setFavorites] = useState<FavKey[]>([]);
+  const [favsOpen, setFavsOpen] = useState(false);
+
   // Savat: faqat bitta dorixona dorilari
   const [cartPharmacy, setCartPharmacy] = useState<Pharmacy | null>(null);
   const [cart, setCart] = useState<CartLine[]>([]);
@@ -93,6 +151,29 @@ export default function MarketClient() {
   >(null);
   const [trackBusy, setTrackBusy] = useState(false);
   const [trackError, setTrackError] = useState<string | null>(null);
+
+  // ---- Yoqtirilganlar: localStorage'dan yuklash ----
+  useEffect(() => {
+    setFavorites(loadFavorites());
+  }, []);
+
+  function toggleFavorite(pharmacyId: number, medicineId: number) {
+    setFavorites((prev) => {
+      const exists = prev.some((f) => f.pharmacyId === pharmacyId && f.medicineId === medicineId);
+      const next = exists
+        ? prev.filter((f) => !(f.pharmacyId === pharmacyId && f.medicineId === medicineId))
+        : [...prev, { pharmacyId, medicineId }].slice(0, 200);
+      try {
+        window.localStorage.setItem(FAV_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // localStorage band bo'lsa ham ishlashi davom etadi (faqat sessiyaga saqlanadi).
+      }
+      return next;
+    });
+  }
+
+  const isFavorite = (pharmacyId: number, medicineId: number) =>
+    favorites.some((f) => f.pharmacyId === pharmacyId && f.medicineId === medicineId);
 
   // ---- Joylashuv ----
   useEffect(() => {
@@ -141,34 +222,48 @@ export default function MarketClient() {
     };
   }, [coords, radiusKm]);
 
-  // Bo'lim bo'yicha filtr — dori turi bo'yicha.
-  const visible = useMemo(
+  // ---- Filtrlash: bo'lim + qidiruv → flat kartochkalar ----
+  const cards = useMemo<Card[]>(() => {
+    const q = query.trim().toLowerCase();
+    const list: Card[] = [];
+    for (const p of items) {
+      for (const m of p.medicines) {
+        if (m.status !== "bor") continue;
+        if (section !== "all" && m.type !== section && m.type !== "general") continue;
+        if (q) {
+          const haystack = `${m.name} ${m.usage ?? ""} ${p.organization ?? p.name}`.toLowerCase();
+          if (!haystack.includes(q)) continue;
+        }
+        list.push({ pharmacy: p, medicine: m });
+      }
+    }
+    return list;
+  }, [items, section, query]);
+
+  // Yoqtirilgan kartochkalar (dorilar o'chirilgan bo'lsa ro'yxatdan tushadi).
+  const favCards = useMemo<Card[]>(
     () =>
-      items
-        .map((p) => ({
-          ...p,
-          // Umumiy (general) dorilar ikkala bo'limda ham ko'rinadi.
-          medicines: p.medicines.filter(
-            (m) => m.status === "bor" && (section === "all" || m.type === section || m.type === "general"),
-          ),
-        }))
-        .filter((p) => p.medicines.length > 0),
-    [items, section],
+      cards.filter((c) =>
+        favorites.some((f) => f.pharmacyId === c.pharmacy.id && f.medicineId === c.medicine.id),
+      ),
+    [cards, favorites],
   );
 
+  const favCount = favorites.length;
   const cartCount = cart.reduce((acc, l) => acc + l.qty, 0);
   const cartTotal = cart.reduce((acc, l) => acc + (l.medicine.price ?? 0) * l.qty, 0);
 
-  function addToCart(pharmacy: Pharmacy, medicine: Medicine) {
+  function addToCard(card: Card) {
+    const { pharmacy, medicine } = card;
     // Boshqa dorixonadan dori qo'shilsa — savatni yangilaymiz (bitta dorixona qoidasi).
     if (cartPharmacy && cartPharmacy.id !== pharmacy.id) {
-      if (!confirm(`Savatda boshqa dorixona (${cartPharmacy.name}) dorilari bor. Yangi dorixona dorilari savatni almashtiradi. Davom etamizmi?`)) {
+      if (!confirm(`Savatda boshqa dorixona (${cartPharmacy.organization ?? cartPharmacy.name}) dorilari bor. Yangi dorixona dorilari savatni almashtiradi. Davom etamizmi?`)) {
         return;
       }
     }
     if (cartPharmacy?.id !== pharmacy.id) {
       setCartPharmacy(pharmacy);
-      setCart([{ medicine: medicine, qty: 1 }]);
+      setCart([{ medicine, qty: 1 }]);
       return;
     }
     setCart((prev) => {
@@ -262,33 +357,166 @@ export default function MarketClient() {
     { v: "animal", l: "🐄 Hayvonlar uchun" },
   ];
 
+  /** Kartochka tanasi — bozor grid'i va yoqtirilganlar ro'yxatida umumiy. */
+  function MedicineCard({ card }: { card: Card }) {
+    const { pharmacy: p, medicine: m } = card;
+    const badge = typeBadge(m.type);
+    const liked = isFavorite(p.id, m.id);
+    const inCart = cartPharmacy?.id === p.id && cart.find((l) => l.medicine.id === m.id);
+    return (
+      <div className="flex h-full flex-col overflow-hidden rounded-[22px] bg-white shadow-sm">
+        {/* Rasm yoki rangli placeholder */}
+        <div className="relative">
+          {m.hasPhoto ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={`/api/medicines/${m.id}/photo`}
+              alt={m.name}
+              className="h-32 w-full object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <div
+              className="flex h-32 w-full items-center justify-center"
+              style={{
+                background:
+                  m.type === "animal"
+                    ? "linear-gradient(135deg,#fff7df,#ffedb3)"
+                    : m.type === "crop"
+                      ? "linear-gradient(135deg,#f0fae8,#dcf3cf)"
+                      : "linear-gradient(135deg,#eefdf9,#d4f5ee)",
+              }}
+            >
+              <span
+                className="flex h-16 w-16 items-center justify-center rounded-full bg-white/80"
+                style={{ color: m.type === "animal" ? "var(--brand-ink)" : "var(--brand-green)" }}
+              >
+                <TypeIcon type={m.type} size={32} />
+              </span>
+            </div>
+          )}
+          {/* Tur belgisi */}
+          <span
+            className="absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold shadow-sm"
+            style={{ background: badge.bg, color: badge.color }}
+          >
+            {badge.label}
+          </span>
+          {/* Yoqtirish */}
+          <button
+            onClick={() => toggleFavorite(p.id, m.id)}
+            aria-label={liked ? "Yoqtirilganlardan olib tashlash" : "Yoqtirilganlarga qo'shish"}
+            aria-pressed={liked}
+            className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white/95 shadow-sm transition active:scale-90"
+          >
+            <Heart
+              size={16}
+              className={liked ? "text-[#e0245e]" : "text-[var(--brand-muted)]"}
+              fill={liked ? "#e0245e" : "none"}
+            />
+          </button>
+        </div>
+
+        {/* Tana: nomi, tavsifi, narxi, dorixona */}
+        <div className="flex flex-1 flex-col p-3">
+          <p className="line-clamp-2 text-[14px] font-bold leading-snug text-[var(--brand-ink)]">
+            {m.name}
+          </p>
+          {m.usage && (
+            <p className="mt-0.5 line-clamp-1 text-[11.5px] text-[var(--brand-muted)]">{m.usage}</p>
+          )}
+          {m.price ? (
+            <p className="mt-1.5 text-[15px] font-black text-[var(--brand-green)]">
+              {shortSum(m.price)} so&apos;m
+            </p>
+          ) : (
+            <p className="mt-1.5 text-[12.5px] font-bold text-[var(--brand-muted)]">Narx so&apos;rang</p>
+          )}
+          <p className="mt-1 flex items-center gap-1 text-[11px] text-[var(--brand-muted)]">
+            <Store size={10} className="shrink-0" />
+            <span className="line-clamp-1">{p.organization ?? p.name}</span>
+          </p>
+
+          {/* Savatga qo'shish */}
+          <button
+            onClick={() => addToCard(card)}
+            className={`mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-xl py-2.5 text-[13px] font-bold transition active:scale-[0.97] ${
+              inCart
+                ? "text-[var(--brand-green)]"
+                : "text-white"
+            }`}
+            style={
+              inCart
+                ? { background: "var(--brand-green-soft)" }
+                : { background: "var(--brand-green)" }
+            }
+          >
+            {inCart ? <Check size={15} /> : <ShoppingCart size={15} />}
+            {inCart ? `Savatda (${inCart.qty})` : "Savatga"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="px-5 pb-6">
       {/* Header */}
       <div className="flex items-start justify-between pt-3">
         <div>
           <p className="ios-sub">Bozor</p>
-          <h1 className="ios-title">Dorilar</h1>
+          <h1 className="ios-title">Agro Bozor</h1>
           <p className="mt-1 text-[13px] font-medium text-[var(--brand-muted)]">
-            Ro&apos;yxatdan o&apos;tgan dorixonalar dorilari · {radiusKm} km radius
+            Agro Bozor · {radiusKm} km radius
           </p>
         </div>
-        <button
-          onClick={() => setCartOpen(true)}
-          className="relative mt-2 flex h-11 w-11 items-center justify-center rounded-full bg-white text-[var(--brand-green)] shadow-sm active:scale-95"
-          aria-label="Savat"
-        >
-          <ShoppingCart size={20} />
-          {cartCount > 0 && (
-            <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--brand-red)] px-1 text-[10px] font-black text-white">
-              {cartCount}
-            </span>
-          )}
-        </button>
+        <div className="mt-2 flex gap-2">
+          <button
+            onClick={() => setFavsOpen(true)}
+            className="relative flex h-11 w-11 items-center justify-center rounded-full bg-white text-[#e0245e] shadow-sm active:scale-95"
+            aria-label="Yoqtirilganlar"
+          >
+            <Heart size={20} />
+            {favCount > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#e0245e] px-1 text-[10px] font-black text-white">
+                {favCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setCartOpen(true)}
+            className="relative flex h-11 w-11 items-center justify-center rounded-full bg-white text-[var(--brand-green)] shadow-sm active:scale-95"
+            aria-label="Savat"
+          >
+            <ShoppingCart size={20} />
+            {cartCount > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--brand-red)] px-1 text-[10px] font-black text-white">
+                {cartCount}
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Qidiruv */}
+      <div className="mt-3 flex items-center gap-2 rounded-2xl bg-white px-3.5 py-2.5 shadow-sm">
+        <Search size={17} className="shrink-0 text-[var(--brand-muted)]" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Dori nomi, kasallik yoki dorixona..."
+          maxLength={80}
+          className="w-full bg-transparent text-[14px] font-medium text-[var(--brand-ink)] outline-none placeholder:text-[var(--brand-muted)]"
+        />
+        {query && (
+          <button onClick={() => setQuery("")} aria-label="Tozalash" className="text-[var(--brand-muted)]">
+            <X size={16} />
+          </button>
+        )}
       </div>
 
       {/* Bo'limlar */}
-      <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+      <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
         {sectionTabs.map((t) => {
           const active = section === t.v;
           return (
@@ -329,12 +557,12 @@ export default function MarketClient() {
         </p>
       )}
 
-      {/* Ro'yxat */}
-      {      loading ? (
+      {/* Kartochkalar grid'i */}
+      {loading ? (
         <div className="flex justify-center py-14">
           <Loader2 className="animate-spin text-[var(--brand-green)]" size={28} />
         </div>
-      ) : visible.length === 0 ? (
+      ) : cards.length === 0 ? (
         <div className="ios-card mt-4 px-5 py-7 text-center">
           <span
             className="mx-auto flex h-14 w-14 items-center justify-center rounded-full"
@@ -343,144 +571,17 @@ export default function MarketClient() {
             <Store size={26} />
           </span>
           <p className="mt-3 text-[16px] font-black text-[var(--brand-ink)]">
-            Bu bo&apos;limda hozircha dori yo&apos;q
+            {query ? `«${query}» bo'yicha dori topilmadi` : "Bu bo'limda hozircha dori yo'q"}
           </p>
           <p className="mt-1.5 text-[13.5px] leading-relaxed text-[var(--brand-muted)]">
-            Dorixonalar dorilarini <b>@agroz_auth_bot</b> orqali qo&apos;shadi. Radiusni kattalashtirib ko&apos;ring yoki boshqa bo&apos;limga o&apos;ting.
+            Dorixonalar dorilarini <b>@agroz_auth_bot</b> orqali qo&apos;shadi. Radiusni kattalashtirib
+            ko&apos;ring, boshqa bo&apos;limga o&apos;ting yoki qidiruvni tozalang.
           </p>
         </div>
       ) : (
-        <div className="mt-4 space-y-5">
-          {visible.map((p) => (
-            <section key={p.id}>
-              {/* Dorixona kartasi */}
-              <div className="flex items-start justify-between gap-3 rounded-[22px] bg-white p-4 shadow-sm">
-                <div className="flex min-w-0 items-start gap-3">
-                  <span
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px]"
-                    style={{ background: "var(--brand-green-soft)", color: "var(--brand-green)" }}
-                  >
-                    <Store size={20} />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-[16px] font-bold leading-tight text-[var(--brand-ink)]">
-                      {p.organization ?? p.name}
-                    </p>
-                    <p className="mt-0.5 flex items-start gap-1 text-[12.5px] text-[var(--brand-muted)]">
-                      <MapPin size={12} className="mt-0.5 shrink-0" />
-                      <span className="line-clamp-1">{p.address}</span>
-                    </p>
-                    <div className="mt-1 flex items-center gap-2">
-                      {p.ratingAvg ? (
-                        <span className="inline-flex items-center gap-1 text-[11.5px] font-bold text-[#b8860b]">
-                          <Star size={11} fill="currentColor" className="text-[#fcbd00]" />
-                          {p.ratingAvg.toFixed(1)}
-                          <span className="text-[var(--brand-muted)]">({p.ratingCount})</span>
-                        </span>
-                      ) : (
-                        <span className="text-[11px] font-semibold text-[var(--brand-muted)]">
-                          ★ Reyting yo&apos;q
-                        </span>
-                      )}
-                      {p.distanceKm !== null && (
-                        <span
-                          className="rounded-full px-2 py-0.5 text-[11px] font-bold text-white"
-                          style={{ background: p.locked ? "var(--brand-muted)" : "var(--brand-green)" }}
-                        >
-                          {p.distanceKm.toFixed(1)} km
-                        </span>
-                      )}
-                      {p.locked && (
-                        <span
-                          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold"
-                          style={{ background: "var(--brand-red-soft)", color: "#d7263d" }}
-                        >
-                          <Lock size={9} /> uzoqda
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <a
-                  href={`tel:${p.phone.replace(/\s/g, "")}`}
-                  className="flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-[12px] font-bold text-white"
-                  style={{ background: "var(--brand-green)" }}
-                >
-                  <Phone size={13} /> Qo&apos;ng&apos;iroq
-                </a>
-              </div>
-
-              {/* Dorilar */}
-              <ul className="mt-2 space-y-2">
-                {p.medicines.map((m) => {
-                  const inCart = cartPharmacy?.id === p.id && cart.find((l) => l.medicine.id === m.id);
-                  return (
-                    <li key={m.id} className="rounded-[20px] bg-white p-3 shadow-sm">
-                      <div className="flex items-center gap-3">
-                        {m.hasPhoto ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={`/api/medicines/${m.id}/photo`}
-                            alt={m.name}
-                            className="h-14 w-14 shrink-0 rounded-xl object-cover"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <span
-                            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl"
-                            style={{ background: "var(--brand-green-soft)", color: "var(--brand-green)" }}
-                          >
-                            <Pill size={22} />
-                          </span>
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[15px] font-bold leading-tight text-[var(--brand-ink)]">
-                            {m.name}
-                          </p>
-                          {m.usage && (
-                            <p className="mt-0.5 line-clamp-1 text-[12px] text-[var(--brand-muted)]">
-                              {m.usage}
-                            </p>
-                          )}
-                          <div className="mt-1 flex items-center gap-2">
-                            {m.price ? (
-                              <span className="text-[14px] font-black text-[var(--brand-green)]">
-                                {shortSum(m.price)} so&apos;m
-                              </span>
-                            ) : (
-                              <span className="text-[12px] font-bold text-[var(--brand-muted)]">
-                                Narx so&apos;rang
-                              </span>
-                            )}
-                            <span
-                              className="rounded-full px-2 py-0.5 text-[10px] font-bold"
-                              style={{
-                                background: m.type === "crop" ? "var(--brand-green-soft)" : m.type === "animal" ? "var(--brand-yellow-soft)" : "#ccfbf1",
-                                color: m.type === "crop" ? "var(--brand-green)" : m.type === "animal" ? "var(--brand-ink)" : "#0d9488",
-                              }}
-                            >
-                              {m.type === "crop" ? "🌱 Ekin" : m.type === "animal" ? "🐄 Hayvon" : "📦 Umumiy"}
-                            </span>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => addToCart(p, m)}
-                          className="flex shrink-0 items-center gap-1 rounded-xl px-3 py-2.5 text-[12.5px] font-bold text-white active:scale-95"
-                          style={
-                            inCart
-                              ? { background: "var(--brand-green-soft)", color: "var(--brand-green)" }
-                              : { background: "var(--brand-green)" }
-                          }
-                        >
-                          {inCart ? <Check size={14} /> : <Plus size={14} />}
-                          {inCart ? `Savatda (${inCart.qty})` : "Savatga"}
-                        </button>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          {cards.map((c) => (
+            <MedicineCard key={`${c.pharmacy.id}:${c.medicine.id}`} card={c} />
           ))}
         </div>
       )}
@@ -577,6 +678,100 @@ export default function MarketClient() {
         </div>
       </section>
 
+      {/* Yoqtirilganlar bottom sheet */}
+      {favsOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-end justify-center"
+          style={{ background: "rgba(0,0,0,0.35)" }}
+          onClick={() => setFavsOpen(false)}
+        >
+          <div
+            className="max-h-[85dvh] w-full max-w-[520px] overflow-y-auto rounded-t-[28px] bg-white px-5 pb-[max(16px,env(safe-area-inset-bottom))] pt-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sheet-handle" />
+            <div className="mt-2 flex items-center justify-between">
+              <p className="text-[18px] font-black text-[var(--brand-ink)]">
+                ❤️ Yoqtirilganlar {favCards.length > 0 && `(${favCards.length})`}
+              </p>
+              <button onClick={() => setFavsOpen(false)} aria-label="Yopish" className="p-1 text-[var(--brand-muted)]">
+                <X size={20} />
+              </button>
+            </div>
+            {favCards.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-8 text-center">
+                <Heart size={30} className="text-[var(--brand-muted)]" />
+                <p className="text-[15px] font-bold text-[var(--brand-ink)]">Ro&apos;yxat bo&apos;sh</p>
+                <p className="text-[13px] leading-relaxed text-[var(--brand-muted)]">
+                  Dorilar kartochkasidagi ❤️ belgisini bosib, keyinroq uchun saqlab qo&apos;ying.
+                </p>
+              </div>
+            ) : (
+              <ul className="mt-3 space-y-2 pb-2">
+                {favCards.map((c) => {
+                  const inCart = cartPharmacy?.id === c.pharmacy.id && cart.find((l) => l.medicine.id === c.medicine.id);
+                  return (
+                    <li key={`${c.pharmacy.id}:${c.medicine.id}`} className="flex items-center gap-3 rounded-2xl bg-[var(--brand-bg)] p-2.5">
+                      {c.medicine.hasPhoto ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={`/api/medicines/${c.medicine.id}/photo`}
+                          alt={c.medicine.name}
+                          className="h-14 w-14 shrink-0 rounded-xl object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <span
+                          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white"
+                          style={{ color: c.medicine.type === "animal" ? "var(--brand-ink)" : "var(--brand-green)" }}
+                        >
+                          <TypeIcon type={c.medicine.type} size={22} />
+                        </span>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="line-clamp-1 text-[14px] font-bold text-[var(--brand-ink)]">
+                          {c.medicine.name}
+                        </p>
+                        <p className="text-[12px] font-semibold text-[var(--brand-green)]">
+                          {c.medicine.price ? `${shortSum(c.medicine.price)} so'm` : "Narx so'rang"}
+                        </p>
+                        <p className="flex items-center gap-1 text-[11px] text-[var(--brand-muted)]">
+                          <Store size={10} className="shrink-0" />
+                          <span className="line-clamp-1">{c.pharmacy.organization ?? c.pharmacy.name}</span>
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 flex-col gap-1">
+                        <button
+                          onClick={() => addToCard(c)}
+                          className="flex items-center justify-center gap-1 rounded-lg px-2.5 py-1.5 text-[11.5px] font-bold text-white"
+                          style={inCart ? { background: "var(--brand-green-soft)", color: "var(--brand-green)" } : { background: "var(--brand-green)" }}
+                        >
+                          {inCart ? <Check size={12} /> : <ShoppingCart size={12} />}
+                          {inCart ? `(${inCart.qty})` : "Savatga"}
+                        </button>
+                        <a
+                          href={`tel:${c.pharmacy.phone.replace(/\s/g, "")}`}
+                          className="flex items-center justify-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-[11.5px] font-bold text-[var(--brand-ink)] shadow-sm"
+                        >
+                          <Phone size={12} /> Qo&apos;ng&apos;iroq
+                        </a>
+                      </div>
+                      <button
+                        onClick={() => toggleFavorite(c.pharmacy.id, c.medicine.id)}
+                        aria-label="Yoqtirilganlardan olib tashlash"
+                        className="shrink-0 self-start p-0.5"
+                      >
+                        <Trash2 size={15} className="text-[var(--brand-muted)]" />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Savat bottom sheet */}
       {cartOpen && (
         <div
@@ -620,7 +815,7 @@ export default function MarketClient() {
                 <ShoppingCart size={32} className="text-[var(--brand-muted)]" />
                 <p className="text-[15px] font-bold text-[var(--brand-ink)]">Savat bo&apos;sh</p>
                 <p className="text-[13px] text-[var(--brand-muted)]">
-                  Dorilardan «Savatga» tugmasini bosing
+                  Dorilardagi «Savatga» tugmasini bosing
                 </p>
                 <button onClick={() => setCartOpen(false)} className="ios-btn secondary mt-2 w-full">
                   <X size={17} /> Yopish
@@ -634,6 +829,22 @@ export default function MarketClient() {
                 <ul className="mt-3 space-y-2">
                   {cart.map((l) => (
                     <li key={l.medicine.id} className="flex items-center gap-2 rounded-2xl bg-[var(--brand-bg)] p-2.5">
+                      {l.medicine.hasPhoto ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={`/api/medicines/${l.medicine.id}/photo`}
+                          alt={l.medicine.name}
+                          className="h-11 w-11 shrink-0 rounded-xl object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <span
+                          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white"
+                          style={{ color: l.medicine.type === "animal" ? "var(--brand-ink)" : "var(--brand-green)" }}
+                        >
+                          <TypeIcon type={l.medicine.type} size={18} />
+                        </span>
+                      )}
                       <div className="min-w-0 flex-1">
                         <p className="text-[14px] font-bold text-[var(--brand-ink)]">{l.medicine.name}</p>
                         <p className="text-[12px] font-semibold text-[var(--brand-green)]">

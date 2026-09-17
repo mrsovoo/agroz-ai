@@ -201,7 +201,7 @@ export default async function HomePage() {
         ))}
       </div>
 
-      {/* Dorilar bozori — 4 ta dori kartochkasi, to'liq ro'yxat /dorilar sahifasida */}
+      {/* Agro Bozor — 4 ta dori kartochkasi, to'liq ro'yxat /dorilar sahifasida */}
       <FeaturedMedicines />
 
       {/* @agroz_auth_bot orqali ro'yxatdan o'tgan mutaxassislar */}

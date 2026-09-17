@@ -4,9 +4,9 @@ import MarketClient from "@/components/MarketClient";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Dorilar bozori",
+  title: "Agro Bozor — dorilar",
   description:
-    "Ro'yxatdan o'tgan dorixonalardan ekin va hayvonlar uchun dorilarni toping, savatga qo'shib buyurtma bering.",
+    "Agro Bozor: ro'yxatdan o'tgan dorixonalar dorilari. Ekin va hayvonlar uchun dorilarni toping, yoqtirilganlarga saqlang, savatga qo'shib buyurtma bering.",
 };
 
 export default function MarketPage() {

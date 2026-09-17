@@ -40,6 +40,14 @@ export function orderMessage(order: OrderWithItems): string {
         `• ${escapeHtml(i.name)} × ${i.qty}${i.price ? ` — ${shortSum(i.price * i.qty)} so'm` : ""}`,
     )
     .join("\n");
+  // Mijoz bahosi: yulduzcha + izoh (yetkazilgan buyurtma baholangan bo'lsa).
+  const rating = order.ratingStars
+    ? [
+        "",
+        `⭐️ Mijoz bahosi: ${"★".repeat(order.ratingStars)}${"☆".repeat(5 - order.ratingStars)} (${order.ratingStars}/5)`,
+        ...(order.ratingNote ? [`💬 "${escapeHtml(order.ratingNote)}"`] : []),
+      ]
+    : [];
   return [
     `${st.emoji} <b>Buyurtma #${order.id}</b> — ${st.label}`,
     "",
@@ -51,6 +59,7 @@ export function orderMessage(order: OrderWithItems): string {
     "",
     `💰 Jami: <b>${order.totalSum !== null ? `${shortSum(order.totalSum)} so'm` : "narx yo'q"}</b>`,
     order.note ? `📝 Izoh: ${escapeHtml(order.note)}` : "",
+    ...rating,
   ]
     .filter(Boolean)
     .join("\n");
@@ -71,13 +80,15 @@ export function orderActionsKeyboard(order: OrderWithItems): InlineKeyboard {
   return { inline_keyboard: rows };
 }
 
-/** /buyurtmalar ro'yxati klaviaturasi — har bir buyurtma alohida tugma. */
+/** /buyurtmalar ro'yxati klaviaturasi — har bir buyurtma alohida tugma (bahosi bilan). */
 export function ordersListKeyboard(orders: OrderWithItems[]): InlineKeyboard {
   const rows = orders.slice(0, 20).map((o) => {
     const st = orderStatusLabel(o.status);
+    // Baholangan buyurtmada yulduzcha ko'rinadi — qancha yaxshi bo'lsa shuncha ★.
+    const stars = o.ratingStars ? ` · ${"★".repeat(o.ratingStars)}` : "";
     return [
       {
-        text: `${st.emoji} #${o.id} · ${o.customerName} · ${o.totalSum !== null ? shortSum(o.totalSum) + " so'm" : "narxsiz"}`,
+        text: `${st.emoji} #${o.id} · ${o.customerName} · ${o.totalSum !== null ? shortSum(o.totalSum) + " so'm" : "narxsiz"}${stars}`,
         callback_data: `o:view:${o.id}`,
       },
     ];

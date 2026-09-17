@@ -843,7 +843,9 @@ export function invalidLocationMessage(): string {
 export function appKeyboard(): InlineKeyboard | undefined {
   const raw = process.env.NEXT_PUBLIC_APP_URL?.trim()?.replace(/\/+$/, "");
   if (!raw) return undefined;
-  const rows: InlineKeyboard["inline_keyboard"] = [];
-  rows.push([{ text: "🗺 Mutaxassislar xaritasi", url: `${raw}/mutaxassislar` }]);
+  const rows: InlineKeyboard["inline_keyboard"] = [
+    [{ text: "🛒 Agro Bozor — dorilar bozori", url: `${raw}/dorilar` }],
+    [{ text: "🗺 Mutaxassislar xaritasi", url: `${raw}/mutaxassislar` }],
+  ];
   return { inline_keyboard: rows };
 }

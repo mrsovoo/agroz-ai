@@ -161,13 +161,13 @@ async function setupAuthBot() {
     await call("setChatMenuButton", {
       menu_button: {
         type: "web_app",
-        text: "Mutaxassislar",
-        web_app: { url: `${appUrl}/mutaxassislar` },
+        text: "Agro Bozor",
+        web_app: { url: `${appUrl}/dorilar` },
       },
     });
-    console.log("✓ Auth bot menyu tugmasi /mutaxassislar sahifasiga ulandi");
+    console.log("✓ Auth bot menyu tugmasi Agro Bozor (/dorilar) sahifasiga ulandi");
   } catch (err) {
-    console.warn("⚠️  Auth bot menyu tugmasini o'rnatib bo'lmadi:", err.message);
+    console.warn("⚠️  Menyu tugmasini o'rnatib bo'lmadi:", err.message);
   }
 
   const info = await call("getWebhookInfo");
