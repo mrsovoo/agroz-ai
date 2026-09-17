@@ -176,6 +176,45 @@ export const specialistRatings = pgTable(
 );
 
 /**
+ * Mijoz buyurtmasi — savat **bitta dorixonadan** dorilar bilan yaratiladi
+ * (har bir dorixona uchun alohida buyurtma).
+ */
+export const orders = pgTable("orders", {
+  id: serial("id").primaryKey(),
+  /** Sayt foydalanuvchisi (kirmagan bo'lsa null — anonim buyurtma). */
+  userId: integer("user_id"),
+  /** `specialists.id` — buyurtma qilingan dorixona. */
+  pharmacySpecialistId: integer("pharmacy_specialist_id").notNull(),
+  customerName: varchar("customer_name", { length: 120 }).notNull(),
+  customerPhone: varchar("customer_phone", { length: 32 }).notNull(),
+  /** Mijoz izohi (masalan: "ertalab kerak bo'ladi"). */
+  note: text("note"),
+  /** pickup — dorixonadan olib ketish, delivery — yetkazib berish. */
+  deliveryType: varchar("delivery_type", { length: 20 }).notNull().default("pickup"),
+  /** Yetkazib berish manzili (faqat delivery uchun). */
+  customerAddress: text("customer_address"),
+  /** Server tomonda hisoblangan umumiy summa (so'm). */
+  totalSum: integer("total_sum"),
+  /** yangi | tasdiqlandi | yetkazildi | bekor. */
+  status: varchar("status", { length: 20 }).notNull().default("yangi"),
+  /** Mijoz buyurtmani baholashi: 1–5 yulduz + izoh (dorixona reytingiga qo'shiladi). */
+  ratingStars: integer("rating_stars"),
+  ratingNote: varchar("rating_note", { length: 300 }),
+  ratedAt: timestamp("rated_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+/** Buyurtmadagi har bir dori (nom/narx buyurtma paytidagi ko'rinishida saqlanadi). */
+export const orderItems = pgTable("order_items", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").notNull(),
+  medicineId: integer("medicine_id").notNull(),
+  name: varchar("name", { length: 160 }).notNull(),
+  price: integer("price"),
+  qty: integer("qty").notNull().default(1),
+});
+
+/**
  * Bot suhbatining holati (multi-step ro'yxatdan o'tish).
  * Serverless muhitda xotira saqlanmaydi — shuning uchun holat bazada saqlanadi.
  */

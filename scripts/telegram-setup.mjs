@@ -148,6 +148,7 @@ async function setupAuthBot() {
       { command: "start", description: "Boshlash" },
       { command: "royxatdan_otish", description: "Ro'yxatdan o'tish / ma'lumotlarni yangilash" },
       { command: "dori_qoshish", description: "Dorixonaga dori qo'shish (rasm + nom)" },
+      { command: "buyurtmalar", description: "Mijozlar buyurtmalari" },
       { command: "malumotlarim", description: "Profilimni ko'rish" },
       { command: "yangiliklar", description: "Agro va chorvachilik yangiliklari" },
       { command: "bekor", description: "Jarayonni to'xtatish" },

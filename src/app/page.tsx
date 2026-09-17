@@ -1,5 +1,6 @@
 import Link from "next/link";
 import WeatherCard from "@/components/WeatherCard";
+import FeaturedMedicines from "@/components/FeaturedMedicines";
 import { getCurrentUser } from "@/lib/session";
 import { ensureSeed } from "@/lib/seed";
 import { db } from "@/db";
@@ -199,6 +200,9 @@ export default async function HomePage() {
           </div>
         ))}
       </div>
+
+      {/* Dorilar bozori — 4 ta dori kartochkasi, to'liq ro'yxat /dorilar sahifasida */}
+      <FeaturedMedicines />
 
       {/* @agroz_auth_bot orqali ro'yxatdan o'tgan mutaxassislar */}
       <Link href="/mutaxassislar" className="mt-3 block web:mt-6">

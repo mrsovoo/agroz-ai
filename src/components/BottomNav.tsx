@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Map, Lightbulb, UserRound, UsersRound } from "lucide-react";
+import { Home, Map, Pill, UserRound, UsersRound, Lightbulb } from "lucide-react";
 
 const items = [
   { href: "/", label: "Asosiy", Icon: Home },
+  { href: "/dorilar", label: "Dorilar", Icon: Pill },
   { href: "/xarita", label: "Xarita", Icon: Map },
   { href: "/mutaxassislar", label: "Mutaxassis", Icon: UsersRound },
-  { href: "/yangiliklar", label: "Maslahat", Icon: Lightbulb },
   { href: "/profil", label: "Profil", Icon: UserRound },
 ];
 
@@ -25,7 +25,7 @@ export default function BottomNav() {
       }}
     >
       <ul className="grid grid-cols-5 pb-[max(10px,env(safe-area-inset-bottom))] pt-2.5">
-        {items.map(({ href, label, Icon }) => {
+        {items.slice(0, 5).map(({ href, label, Icon }) => {
           const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
           return (
             <li key={href}>

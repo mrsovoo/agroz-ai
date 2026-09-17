@@ -428,6 +428,7 @@ export function helpMessage(): string {
     "/royxatdan_otish — ro'yxatdan o'tish yoki ma'lumotlarni yangilash",
     "/dori_qoshish — dorixonaga dori qo'shish (rasm + nom)",
     "/dorilarim — dorilar ro'yxati va o'chirish",
+    "/buyurtmalar — mijozlar buyurtmalari (dorixona egalari uchun)",
     "/malumotlarim — profilingizni ko'rish",
     "/profilni_ochirish — profilingizni butunlay o'chirish",
     "/yangiliklar — agro va chorvachilik yangiliklarini ko'rish",

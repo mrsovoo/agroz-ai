@@ -312,6 +312,30 @@ async function handleCommand(
     return;
   }
 
+  // /buyurtmalar — dorixona egasiga kelgan buyurtmalar ro'yxati.
+  if (command === "/buyurtmalar") {
+    const { listOrders } = await import("@/lib/orders");
+    const { ordersListKeyboard, ordersEmptyMessage, ordersHintMessage } = await import("@/lib/orders-bot");
+    const profile = await getSpecialistByTelegramId(telegramId);
+    if (!profile) {
+      await sendAuthMessage(chatId, needRegistrationMessage(), { inline: NEXT_STEP_KEYBOARD });
+      return;
+    }
+    if (profile.role !== "pharmacy") {
+      await sendAuthMessage(chatId, onlyPharmacyMessage(profile.role));
+      return;
+    }
+    const orders = await listOrders({ pharmacySpecialistId: profile.id, limit: 20 });
+    if (orders.length === 0) {
+      await sendAuthMessage(chatId, ordersEmptyMessage());
+      return;
+    }
+    await sendAuthMessage(chatId, ordersHintMessage(orders.length), {
+      inline: ordersListKeyboard(orders),
+    });
+    return;
+  }
+
   // Dorilar ro'yxati va o'chirish (faqat dorixona egasi).
   if (command === "/dorilarim") {
     const data = await listMedicines(telegramId);
@@ -748,6 +772,58 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
     if (data === "m:start") {
       await answerCallbackQuery(query.id);
       await startMedicineAdd(chatId, telegramId);
+      return;
+    }
+
+    // Buyurtma ko'rish / holat o'zgartirish (o:view:<id>, o:confirm:<id>, o:cancel:<id>, o:done:<id>).
+    if (data.startsWith("o:")) {
+      await answerCallbackQuery(query.id);
+      const [, action, idPart] = data.split(":");
+      const orderId = Number(idPart);
+      if (!Number.isSafeInteger(orderId)) return;
+
+      const { listOrders, setOrderStatus } = await import("@/lib/orders");
+      const { orderMessage, orderActionsKeyboard } = await import("@/lib/orders-bot");
+
+      if (action === "view") {
+        const orders = await listOrders({ orderId });
+        const order = orders[0];
+        if (!order) {
+          await sendAuthMessage(chatId, errorMessage());
+          return;
+        }
+        // Faqat shu dorixona egasi ko'ra oladi.
+        const profile = await getSpecialistByTelegramId(telegramId);
+        if (!profile || order.customerName === undefined) {
+          await sendAuthMessage(chatId, errorMessage());
+          return;
+        }
+        const mine = await listOrders({ pharmacySpecialistId: profile.id, limit: 100 });
+        if (!mine.some((o) => o.id === orderId)) {
+          await sendAuthMessage(chatId, errorMessage());
+          return;
+        }
+        await sendAuthMessage(chatId, orderMessage(order), { inline: orderActionsKeyboard(order) });
+        return;
+      }
+
+      const statusMap: Record<string, "tasdiqlandi" | "bekor" | "yetkazildi"> = {
+        confirm: "tasdiqlandi",
+        cancel: "bekor",
+        done: "yetkazildi",
+      };
+      const nextStatus = statusMap[action];
+      if (!nextStatus) return;
+      const ok = await setOrderStatus(telegramId, orderId, nextStatus);
+      if (!ok) {
+        await sendAuthMessage(chatId, errorMessage());
+        return;
+      }
+      const orders = await listOrders({ orderId });
+      const order = orders[0];
+      if (order) {
+        await sendAuthMessage(chatId, orderMessage(order), { inline: orderActionsKeyboard(order) });
+      }
       return;
     }
 
