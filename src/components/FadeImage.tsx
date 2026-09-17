@@ -19,6 +19,7 @@ export default function FadeImage({
   alt,
   className,
   fallback,
+  fit = "cover",
 }: {
   src: string;
   alt: string;
@@ -26,6 +27,8 @@ export default function FadeImage({
   className?: string;
   /** Rasm yuklanmagan/xato bo'lsa ko'rsatiladigan vaznli element. */
   fallback?: ReactNode;
+  /** `cover` — to'ldirib qirqish, `contain` — nisbatni saqlab to'liq ko'rsatish. */
+  fit?: "cover" | "contain";
 }) {
   const [state, setState] = useState<"loading" | "loaded" | "error">("loading");
 
@@ -58,7 +61,7 @@ export default function FadeImage({
           decoding="async"
           onLoad={() => setState("loaded")}
           onError={() => setState("error")}
-          className={`h-full w-full object-cover transition-opacity duration-400 motion-reduce:transition-none ${
+          className={`h-full w-full ${fit === "contain" ? "object-contain" : "object-cover"} transition-opacity duration-400 motion-reduce:transition-none ${
             state === "loaded" ? "opacity-100" : "opacity-0"
           }`}
         />

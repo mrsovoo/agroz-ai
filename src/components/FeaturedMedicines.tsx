@@ -28,6 +28,7 @@ export default async function FeaturedMedicines() {
         type: specialistMedicines.type,
         price: specialistMedicines.price,
         photoFileId: specialistMedicines.photoFileId,
+        photoData: specialistMedicines.photoData,
         pharmacyName: specialists.organization,
         contactName: specialists.name,
       })
@@ -41,7 +42,7 @@ export default async function FeaturedMedicines() {
       name: r.name,
       type: r.type,
       price: r.price,
-      hasPhoto: Boolean(r.photoFileId),
+      hasPhoto: Boolean(r.photoFileId || r.photoData),
       pharmacyName: r.pharmacyName ?? r.contactName,
     }));
   } catch {
@@ -67,12 +68,13 @@ export default async function FeaturedMedicines() {
         {items.map((m) => (
           <Link key={m.id} href="/dorilar" className="block">
             <div className="flex h-full flex-col overflow-hidden rounded-[22px] bg-white shadow-sm transition-transform hover-lift active:scale-[0.98]">
-              {/* Rasm tepada — 4:1 nisbatda, shimmer + fade-in bilan (yo'q bo'lsa rangli placeholder) */}
+              {/* Rasm tepada — portret (3:4), shimmer + fade-in bilan (yo'q bo'lsa rangli placeholder) */}
               {m.hasPhoto ? (
                 <FadeImage
                   src={`/api/medicines/${m.id}/photo`}
                   alt={m.name}
-                  className="aspect-[4/1] w-full"
+                  className="aspect-[3/4] w-full bg-white"
+                  fit="contain"
                   fallback={
                     <div
                       className="flex h-full w-full items-center justify-center"
@@ -94,7 +96,7 @@ export default async function FeaturedMedicines() {
                 />
               ) : (
                 <div
-                  className="flex aspect-[4/1] w-full items-center justify-center"
+                  className="flex aspect-[3/4] w-full items-center justify-center"
                   style={{
                     background:
                       m.type === "animal"

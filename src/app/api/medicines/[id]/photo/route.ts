@@ -38,10 +38,14 @@ async function cachedFilePath(token: string, fileId: string): Promise<string | n
 }
 
 /**
- * Dori rasmini Telegram'dan uzatadi.
+ * Dori rasmini beradi.
  *
- * Rasm `file_id` sifatida saqlanadi; bot tokeni **hech qachon** clientga
- * chiqmasligi kerak, shuning uchun rasmni shu route orqali proxy qilamiz.
+ * • Yangi dorilar: rasm botda qo'shishda 1080×1450 ga normallashtirilib bazaga
+ *   yozilgan — base64'dan decode qilib to'g'ridan-to'g'ri beramiz (tez, Telegram
+ *   so'rovisiz, doim bir xil o'lchamda).
+ * • Eskilar (photoData yo'q): Telegram'dan proxy orqali uzatiladi (avvalgi usul).
+ *
+ * Bot tokeni **hech qachon** clientga chiqmaydi.
  */
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -49,7 +53,25 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   if (!Number.isFinite(numericId)) return new Response("not found", { status: 404 });
 
   const medicine = await getMedicineById(numericId);
-  if (!medicine?.photoFileId) return new Response("not found", { status: 404 });
+  if (!medicine) return new Response("not found", { status: 404 });
+
+  // 1) Bazadagi normallashtirilgan rasm — eng tez va ishonchli yo'l.
+  if (medicine.photoData) {
+    try {
+      const bytes = Buffer.from(medicine.photoData, "base64");
+      return new Response(new Uint8Array(bytes), {
+        headers: {
+          "Content-Type": "image/jpeg",
+          "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800",
+        },
+      });
+    } catch {
+      // Base64 buzuk bo'lsa — Telegram proxy'ga o'tamiz.
+    }
+  }
+
+  // 2) Eski usul: Telegram file_id orqali proxy.
+  if (!medicine.photoFileId) return new Response("not found", { status: 404 });
 
   const token = await resolveAuthBotToken();
   if (!token) return new Response("bot sozlanmagan", { status: 503 });

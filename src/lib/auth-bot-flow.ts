@@ -165,6 +165,8 @@ type Draft = {
   workHours?: string;
   /** Dori qo'shish uchun vaqtinchalik maydonlar. */
   medPhotoFileId?: string;
+  /** Normallashtirilgan rasm (1080×1450 JPEG, base64) — saqlashda bazaga yoziladi. */
+  medPhotoBase64?: string;
   medName?: string;
   /** crop | animal | general */
   medType?: string;
@@ -1254,6 +1256,23 @@ async function handleMedicinePhoto(
   }
   const draft = state.draft;
   draft.medPhotoFileId = best.file_id;
+
+  // Rasmi Telegram'dan yuklab, 1080×1450 ga normallashtiramiz (oq fon + JPEG siqish).
+  // Bazaga saqlanadi — sahifalarda Telegram'ga qayta murojaat qilmasdan ko'rsatiladi.
+  try {
+    const { fetchTelegramPhoto } = await import("@/lib/image");
+    const processed = await fetchTelegramPhoto(best.file_id);
+    if (processed) {
+      draft.medPhotoBase64 = processed.base64;
+      await sendAuthMessage(
+        chatId,
+        "🖼 Rasm 1080×1450 formatga moslandi (nisbat saqlanadi, oq fon bilan to'ldiriladi).",
+      );
+    }
+  } catch (err) {
+    console.error("[auth-bot] rasmni normallashtirishda xatolik:", err);
+  }
+
   await setState(telegramId, "med_name", draft);
   await sendAuthMessage(
     chatId,
@@ -1311,6 +1330,7 @@ async function saveMedicine(
     specialistId: profile.id,
     name,
     photoFileId: draft.medPhotoFileId ?? null,
+    photoData: draft.medPhotoBase64 ?? null,
     type: medType,
     usage: draft.medUsage ?? null,
     price: draft.medPrice ?? null,

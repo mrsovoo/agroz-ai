@@ -208,11 +208,13 @@ export async function getSpecialistByTelegramId(telegramId: number) {
 
 /**
  * Dorixonaga yangi dori qo'shadi (rasm Telegram file_id, turi va ishlatilishi bilan).
+ * `photoData` — normallashtirilgan rasm (1080×1450 JPEG base64), bo'lsa bazaga yoziladi.
  */
 export async function addMedicine(params: {
   specialistId: number;
   name: string;
   photoFileId: string | null;
+  photoData?: string | null;
   type?: "crop" | "animal" | "general";
   usage?: string | null;
   /** Narx so'mda (ixtiyoriy). */
@@ -224,6 +226,7 @@ export async function addMedicine(params: {
       specialistId: params.specialistId,
       name: params.name,
       photoFileId: params.photoFileId,
+      photoData: params.photoData ?? null,
       type: params.type ?? "general",
       usage: params.usage ?? null,
       price: params.price ?? null,
@@ -333,7 +336,7 @@ export async function listSpecialists(opts: {
       id: m.id,
       name: m.name,
       status: m.status,
-      hasPhoto: Boolean(m.photoFileId),
+      hasPhoto: Boolean(m.photoFileId || m.photoData),
       type: m.type,
       usage: m.usage,
       price: m.price ?? null,

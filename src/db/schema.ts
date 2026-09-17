@@ -143,8 +143,14 @@ export const specialistMedicines = pgTable("specialist_medicines", {
   /** `specialists.id` — dorixona egasi (role=pharmacy). */
   specialistId: integer("specialist_id").notNull(),
   name: varchar("name", { length: 160 }).notNull(),
-  /** Telegram `file_id` — rasm bot tokenisiz, o'z API'miz orqali uzatiladi. */
+  /** Telegram `file_id` — eski rasmlar uchun (proxy orqali uzatiladi). */
   photoFileId: varchar("photo_file_id", { length: 300 }),
+  /**
+   * Normallashtirilgan rasm (1080×1450 JPEG) — base64.
+   * Dori qo'shishda bot rasmini yuklab, shu o'lchamga keltirib bazaga yozadi;
+   * sahifalarda shundan o'qiladi (Telegram'ga qayta murojaat shart emas).
+   */
+  photoData: text("photo_data"),
   /** Kim uchun: crop — ekin/o'simlik, animal — hayvon, general — umumiy. */
   type: varchar("type", { length: 20 }).notNull().default("general"),
   /** Nima uchun ishlatiladi (qisqa tavsif, mijozga ko'rinadi). */
