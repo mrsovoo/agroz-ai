@@ -68,12 +68,12 @@ export default async function FeaturedMedicines() {
         {items.map((m) => (
           <Link key={m.id} href="/dorilar" className="block">
             <div className="flex h-full flex-col overflow-hidden rounded-[22px] bg-white shadow-sm transition-transform hover-lift active:scale-[0.98]">
-              {/* Rasm tepada — portret (3:4), shimmer + fade-in bilan (yo'q bo'lsa rangli placeholder) */}
+              {/* Rasm — marketplace uslubida: kvadrat oynada mayda, markazda */}
               {m.hasPhoto ? (
                 <FadeImage
                   src={`/api/medicines/${m.id}/photo`}
                   alt={m.name}
-                  className="aspect-[3/4] w-full bg-white"
+                  className="aspect-square w-full bg-white p-2"
                   fit="contain"
                   fallback={
                     <div
@@ -96,7 +96,7 @@ export default async function FeaturedMedicines() {
                 />
               ) : (
                 <div
-                  className="flex aspect-[3/4] w-full items-center justify-center"
+                  className="flex aspect-square w-full items-center justify-center p-2"
                   style={{
                     background:
                       m.type === "animal"

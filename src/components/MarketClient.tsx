@@ -387,18 +387,18 @@ export default function MarketClient() {
     );
     return (
       <div className="flex h-full flex-col overflow-hidden rounded-[22px] bg-white shadow-sm">
-        {/* Rasm yoki rangli placeholder — portret (3:4), nisbat buzilmaydi */}
+        {/* Rasm — marketplace uslubida: kvadrat oynada mayda, markazda, nisbat buzilmaydi */}
         <div className="relative">
           {m.hasPhoto ? (
             <FadeImage
               src={`/api/medicines/${m.id}/photo`}
               alt={m.name}
-              className="aspect-[3/4] w-full bg-white"
+              className="aspect-square w-full bg-white p-2"
               fit="contain"
               fallback={cardFallback}
             />
           ) : (
-            <div className="aspect-[3/4] w-full">{cardFallback}</div>
+            <div className="aspect-square w-full p-2">{cardFallback}</div>
           )}
           {/* Tur belgisi */}
           <span
@@ -721,7 +721,8 @@ export default function MarketClient() {
                         <FadeImage
                           src={`/api/medicines/${c.medicine.id}/photo`}
                           alt={c.medicine.name}
-                          className="h-14 w-14 shrink-0 rounded-xl"
+                          className="h-14 w-14 shrink-0 rounded-xl bg-white"
+                          fit="contain"
                           fallback={
                             <span
                               className="flex h-full w-full items-center justify-center bg-white"
@@ -844,7 +845,8 @@ export default function MarketClient() {
                         <FadeImage
                           src={`/api/medicines/${l.medicine.id}/photo`}
                           alt={l.medicine.name}
-                          className="h-11 w-11 shrink-0 rounded-xl"
+                          className="h-11 w-11 shrink-0 rounded-xl bg-white"
+                          fit="contain"
                           fallback={
                             <span
                               className="flex h-full w-full items-center justify-center bg-white"
