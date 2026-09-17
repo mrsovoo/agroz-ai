@@ -387,18 +387,18 @@ export default function MarketClient() {
     );
     return (
       <div className="flex h-full flex-col overflow-hidden rounded-[22px] bg-white shadow-sm">
-        {/* Rasm — marketplace uslubida: kvadrat oynada mayda, markazda, nisbat buzilmaydi */}
-        <div className="relative">
+        {/* Rasm — maksimal 250×350 px, markazda, nisbat buzilmaydi */}
+        <div className="relative flex items-start justify-center bg-white">
           {m.hasPhoto ? (
             <FadeImage
               src={`/api/medicines/${m.id}/photo`}
               alt={m.name}
-              className="aspect-square w-full bg-white p-2"
+              className="aspect-[5/7] max-h-[350px] w-full max-w-[250px] bg-white p-2"
               fit="contain"
               fallback={cardFallback}
             />
           ) : (
-            <div className="aspect-square w-full p-2">{cardFallback}</div>
+            <div className="aspect-[5/7] max-h-[350px] w-full max-w-[250px] p-2">{cardFallback}</div>
           )}
           {/* Tur belgisi */}
           <span
