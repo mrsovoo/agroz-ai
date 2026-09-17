@@ -372,12 +372,12 @@ export default function MarketClient() {
             <img
               src={`/api/medicines/${m.id}/photo`}
               alt={m.name}
-              className="h-32 w-full object-cover"
+              className="aspect-[4/1] w-full object-cover"
               loading="lazy"
             />
           ) : (
             <div
-              className="flex h-32 w-full items-center justify-center"
+              className="flex aspect-[4/1] w-full items-center justify-center"
               style={{
                 background:
                   m.type === "animal"
@@ -388,10 +388,10 @@ export default function MarketClient() {
               }}
             >
               <span
-                className="flex h-16 w-16 items-center justify-center rounded-full bg-white/80"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/80"
                 style={{ color: m.type === "animal" ? "var(--brand-ink)" : "var(--brand-green)" }}
               >
-                <TypeIcon type={m.type} size={32} />
+                <TypeIcon type={m.type} size={20} />
               </span>
             </div>
           )}

@@ -66,18 +66,18 @@ export default async function FeaturedMedicines() {
         {items.map((m) => (
           <Link key={m.id} href="/dorilar" className="block">
             <div className="flex h-full flex-col overflow-hidden rounded-[22px] bg-white shadow-sm transition-transform hover-lift active:scale-[0.98]">
-              {/* Rasm tepada (yo'q bo'lsa rangli placeholder) */}
+              {/* Rasm tepada — 4:1 nisbatda (yo'q bo'lsa rangli placeholder) */}
               {m.hasPhoto ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={`/api/medicines/${m.id}/photo`}
                   alt={m.name}
-                  className="h-28 w-full object-cover web:h-32"
+                  className="aspect-[4/1] w-full object-cover"
                   loading="lazy"
                 />
               ) : (
                 <div
-                  className="flex h-28 w-full items-center justify-center web:h-32"
+                  className="flex aspect-[4/1] w-full items-center justify-center"
                   style={{
                     background:
                       m.type === "animal"
@@ -86,10 +86,10 @@ export default async function FeaturedMedicines() {
                   }}
                 >
                   <span
-                    className="flex h-14 w-14 items-center justify-center rounded-full bg-white/80"
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-white/80"
                     style={{ color: m.type === "animal" ? "var(--brand-ink)" : "var(--brand-green)" }}
                   >
-                    {m.type === "animal" ? <Pill size={26} /> : <Sprout size={26} />}
+                    {m.type === "animal" ? <Pill size={20} /> : <Sprout size={20} />}
                   </span>
                 </div>
               )}
