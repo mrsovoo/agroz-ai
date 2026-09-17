@@ -70,6 +70,10 @@ export default function DiagnoseForm({ category }: { category: "crop" | "animal"
       setRecording(false);
       return;
     }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setStatus("Kechirasiz, bu brauzer ovoz yozishni qo'llab-quvvatlamaydi.");
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const rec = new MediaRecorder(stream);
@@ -95,7 +99,7 @@ export default function DiagnoseForm({ category }: { category: "crop" | "animal"
       setRecording(true);
       setStatus("Yozilmoqda... Muammoni o'zbek tilida gapiring");
     } catch {
-      setStatus("Mikrofonga ruxsat berilmadi.");
+      setStatus("Mikrofonga ruxsat berilmadi yoki mikrofon topilmadi.");
     }
   }
 

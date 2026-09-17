@@ -246,8 +246,9 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
       )}
 
       <Link
-        // Xaritada ikkala rol ham "specialist" turi bilan ko'rsatiladi.
-        href={role === "all" ? "/xarita" : "/xarita?kind=specialist"}
+        // Faqat "Mutaxassislar" filtri tanlanganda xaritada ham shu tur ochiladi;
+        // dorixona egalari xaritada dorixona sifatida ko'rinadi.
+        href={role === "specialist" ? "/xarita?kind=specialist" : "/xarita"}
         className="mt-4 flex items-center justify-center gap-2 rounded-2xl bg-[var(--brand-ink)] py-3.5 text-[14px] font-bold text-white active:scale-[0.98]"
       >
         <Map size={17} /> Xaritada ko&apos;rish

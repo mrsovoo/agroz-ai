@@ -65,14 +65,26 @@ export default function WeatherCard({
   const [w, setW] = useState<Weather | null>(null);
   const [place, setPlace] = useState("Hudud aniqlanmoqda");
   const [region, setRegion] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
     const load = (lat?: number, lng?: number) => {
       const q = lat !== undefined && lng !== undefined ? `?lat=${lat}&lng=${lng}` : "";
       fetch(`/api/weather${q}`)
         .then((r) => r.json())
-        .then((d: Weather) => setW(typeof d?.temp === "number" ? d : null))
-        .catch(() => setW(null));
+        .then((d: Weather) => {
+          if (typeof d?.temp === "number") {
+            setW(d);
+            setLoadFailed(false);
+          } else {
+            setW(null);
+            setLoadFailed(true);
+          }
+        })
+        .catch(() => {
+          setW(null);
+          setLoadFailed(true);
+        });
 
       if (showRegion && lat !== undefined && lng !== undefined) {
         fetch(`/api/location?lat=${lat}&lng=${lng}`)
@@ -154,7 +166,13 @@ export default function WeatherCard({
           style={{ background: "var(--brand-yellow)", color: "var(--brand-ink)" }}
         >
           <span className="mt-0.5 shrink-0">{w ? levelIcon[w.level] : null}</span>
-          <span>{w ? w.advice : "Ob-havo yuklanmoqda..."}</span>
+          <span>
+            {w
+              ? w.advice
+              : loadFailed
+                ? "Ob-havo hozircha olinmadi — keyinroq qayta urinib ko'ring."
+                : "Ob-havo yuklanmoqda..."}
+          </span>
         </div>
       </div>
 
@@ -175,7 +193,9 @@ export default function WeatherCard({
 
           {!w?.tips || w.tips.length === 0 ? (
             <p className="ios-card mt-2 p-4 text-[14px] text-[var(--brand-muted)]">
-              Maslahatlar yuklanmoqda...
+              {loadFailed
+                ? "Maslahatlar uchun ob-havo ma'lumoti olinmadi."
+                : "Maslahatlar yuklanmoqda..."}
             </p>
           ) : (
             <ul className="mt-2 space-y-2.5">
