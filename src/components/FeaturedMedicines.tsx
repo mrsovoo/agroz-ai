@@ -1,15 +1,14 @@
 import { db } from "@/db";
 import { specialistMedicines, specialists } from "@/db/schema";
 import { and, eq, sql } from "drizzle-orm";
-import { Pill, Sprout, Store } from "lucide-react";
-import FadeImage from "@/components/FadeImage";
-import AddToCartButton from "@/components/AddToCartButton";
-import { shortSum } from "@/lib/format";
+import { Pill } from "lucide-react";
+import ProductCard from "@/components/ProductCard";
 
 /**
  * Bosh sahifadagi «Agro Bozor» bloki — so'nggi qo'shilgan 4 ta mavjud dori.
- * Kartochka: 250×350 gacha rasm, ostida nomi, narxi, tavsifi va «Savatga» tugmasi.
- * Savat umumiy — Agro Bozordagi savat bilan sinxron ishlaydi.
+ * Kartochkalar **ProductCard** bilan chiziladi — Agro Bozor va tafsilot
+ * sahifasidagi «o'xshash mahsulotlar» bilan aynan bir xil ko'rinishda:
+ * 260×450 kartochka, 250×350 rasm, nom, narx, tavsif, ❤️ va 🛒 Savatga.
  */
 export default async function FeaturedMedicines() {
   let items: {
@@ -76,93 +75,19 @@ export default async function FeaturedMedicines() {
 
       <div className="mt-3 grid grid-cols-2 gap-3 web:grid-cols-4">
         {items.map((m) => (
-          <div key={m.id} className="flex h-full flex-col overflow-hidden rounded-[22px] bg-white shadow-sm">
-            {/* Rasm — maksimal 250×350 px, markazda, nisbat buzilmaydi */}
-            <a href="/dorilar" className="block" aria-label={m.name}>
-              {m.hasPhoto ? (
-                <FadeImage
-                  src={`/api/medicines/${m.id}/photo`}
-                  alt={m.name}
-                  className="mx-auto aspect-[5/7] max-h-[350px] w-full max-w-[250px] bg-white p-2"
-                  fit="contain"
-                  fallback={
-                    <div
-                      className="flex h-full w-full items-center justify-center"
-                      style={{
-                        background:
-                          m.type === "animal"
-                            ? "linear-gradient(135deg,#fff7df,#ffedb3)"
-                            : "linear-gradient(135deg,#f0fae8,#dcf3cf)",
-                      }}
-                    >
-                      <span
-                        className="flex h-12 w-12 items-center justify-center rounded-full bg-white/80"
-                        style={{ color: m.type === "animal" ? "var(--brand-ink)" : "var(--brand-green)" }}
-                      >
-                        {m.type === "animal" ? <Pill size={22} /> : <Sprout size={22} />}
-                      </span>
-                    </div>
-                  }
-                />
-              ) : (
-                <div
-                  className="mx-auto flex aspect-[5/7] max-h-[350px] w-full max-w-[250px] items-center justify-center p-2"
-                  style={{
-                    background:
-                      m.type === "animal"
-                        ? "linear-gradient(135deg,#fff7df,#ffedb3)"
-                        : "linear-gradient(135deg,#f0fae8,#dcf3cf)",
-                  }}
-                >
-                  <span
-                    className="flex h-12 w-12 items-center justify-center rounded-full bg-white/80"
-                    style={{ color: m.type === "animal" ? "var(--brand-ink)" : "var(--brand-green)" }}
-                  >
-                    {m.type === "animal" ? <Pill size={22} /> : <Sprout size={22} />}
-                  </span>
-                </div>
-              )}
-            </a>
-
-            {/* Nomi, narxi, tavsifi */}
-            <div className="flex flex-1 flex-col p-3">
-              <p className="line-clamp-2 text-[14px] font-bold leading-snug text-[var(--brand-ink)]">
-                {m.name}
-              </p>
-              {m.price ? (
-                <p className="mt-1 text-[14.5px] font-black text-[var(--brand-green)]">
-                  {shortSum(m.price)} so&apos;m
-                </p>
-              ) : (
-                <p className="mt-1 text-[12.5px] font-bold text-[var(--brand-muted)]">
-                  Narx so&apos;rang
-                </p>
-              )}
-              {m.usage && (
-                <p className="mt-0.5 line-clamp-2 text-[11.5px] leading-snug text-[var(--brand-muted)]">
-                  {m.usage}
-                </p>
-              )}
-              <p className="mt-1 flex items-center gap-1 text-[11px] text-[var(--brand-muted)]">
-                <Store size={11} className="shrink-0" />
-                <span className="line-clamp-1">{m.pharmacyName}</span>
-              </p>
-
-              {/* Savatga — umumiy savat (Agro Bozor bilan bir xil) */}
-              <AddToCartButton
-                medicine={{
-                  id: m.id,
-                  name: m.name,
-                  price: m.price,
-                  type: m.type,
-                  hasPhoto: m.hasPhoto,
-                  usage: m.usage,
-                  status: "bor",
-                }}
-                pharmacy={{ id: m.pharmacyId, name: m.pharmacyName, phone: m.pharmacyPhone }}
-              />
-            </div>
-          </div>
+          <ProductCard
+            key={m.id}
+            medicine={{
+              id: m.id,
+              name: m.name,
+              price: m.price,
+              type: m.type,
+              hasPhoto: m.hasPhoto,
+              usage: m.usage,
+              status: "bor",
+            }}
+            pharmacy={{ id: m.pharmacyId, name: m.pharmacyName, phone: m.pharmacyPhone }}
+          />
         ))}
       </div>
 

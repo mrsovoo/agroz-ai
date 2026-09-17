@@ -43,6 +43,13 @@ import {
   CART_EVENT,
   type CartStoreState,
 } from "@/lib/cart-store";
+import ProductCard from "@/components/ProductCard";
+import {
+  loadFavorites,
+  toggleFavorite as toggleFavStore,
+  FAV_EVENT,
+  type FavKey,
+} from "@/lib/favorites-store";
 
 type Medicine = {
   id: number;
@@ -74,41 +81,8 @@ type Pharmacy = {
 /** Kartochka — dori + uning dorixonasi (grid'da flat ko'rsatiladi). */
 type Card = { pharmacy: Pharmacy; medicine: Medicine };
 
-type CartLine = { medicine: Medicine; qty: number };
-
-/** Yoqtirilganlar kaliti: dorixona + dori juftligi. */
-type FavKey = { pharmacyId: number; medicineId: number };
-
-const FAV_STORAGE_KEY = "agroz:favorites:v1";
-
 function shortSum(value: number): string {
   return new Intl.NumberFormat("ru-RU").format(value).replace(/\u00a0/g, " ");
-}
-
-function favKeyId(f: FavKey): string {
-  return `${f.pharmacyId}:${f.medicineId}`;
-}
-
-function loadFavorites(): FavKey[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(FAV_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .map((x) => {
-        const o = x as { pharmacyId?: unknown; medicineId?: unknown };
-        const pharmacyId = Number(o?.pharmacyId);
-        const medicineId = Number(o?.medicineId);
-        if (!Number.isSafeInteger(pharmacyId) || !Number.isSafeInteger(medicineId)) return null;
-        return { pharmacyId, medicineId };
-      })
-      .filter((x): x is FavKey => x !== null)
-      .slice(0, 200);
-  } catch {
-    return [];
-  }
 }
 
 function TypeIcon({ type, size = 30 }: { type: string; size?: number }) {
@@ -159,24 +133,20 @@ export default function MarketClient() {
   const [trackBusy, setTrackBusy] = useState(false);
   const [trackError, setTrackError] = useState<string | null>(null);
 
-  // ---- Yoqtirilganlar: localStorage'dan yuklash ----
+  // ---- Yoqtirilganlar: umumiy store'dan yuklash ----
   useEffect(() => {
-    setFavorites(loadFavorites());
+    const sync = () => setFavorites(loadFavorites());
+    sync();
+    window.addEventListener(FAV_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(FAV_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
   }, []);
 
   function toggleFavorite(pharmacyId: number, medicineId: number) {
-    setFavorites((prev) => {
-      const exists = prev.some((f) => f.pharmacyId === pharmacyId && f.medicineId === medicineId);
-      const next = exists
-        ? prev.filter((f) => !(f.pharmacyId === pharmacyId && f.medicineId === medicineId))
-        : [...prev, { pharmacyId, medicineId }].slice(0, 200);
-      try {
-        window.localStorage.setItem(FAV_STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        // localStorage band bo'lsa ham ishlashi davom etadi (faqat sessiyaga saqlanadi).
-      }
-      return next;
-    });
+    toggleFavStore(pharmacyId, medicineId);
   }
 
   const isFavorite = (pharmacyId: number, medicineId: number) =>
@@ -378,113 +348,6 @@ export default function MarketClient() {
   ];
 
   /** Kartochka tanasi — bozor grid'i va yoqtirilganlar ro'yxatida umumiy. */
-  function MedicineCard({ card }: { card: Card }) {
-    const { pharmacy: p, medicine: m } = card;
-    const badge = typeBadge(m.type);
-    const liked = isFavorite(p.id, m.id);
-    const inCart =
-      cartState?.pharmacy.id === p.id
-        ? cartState.lines.find((l) => l.medicine.id === m.id)
-        : undefined;
-    // Rasm yo'q yoki yuklanmagan holatda ko'rsatiladigan placeholder.
-    const cardFallback = (
-      <div
-        className="flex h-full w-full items-center justify-center"
-        style={{
-          background:
-            m.type === "animal"
-              ? "linear-gradient(135deg,#fff7df,#ffedb3)"
-              : m.type === "crop"
-                ? "linear-gradient(135deg,#f0fae8,#dcf3cf)"
-                : "linear-gradient(135deg,#eefdf9,#d4f5ee)",
-        }}
-      >
-        <span
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/80"
-          style={{ color: m.type === "animal" ? "var(--brand-ink)" : "var(--brand-green)" }}
-        >
-          <TypeIcon type={m.type} size={20} />
-        </span>
-      </div>
-    );
-    return (
-      <div className="flex h-full flex-col overflow-hidden rounded-[22px] bg-white shadow-sm">
-        {/* Rasm — maksimal 250×350 px, markazda, nisbat buzilmaydi */}
-        <div className="relative flex items-start justify-center bg-white">
-          {m.hasPhoto ? (
-            <FadeImage
-              src={`/api/medicines/${m.id}/photo`}
-              alt={m.name}
-              className="aspect-[5/7] max-h-[350px] w-full max-w-[250px] bg-white p-2"
-              fit="contain"
-              fallback={cardFallback}
-            />
-          ) : (
-            <div className="aspect-[5/7] max-h-[350px] w-full max-w-[250px] p-2">{cardFallback}</div>
-          )}
-          {/* Tur belgisi */}
-          <span
-            className="absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold shadow-sm"
-            style={{ background: badge.bg, color: badge.color }}
-          >
-            {badge.label}
-          </span>
-          {/* Yoqtirish */}
-          <button
-            onClick={() => toggleFavorite(p.id, m.id)}
-            aria-label={liked ? "Yoqtirilganlardan olib tashlash" : "Yoqtirilganlarga qo'shish"}
-            aria-pressed={liked}
-            className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white/95 shadow-sm transition active:scale-90"
-          >
-            <Heart
-              size={16}
-              className={liked ? "text-[#e0245e]" : "text-[var(--brand-muted)]"}
-              fill={liked ? "#e0245e" : "none"}
-            />
-          </button>
-        </div>
-
-        {/* Tana: nomi, tavsifi, narxi, dorixona */}
-        <div className="flex flex-1 flex-col p-3">
-          <p className="line-clamp-2 text-[14px] font-bold leading-snug text-[var(--brand-ink)]">
-            {m.name}
-          </p>
-          {m.usage && (
-            <p className="mt-0.5 line-clamp-1 text-[11.5px] text-[var(--brand-muted)]">{m.usage}</p>
-          )}
-          {m.price ? (
-            <p className="mt-1.5 text-[15px] font-black text-[var(--brand-green)]">
-              {shortSum(m.price)} so&apos;m
-            </p>
-          ) : (
-            <p className="mt-1.5 text-[12.5px] font-bold text-[var(--brand-muted)]">Narx so&apos;rang</p>
-          )}
-          <p className="mt-1 flex items-center gap-1 text-[11px] text-[var(--brand-muted)]">
-            <Store size={10} className="shrink-0" />
-            <span className="line-clamp-1">{p.organization ?? p.name}</span>
-          </p>
-
-          {/* Savatga qo'shish */}
-          <button
-            onClick={() => addToCart(p, m)}
-            className={`mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-xl py-2.5 text-[13px] font-bold transition active:scale-[0.97] ${
-              inCart
-                ? "text-[var(--brand-green)]"
-                : "text-white"
-            }`}
-            style={
-              inCart
-                ? { background: "var(--brand-green-soft)" }
-                : { background: "var(--brand-green)" }
-            }
-          >
-            {inCart ? <Check size={15} /> : <ShoppingCart size={15} />}
-            {inCart ? `Savatda (${inCart.qty})` : "Savatga"}
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="px-5 pb-6">
@@ -608,7 +471,11 @@ export default function MarketClient() {
       ) : (
         <div className="mt-4 grid grid-cols-2 gap-3">
           {cards.map((c) => (
-            <MedicineCard key={`${c.pharmacy.id}:${c.medicine.id}`} card={c} />
+            <ProductCard
+              key={`${c.pharmacy.id}:${c.medicine.id}`}
+              medicine={c.medicine}
+              pharmacy={{ id: c.pharmacy.id, name: c.pharmacy.organization ?? c.pharmacy.name, phone: c.pharmacy.phone }}
+            />
           ))}
         </div>
       )}
