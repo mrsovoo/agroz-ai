@@ -1,4 +1,5 @@
 import Link from "next/link";
+import FadeImage from "@/components/FadeImage";
 import { db } from "@/db";
 import { specialistMedicines, specialists } from "@/db/schema";
 import { and, eq, sql } from "drizzle-orm";
@@ -66,14 +67,30 @@ export default async function FeaturedMedicines() {
         {items.map((m) => (
           <Link key={m.id} href="/dorilar" className="block">
             <div className="flex h-full flex-col overflow-hidden rounded-[22px] bg-white shadow-sm transition-transform hover-lift active:scale-[0.98]">
-              {/* Rasm tepada — 4:1 nisbatda (yo'q bo'lsa rangli placeholder) */}
+              {/* Rasm tepada — 4:1 nisbatda, shimmer + fade-in bilan (yo'q bo'lsa rangli placeholder) */}
               {m.hasPhoto ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <FadeImage
                   src={`/api/medicines/${m.id}/photo`}
                   alt={m.name}
-                  className="aspect-[4/1] w-full object-cover"
-                  loading="lazy"
+                  className="aspect-[4/1] w-full"
+                  fallback={
+                    <div
+                      className="flex h-full w-full items-center justify-center"
+                      style={{
+                        background:
+                          m.type === "animal"
+                            ? "linear-gradient(135deg,#fff7df,#ffedb3)"
+                            : "linear-gradient(135deg,#f0fae8,#dcf3cf)",
+                      }}
+                    >
+                      <span
+                        className="flex h-10 w-10 items-center justify-center rounded-full bg-white/80"
+                        style={{ color: m.type === "animal" ? "var(--brand-ink)" : "var(--brand-green)" }}
+                      >
+                        {m.type === "animal" ? <Pill size={20} /> : <Sprout size={20} />}
+                      </span>
+                    </div>
+                  }
                 />
               ) : (
                 <div

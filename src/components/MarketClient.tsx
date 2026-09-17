@@ -35,6 +35,7 @@ import {
   X,
 } from "lucide-react";
 import { RADIUS_OPTIONS } from "@/lib/constants";
+import FadeImage from "@/components/FadeImage";
 
 type Medicine = {
   id: number;
@@ -363,37 +364,40 @@ export default function MarketClient() {
     const badge = typeBadge(m.type);
     const liked = isFavorite(p.id, m.id);
     const inCart = cartPharmacy?.id === p.id && cart.find((l) => l.medicine.id === m.id);
+    // Rasm yo'q yoki yuklanmagan holatda ko'rsatiladigan placeholder.
+    const cardFallback = (
+      <div
+        className="flex h-full w-full items-center justify-center"
+        style={{
+          background:
+            m.type === "animal"
+              ? "linear-gradient(135deg,#fff7df,#ffedb3)"
+              : m.type === "crop"
+                ? "linear-gradient(135deg,#f0fae8,#dcf3cf)"
+                : "linear-gradient(135deg,#eefdf9,#d4f5ee)",
+        }}
+      >
+        <span
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/80"
+          style={{ color: m.type === "animal" ? "var(--brand-ink)" : "var(--brand-green)" }}
+        >
+          <TypeIcon type={m.type} size={20} />
+        </span>
+      </div>
+    );
     return (
       <div className="flex h-full flex-col overflow-hidden rounded-[22px] bg-white shadow-sm">
         {/* Rasm yoki rangli placeholder */}
         <div className="relative">
           {m.hasPhoto ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <FadeImage
               src={`/api/medicines/${m.id}/photo`}
               alt={m.name}
-              className="aspect-[4/1] w-full object-cover"
-              loading="lazy"
+              className="aspect-[4/1] w-full"
+              fallback={cardFallback}
             />
           ) : (
-            <div
-              className="flex aspect-[4/1] w-full items-center justify-center"
-              style={{
-                background:
-                  m.type === "animal"
-                    ? "linear-gradient(135deg,#fff7df,#ffedb3)"
-                    : m.type === "crop"
-                      ? "linear-gradient(135deg,#f0fae8,#dcf3cf)"
-                      : "linear-gradient(135deg,#eefdf9,#d4f5ee)",
-              }}
-            >
-              <span
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/80"
-                style={{ color: m.type === "animal" ? "var(--brand-ink)" : "var(--brand-green)" }}
-              >
-                <TypeIcon type={m.type} size={20} />
-              </span>
-            </div>
+            <div className="aspect-[4/1] w-full">{cardFallback}</div>
           )}
           {/* Tur belgisi */}
           <span
@@ -713,12 +717,18 @@ export default function MarketClient() {
                   return (
                     <li key={`${c.pharmacy.id}:${c.medicine.id}`} className="flex items-center gap-3 rounded-2xl bg-[var(--brand-bg)] p-2.5">
                       {c.medicine.hasPhoto ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
+                        <FadeImage
                           src={`/api/medicines/${c.medicine.id}/photo`}
                           alt={c.medicine.name}
-                          className="h-14 w-14 shrink-0 rounded-xl object-cover"
-                          loading="lazy"
+                          className="h-14 w-14 shrink-0 rounded-xl"
+                          fallback={
+                            <span
+                              className="flex h-full w-full items-center justify-center bg-white"
+                              style={{ color: c.medicine.type === "animal" ? "var(--brand-ink)" : "var(--brand-green)" }}
+                            >
+                              <TypeIcon type={c.medicine.type} size={22} />
+                            </span>
+                          }
                         />
                       ) : (
                         <span
@@ -830,12 +840,18 @@ export default function MarketClient() {
                   {cart.map((l) => (
                     <li key={l.medicine.id} className="flex items-center gap-2 rounded-2xl bg-[var(--brand-bg)] p-2.5">
                       {l.medicine.hasPhoto ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
+                        <FadeImage
                           src={`/api/medicines/${l.medicine.id}/photo`}
                           alt={l.medicine.name}
-                          className="h-11 w-11 shrink-0 rounded-xl object-cover"
-                          loading="lazy"
+                          className="h-11 w-11 shrink-0 rounded-xl"
+                          fallback={
+                            <span
+                              className="flex h-full w-full items-center justify-center bg-white"
+                              style={{ color: l.medicine.type === "animal" ? "var(--brand-ink)" : "var(--brand-green)" }}
+                            >
+                              <TypeIcon type={l.medicine.type} size={18} />
+                            </span>
+                          }
                         />
                       ) : (
                         <span
