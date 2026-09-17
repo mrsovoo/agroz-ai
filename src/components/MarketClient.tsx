@@ -36,6 +36,13 @@ import {
 } from "lucide-react";
 import { RADIUS_OPTIONS } from "@/lib/constants";
 import FadeImage from "@/components/FadeImage";
+import {
+  loadCart,
+  saveCart,
+  notifyCartChanged,
+  CART_EVENT,
+  type CartStoreState,
+} from "@/lib/cart-store";
 
 type Medicine = {
   id: number;
@@ -132,9 +139,8 @@ export default function MarketClient() {
   const [favorites, setFavorites] = useState<FavKey[]>([]);
   const [favsOpen, setFavsOpen] = useState(false);
 
-  // Savat: faqat bitta dorixona dorilari
-  const [cartPharmacy, setCartPharmacy] = useState<Pharmacy | null>(null);
-  const [cart, setCart] = useState<CartLine[]>([]);
+  // Savat: umumiy localStorage ombori — bosh sahifa kartochkalari bilan bir xil savat.
+  const [cartState, setCartStateLocal] = useState<CartStoreState>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [cartName, setCartName] = useState("");
   const [cartPhone, setCartPhone] = useState("");
@@ -251,45 +257,58 @@ export default function MarketClient() {
   );
 
   const favCount = favorites.length;
-  const cartCount = cart.reduce((acc, l) => acc + l.qty, 0);
-  const cartTotal = cart.reduce((acc, l) => acc + (l.medicine.price ?? 0) * l.qty, 0);
+  const cartPharmacyId = cartState?.pharmacy.id ?? null;
+  const cartCount = (cartState?.lines ?? []).reduce((acc, l) => acc + l.qty, 0);
+  const cartTotal = (cartState?.lines ?? []).reduce(
+    (acc, l) => acc + (l.medicine.price ?? 0) * l.qty,
+    0,
+  );
 
-  function addToCard(card: Card) {
-    const { pharmacy, medicine } = card;
+  /** Savatni omborga yozadi va boshqa komponentlarga xabar beradi. */
+  function updateCart(next: CartStoreState) {
+    setCartStateLocal(next);
+    saveCart(next);
+    notifyCartChanged();
+  }
+
+  /** Kartochkadan dori qo'shish —savat boshqa dorixonadan bo'lsa so'raymiz. */
+  function addToCart(pharmacy: Pharmacy, medicine: Medicine) {
     // Boshqa dorixonadan dori qo'shilsa — savatni yangilaymiz (bitta dorixona qoidasi).
-    if (cartPharmacy && cartPharmacy.id !== pharmacy.id) {
-      if (!confirm(`Savatda boshqa dorixona (${cartPharmacy.organization ?? cartPharmacy.name}) dorilari bor. Yangi dorixona dorilari savatni almashtiradi. Davom etamizmi?`)) {
+    if (cartState && cartState.pharmacy.id !== pharmacy.id) {
+      if (!confirm(`Savatda boshqa dorixona (${cartState.pharmacy.name}) dorilari bor. Yangi dorixona dorilari savatni almashtiradi. Davom etamizmi?`)) {
         return;
       }
     }
-    if (cartPharmacy?.id !== pharmacy.id) {
-      setCartPharmacy(pharmacy);
-      setCart([{ medicine, qty: 1 }]);
+    if (!cartState || cartState.pharmacy.id !== pharmacy.id) {
+      updateCart({
+        pharmacy: { id: pharmacy.id, name: pharmacy.organization ?? pharmacy.name, phone: pharmacy.phone },
+        lines: [{ medicine, qty: 1 }],
+      });
       return;
     }
-    setCart((prev) => {
-      const existing = prev.find((l) => l.medicine.id === medicine.id);
-      if (existing) {
-        return prev.map((l) =>
+    const existing = cartState.lines.find((l) => l.medicine.id === medicine.id);
+    const lines = existing
+      ? cartState.lines.map((l) =>
           l.medicine.id === medicine.id ? { ...l, qty: Math.min(99, l.qty + 1) } : l,
-        );
-      }
-      return [...prev, { medicine, qty: 1 }];
-    });
+        )
+      : [...cartState.lines, { medicine, qty: 1 }];
+    updateCart({ ...cartState, lines });
   }
 
   function changeQty(medicineId: number, delta: number) {
-    setCart((prev) =>
-      prev
-        .map((l) =>
-          l.medicine.id === medicineId ? { ...l, qty: Math.max(0, Math.min(99, l.qty + delta)) } : l,
-        )
-        .filter((l) => l.qty > 0),
-    );
+    if (!cartState) return;
+    const lines = cartState.lines
+      .map((l) =>
+        l.medicine.id === medicineId ? { ...l, qty: Math.max(0, Math.min(99, l.qty + delta)) } : l,
+      )
+      .filter((l) => l.qty > 0);
+    updateCart({ ...cartState, lines });
   }
 
   async function submitOrder() {
-    if (!cartPharmacy || cart.length === 0) return;
+    if (!cartState || cartState.lines.length === 0) return;
+    const cartPharmacyId = cartState.pharmacy.id;
+    const cart = cartState.lines;
     setCartBusy(true);
     setCartError(null);
     try {
@@ -297,7 +316,7 @@ export default function MarketClient() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          pharmacySpecialistId: cartPharmacy.id,
+          pharmacySpecialistId: cartPharmacyId,
           items: cart.map((l) => ({ medicineId: l.medicine.id, qty: l.qty })),
           customerName: cartName,
           customerPhone: cartPhone,
@@ -309,7 +328,7 @@ export default function MarketClient() {
       const data = (await res.json()) as { ok?: boolean; orderId?: number; total?: number; error?: string };
       if (!res.ok || !data.ok) throw new Error(data.error ?? "Buyurtma yuborilmadi");
       setOrderDone({ orderId: data.orderId!, total: data.total ?? cartTotal });
-      setCart([]);
+      updateCart(null);
       setCartOpen(false);
       setCartNote("");
     } catch (e) {
@@ -363,7 +382,10 @@ export default function MarketClient() {
     const { pharmacy: p, medicine: m } = card;
     const badge = typeBadge(m.type);
     const liked = isFavorite(p.id, m.id);
-    const inCart = cartPharmacy?.id === p.id && cart.find((l) => l.medicine.id === m.id);
+    const inCart =
+      cartState?.pharmacy.id === p.id
+        ? cartState.lines.find((l) => l.medicine.id === m.id)
+        : undefined;
     // Rasm yo'q yoki yuklanmagan holatda ko'rsatiladigan placeholder.
     const cardFallback = (
       <div
@@ -444,7 +466,7 @@ export default function MarketClient() {
 
           {/* Savatga qo'shish */}
           <button
-            onClick={() => addToCard(card)}
+            onClick={() => addToCart(p, m)}
             className={`mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-xl py-2.5 text-[13px] font-bold transition active:scale-[0.97] ${
               inCart
                 ? "text-[var(--brand-green)]"
@@ -714,7 +736,10 @@ export default function MarketClient() {
             ) : (
               <ul className="mt-3 space-y-2 pb-2">
                 {favCards.map((c) => {
-                  const inCart = cartPharmacy?.id === c.pharmacy.id && cart.find((l) => l.medicine.id === c.medicine.id);
+                  const inCart =
+                    cartState?.pharmacy.id === c.pharmacy.id
+                      ? cartState.lines.find((l) => l.medicine.id === c.medicine.id)
+                      : undefined;
                   return (
                     <li key={`${c.pharmacy.id}:${c.medicine.id}`} className="flex items-center gap-3 rounded-2xl bg-[var(--brand-bg)] p-2.5">
                       {c.medicine.hasPhoto ? (
@@ -754,7 +779,7 @@ export default function MarketClient() {
                       </div>
                       <div className="flex shrink-0 flex-col gap-1">
                         <button
-                          onClick={() => addToCard(c)}
+                          onClick={() => addToCart(c.pharmacy, c.medicine)}
                           className="flex items-center justify-center gap-1 rounded-lg px-2.5 py-1.5 text-[11.5px] font-bold text-white"
                           style={inCart ? { background: "var(--brand-green-soft)", color: "var(--brand-green)" } : { background: "var(--brand-green)" }}
                         >
@@ -822,7 +847,7 @@ export default function MarketClient() {
                   <Check size={17} /> Yaxshi
                 </button>
               </div>
-            ) : cart.length === 0 ? (
+            ) : cartState === null || cartState.lines.length === 0 ? (
               <div className="flex flex-col items-center gap-3 py-8 text-center">
                 <ShoppingCart size={32} className="text-[var(--brand-muted)]" />
                 <p className="text-[15px] font-bold text-[var(--brand-ink)]">Savat bo&apos;sh</p>
@@ -836,10 +861,10 @@ export default function MarketClient() {
             ) : (
               <>
                 <p className="mt-2 text-[18px] font-black text-[var(--brand-ink)]">
-                  Savat · {cartPharmacy?.organization ?? cartPharmacy?.name}
+                  Savat · {cartState.pharmacy.name}
                 </p>
                 <ul className="mt-3 space-y-2">
-                  {cart.map((l) => (
+                  {cartState.lines.map((l) => (
                     <li key={l.medicine.id} className="flex items-center gap-2 rounded-2xl bg-[var(--brand-bg)] p-2.5">
                       {l.medicine.hasPhoto ? (
                         <FadeImage
