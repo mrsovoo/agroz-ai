@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import WeatherCard from "@/components/WeatherCard";
+import WeatherAlertBanner from "@/components/WeatherAlertBanner";
 import NewsList from "@/components/NewsList";
 import { getNewsFeed, NEWS_SOURCES } from "@/lib/news";
 import { Lightbulb, Newspaper, Database, ExternalLink, ShieldCheck } from "lucide-react";
@@ -58,6 +59,10 @@ export default async function NewsPage() {
         <p className="mt-1 text-[14px] text-[var(--brand-muted)] web:text-[16px]">
           Turgan hududingiz uchun ob-havo maslahatlari va agro/chorvachilik yangiliklari
         </p>
+
+        <section className="mt-5">
+          <WeatherAlertBanner />
+        </section>
 
         <section className="mt-5">
           <WeatherCard showTips showRegion />

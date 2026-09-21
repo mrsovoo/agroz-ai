@@ -7,18 +7,35 @@ xaritasi, ob-havoga qarab tavsiyalar va OTP/Telegram orqali kirish.
 ## Imkoniyatlar
 
 - **AI tashxis** — rasm, matn yoki ovoz asosida ekin/chorva muammosini tahlil qiladi.
-  `OPENAI_API_KEY` bo'lmasa ham offline demo baza javob beradi (ilova ishdan chiqmaydi).
+  OpenAI-mos API (Gemini, Groq, OpenRouter, vLLM) bilan ishlaydi; kalit bo'lmasa
+  offline demo baza javob beradi. Model band bo'lsa (503/429) avtomatik qayta urinadi.
 - **Telegram Mini App** — `initData` imzosi server tomonda tekshiriladi, mobil ilova uslubidagi UI.
-- **Web sayt** — desktop browserda keng layout va top navigation.
-- **Xarita** — Leaflet + OpenStreetMap; GPS bo'yicha eng yaqin agro/vet dorixonalar,
-  ularning dorilari, ro'yxatdan o'tgan mutaxassislar, qo'ng'iroq va yo'nalish.
-  Barcha qidiruv **qat'iy 5 km** radius bilan cheklangan.
+- **Web sayt** — desktop browserda keng layout va top navigation (avtomatik aniqlanadi).
+- **Xarita** — Leaflet + OpenStreetMap; agro/vet/umumiy dorixonalar va mutaxassislar,
+  dorilari rasmi bilan, qo'ng'iroq va yo'nalish.
+- **Aqlli radius algoritmi** — yaqin atrof 5 km; tashxis ishonchi yuqori (80+) yoki
+  holat jiddiy bo'lsa tajribali (5+ yil) va reytingi yaxshi (4+) mutaxassislar uchun
+  radius 15 km gacha kengayadi. Radiusdan tashqaridagilar **qulflangan holatda
+  ko'rinadi**: telefon ishlaydi, yo'nalish yopiq — "hech kim yo'q" sahifasi yo'q.
+- **Reyting** — mijozlar 1–5 yulduz qo'yadi (bir mijoz = bitta ovoz, IP-hash himoyasi).
+  Reyting bo'yicha saralash va tajribalilarga kengroq radius.
+- **Mutaxassis profili** — mutaxassislik, ta'lim (qayerda o'qigan), bio (nimalarni
+  biladi), tajriba yillari, kimga yordam beradi (ekin/chorva/ikkalasi).
+- **Dori katalogi** — dorixona egasi botda rasm → nom → turi (ekin/hayvon/umumiy) →
+  nima uchun → tasdiqlash bosqichlari bilan qo'shadi (5 bosqichli indikator).
+  Tashxisdan keyin tavsiya etilgan dori + dorixona manzili/telefoni ko'rsatiladi.
+- **Botlarda yangiliklar** — `/yangiliklar` ikkala botda ham real manbalardan
+  (AgroWorld, EastFruit, Kun.uz, Gazeta.uz) agro/chorvachilik yangiliklarini beradi.
+- **Admin panel** (`/admin/panel`) — login/parol bilan: barcha tokenlar (bot, AI, SMS)
+  bazadan boshqariladi (env'dan ustun), statistika, webhook ulash/uzish,
+  bepul AI provayder presetlari. Tokenlar hech qachon clientga chiqmaydi.
 - **Maslahatlar** — Open-Meteo real ob-havosi va **turgan hudud** asosida maslahatlar
-  (ekin va chorva uchun alohida) hamda agro/chorvachilik **yangiliklari** real
-  manbalardan (AgroWorld, EastFruit, Kun.uz, Gazeta.uz).
+  (ekin va chorva uchun alohida) hamda yangiliklar sahifasi.
 - **Faol ma'lumot** — platformada faqat real ma'lumot: dorixona/mutaxassis
   `@agroz_auth_bot` orqali, dorilar esa dorixona egalari tomonidan qo'shiladi.
   Demo ma'lumot standart holatda butunlay o'chirilgan (`SEED_DEMO_DATA=false`).
+- **Profil/dori boshqaruvi botda** — `/profilni_ochirish` (tasdiqlash bilan),
+  `/dorilarim` (ro'yxat + bir bosishda o'chirish).
 - **Kirish** — Telegram yoki SMS OTP (Eskiz.uz). Sessiyalar bazada, muddati bilan.
 - **Baza** — PostgreSQL (Neon) + Drizzle ORM, migratsiyalar `drizzle/` ichida.
 
@@ -59,6 +76,8 @@ npm run db:clear -- --yes # so'ramasdan o'chiradi
 | `TELEGRAM_AUTH_BOT_USERNAME` | ✖ | Auth bot username (asosiy botdagi havola uchun); default `agroz_auth_bot` |
 | `TELEGRAM_AUTH_WEBHOOK_SECRET` | ✖ | Auth bot webhook'i uchun alohida kalit (bo'sh bo'lsa `TELEGRAM_WEBHOOK_SECRET`) |
 | `NEXT_PUBLIC_TELEGRAM_AUTH_BOT_USERNAME` | ✖ | Xuddi shu username, saytdagi havolalar uchun (default `agroz_auth_bot`) |
+| `ADMIN_USERNAME` | ✖ | Admin panel logini (default `admin`) |
+| `ADMIN_PASSWORD` | ✖ | Admin panel paroli — bo'sh bo'lsa admin panel o'chirilgan. Panelda ham o'zgartirish mumkin |
 | `SEED_DEMO_DATA` | ✖ | `true` bo'lsa namuna dorixona/dori/maslahat yoziladi. Standart: `false` |
 | `NEXT_PUBLIC_APP_URL` | tavsiya | Sayt domeni (metadata, kanonik havolalar) |
 | `OPENAI_API_KEY` | ✖ | AI tashxis + ovoz (Whisper). Bo'sh bo'lsa offline demo rejim |
@@ -70,51 +89,56 @@ npm run db:clear -- --yes # so'ramasdan o'chiradi
 
 ## Mutaxassislar va dorixona egalari (`@agroz_auth_bot`)
 
-Alohida bot (`TELEGRAM_AUTH_BOT_TOKEN`) mutaxassis va dorixona egalarini
-ro'yxatdan o'tkazadi. Har bir Telegram hisobi uchun **bitta profil** saqlanadi,
-qayta o'tilsa ma'lumotlar yangilanadi.
+Alohida bot mutaxassis va dorixona egalarini ro'yxatdan o'tkazadi. Har bir Telegram
+hisobi uchun **bitta profil** saqlanadi, qayta o'tilsa ma'lumotlar yangilanadi.
 
 Ro'yxatdan o'tish bosqichlari (`/royxatdan_otish`):
 
 1. **Turi** — mutaxassis yoki dorixona egasi (inline tugmalar)
 2. **Ism-familiya** — matn
 3. **Telefon** — «📱 Telefon raqamni yuborish» tugmasi yoki qo'lda `+998XXXXXXXXX`
-4. **Lokatsiya** — «📍 Lokatsiyani yuborish». Bot koordinatadan manzilni **avtomatik**
-   aniqlaydi (OpenStreetMap Nominatim, lotin o'zbekcha) va matn ko'rinishida yuborib
-   tasdiqlashni so'raydi: «✅ Manzil to'g'ri» yoki «✏️ O'zim yozaman».
-   Aniqlanmasa — manzil qo'lda so'raladi (oqim to'xtamaydi).
-5. **Mutaxassislik** — tayyor variantlar (Agronom, Veterinar, Zootexnik, Bog'bon) yoki o'zi yozadi;
-   dorixona egasi uchun avval dorixona nomi, keyin turi (agro/vet)
-6. **Tasdiqlash** — ✅ / ❌ → profil tanlangan **rol bo'yicha** saqlanadi va platformada ko'rinadi
+4. **Lokatsiya** — «📍 Lokatsiyani yuborish»; manzil **avtomatik** aniqlanadi
+   (OpenStreetMap Nominatim) va tasdiqlatiladi
+5. **Mutaxassislik** — Agronom, Veterinar, Zootexnik, Bog'bon yoki o'zi yozadi;
+   dorixona uchun: nomi → turi (agro / vet / **umumiy**)
+6. **Kimga yordam beradi** — ekin / chorva / ikkalasi (mutaxassislar uchun)
+7. **Ta'lim, tajriba (yil), bio** — mijozlar ko'radigan tafsilotlar (`/skip` bilan
+   o'tkazib yuborish mumkin)
+8. **Tasdiqlash** — ✅ / ❌ → profil saqlanadi. Dorixona egasiga dori qo'shish
+   taklifi avtomatik chiqadi
 
-Saqlangan profillar `/api/specialists` orqali olinadi va platformada ko'rinadi:
+### Boshqaruv buyruqlari
 
-- **`/mutaxassislar`** — yaqin atrofdagi mutaxassislar ro'yxati (qo'ng'iroq + yo'nalish)
-- **`/xarita`** — umumiy xarita; «Mutaxassis» filtri bilan
+| Buyruq | Vazifasi |
+|---|---|
+| `/royxatdan_otish` | Ro'yxatdan o'tish / yangilash |
+| `/dori_qoshish` | Dori qo'shish (5 bosqich: rasm → nom → turi → nima uchun → tasdiqlash) |
+| `/dorilarim` | Dorilar ro'yxati va bir bosishda o'chirish |
+| `/malumotlarim` | Profilni ko'rish |
+| `/profilni_ochirish` | Profilni tasdiqlash bilan butunlay o'chirish |
+| `/yangiliklar` | Real manbalardan agro/chorva yangiliklari |
+| `/bekor`, `/yordam` | Jarayonni to'xtatish / yordam |
 
-> **5 km qoidasi:** yaqin atrof qidiruvida radius qat'iy cheklangan —
-> `MAX_NEARBY_RADIUS_KM = 5`. Dorixonalar ham (`/api/pharmacies`), mutaxassislar ham
-> (`/api/specialists`) shu radiusdan uzoqni qaytarmaydi; `radius` parametri 5 km dan
-> oshirilmaydi.
+### Aqlli tavsiya algoritmi (radius va reyting)
 
-Bot buyruqlari: `/start`, `/royxatdan_otish`, `/dori_qoshish`, `/malumotlarim`,
-`/bekor`, `/yordam`.
+- Asosiy radius — **5 km**. Radiusdan tashqaridagi mutaxassislar/dorixonalar
+  **qulflangan holatda ko'rinadi**: telefon ko'rinadi va qo'ng'iroq ishlaydi,
+  yo'nalish tugmasi yopiq.
+- Tashxis ishonchi **80%+** yoki holat **jiddiy** bo'lsa — tajribali (5+ yil) va
+  reytingi yaxshi (4+ yulduz) mutaxassislar uchun radius **15 km gacha** kengayadi.
+- Qulflanganlar reyting bo'yicha, ochiqlar masofa bo'yicha saralanadi.
+- Mijoz har bir kartada yulduz bosib reyting qo'yadi (bir IP = bitta ovoz).
 
-### Dorixona uchun dori qo'shish
+### Tashxis → dori → dorixona zanjiri
 
-Dorixona egasi ro'yxatdan o'tgach `/dori_qoshish` buyrug'i bilan dori qo'shadi:
-
-1. Dorining **rasmini** yuboradi (eng katta o'lchamdagi variant olinadi)
-2. Dorining **nomini** yozadi
-3. Bot rasmni nomi bilan qaytarib, **«✅ Tasdiqlash»**ni so'raydi
-4. Tasdiqlansa dori platformaga qo'shiladi
+1. Mijoz tashxis qo'yadi (rasm/matn/ovoz) — AI kasallik va **dorilar** ro'yxatini beradi
+2. Natija sahifasida tavsiya etilgan dorilar va **shu dorilar bor dorixonalar**
+   (rasmi, nomi, masofasi, reytingi) ko'rinadi
+3. Jiddiy holat/past ishonch bo'lsa — **mutaxassislar** manzili, ta'limi, tajribasi,
+   reytingi bilan tavsiya etiladi
 
 Dori rasmi Telegram `file_id` sifatida saqlanadi va saytda `/api/medicines/<id>/photo`
 orqali uzatiladi — bot tokeni clientga hech qachon chiqmaydi.
-
-> Dorilar ro'yxati **faqat tashxis qo'yilgandan keyin** ko'rinadi: natija sahifasida
-> tavsiya etilgan dorilar bo'yicha 5 km ichidagi dorixonalar (rasmi va nomi bilan)
-> ko'rsatiladi. Alohida dori katalogi sahifasi yo'q.
 
 ## Maslahatlar va yangiliklar (`/yangiliklar`)
 
@@ -132,6 +156,22 @@ Sahifa ikki qismdan iborat:
 
 Birorta manba ishlamasa qolganlari ko'rsatiladi; hammasi ishlamasa sahifada
 ob-havo maslahatlari saqlanib qoladi.
+
+## Admin panel (`/admin/panel`)
+
+Sayt manzilining oxiriga `/admin/panel` qo'sib kiring. Barcha tokenlar va sozlashlar
+shu yerda boshqariladi — **bazada saqlanadi va env'dan ustun turadi**, ya'ni token
+yangilasangiz redeploy shart emas:
+
+- **Botlar** — asosiy va auth bot tokenlari, webhook ulash/uzish/tekshirish bir bosishda
+- **AI** — kalit, endpoint va model; Gemini/Groq/OpenRouter/vLLM presetlari bir bosishda
+- **SMS** — Eskiz.uz email/parol
+- **Admin hisobi** — login/parolni o'zgartirish (parol SHA-256 hash bo'lib saqlanadi)
+- **Statistika** — foydalanuvchilar, mutaxassislar, tashxislar, OTP, bot sessiyalari,
+  eng ko'p tashxis qilingan kasalliklar
+
+> Xavfsizlik: maxfiy maydonlar panelda maskalanadi (`••••1234`), API ularni hech qachon
+> to'liq qaytarmaydi. Bo'sh maydon bilan «Saqlash» bosilsa qiymat o'zgarmaydi.
 
 ## Kirish (OTP) qanday ishlaydi
 

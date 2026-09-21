@@ -3,7 +3,12 @@
  *
  * Saytdan kirishda telefon raqamni tasdiqlash uchun kod SMS o'rniga bot orqali
  * yuboriladi: foydalanuvchi botga o'tadi, «Start» bosadi va kodni oladi.
+ *
+ * Token admin panel (`/admin/panel`) orqali ham sozlanadi — DB'da yozuv bo'lsa
+ * env'dagi qiymatdan ustun turadi.
  */
+
+import { telegramBotToken } from "@/lib/settings";
 
 const API_BASE = "https://api.telegram.org";
 
@@ -11,13 +16,20 @@ export type InlineKeyboard = {
   inline_keyboard: { text: string; url?: string; web_app?: { url: string } }[][];
 };
 
+/** Token: DB (admin panel) > env. */
+export async function resolveBotToken(): Promise<string | null> {
+  return telegramBotToken();
+}
+
+/** Sinxron env tokeni — faqat tez tekshiruvlar uchun (webhook guard). */
 export function botToken(): string | null {
   const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
   return token ? token : null;
 }
 
-export function isBotConfigured(): boolean {
-  return botToken() !== null;
+/** Ilova sozlanganmi: DB'da yoki env'da token bormi. */
+export async function isBotConfigured(): Promise<boolean> {
+  return (await resolveBotToken()) !== null;
 }
 
 /** Ilovaning tashqi manzili (Mini App tugmasi va deep linklar uchun). */
@@ -37,7 +49,7 @@ export async function callBot<T>(
   method: string,
   payload?: Record<string, unknown>,
 ): Promise<T | null> {
-  const token = botToken();
+  const token = await resolveBotToken();
   if (!token) return null;
   try {
     const res = await fetch(`${API_BASE}/bot${token}/${method}`, {
@@ -64,6 +76,7 @@ export async function getBotUsername(): Promise<string | null> {
   const fromEnv = process.env.TELEGRAM_BOT_USERNAME?.trim().replace(/^@/, "");
   if (fromEnv) return fromEnv;
   if (cachedUsername !== undefined) return cachedUsername;
+  if (!(await isBotConfigured())) return null;
   const me = await callBot<{ username?: string }>("getMe");
   cachedUsername = me?.username ?? null;
   return cachedUsername;

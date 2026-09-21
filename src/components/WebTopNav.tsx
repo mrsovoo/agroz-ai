@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MapPin, Newspaper, PawPrint, Sprout, UserRound, UsersRound } from "lucide-react";
+import { MapPin, Newspaper, PawPrint, Pill, Sprout, UserRound, UsersRound } from "lucide-react";
 
 const links = [
   { href: "/", label: "Asosiy", Icon: Sprout },
   { href: "/tashxis/crop", label: "Ekin tashxisi", Icon: Sprout },
   { href: "/tashxis/animal", label: "Chorva tashxisi", Icon: PawPrint },
+  { href: "/dorilar", label: "Agro Bozor", Icon: Pill },
   { href: "/xarita", label: "Xarita", Icon: MapPin },
   { href: "/mutaxassislar", label: "Mutaxassislar", Icon: UsersRound },
   { href: "/yangiliklar", label: "Maslahatlar", Icon: Newspaper },

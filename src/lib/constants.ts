@@ -28,10 +28,15 @@ export const MAX_DIAGNOSIS_TEXT = 2000;
 export const NEARBY_RADIUS_KM = 5;
 
 /**
- * Yaqin atrof qidiruvining qat'iy chegarasi (km).
- * Mutaxassis ham, dorixona ham faqat shu radius ichida ko'rsatiladi.
+ * Yaqin atrof qidiruvining maksimal chegarasi (km).
+ * Foydalanuvchi 5/10/25/50 km tanlay oladi — qishloq hududlarida 5 km ichida
+ * hech kim bo'lmasa kattaroq radiusdan foydalanadi. Radiusdan tashqaridagilar
+ * baribir qulflangan holatda ko'rinadi (telefon ishlaydi).
  */
-export const MAX_NEARBY_RADIUS_KM = 5;
+export const MAX_NEARBY_RADIUS_KM = 50;
+
+/** UI'da taklif qilinadigan radius variantlari (km). */
+export const RADIUS_OPTIONS = [5, 10, 25, 50] as const;
 
 /**
  * AI tashxisi shu foizdan past ishonch bilan qaytsa — foydalanuvchi

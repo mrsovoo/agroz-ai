@@ -18,6 +18,7 @@ import {
 import { verifyInitData } from "@/lib/tg-auth";
 import { BOT_OTP_TTL_MINUTES, OTP_LENGTH, OTP_TTL_MINUTES } from "@/lib/constants";
 import { withApiErrors } from "@/lib/api";
+import { telegramBotToken } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,7 @@ function devOtpEnabled(): boolean {
 /** Mini App'dan kelgan initData imzosini tekshirib, Telegram ID ni qaytaradi. */
 async function telegramIdFromInitData(initData: unknown): Promise<number | null> {
   if (typeof initData !== "string" || !initData) return null;
-  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const botToken = await telegramBotToken();
   if (!botToken || !verifyInitData(initData, botToken)) return null;
   const raw = new URLSearchParams(initData).get("user");
   if (!raw) return null;
@@ -65,7 +66,7 @@ export const POST = withApiErrors(async (req: Request) => {
   const phoneLimit = rateLimit(`otp:phone:${phone}`, 3, 10 * 60 * 1000);
   if (!phoneLimit.ok) return tooManyRequests(phoneLimit.retryAfterSeconds);
 
-  const botUsername = isBotConfigured() ? await getBotUsername() : null;
+  const botUsername = (await isBotConfigured()) ? await getBotUsername() : null;
   const useTelegram = Boolean(botUsername);
   const chatTelegramId = useTelegram ? await telegramIdFromInitData(body.initData) : null;
   const ttlMinutes = useTelegram ? BOT_OTP_TTL_MINUTES : OTP_TTL_MINUTES;
@@ -133,7 +134,7 @@ export const POST = withApiErrors(async (req: Request) => {
   }
 
   // 2) SMS orqali
-  if (smsConfigured()) {
+  if (await smsConfigured()) {
     const delivered = await sendOtpSms(phone, code);
     if (!delivered) {
       await db.delete(otpCodes).where(and(eq(otpCodes.phone, phone), eq(otpCodes.code, code)));

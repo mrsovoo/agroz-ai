@@ -19,6 +19,11 @@ export type PharmacyDto = {
   specialist: string | null;
   workHours: string | null;
   distanceKm: number | null;
+  /** Radiusdan tashqarida — qulflangan ko'rinishda (telefon ochiq). */
+  locked: boolean;
+  /** Reyting (legacy dorixonalar uchun hozircha null). */
+  ratingAvg: number | null;
+  ratingCount: number;
   stock: { medicine: string; status: string; price: number | null }[];
 };
 
@@ -61,22 +66,32 @@ export const GET = withApiErrors(async (req: Request) => {
   }
 
   const items: PharmacyDto[] = filtered
-    .map((p) => ({
-      id: p.id,
-      name: p.name,
-      kind: p.kind,
-      lat: p.lat,
-      lng: p.lng,
-      phone: p.phone,
-      address: p.address,
-      specialist: p.specialist,
-      workHours: p.workHours,
-      distanceKm: coords ? roundKm(distanceKm(coords.lat, coords.lng, p.lat, p.lng)) : null,
-      stock: stockMap.get(p.id) ?? [],
-    }))
-    // Koordinata bo'lsa faqat radius ichidagilar qoladi (masofa noma'lum bo'lsa — hammasi).
-    .filter((p) => p.distanceKm === null || p.distanceKm <= radiusKm)
-    .sort((a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999));
+    .map((p) => {
+      const d = coords ? roundKm(distanceKm(coords.lat, coords.lng, p.lat, p.lng)) : null;
+      return {
+        id: p.id,
+        name: p.name,
+        kind: p.kind,
+        lat: p.lat,
+        lng: p.lng,
+        phone: p.phone,
+        address: p.address,
+        specialist: p.specialist,
+        workHours: p.workHours,
+        distanceKm: d,
+        // Masofa noma'lum bo'lsa — ochiq hisoblanadi.
+        locked: d !== null && d > radiusKm,
+        ratingAvg: null,
+        ratingCount: 0,
+        stock: stockMap.get(p.id) ?? [],
+      };
+    })
+    // Hech kim olib tashlanmaydi: radius ichidagilar ochiq, tashqaridagilar
+    // qulflangan holatda qoladi (mijoz telefon qilishi mumkin).
+    .sort((a, b) => {
+      if (a.locked !== b.locked) return a.locked ? 1 : -1;
+      return (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999);
+    });
 
   return NextResponse.json(
     { items, radiusKm },

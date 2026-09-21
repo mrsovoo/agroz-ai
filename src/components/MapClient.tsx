@@ -17,8 +17,9 @@ import {
   UserRound,
   Pill,
   RefreshCw,
+  Lock,
 } from "lucide-react";
-import { AUTH_BOT_URL } from "@/lib/constants";
+import { AUTH_BOT_URL, RADIUS_OPTIONS } from "@/lib/constants";
 
 type Stock = { medicine: string; status: string; price: number | null };
 type Medicine = { id: number; name: string; status: string; hasPhoto: boolean };
@@ -35,6 +36,10 @@ type Place = {
   specialist: string | null;
   workHours: string | null;
   distanceKm: number | null;
+  /** Radiusdan tashqarida — yo'nalish o'rniga qulf chiqadi. */
+  locked?: boolean;
+  ratingAvg?: number | null;
+  ratingCount?: number;
   stock: Stock[];
   /** Dorixona egasi bot orqali qo'shgan dorilar (rasmi bilan). */
   medicines: Medicine[];
@@ -60,6 +65,9 @@ type Specialist = {
   lng: number;
   workHours: string | null;
   distanceKm: number | null;
+  locked: boolean;
+  ratingAvg: number | null;
+  ratingCount: number;
   medicines?: Medicine[];
 };
 
@@ -68,10 +76,19 @@ const GLYPH = {
   vet: '<circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/>',
   specialist:
     '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>',
+  general:
+    '<path d="M10.5 20.5 21 10a2.83 2.83 0 0 0-4-4L6.5 16.5 5 21.5l5-1z"/><path d="M15.5 6.5 19 10"/>',
 };
 
-function pinSvg(kind: "agro" | "vet" | "specialist", hasWanted: boolean) {
-  const color = kind === "vet" ? "#b45309" : kind === "specialist" ? "#2563eb" : "#028e11";
+function pinSvg(kind: "agro" | "vet" | "specialist" | "general", hasWanted: boolean) {
+  const color =
+    kind === "vet"
+      ? "#b45309"
+      : kind === "specialist"
+        ? "#2563eb"
+        : kind === "general"
+          ? "#0d9488"
+          : "#028e11";
   return `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="52" viewBox="0 0 36 46" style="filter:drop-shadow(0 5px 8px rgba(0,0,0,0.35))">
     <path d="M18 1C8.6 1 1 8.6 1 18c0 12.3 15.1 26.1 16.3 27.2a1.1 1.1 0 0 0 1.4 0C19.9 44.1 35 30.3 35 18 35 8.6 27.4 1 18 1z" fill="${color}" stroke="#fff" stroke-width="2"/>
     <svg x="8" y="7" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${GLYPH[kind]}</svg>
@@ -98,6 +115,7 @@ export default function MapClient() {
   const [loading, setLoading] = useState(true);
   const [locError, setLocError] = useState<string | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const [radiusKm, setRadiusKm] = useState<number>(5);
 
   const mapRef = useRef<LeafletMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
@@ -145,6 +163,7 @@ export default function MapClient() {
       for (const p of [pharmacyParams, specialistParams]) {
         p.set("lat", String(coords.lat));
         p.set("lng", String(coords.lng));
+        p.set("radius", String(radiusKm));
       }
     }
     meds.forEach((m) => pharmacyParams.append("med", m));
@@ -164,21 +183,33 @@ export default function MapClient() {
       .then(([pharmacies, specialists]) => {
         if (cancelled) return;
         // Ro'yxatdan o'tgan dorixona egalari ham "dorixona" bo'lib chiqadi —
-        // ularning turi (agro/vet) mutaxassislik maydonida saqlanadi.
+        // ularning turi (agro/vet/umumiy) mutaxassislik maydonida saqlanadi.
+        // Umumiy dorixonalar har ikkala filtrda (agro ham, vet ham) ko'rinadi.
         const mapped: Place[] = specialists.map((s) => ({
           id: -s.id,
           name: s.organization ?? s.name,
-          kind: s.role === "pharmacy" ? (s.specialty === "vet" ? "vet" : "agro") : "specialist",
+          // Botda turi matn sifatida saqlanadi: "Agro dorixona" | "Vet dorixona" |
+          // "Umumiy dorixona". Shunga qarab xarita turi aniqlanadi.
+          kind: s.role === "pharmacy"
+            ? s.specialty?.startsWith("Vet")
+              ? "vet"
+              : s.specialty?.startsWith("Umumiy")
+                ? "general"
+                : "agro"
+            : "specialist",
           lat: s.lat,
           lng: s.lng,
           phone: s.phone,
           address: s.address,
           specialist:
             s.role === "pharmacy"
-              ? `${s.specialty === "vet" ? "Veterinariya" : "Agro"} dorixonasi · ${s.name}`
+              ? `${s.specialty ?? "Dorixona"} · ${s.name}`
               : (s.specialty ?? s.name),
           workHours: s.workHours,
           distanceKm: s.distanceKm,
+          locked: s.locked,
+          ratingAvg: s.ratingAvg,
+          ratingCount: s.ratingCount,
           stock: [],
           medicines: s.medicines ?? [],
         }));
@@ -193,11 +224,19 @@ export default function MapClient() {
     return () => {
       cancelled = true;
     };
-  }, [coords, meds]);
+  }, [coords, meds, radiusKm]);
 
   // Tanlangan tur bo'yicha filtr (kind=all bo'lsa hammasi).
   const items = useMemo(
-    () => (kind === "all" ? places : places.filter((p) => p.kind === kind)),
+    () =>
+      kind === "all"
+        ? places
+        : places.filter(
+            (p) =>
+              p.kind === kind ||
+              // "Umumiy dorixona" ikkala filtrda (agro ham, vet ham) ko'rinadi.
+              ((kind === "agro" || kind === "vet") && p.kind === "general"),
+          ),
     [places, kind],
   );
 
@@ -265,8 +304,24 @@ export default function MapClient() {
       markersRef.current.forEach((m) => m.remove());
       markersRef.current = [];
       items.forEach((p) => {
-        const hasWanted = meds.length > 0 && p.stock.some((s) => s.status === "bor");
-        const pinKind = p.kind === "vet" ? "vet" : p.kind === "specialist" ? "specialist" : "agro";
+        // Sariq "bor" belgisi: eski dorixona omborida ham, dorixona egasi bot orqali
+        // qo'shgan va qidirilayotgan dorilarda ham ishlaydi.
+        const hasWanted =
+          meds.length > 0 &&
+          (p.stock.some((s) => s.status === "bor") ||
+            p.medicines.some(
+              (m) =>
+                m.status === "bor" &&
+                meds.some((w) => m.name.toLowerCase().includes(w.toLowerCase())),
+            ));
+        const pinKind =
+          p.kind === "vet"
+            ? "vet"
+            : p.kind === "specialist"
+              ? "specialist"
+              : p.kind === "general"
+                ? "general"
+                : "agro";
         const icon = L.divIcon({
           className: "",
           html: pinSvg(pinKind, hasWanted),
@@ -329,7 +384,7 @@ export default function MapClient() {
       <div className="px-5 pt-3">
         <div className="flex items-start justify-between">
           <div>
-            <p className="ios-sub">Geo-qidiruv · 5 km</p>
+            <p className="ios-sub">Geo-qidiruv · {radiusKm} km</p>
             <h1 className="ios-title">
               {(KINDS.find((k) => k.v === kind) ?? KINDS[0]).title}
             </h1>
@@ -369,11 +424,29 @@ export default function MapClient() {
           })}
         </div>
 
+        {/* Radius tanlash — 5 km bo'sh bo'lsa 10/25 km ga kengaytirish mumkin. */}
+        <div className="mt-2 flex items-center gap-2 overflow-x-auto pb-1">
+          <span className="shrink-0 text-[12px] font-bold text-[var(--brand-muted)]">Radius:</span>
+          {RADIUS_OPTIONS.map((r) => (
+            <button
+              key={r}
+              onClick={() => setRadiusKm(r)}
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-bold transition active:scale-95 ${
+                radiusKm === r ? "text-white" : "bg-white text-[var(--brand-ink)] shadow-sm"
+              }`}
+              style={radiusKm === r ? { background: "var(--brand-ink)" } : undefined}
+            >
+              {r} km
+            </button>
+          ))}
+        </div>
+
         {/* Xaritadagi belgilar izohi — nima ko'rinayotganini tushuntiradi */}
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 px-1 text-[11.5px] font-bold text-[var(--brand-muted)]">
           {[
             { c: "#028e11", l: "Agro dorixona", show: true },
             { c: "#b45309", l: "Veterinariya dorixonasi", show: true },
+            { c: "#0d9488", l: "Umumiy dorixona", show: true },
             { c: "#2563eb", l: "Mutaxassis", show: true },
           ]
             .filter((x) => x.show)
@@ -463,12 +536,17 @@ export default function MapClient() {
                       ...(p.kind === "specialist"
                         ? { background: "#dbeafe", color: "#2563eb" }
                         : {}),
+                      ...(p.kind === "general"
+                        ? { background: "#ccfbf1", color: "#0d9488" }
+                        : {}),
                     }}
                   >
                     {p.kind === "vet" ? (
                       <PawPrint size={20} />
                     ) : p.kind === "specialist" ? (
                       <UserRound size={20} />
+                    ) : p.kind === "general" ? (
+                      <Pill size={20} />
                     ) : (
                       <Sprout size={20} />
                     )}
@@ -491,9 +569,17 @@ export default function MapClient() {
                 {p.distanceKm !== null && (
                   <span
                     className="shrink-0 rounded-full px-2.5 py-1 text-[12px] font-bold text-white"
-                    style={{ background: "var(--brand-green)" }}
+                    style={{ background: p.locked ? "var(--brand-muted)" : "var(--brand-green)" }}
                   >
                     {p.distanceKm.toFixed(1)} km
+                  </span>
+                )}
+                {p.locked && (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-bold"
+                    style={{ background: "var(--brand-red-soft)", color: "#d7263d" }}
+                  >
+                    <Lock size={9} /> uzoqda
                   </span>
                 )}
               </div>
@@ -569,15 +655,26 @@ export default function MapClient() {
                 >
                   <Phone size={15} /> Qo'ng'iroq
                 </a>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openDirections(p);
-                  }}
-                  className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-[var(--brand-ink)] py-3 text-[14px] font-bold text-white"
-                >
-                  <Navigation size={14} /> Yo'nalish
-                </button>
+                {p.locked ? (
+                  // Boshqa sahifalar bilan bir xil qoida: radiusdan tashqarida
+                  // yo'nalish yopiq, telefon esa ishlaydi.
+                  <div
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl py-3 text-[13px] font-bold text-[var(--brand-muted)]"
+                    style={{ background: "var(--brand-bg)" }}
+                  >
+                    <Lock size={13} /> Yo'nalish yopiq
+                  </div>
+                ) : (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openDirections(p);
+                    }}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-[var(--brand-ink)] py-3 text-[14px] font-bold text-white"
+                  >
+                    <Navigation size={14} /> Yo'nalish
+                  </button>
+                )}
               </div>
             </li>
           );
@@ -611,8 +708,8 @@ export default function MapClient() {
             </span>
             <p className="mt-3 text-[16px] font-black text-[var(--brand-ink)]">
               {meds.length > 0
-                ? "Bu dorilar 5 km ichida topilmadi"
-                : "5 km ichida hozircha ma'lumot yo'q"}
+                ? `Bu dorilar ${radiusKm} km ichida topilmadi`
+                : `${radiusKm} km ichida hozircha ma'lumot yo'q`}
             </p>
             <p className="mt-1.5 text-[13.5px] leading-relaxed text-[var(--brand-muted)]">
               Xaritada faqat <b>real</b> ro&apos;yxatdan o&apos;tgan dorixonalar, ularning dorilari
@@ -664,12 +761,17 @@ export default function MapClient() {
                   ...(selected.kind === "specialist"
                     ? { background: "#dbeafe", color: "#2563eb" }
                     : {}),
+                  ...(selected.kind === "general"
+                    ? { background: "#ccfbf1", color: "#0d9488" }
+                    : {}),
                 }}
               >
                 {selected.kind === "vet" ? (
                   <PawPrint size={22} />
                 ) : selected.kind === "specialist" ? (
                   <UserRound size={22} />
+                ) : selected.kind === "general" ? (
+                  <Pill size={22} />
                 ) : (
                   <Sprout size={22} />
                 )}
@@ -700,6 +802,25 @@ export default function MapClient() {
               )}
             </div>
 
+            {selected.ratingAvg != null && (selected.ratingCount ?? 0) > 0 && (
+              <p className="mt-1 flex items-center gap-1 text-[12px] font-bold text-[#b8860b]">
+                ★ {selected.ratingAvg.toFixed(1)}
+                <span className="text-[var(--brand-muted)]">({selected.ratingCount ?? 0} ovoz)</span>
+              </p>
+            )}
+
+            {selected.locked && (
+              <p
+                className="mt-2 flex items-start gap-2 rounded-2xl p-2.5 px-3 text-[12px] font-medium"
+                style={{ background: "var(--brand-yellow-soft)", color: "var(--brand-ink)" }}
+              >
+                <Lock size={14} className="mt-0.5 shrink-0" />
+                <span>
+                  Bu joy sizdan 5 km dan uzoq — yo&apos;nalish o&apos;rniga telefon orqali bog&apos;laning.
+                </span>
+              </p>
+            )}
+
             {selected.stock.length > 0 && (
               <div className="mt-4 max-h-[200px] overflow-y-auto rounded-2xl bg-[var(--brand-bg)] p-2">
                 {selected.stock.map((s) => (
@@ -728,12 +849,21 @@ export default function MapClient() {
               >
                 <Phone size={17} /> {selected.phone}
               </a>
-              <button
-                onClick={() => openDirections(selected)}
-                className="flex items-center justify-center gap-1.5 rounded-2xl bg-[var(--brand-yellow)] px-5 py-4 text-[15px] font-bold text-[var(--brand-ink)]"
-              >
-                <Navigation size={16} /> Boraman
-              </button>
+              {selected.locked ? (
+                <div
+                  className="flex items-center justify-center gap-1.5 rounded-2xl px-5 py-4 text-[14px] font-bold text-[var(--brand-muted)]"
+                  style={{ background: "var(--brand-bg)" }}
+                >
+                  <Lock size={15} /> Uzoq
+                </div>
+              ) : (
+                <button
+                  onClick={() => openDirections(selected)}
+                  className="flex items-center justify-center gap-1.5 rounded-2xl bg-[var(--brand-yellow)] px-5 py-4 text-[15px] font-bold text-[var(--brand-ink)]"
+                >
+                  <Navigation size={16} /> Boraman
+                </button>
+              )}
             </div>
             <button
               onClick={() => setSelected(null)}

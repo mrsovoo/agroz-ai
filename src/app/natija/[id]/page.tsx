@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { createHash } from "crypto";
 import { db } from "@/db";
 import { diagnoses } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/session";
+import { getInMemoryDiagnosis } from "@/lib/in-memory-store";
 import {
   ChevronLeft,
   Stethoscope,
@@ -31,19 +33,39 @@ const severityStyle: Record<string, { bg: string; text: string; label: string }>
   yuqori: { bg: "var(--brand-red-soft)", text: "#d7263d", label: "Jiddiy" },
 };
 
-export default async function ResultPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ResultPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ t?: string }>;
+}) {
   const { id } = await params;
+  const { t: viewToken } = await searchParams;
   const numericId = Number(id);
   if (!Number.isFinite(numericId)) notFound();
 
-  const rows = await db.select().from(diagnoses).where(eq(diagnoses.id, numericId)).limit(1);
-  const d = rows[0];
+  let d: any = null;
+  try {
+    const rows = await db.select().from(diagnoses).where(eq(diagnoses.id, numericId)).limit(1);
+    d = rows[0] ?? null;
+  } catch {
+    d = null;
+  }
+
+  if (!d) {
+    d = getInMemoryDiagnosis(numericId);
+  }
   if (!d) notFound();
 
-  // Boshqa foydalanuvchining tashxis tarixini ID bo'yicha ko'rishning oldini olamiz.
-  if (d.userId !== null) {
+  // Himoya: tashxis egasiga tegishli bo'lsa (userId bor) — faqat o'zi ko'radi.
+  // Anonim tashxis (userId=null) — agar viewHash bo'lsa to'g'ri view token bilan, aks holda ko'rish mumkin.
+  if (d.userId !== null && d.userId !== undefined) {
     const user = await getCurrentUser();
     if (!user || user.id !== d.userId) notFound();
+  } else if (d.viewHash) {
+    const hash = createHash("sha256").update(viewToken ?? "").digest("hex");
+    if (!viewToken || hash !== d.viewHash) notFound();
   }
 
   let meds: string[] = [];

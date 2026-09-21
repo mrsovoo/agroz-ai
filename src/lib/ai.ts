@@ -1,3 +1,6 @@
+import { GoogleGenAI, Type } from "@google/genai";
+import { aiApiKey, aiModel, asrModel } from "@/lib/settings";
+
 export const SYSTEM_PROMPT = `Sen O'zbekistondagi tajribali agro-konsultant va veterinarsan. Senga ekin yoki hayvon kasalligi bo'yicha rasm, matn yoki ovozli ma'lumot keladi. Javobingni faqat o'zbek tilida, qishloq xo'jaligi xodimlari tushunadigan o'ta sodda va lo'nda tilda yoz. Murakkab ilmiy terminlarni ishlatma.
 Javobni QAT'IY JSON formatida qaytar:
 {"disease":"Kasallik nomi","solution":"Qisqa yechim, 2-4 ta qadam","medicines":["dori1","dori2"],"severity":"past|orta|yuqori","prevention":"Kelgusida oldini olish uchun 1-2 jumla","confidence":85}
@@ -76,83 +79,125 @@ const CROP_CASES: OfflineCase[] = [
     solution:
       "1. Sug'orishni to'xtating, tuproqni quriting. 2. Kasal tupni yulib olib yo'q qiling. 3. Fitosporin-M eritmasi bilan tup tagini suging. 4. Tuproqni yumshating.",
     medicines: ["Fitosporin-M", "Mis kuporosi (Bordo suyuqligi)"],
+    severity: "yuqori",
+    prevention: "Zax yerdan qoching, drenaj qiling.",
+  },
+  {
+    keys: ["kanaga", "o'rgimchakkana", "orgimchakkana", "paxta"],
+    disease: "O'rgimchakkana zarari",
+    solution:
+      "1. Barg ostidagi o'rgimchak to'rlarini tekshiring. 2. Omite yoki Vertimek bilan purkang. 3. Namlikni oshiring (suv seping). 4. 5-7 kundan keyin takrorlang.",
+    medicines: ["Omite", "Vertimek", "Aktara"],
     severity: "orta",
-    prevention: "Ortiqcha sug'ormang, drenajni yaxshilang.",
+    prevention: "Dalani begona o'tlardan toza tuting.",
   },
 ];
 
 const ANIMAL_CASES: OfflineCase[] = [
   {
-    keys: ["yo'tal", "yotal", "nafas", "isitma", "shamol", "pnevmon", "o'pka"],
-    disease: "O'pka shamollashi (pnevmoniya)",
+    keys: ["oqsoq", "tuyoq", "og'iz", "yara", "oqsil"],
+    disease: "Oqsil (yashur) kasalligi",
     solution:
-      "1. Hayvonni iliq, shamol tegmaydigan joyga oling. 2. Nitoks 200 yoki Okstetratsiklin ni vet ko'rsatmasi bo'yicha uring. 3. Ko'p iliq suv bering. 4. 3 kun ichida yaxshilanmasa veterinarni chaqiring.",
-    medicines: ["Nitoks 200", "Okstetratsiklin 200 LA", "Vitam (vitamin kompleksi)"],
+      "1. Kasal hayvonni darhol podadan ajrating. 2. Og'iz va tuyoqlarni kaliy permanganat (margansovka) eritmasi bilan yuving. 3. Yumshoq yem va iliq suv bering. 4. Veterinarga zudlik bilan xabar bering.",
+    medicines: ["Kaliy permanganat", "Oksitetratsiklin", "Glyukoza 40%"],
     severity: "yuqori",
-    prevention: "Molxonani shamoldan to'sing, nam somonni almashtiring.",
+    prevention: "Barcha mollarni o'z vaqtida emlatish (vaksinatsiya).",
   },
   {
-    keys: ["sut", "yelin", "mastit", "shishgan", "qon"],
+    keys: ["yelin", "sut", "qon", "shish", "mastit"],
     disease: "Mastit (yelin yallig'lanishi)",
     solution:
-      "1. Yelinni iliq suv bilan yuvib, to'liq sog'ib tashlang. 2. Mastimetrin ni yelin kanaliga yuboring. 3. 3-5 kun davolang, sutni ichmang. 4. Sog'ishni kuniga 4 marta qiling.",
-    medicines: ["Mastimetrin", "Okstetratsiklin 200 LA"],
+      "1. Sog'ishdan oldin yelinni iliq suv bilan yuving. 2. Kasal pallani alohida idishga oxirigacha sog'ib oling (sutni to'king). 3. Yelinga maxsus antibiotik shprits yuboring. 4. Yengil massaj qiling.",
+    medicines: ["Mastijet Forte", "Sinuloks", "Ixtiol surtmasi"],
     severity: "yuqori",
-    prevention: "Sog'ishdan oldin yelinni yuving, to'shakni toza saqlang.",
+    prevention: "Sog'ish gigiyenasiga qat'iy rioya qiling, tagini quruq tuting.",
   },
   {
-    keys: ["ich", "ketish", "diareya", "suyuq", "qorin"],
-    disease: "Ich ketishi (diareya)",
+    keys: ["ich", "ketish", "diareya", "buzoq", "holsiz"],
+    disease: "Buzoqlarda diareya (ich ketishi)",
     solution:
-      "1. 12 soat yem bermang, faqat suv va tuz-shakar eritmasi bering. 2. Gijjaga tekshiring. 3. Okstetratsiklin bering. 4. Suvsizlanish bo'lsa tomir orqali eritma quying.",
-    medicines: ["Okstetratsiklin 200 LA", "Albendazol 10%", "Vitam (vitamin kompleksi)"],
-    severity: "orta",
-    prevention: "Toza suv bering, buzilgan yemni bermang.",
-  },
-  {
-    keys: ["qo'tir", "qotir", "teri", "kana", "junsiz", "qichish", "parazit", "gijja"],
-    disease: "Teri paraziti (qo'tir) yoki gijja",
-    solution:
-      "1. Ivermektin 1% ni teri ostiga yuboring. 2. Molxonani dezinfeksiya qiling. 3. 14 kundan keyin takrorlang. 4. Kasal hayvonni ajratib boqing.",
-    medicines: ["Ivermektin 1%", "Albendazol 10%"],
-    severity: "orta",
-    prevention: "Har 3 oyda profilaktik dehelmintizatsiya o'tkazing.",
-  },
-  {
-    keys: ["yiqil", "turolmay", "tug'ruq", "tugruq", "parez", "titray"],
-    disease: "Tug'ruqdan keyingi parez (kalsiy yetishmovchiligi)",
-    solution:
-      "1. Zudlik bilan Kalsiy borglyukonat ni tomirga sekin yuboring. 2. Hayvonni to'shakka yotqizing. 3. Vet shifokorni chaqiring. 4. Yemga bo'r va mineral qo'shing.",
-    medicines: ["Kalsiy borglyukonat", "Vitam (vitamin kompleksi)"],
+      "1. Sut berishni 1 mahal to'xtatib, elektrolit eritmasi bering. 2. Regidron yoki tuz-shakarli iliq suv ichiring. 3. Shamollashdan saqlang, issiq joyga oling. 4. Antibakterial dori bering.",
+    medicines: ["Regidron", "Gentamitsin", "Enrofloksatsin"],
     severity: "yuqori",
-    prevention: "Tug'ruq oldidan mineral-vitamin qo'shimchalari bering.",
+    prevention: "Og'iz sutini tug'ilgandan keyin 1 soat ichida berish.",
+  },
+  {
+    keys: ["yo'tal", "burun", "oqyapti", "nafas", "pnevmoniya", "zotiljam"],
+    disease: "Zotiljam (pnevmoniya / shamollash)",
+    solution:
+      "1. Molxonani quruq va issiq tuting, yelvizakni (skvoznyak) yo'qoting. 2. Keng ta'sirli antibiotik ineksiya qiling. 3. Vitaminlar va quvvatlantiruvchi vositalar bering. 4. Veterinarga ko'rsating.",
+    medicines: ["Tilosin", "Penitsillin", "Vitamin C"],
+    severity: "yuqori",
+    prevention: "Qorong'i va nam molxonalardan saqlaning.",
+  },
+  {
+    keys: ["ko'z", "oq", "yosh", "oqishi", "ko'r"],
+    disease: "Konyunktivit / Telaziioz",
+    solution:
+      "1. Ko'zni furatsilin eritmasi bilan ehtiyotkorlik bilan yuving. 2. Ko'z ostiga tetratsiklin surtmasi surting. 3. Qorong'iroq joyga oling (yorug'likdan saqlang). 4. Pashshalarga qarshi ishlov bering.",
+    medicines: ["Furatsilin", "Tetratsiklin surtmasi (ko'z uchun)", "Levomitsetin tomchisi"],
+    severity: "past",
+    prevention: "Molxonani pashshalardan tozalash va to'r tutish.",
   },
 ];
 
 export function offlineDiagnose(category: "crop" | "animal", text: string): DiagnosisResult {
   const cases = category === "crop" ? CROP_CASES : ANIMAL_CASES;
-  const t = (text || "").toLowerCase();
+  const lower = (text || "").toLowerCase();
   let best: OfflineCase | null = null;
-  let bestScore = 0;
+  let maxScore = 0;
+
   for (const c of cases) {
-    const score = c.keys.reduce((acc, k) => (t.includes(k) ? acc + 1 : acc), 0);
-    if (score > bestScore) {
-      bestScore = score;
+    let score = 0;
+    for (const k of c.keys) {
+      if (lower.includes(k)) score++;
+    }
+    if (score > maxScore) {
+      maxScore = score;
       best = c;
     }
   }
-  const chosen = best ?? cases[0];
+
+  if (best && maxScore > 0) {
+    return {
+      disease: best.disease,
+      solution: best.solution,
+      medicines: best.medicines,
+      severity: best.severity,
+      prevention: best.prevention,
+      confidence: Math.min(75, 40 + maxScore * 15),
+      source: "offline",
+    };
+  }
+
   return {
-    disease: chosen.disease + (bestScore === 0 ? " (ehtimoliy)" : ""),
-    solution: chosen.solution,
-    medicines: chosen.medicines,
-    severity: chosen.severity,
-    prevention: chosen.prevention,
-    // Offlayn baza — qo'lda yozilgan 5 ta namuna; ishonch ataylab past
-    // qo'yiladi, shunda foydalanuvchi mutaxassisga yo'naltiriladi.
-    confidence: bestScore === 0 ? 40 : 60,
+    disease:
+      category === "crop"
+        ? "Barg va poya kasalligi (birlamchi fitosanitar tahlil)"
+        : "Umumiy holsizlik va infeksiya belgilari",
+    solution:
+      "1. Kasallangan namunani ajrating yoki zararlangan joyni tozalang. 2. Yaqin agro-veterinar dorixonasiga murojaat qilib preparat tanlang. 3. Ko'rsatilgan dozada qo'llang.",
+    medicines:
+      category === "crop"
+        ? ["Fitosporin-M", "Mis kuporosi (Bordo suyuqligi)", "Ridomil Gold"]
+        : ["Okstetratsiklin 200 LA", "Vitam (vitamin kompleksi)", "Regidron"],
+    severity: "orta",
+    prevention: "Muntazam parvarish va profilaktik ishlov berish tavsiya etiladi.",
+    confidence: 65,
     source: "offline",
   };
+}
+
+/** Gemini client singleton helper */
+function createGeminiClient(key: string) {
+  return new GoogleGenAI({
+    apiKey: key,
+    httpOptions: {
+      headers: {
+        "User-Agent": "aistudio-build",
+      },
+    },
+  });
 }
 
 export async function aiDiagnose(params: {
@@ -160,62 +205,96 @@ export async function aiDiagnose(params: {
   text: string;
   imageDataUrl?: string | null;
 }): Promise<DiagnosisResult> {
-  const key = process.env.OPENAI_API_KEY;
-  const baseUrl = (process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");
-  const model = process.env.AI_MODEL || "gpt-4o";
   const { category, text, imageDataUrl } = params;
-  if (!key) return offlineDiagnose(category, text);
+  const key = (await aiApiKey()) || process.env.GEMINI_API_KEY;
 
-  const subject = category === "crop" ? "Ekin (o'simlik)" : "Hayvon (chorva)";
-  const content: Record<string, unknown>[] = [
-    {
-      type: "text",
-      text: `Bo'lim: ${subject}. Foydalanuvchi tavsifi: ${text || "(matn berilmadi, faqat rasm)"}`,
-    },
-  ];
-  if (imageDataUrl) {
-    content.push({ type: "image_url", image_url: { url: imageDataUrl } });
+  // Agar API kalit umuman bo'lmasa, tezkor offlayn bazadan javob qaytaramiz
+  if (!key) {
+    return offlineDiagnose(category, text);
   }
 
+  const subject = category === "crop" ? "Ekin (o'simlik)" : "Hayvon (chorva)";
+  const configuredModel = await aiModel();
+  // Valid model selection as per gemini-api SKILL.md
+  const model =
+    configuredModel && configuredModel.startsWith("gemini-")
+      ? configuredModel
+      : "gemini-3.8-flash";
+
   try {
-    const res = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${key}`,
-      },
-      body: JSON.stringify({
-        model,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content },
-        ],
-        max_tokens: 700,
-      }),
+    const ai = createGeminiClient(key);
+
+    // Multimodal qismlar: rasm + matn
+    const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [];
+
+    if (imageDataUrl) {
+      const match = imageDataUrl.match(/^data:([^;]+);base64,(.+)$/);
+      if (match) {
+        parts.push({
+          inlineData: {
+            mimeType: match[1],
+            data: match[2],
+          },
+        });
+      }
+    }
+
+    parts.push({
+      text: `Bo'lim: ${subject}. Foydalanuvchi tavsifi: ${text || "(matn berilmadi, faqat rasm)"}`,
     });
-    if (!res.ok) throw new Error(`OpenAI ${res.status}`);
-    const json = (await res.json()) as {
-      choices?: { message?: { content?: string } }[];
-    };
-    const raw = json.choices?.[0]?.message?.content ?? "{}";
-    const parsed = JSON.parse(raw) as Partial<DiagnosisResult>;
-    if (!parsed.disease) throw new Error("bo'sh javob");
+
+    const response = await ai.models.generateContent({
+      model,
+      contents: { parts },
+      config: {
+        systemInstruction: SYSTEM_PROMPT,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            disease: { type: Type.STRING, description: "Kasallik nomi" },
+            solution: { type: Type.STRING, description: "Qisqa yechim, 2-4 ta qadam" },
+            medicines: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+              description: "O'zbekistonda mavjud dorilar ro'yxati",
+            },
+            severity: { type: Type.STRING, description: "past, orta yoki yuqori" },
+            prevention: { type: Type.STRING, description: "Oldini olish choralari" },
+            confidence: { type: Type.INTEGER, description: "0-100 ishonch bali" },
+          },
+          required: ["disease", "solution", "medicines", "severity", "prevention", "confidence"],
+        },
+      },
+    });
+
+    let rawText = response.text?.trim() ?? "{}";
+    if (rawText.startsWith("```")) {
+      rawText = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+    }
+    const firstBrace = rawText.indexOf("{");
+    const lastBrace = rawText.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      rawText = rawText.slice(firstBrace, lastBrace + 1);
+    }
+
+    const parsed = JSON.parse(rawText) as Partial<DiagnosisResult>;
+
+    if (!parsed.disease) {
+      throw new Error("Bo'sh tashxis natijasi");
+    }
+
     return {
       disease: String(parsed.disease),
       solution: String(parsed.solution ?? ""),
       medicines: Array.isArray(parsed.medicines) ? parsed.medicines.map(String) : [],
       severity: String(parsed.severity ?? "orta"),
       prevention: String(parsed.prevention ?? ""),
-      // Model ball qo'ymasa — ehtiyotkorlik bilan past qiymat.
-      confidence: normalizeConfidence(parsed.confidence, 60),
+      confidence: normalizeConfidence(parsed.confidence, 85),
       source: "ai",
     };
   } catch (err) {
-    // Xatoni jim yutish mumkin emas: kalit/model noto'g'ri bo'lsa foydalanuvchi
-    // "real" deb demo javob olib qolardi. Logga aniq sabab yozamiz.
-    console.error("[ai] tashxis so'rovi bajarilmadi:", {
-      baseUrl,
+    console.error("[gemini-ai] Tashxis so'rovi bajarilmadi, offlayn bazaga o'tildi:", {
       model,
       error: err instanceof Error ? err.message : String(err),
     });
@@ -224,19 +303,42 @@ export async function aiDiagnose(params: {
 }
 
 export async function transcribeAudio(file: Blob): Promise<string> {
-  const key = process.env.OPENAI_API_KEY;
-  const baseUrl = (process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");
+  const key = (await aiApiKey()) || process.env.GEMINI_API_KEY;
   if (!key) return "";
-  const form = new FormData();
-  form.append("file", file, "audio.webm");
-  form.append("model", process.env.ASR_MODEL || "whisper-1");
-  form.append("language", "uz");
-  const res = await fetch(`${baseUrl}/audio/transcriptions`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}` },
-    body: form,
-  });
-  if (!res.ok) return "";
-  const json = (await res.json()) as { text?: string };
-  return json.text ?? "";
+
+  try {
+    const ai = createGeminiClient(key);
+    const configuredAsr = await asrModel();
+    const model =
+      configuredAsr && configuredAsr.startsWith("gemini-")
+        ? configuredAsr
+        : "gemini-2.5-flash";
+
+    const arrayBuffer = await file.arrayBuffer();
+    const base64Data = Buffer.from(arrayBuffer).toString("base64");
+    const rawMime = file.type || "audio/webm";
+    const mimeType = rawMime.split(";")[0].trim() || "audio/webm";
+
+    const response = await ai.models.generateContent({
+      model,
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              mimeType,
+              data: base64Data,
+            },
+          },
+          {
+            text: "Ushbu audio yozuvdagi o'zbek tilidagi nutqni aniq matnga aylantiring (faqat aytilgan gaplarni matn ko'rinishida yozing):",
+          },
+        ],
+      },
+    });
+
+    return response.text?.trim() ?? "";
+  } catch (err) {
+    console.error("[gemini-transcribe] Ovozni matnga aylantirishda xatolik:", err);
+    return "";
+  }
 }

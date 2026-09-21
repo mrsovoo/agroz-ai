@@ -43,6 +43,7 @@ export async function getCurrentUser() {
     .select({
       id: users.id,
       phone: users.phone,
+      telegramId: users.telegramId,
       name: users.name,
       region: users.region,
       district: users.district,

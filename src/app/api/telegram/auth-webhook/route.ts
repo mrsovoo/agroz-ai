@@ -1,5 +1,6 @@
 import { handleAuthBotUpdate, type AuthBotUpdate } from "@/lib/auth-bot-flow";
 import { isAuthBotConfigured } from "@/lib/auth-bot";
+import { telegramAuthWebhookSecret, telegramWebhookSecret } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -8,17 +9,18 @@ export const dynamic = "force-dynamic";
  *
  * Asosiy botdan (`/api/telegram/webhook`) ajratilgan: bu bot OTP kod yubormaydi,
  * faqat mutaxassis va dorixona egalarini ro'yxatdan o'tkazadi.
- * `npm run telegram:setup` ikkala webhookni ham ulaydi.
+ * Webhook'ni `npm run telegram:setup` yoki admin panelning «Webhook ulash»
+ * tugmasi orqali ulash mumkin.
  */
 export async function POST(req: Request) {
-  if (!isAuthBotConfigured()) {
+  if (!(await isAuthBotConfigured())) {
     return Response.json({ ok: false, error: "auth bot sozlanmagan" }, { status: 503 });
   }
 
-  // Bo'sh qiymat ham qabul qilinadi — shunda umumiy kalitga qaytamiz.
+  // Auth botga alohida kalit; bo'lmasa umumiy kalit. Bo'sh qiymat ham qabul qilinadi —
+  // shunda admin panel faqat bitta umumiy kalitni yuritishi mumkin.
   const secret =
-    process.env.TELEGRAM_AUTH_WEBHOOK_SECRET?.trim() ||
-    process.env.TELEGRAM_WEBHOOK_SECRET?.trim();
+    (await telegramAuthWebhookSecret()) || (await telegramWebhookSecret());
   if (secret && req.headers.get("x-telegram-bot-api-secret-token") !== secret) {
     return new Response("unauthorized", { status: 401 });
   }

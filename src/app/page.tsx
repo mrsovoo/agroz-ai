@@ -1,5 +1,7 @@
 import Link from "next/link";
 import WeatherCard from "@/components/WeatherCard";
+import WeatherAlertBanner from "@/components/WeatherAlertBanner";
+import FeaturedMedicines from "@/components/FeaturedMedicines";
 import { getCurrentUser } from "@/lib/session";
 import { ensureSeed } from "@/lib/seed";
 import { db } from "@/db";
@@ -93,6 +95,11 @@ export default async function HomePage() {
         <div className="mt-5 web:mt-0">
           <WeatherCard />
         </div>
+      </div>
+
+      {/* Shoshilinch ob-havo ogohlantirishlari (sovuq urishi, kuchli yomg'ir) */}
+      <div className="mt-6">
+        <WeatherAlertBanner initialRegion={user?.region ?? "Toshkent"} />
       </div>
 
       <p className="ios-section-title mt-7">Xizmatlar</p>
@@ -199,6 +206,9 @@ export default async function HomePage() {
           </div>
         ))}
       </div>
+
+      {/* Agro Bozor — 4 ta dori kartochkasi, to'liq ro'yxat /dorilar sahifasida */}
+      <FeaturedMedicines />
 
       {/* @agroz_auth_bot orqali ro'yxatdan o'tgan mutaxassislar */}
       <Link href="/mutaxassislar" className="mt-3 block web:mt-6">

@@ -1,0 +1,12 @@
+{
+  "name": "Agroz AI",
+  "description": "Dehqon va chorvador yordamchisi. Ekin va chorva kasalliklarini AI orqali aniqlang, ob-havo xavflari (sovuq urishi, kuchli yomg'ir) bo'yicha shoshilinch ogohlantirishlar oling va yaqin dorixonalardan dori toping.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

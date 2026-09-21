@@ -7,6 +7,7 @@ const columns = [
     links: [
       { href: "/tashxis/crop", label: "Ekin tashxisi" },
       { href: "/tashxis/animal", label: "Chorva tashxisi" },
+      { href: "/dorilar", label: "Agro Bozor" },
       { href: "/xarita", label: "Xarita" },
       { href: "/yangiliklar", label: "Maslahatlar" },
     ],

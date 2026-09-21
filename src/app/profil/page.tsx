@@ -4,7 +4,9 @@ import { db } from "@/db";
 import { diagnoses } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
 import LogoutButton from "@/components/LogoutButton";
-import { Sprout, PawPrint, Phone, MapPin, ChevronRight, History, Sparkles } from "lucide-react";
+import ProfileEdit from "@/components/ProfileEdit";
+import WeatherAlertBanner from "@/components/WeatherAlertBanner";
+import { Sprout, PawPrint, Phone, MapPin, ChevronRight, History, Sparkles, Send, BellRing } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -24,11 +26,11 @@ export default async function ProfilePage() {
             <Sprout size={32} />
           </div>
           <p className="text-[15px] leading-relaxed text-[var(--brand-ink)]">
-            Tashxis tarixini saqlash va yaqin dorixonalarni shaxsiylashtirish uchun telefon raqam
+            Tashxis tarixini saqlash va yaqin dorixonalarni shaxsiylashtirish uchun Telegram yoki telefon raqam
             orqali kiring.
           </p>
-          <Link href="/kirish" className="w-full">
-            <button className="ios-btn">Telefon orqali kirish</button>
+          <Link href="/kirish" className="w-full max-w-sm">
+            <button className="ios-btn">Kirish (Telegram / Telefon)</button>
           </Link>
         </div>
       </main>
@@ -63,9 +65,15 @@ export default async function ProfilePage() {
             </div>
             <div>
               <p className="text-[18px] font-black">{user.name || "Foydalanuvchi"}</p>
-              <p className="mt-0.5 flex items-center gap-1.5 text-[13px] opacity-90">
-                <Phone size={12} /> {user.phone}
-              </p>
+              {user.phone ? (
+                <p className="mt-0.5 flex items-center gap-1.5 text-[13px] opacity-90">
+                  <Phone size={12} /> {user.phone}
+                </p>
+              ) : user.telegramId ? (
+                <p className="mt-0.5 flex items-center gap-1.5 text-[13px] opacity-90">
+                  <Send size={12} /> TG ID: {user.telegramId}
+                </p>
+              ) : null}
               {user.region && (
                 <p className="mt-0.5 flex items-center gap-1.5 text-[13px] opacity-90">
                   <MapPin size={12} /> {user.region}
@@ -75,17 +83,27 @@ export default async function ProfilePage() {
           </div>
         </section>
 
+        <ProfileEdit name={user.name} region={user.region} district={user.district} />
+
         <LogoutButton />
       </div>
 
       <div>
+        {/* Hududiy ob-havo ogohlantirishlari */}
+        <div className="mb-6">
+          <p className="ios-section-title flex items-center gap-1.5 web:mt-0">
+            <BellRing size={14} className="text-red-500" /> Hududingizdagi muhim ob-havo xavflari
+          </p>
+          <WeatherAlertBanner initialRegion={user.region || "Toshkent"} />
+        </div>
+
         <p className="ios-section-title mt-6 flex items-center gap-1.5 web:mt-0">
           <History size={14} /> Tashxislar tarixi
         </p>
         {history.length === 0 ? (
           <div className="ios-card flex flex-col items-center gap-3 p-6 text-center text-[var(--brand-muted)] web:p-10">
             <Sparkles size={28} className="text-[var(--brand-green-light)]" />
-            Hali tashxis qo'yilmagan.
+            Hali tashxis qo&apos;yilmagan.
             <Link href="/" className="w-full web:max-w-xs">
               <button className="ios-btn yellow">Birinchi tashxisni boshlash</button>
             </Link>
@@ -113,7 +131,7 @@ export default async function ProfilePage() {
                       {d.diseaseName}
                     </p>
                     <p className="text-[12px] text-[var(--brand-muted)]">
-                      {new Date(d.createdAt).toLocaleDateString("uz-UZ")}
+                      {d.source === "ai" ? "Gemini AI" : "Offlayn"} · {d.confidence ?? "—"}%
                     </p>
                   </div>
                   <ChevronRight size={18} className="text-[var(--brand-muted)]" />

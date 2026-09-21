@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createHash, randomBytes } from "crypto";
 import { db } from "@/db";
 import { diagnoses } from "@/db/schema";
 import { aiDiagnose } from "@/lib/ai";
@@ -7,6 +8,7 @@ import { clientIp, dataUrlBytes, isImageDataUrl } from "@/lib/validate";
 import { rateLimit, tooManyRequests } from "@/lib/rate-limit";
 import { MAX_DIAGNOSIS_TEXT, MAX_IMAGE_BYTES } from "@/lib/constants";
 import { withApiErrors } from "@/lib/api";
+import { saveInMemoryDiagnosis } from "@/lib/in-memory-store";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -48,23 +50,70 @@ export const POST = withApiErrors(async (req: Request) => {
 
   const result = await aiDiagnose({ category, text, imageDataUrl });
 
-  const inserted = await db
-    .insert(diagnoses)
-    .values({
-      userId: user?.id ?? null,
-      category,
-      inputText: text || null,
-      hasImage: Boolean(imageDataUrl),
-      diseaseName: result.disease,
-      solution: [result.solution, result.prevention ? `Oldini olish: ${result.prevention}` : ""]
-        .filter(Boolean)
-        .join("\n\n"),
-      medicines: JSON.stringify(result.medicines),
-      severity: result.severity,
-      confidence: result.confidence,
-      source: result.source,
-    })
-    .returning({ id: diagnoses.id });
+  // Anonim tashxis (userId=null) faqat imzolangan token bilan ko'riladi: bazada
+  // tokenning SHA-256 hash'i saqlanadi, o'zi esa bir marta API javobida qaytadi.
+  // ID'ni bilgan istalgan odam boshqaning tashxisini sanab ko'ra olmaydi.
+  const viewToken = user ? null : randomBytes(24).toString("hex");
+  const viewHash = viewToken
+    ? createHash("sha256").update(viewToken).digest("hex")
+    : null;
 
-  return NextResponse.json({ ok: true, id: inserted[0].id, result });
+  const solutionText = [result.solution, result.prevention ? `Oldini olish: ${result.prevention}` : ""]
+    .filter(Boolean)
+    .join("\n\n");
+  const medicinesJson = JSON.stringify(result.medicines);
+
+  let insertedId: number = Date.now();
+
+  try {
+    const inserted = await db
+      .insert(diagnoses)
+      .values({
+        userId: user?.id ?? null,
+        category,
+        inputText: text || null,
+        hasImage: Boolean(imageDataUrl),
+        diseaseName: result.disease,
+        solution: solutionText,
+        medicines: medicinesJson,
+        severity: result.severity,
+        confidence: result.confidence,
+        source: result.source,
+        viewHash,
+      })
+      .returning({ id: diagnoses.id });
+
+    if (inserted && inserted.length > 0 && typeof inserted[0]?.id === "number") {
+      insertedId = inserted[0].id;
+    }
+  } catch (dbErr) {
+    console.warn("[diagnose] Baza yozishda ogohlantirish, xotirada saqlanadi:", dbErr);
+  }
+
+  // Sahifa `/natija/[id]` ga yo'naltirilganda zudlik bilan topilishi uchun xotiraga ham saqlaymiz
+  saveInMemoryDiagnosis({
+    id: insertedId,
+    userId: user?.id ?? null,
+    category,
+    inputText: text || null,
+    hasImage: Boolean(imageDataUrl),
+    diseaseName: result.disease,
+    solution: solutionText,
+    medicines: medicinesJson,
+    severity: result.severity,
+    confidence: result.confidence,
+    source: result.source,
+    viewHash,
+    createdAt: new Date(),
+  });
+
+  const response: {
+    ok: boolean;
+    id: number;
+    result: typeof result;
+    viewToken?: string;
+  } = { ok: true, id: insertedId, result };
+  if (viewToken) response.viewToken = viewToken;
+
+  return NextResponse.json(response);
 });
