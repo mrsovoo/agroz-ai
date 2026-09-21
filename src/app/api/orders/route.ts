@@ -90,6 +90,14 @@ export const POST = withApiErrors(async (req: Request) => {
     ok: true,
     orderId: result.orderId,
     total: result.total,
+    deliveryType,
+    customerAddress: deliveryType === "delivery" ? customerAddress : undefined,
+    pharmacy: {
+      id: result.pharmacy.id,
+      name: result.pharmacy.name,
+      phone: result.pharmacy.phone,
+      address: result.pharmacy.address,
+    },
   });
 });
 

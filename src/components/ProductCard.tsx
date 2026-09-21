@@ -105,19 +105,19 @@ export default function ProductCard({
         : "#0d9488";
 
   return (
-    <div className="mx-auto flex aspect-[26/45] w-full max-w-[260px] flex-col overflow-hidden rounded-[22px] bg-white shadow-sm transition-transform active:scale-[0.99]">
-      {/* Rasm oynasi: 250×350 (5:7), markazda, nisbat buzilmaydi */}
-      <div className="relative mx-auto w-[96%] shrink-0">
+    <div className="group flex w-full flex-col justify-between overflow-hidden rounded-[20px] sm:rounded-[22px] border border-black/5 bg-white shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-md active:scale-[0.99]">
+      {/* Rasm oynasi: 5:7 nisbat, markazda, nisbat buzilmaydi */}
+      <div className="relative w-full shrink-0 overflow-hidden bg-neutral-50/50">
         <Link href={href} aria-label={medicine.name} className="block">
           {medicine.hasPhoto ? (
             <FadeImage
               src={`/api/medicines/${medicine.id}/photo`}
               alt={medicine.name}
-              className="aspect-[5/7] w-full bg-white"
+              className="aspect-[5/7] w-full bg-white transition-transform duration-300 group-hover:scale-105"
               fit="contain"
               fallback={
                 <div
-                  className="flex h-full w-full items-center justify-center"
+                  className="flex aspect-[5/7] w-full items-center justify-center"
                   style={{
                     background:
                       medicine.type === "animal"
@@ -128,12 +128,12 @@ export default function ProductCard({
                   }}
                 >
                   <span
-                    className="flex h-12 w-12 items-center justify-center rounded-full bg-white/80"
+                    className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-white/80 shadow-xs"
                     style={{
                       color: medicine.type === "animal" ? "var(--brand-ink)" : "var(--brand-green)",
                     }}
                   >
-                    <ShoppingCart size={22} />
+                    <ShoppingCart size={20} />
                   </span>
                 </div>
               }
@@ -151,12 +151,12 @@ export default function ProductCard({
               }}
             >
               <span
-                className="flex h-12 w-12 items-center justify-center rounded-full bg-white/80"
+                className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-white/80 shadow-xs"
                 style={{
                   color: medicine.type === "animal" ? "var(--brand-ink)" : "var(--brand-green)",
                 }}
               >
-                <ShoppingCart size={22} />
+                <ShoppingCart size={20} />
               </span>
             </div>
           )}
@@ -164,67 +164,106 @@ export default function ProductCard({
 
         {/* Tur belgisi */}
         <span
-          className="absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold shadow-sm"
+          className="absolute left-2 top-2 sm:left-2.5 sm:top-2.5 flex items-center gap-1 rounded-full px-2 py-0.5 text-[9.5px] sm:text-[10.5px] font-bold shadow-xs backdrop-blur-xs"
           style={{ background: badgeBg, color: badgeColor }}
         >
-          {medicine.type === "animal" ? "🐄 Hayvon" : medicine.type === "crop" ? "🌱 Ekin" : "📦 Umumiy"}
+          {medicine.type === "animal" ? "🐄 Chorva" : medicine.type === "crop" ? "🌱 Ekin" : "📦 Umumiy"}
         </span>
 
         {/* ❤️ Yoqtirish */}
         <button
-          onClick={() => setLiked(toggleFavorite(pharmacy.id, medicine.id))}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setLiked(toggleFavorite(pharmacy.id, medicine.id));
+          }}
           aria-label={liked ? "Yoqtirilganlardan olib tashlash" : "Yoqtirilganlarga qo'shish"}
           aria-pressed={liked}
-          className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white/95 shadow-sm transition active:scale-90"
+          className="absolute right-2 top-2 sm:right-2.5 sm:top-2.5 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white/95 text-neutral-600 shadow-sm transition-transform active:scale-90 hover:scale-105 hover:bg-white"
         >
           <Heart
-            size={16}
-            className={liked ? "text-[#e0245e]" : "text-[var(--brand-muted)]"}
+            size={15}
+            className={liked ? "text-[#e0245e]" : "text-neutral-400"}
             fill={liked ? "#e0245e" : "none"}
           />
         </button>
       </div>
 
-      {/* Pastki qism: nomi, narxi, tavsifi, Savatga */}
-      <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-hidden px-2.5 pb-2 pt-1.5">
-        <Link href={href} className="min-w-0">
-          <p
-            className="truncate text-[13px] font-bold leading-tight text-[var(--brand-ink)]"
-            title={medicine.name}
-          >
-            {medicine.name}
-          </p>
-        </Link>
-        {medicine.price ? (
-          <p className="text-[14px] font-black leading-tight text-[var(--brand-green)]">
-            {new Intl.NumberFormat("ru-RU").format(medicine.price).replace(/\u00a0/g, " ")} so&apos;m
-          </p>
-        ) : (
-          <p className="text-[12px] font-bold leading-tight text-[var(--brand-muted)]">
-            Narx so&apos;rang
-          </p>
-        )}
-        {medicine.usage && (
-          <p
-            className="truncate text-[10.5px] leading-tight text-[var(--brand-muted)]"
-            title={medicine.usage}
-          >
-            {medicine.usage}
-          </p>
-        )}
-        <p className="truncate text-[10.5px] leading-tight text-[var(--brand-muted)]" title={pharmacy.name}>
-          🏪 {pharmacy.name}
-        </p>
+      {/* Pastki qism: nomi, narxi, tavsifi, dorixona, Savatga */}
+      <div className="flex flex-1 flex-col justify-between p-2.5 sm:p-3">
+        <div>
+          {/* Nomi */}
+          <Link href={href} className="group/title block">
+            <h3
+              className="line-clamp-2 min-h-[34px] sm:min-h-[38px] text-[12.5px] sm:text-[13.5px] font-bold leading-snug text-neutral-900 group-hover/title:text-[var(--brand-green)] transition-colors"
+              title={medicine.name}
+            >
+              {medicine.name}
+            </h3>
+          </Link>
 
+          {/* Qo'llanilishi / Kasalliklarga qarshi tavsif */}
+          {medicine.usage ? (
+            <p
+              className="mt-0.5 sm:mt-1 line-clamp-1 text-[10.5px] sm:text-[11px] font-medium text-neutral-500"
+              title={medicine.usage}
+            >
+              💊 {medicine.usage}
+            </p>
+          ) : (
+            <p className="mt-0.5 sm:mt-1 text-[10.5px] sm:text-[11px] font-medium text-emerald-600/90 flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Mavjud
+            </p>
+          )}
+
+          {/* Narxi */}
+          <div className="mt-1 sm:mt-1.5 flex items-baseline gap-1.5">
+            {medicine.price ? (
+              <span className="text-[13.5px] sm:text-[15px] font-black leading-tight text-[var(--brand-green)]">
+                {new Intl.NumberFormat("ru-RU").format(medicine.price).replace(/\u00a0/g, " ")} so&apos;m
+              </span>
+            ) : (
+              <span className="text-[11.5px] sm:text-[12px] font-bold leading-tight text-neutral-500">
+                Kelishilgan narxda
+              </span>
+            )}
+          </div>
+
+          {/* Dorixona ma'lumoti */}
+          <p
+            className="mt-0.5 sm:mt-1 truncate text-[10.5px] sm:text-[11px] font-medium text-neutral-500"
+            title={pharmacy.name}
+          >
+            🏪 {pharmacy.name}
+          </p>
+        </div>
+
+        {/* Savatga tugmasi */}
         <button
+          type="button"
           onClick={add}
-          className={`mt-auto flex w-full items-center justify-center gap-1.5 rounded-xl py-1.5 text-[12px] font-bold transition active:scale-[0.97] ${
-            qty > 0 ? "text-[var(--brand-green)]" : "text-white"
+          className={`mt-2 sm:mt-2.5 flex h-8 sm:h-9 w-full items-center justify-center gap-1 sm:gap-1.5 rounded-xl text-[11px] sm:text-[12.5px] font-bold transition active:scale-[0.97] ${
+            qty > 0
+              ? "bg-[var(--brand-green-soft)] text-[var(--brand-green)] border border-[var(--brand-green)]/20"
+              : "bg-[var(--brand-green)] text-white hover:brightness-105 shadow-xs"
           }`}
-          style={qty > 0 ? { background: "var(--brand-green-soft)" } : { background: "var(--brand-green)" }}
         >
-          {qty > 0 ? <Check size={14} /> : <ShoppingCart size={14} />}
-          {qty > 0 ? `Savatda (${qty})` : "Savatga"}
+          {qty > 0 ? <Check size={13} className="stroke-[3]" /> : <ShoppingCart size={13} />}
+          <span>
+            {qty > 0 ? (
+              <>
+                <span className="inline sm:hidden">Savatda ({qty})</span>
+                <span className="hidden sm:inline">Savatda ({qty} ta)</span>
+              </>
+            ) : (
+              <>
+                <span className="inline sm:hidden">Savatga</span>
+                <span className="hidden sm:inline">Savatga qo&apos;shish</span>
+              </>
+            )}
+          </span>
         </button>
       </div>
     </div>

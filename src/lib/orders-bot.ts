@@ -32,8 +32,16 @@ export function orderMessage(order: OrderWithItems): string {
   const st = orderStatusLabel(order.status);
   const delivery =
     order.deliveryType === "delivery"
-      ? `🛵 Yetkazib berish: ${escapeHtml(order.customerAddress ?? "")}`
-      : "🏪 Dorixonadan olib ketish";
+      ? [
+          "🛵 <b>Qabul qilish:</b> Yetkazib berish (kuryer orqali)",
+          `📍 <b>Yetkazish manzili:</b> <code>${escapeHtml(order.customerAddress ?? "Ko'rsatilmadi")}</code>`,
+          order.customerAddress
+            ? `🗺 <a href="https://maps.google.com/?q=${encodeURIComponent(order.customerAddress)}">Xaritada manzilni ochish</a>`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n")
+      : "🏪 <b>Qabul qilish:</b> Mijoz dorixonaga borib O'ZI OLIB KETADI (bepul)";
   const items = order.items
     .map(
       (i) =>
@@ -51,14 +59,15 @@ export function orderMessage(order: OrderWithItems): string {
   return [
     `${st.emoji} <b>Buyurtma #${order.id}</b> — ${st.label}`,
     "",
-    `👤 ${escapeHtml(order.customerName)} · 📞 <code>${escapeHtml(order.customerPhone)}</code>`,
+    `👤 <b>Mijoz:</b> ${escapeHtml(order.customerName)}`,
+    `📞 <b>Telefon:</b> <code>${escapeHtml(order.customerPhone)}</code>`,
     delivery,
     "",
-    "<b>Dorilar:</b>",
+    "<b>Buyurtma qilingan dorilar:</b>",
     items,
     "",
-    `💰 Jami: <b>${order.totalSum !== null ? `${shortSum(order.totalSum)} so'm` : "narx yo'q"}</b>`,
-    order.note ? `📝 Izoh: ${escapeHtml(order.note)}` : "",
+    `💰 Jami summa: <b>${order.totalSum !== null ? `${shortSum(order.totalSum)} so'm` : "narx yo'q"}</b>`,
+    order.note ? `📝 <b>Mijoz izohi:</b> <i>${escapeHtml(order.note)}</i>` : "",
     ...rating,
   ]
     .filter(Boolean)
@@ -70,12 +79,17 @@ export function orderActionsKeyboard(order: OrderWithItems): InlineKeyboard {
   const rows: InlineKeyboard["inline_keyboard"] = [];
   if (order.status === "yangi") {
     rows.push([
-      { text: "✅ Tasdiqlash", callback_data: `o:confirm:${order.id}` },
+      { text: "✅ Qabul qilish", callback_data: `o:confirm:${order.id}` },
       { text: "❌ Bekor qilish", callback_data: `o:cancel:${order.id}` },
     ]);
   }
   if (order.status === "tasdiqlandi") {
-    rows.push([{ text: "📦 Yetkazildi", callback_data: `o:done:${order.id}` }]);
+    rows.push([
+      {
+        text: order.deliveryType === "delivery" ? "🛵 Yetkazildi" : "✅ Mijoz olib ketdi",
+        callback_data: `o:done:${order.id}`,
+      },
+    ]);
   }
   return { inline_keyboard: rows };
 }

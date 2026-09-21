@@ -136,8 +136,13 @@ export async function createOrder(input: CreateOrderInput) {
   return {
     ok: true as const,
     orderId,
-    total,
-    pharmacy: { id: pharmacyRow.id, name: pharmacyRow.organization ?? pharmacyRow.name, telegramId: pharmacyRow.telegramId },
+    pharmacy: {
+      id: pharmacyRow.id,
+      name: pharmacyRow.organization ?? pharmacyRow.name,
+      telegramId: pharmacyRow.telegramId,
+      phone: pharmacyRow.phone,
+      address: pharmacyRow.address,
+    },
     items: prepared,
   };
 }

@@ -109,6 +109,7 @@ export async function getSimilarMedicines(
       pharmacyOrg: specialists.organization,
       pharmacyName: specialists.name,
       pharmacyPhone: specialists.phone,
+      pharmacyAddress: specialists.address,
     })
     .from(specialistMedicines)
     .innerJoin(specialists, eq(specialists.id, specialistMedicines.specialistId))
@@ -134,6 +135,7 @@ export async function getSimilarMedicines(
     pharmacyId: r.pharmacyId,
     pharmacyName: r.pharmacyOrg ?? r.pharmacyName,
     pharmacyPhone: r.pharmacyPhone,
+    pharmacyAddress: r.pharmacyAddress,
   }));
 }
 
@@ -294,6 +296,7 @@ export default async function MedicineDetail({ medicine }: { medicine: MedicineD
               id: medicine.pharmacyId,
               name: medicine.pharmacyName,
               phone: medicine.pharmacyPhone,
+              address: medicine.pharmacyAddress,
             }}
           />
         </div>
@@ -303,7 +306,7 @@ export default async function MedicineDetail({ medicine }: { medicine: MedicineD
       {similar.length > 0 && (
         <section className="mt-7 web:mt-10">
           <p className="ios-section-title">O&apos;xshash mahsulotlar</p>
-          <div className="mt-1 grid grid-cols-2 gap-3 web:grid-cols-4">
+          <div className="mt-2 grid grid-cols-2 gap-2.5 sm:gap-3.5 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 web:grid-cols-4 web:gap-4.5">
             {similar.map((s) => (
               <ProductCard
                 key={s.id}
@@ -316,7 +319,12 @@ export default async function MedicineDetail({ medicine }: { medicine: MedicineD
                   usage: s.usage,
                   status: "bor",
                 }}
-                pharmacy={{ id: s.pharmacyId, name: s.pharmacyName, phone: s.pharmacyPhone }}
+                pharmacy={{
+                  id: s.pharmacyId,
+                  name: s.pharmacyName,
+                  phone: s.pharmacyPhone,
+                  address: s.pharmacyAddress,
+                }}
               />
             ))}
           </div>

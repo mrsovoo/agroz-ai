@@ -37,6 +37,7 @@ export default async function FeaturedMedicines() {
         pharmacyOrg: specialists.organization,
         pharmacyName: specialists.name,
         pharmacyPhone: specialists.phone,
+        pharmacyAddress: specialists.address,
       })
       .from(specialistMedicines)
       .innerJoin(specialists, eq(specialists.id, specialistMedicines.specialistId))
@@ -53,6 +54,7 @@ export default async function FeaturedMedicines() {
       pharmacyId: r.pharmacyId,
       pharmacyName: r.pharmacyOrg ?? r.pharmacyName,
       pharmacyPhone: r.pharmacyPhone,
+      pharmacyAddress: r.pharmacyAddress,
     }));
   } catch {
     // Baza bo'sh yoki ulanmagan — blok umuman ko'rinmaydi.
@@ -73,7 +75,7 @@ export default async function FeaturedMedicines() {
         </a>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-3 web:grid-cols-4">
+      <div className="mt-3 grid grid-cols-2 gap-2.5 sm:gap-3.5 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 web:grid-cols-4 web:gap-4.5">
         {items.map((m) => (
           <ProductCard
             key={m.id}
@@ -86,7 +88,12 @@ export default async function FeaturedMedicines() {
               usage: m.usage,
               status: "bor",
             }}
-            pharmacy={{ id: m.pharmacyId, name: m.pharmacyName, phone: m.pharmacyPhone }}
+            pharmacy={{
+              id: m.pharmacyId,
+              name: m.pharmacyName,
+              phone: m.pharmacyPhone,
+              address: m.pharmacyAddress,
+            }}
           />
         ))}
       </div>

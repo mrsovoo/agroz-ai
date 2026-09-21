@@ -16,12 +16,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  AlertCircle,
   Check,
   Heart,
   Loader2,
   Lock,
   MapPin,
   Minus,
+  Navigation,
   Phone,
   Pill,
   Plus,
@@ -122,8 +124,17 @@ export default function MarketClient() {
   const [cartDelivery, setCartDelivery] = useState<"pickup" | "delivery">("pickup");
   const [cartAddress, setCartAddress] = useState("");
   const [cartBusy, setCartBusy] = useState(false);
-  const [cartError, setCartError] = useState<string | null>(null);
-  const [orderDone, setOrderDone] = useState<{ orderId: number; total: number } | null>(null);
+  const [orderDone, setOrderDone] = useState<{
+    orderId: number;
+    total: number;
+    deliveryType: "pickup" | "delivery";
+    pharmacyName: string;
+    pharmacyPhone: string;
+    pharmacyAddress?: string | null;
+    customerAddress?: string | null;
+    customerPhone: string;
+  } | null>(null);
+  const [locDetecting, setLocDetecting] = useState(false);
 
   // Buyurtma kuzatuvi va reyting
   const [trackPhone, setTrackPhone] = useState("");
@@ -251,7 +262,12 @@ export default function MarketClient() {
     }
     if (!cartState || cartState.pharmacy.id !== pharmacy.id) {
       updateCart({
-        pharmacy: { id: pharmacy.id, name: pharmacy.organization ?? pharmacy.name, phone: pharmacy.phone },
+        pharmacy: {
+          id: pharmacy.id,
+          name: pharmacy.organization ?? pharmacy.name,
+          phone: pharmacy.phone,
+          address: pharmacy.address,
+        },
         lines: [{ medicine, qty: 1 }],
       });
       return;
@@ -269,16 +285,67 @@ export default function MarketClient() {
     if (!cartState) return;
     const lines = cartState.lines
       .map((l) =>
-        l.medicine.id === medicineId ? { ...l, qty: Math.max(0, Math.min(99, l.qty + delta)) } : l,
+          l.medicine.id === medicineId ? { ...l, qty: Math.max(0, Math.min(99, l.qty + delta)) } : l,
       )
       .filter((l) => l.qty > 0);
     updateCart({ ...cartState, lines });
   }
 
+  /** Mijozning joriy GPS joylashuvidan manzilini aniqlab inputga yozadi */
+  async function detectLocationAddress() {
+    if (!navigator.geolocation) {
+      setCartError("Qurilmangizda geolokatsiya qo'llab-quvvatlanmaydi");
+      return;
+    }
+    setLocDetecting(true);
+    setCartError(null);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          const res = await fetch(`/api/location?lat=${lat}&lng=${lng}&full=1`);
+          const data = (await res.json()) as { ok?: boolean; place?: string | null };
+          if (data.ok && data.place) {
+            setCartAddress(data.place);
+          } else {
+            setCartAddress(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+          }
+        } catch {
+          setCartError("Manzilni avtomatik aniqlab bo'lmadi, iltimos qo'lda yozing");
+        } finally {
+          setLocDetecting(false);
+        }
+      },
+      () => {
+        setLocDetecting(false);
+        setCartError("Geolokatsiya ruxsati berilmadi. Iltimos, manzilni o'zingiz yozing");
+      },
+      { timeout: 8000, enableHighAccuracy: true },
+    );
+  }
+
   async function submitOrder() {
     if (!cartState || cartState.lines.length === 0) return;
-    const cartPharmacyId = cartState.pharmacy.id;
+    if (!cartName.trim()) {
+      setCartError("Iltimos, ismingizni kiriting");
+      return;
+    }
+    const cleanPhone = cartPhone.replace(/\D/g, "").replace(/^998/, "").slice(0, 9);
+    if (cleanPhone.length < 9) {
+      setCartError("Iltimos, to'liq telefon raqamingizni kiriting (+998...)");
+      return;
+    }
+    if (cartDelivery === "delivery" && !cartAddress.trim()) {
+      setCartError("Iltimos, yetkazib berish manzilini kiriting");
+      return;
+    }
+
+    const currentPharmacy = cartState.pharmacy;
+    const cartPharmacyId = currentPharmacy.id;
     const cart = cartState.lines;
+    const phoneFull = `+998${cleanPhone}`;
+
     setCartBusy(true);
     setCartError(null);
     try {
@@ -288,18 +355,34 @@ export default function MarketClient() {
         body: JSON.stringify({
           pharmacySpecialistId: cartPharmacyId,
           items: cart.map((l) => ({ medicineId: l.medicine.id, qty: l.qty })),
-          customerName: cartName,
-          customerPhone: cartPhone,
-          note: cartNote,
+          customerName: cartName.trim(),
+          customerPhone: phoneFull,
+          note: cartNote.trim() || undefined,
           deliveryType: cartDelivery,
-          customerAddress: cartDelivery === "delivery" ? cartAddress : undefined,
+          customerAddress: cartDelivery === "delivery" ? cartAddress.trim() : undefined,
         }),
       });
-      const data = (await res.json()) as { ok?: boolean; orderId?: number; total?: number; error?: string };
+      const data = (await res.json()) as {
+        ok?: boolean;
+        orderId?: number;
+        total?: number;
+        deliveryType?: string;
+        customerAddress?: string;
+        pharmacy?: { id: number; name: string; phone: string; address?: string | null };
+        error?: string;
+      };
       if (!res.ok || !data.ok) throw new Error(data.error ?? "Buyurtma yuborilmadi");
-      setOrderDone({ orderId: data.orderId!, total: data.total ?? cartTotal });
+      setOrderDone({
+        orderId: data.orderId!,
+        total: data.total ?? cartTotal,
+        deliveryType: cartDelivery,
+        pharmacyName: data.pharmacy?.name ?? currentPharmacy.name,
+        pharmacyPhone: data.pharmacy?.phone ?? currentPharmacy.phone,
+        pharmacyAddress: data.pharmacy?.address ?? currentPharmacy.address ?? null,
+        customerAddress: cartDelivery === "delivery" ? cartAddress.trim() : null,
+        customerPhone: cleanPhone,
+      });
       updateCart(null);
-      setCartOpen(false);
       setCartNote("");
     } catch (e) {
       setCartError(e instanceof Error ? e.message : "Xatolik");
@@ -469,19 +552,24 @@ export default function MarketClient() {
           </p>
         </div>
       ) : (
-        <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="mt-4 grid grid-cols-2 gap-2.5 sm:gap-3.5 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 web:grid-cols-4 web:gap-4.5">
           {cards.map((c) => (
             <ProductCard
               key={`${c.pharmacy.id}:${c.medicine.id}`}
               medicine={c.medicine}
-              pharmacy={{ id: c.pharmacy.id, name: c.pharmacy.organization ?? c.pharmacy.name, phone: c.pharmacy.phone }}
+              pharmacy={{
+                id: c.pharmacy.id,
+                name: c.pharmacy.organization ?? c.pharmacy.name,
+                phone: c.pharmacy.phone,
+                address: c.pharmacy.address,
+              }}
             />
           ))}
         </div>
       )}
 
       {/* Buyurtmalarni kuzatish */}
-      <section className="mt-8">
+      <section id="order-tracking-section" className="mt-8">
         <p className="ios-section-title">Buyurtmamni kuzatish</p>
         <div className="ios-card p-4">
           <p className="text-[13px] leading-relaxed text-[var(--brand-muted)]">
@@ -689,30 +777,128 @@ export default function MarketClient() {
           >
             <div className="sheet-handle" />
             {orderDone ? (
-              <div className="flex flex-col items-center gap-3 py-6 text-center">
-                <span
-                  className="flex h-16 w-16 items-center justify-center rounded-full"
-                  style={{ background: "var(--brand-green-soft)", color: "var(--brand-green)" }}
-                >
-                  <Check size={32} />
-                </span>
-                <p className="text-[18px] font-black text-[var(--brand-ink)]">Buyurtma qabul qilindi!</p>
-                <p className="text-[13.5px] leading-relaxed text-[var(--brand-muted)]">
-                  Buyurtma <b>#{orderDone.orderId}</b> dorixona egasiga Telegram orqali yuborildi.
-                  Holatini «Buyurtmamni kuzatish» bo&apos;limida telefon raqamingiz bilan kuzatasiz.
+              <div className="space-y-4 py-4">
+                <div className="flex flex-col items-center gap-2 text-center">
+                  <span
+                    className="flex h-16 w-16 items-center justify-center rounded-full"
+                    style={{ background: "var(--brand-green-soft)", color: "var(--brand-green)" }}
+                  >
+                    <Check size={32} />
+                  </span>
+                  <p className="text-[20px] font-black text-[var(--brand-ink)]">
+                    Buyurtma qabul qilindi!
+                  </p>
+                  <p className="text-[13px] leading-relaxed text-[var(--brand-muted)]">
+                    Buyurtmangiz <b>#{orderDone.orderId}</b> raqami bilan dorixona egasiga Telegram orqali yetkazildi.
+                  </p>
+                </div>
+
+                {/* Buyurtma cheki / vaucheri */}
+                <div className="space-y-3 rounded-2xl border border-[var(--brand-sep)] bg-[var(--brand-bg)] p-4">
+                  <div className="flex items-center justify-between border-b border-[var(--brand-sep)] pb-2.5">
+                    <span className="text-[12px] font-bold text-[var(--brand-muted)]">Buyurtma raqami</span>
+                    <span className="text-[15px] font-black text-[var(--brand-ink)]">#{orderDone.orderId}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between border-b border-[var(--brand-sep)] pb-2.5">
+                    <span className="text-[12px] font-bold text-[var(--brand-muted)]">Qabul qilish usuli</span>
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-bold shadow-xs"
+                      style={
+                        orderDone.deliveryType === "delivery"
+                          ? { background: "#dbeafe", color: "#1e40af" }
+                          : { background: "var(--brand-green-soft)", color: "var(--brand-green)" }
+                      }
+                    >
+                      {orderDone.deliveryType === "delivery" ? "🛵 Yetkazib berish" : "🏪 O'zim olib ketaman"}
+                    </span>
+                  </div>
+
+                  {orderDone.deliveryType === "delivery" ? (
+                    <div className="border-b border-[var(--brand-sep)] pb-2.5">
+                      <span className="block text-[11px] font-bold uppercase tracking-wider text-[var(--brand-muted)]">
+                        Yetkazish manzili
+                      </span>
+                      <p className="mt-1 text-[13px] font-semibold text-[var(--brand-ink)]">
+                        {orderDone.customerAddress || "Manzil ko'rsatilmadi"}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="border-b border-[var(--brand-sep)] pb-2.5">
+                      <span className="block text-[11px] font-bold uppercase tracking-wider text-[var(--brand-muted)]">
+                        Dorixonadan olib ketish manzili
+                      </span>
+                      <p className="mt-1 text-[13px] font-semibold text-[var(--brand-ink)]">
+                        {orderDone.pharmacyAddress || "Dorixona manzili ko'rsatilmagan"}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between border-b border-[var(--brand-sep)] pb-2.5">
+                    <div>
+                      <span className="block text-[11px] font-bold uppercase tracking-wider text-[var(--brand-muted)]">
+                        Dorixona
+                      </span>
+                      <p className="text-[13.5px] font-bold text-[var(--brand-ink)]">
+                        {orderDone.pharmacyName}
+                      </p>
+                    </div>
+                    {orderDone.pharmacyPhone && (
+                      <a
+                        href={`tel:${orderDone.pharmacyPhone.replace(/\s/g, "")}`}
+                        className="inline-flex items-center gap-1 rounded-xl bg-white px-3 py-1.5 text-[12px] font-bold text-[var(--brand-green)] shadow-xs hover:bg-zinc-50"
+                      >
+                        <Phone size={12} /> Qo&apos;ng&apos;iroq
+                      </a>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-0.5">
+                    <span className="text-[14px] font-bold text-[var(--brand-ink)]">Jami to&apos;lov:</span>
+                    <span className="text-[17px] font-black text-[var(--brand-green)]">
+                      {shortSum(orderDone.total)} so&apos;m
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-[12px] leading-relaxed text-[var(--brand-muted)] text-center">
+                  Dorixona buyurtmangizni qabul qilgach sizga aloqaga chiqishi mumkin.
                 </p>
-                <p className="text-[15px] font-black text-[var(--brand-green)]">
-                  Jami: {shortSum(orderDone.total)} so&apos;m
-                </p>
-                <button
-                  onClick={() => {
-                    setOrderDone(null);
-                    setCartOpen(false);
-                  }}
-                  className="ios-btn mt-2 w-full"
-                >
-                  <Check size={17} /> Yaxshi
-                </button>
+
+                {/* Tugmalar */}
+                <div className="space-y-2">
+                  <button
+                    onClick={() => {
+                      const phoneToTrack = orderDone.customerPhone;
+                      setOrderDone(null);
+                      setCartOpen(false);
+                      setTrackPhone(phoneToTrack);
+                      const trackEl = document.getElementById("order-tracking-section");
+                      if (trackEl) {
+                        trackEl.scrollIntoView({ behavior: "smooth" });
+                      }
+                      setTimeout(() => {
+                        fetch(`/api/orders/track?phone=${encodeURIComponent(phoneToTrack)}`)
+                          .then((r) => r.json())
+                          .then((d) => setTrackResult(d.orders ?? []))
+                          .catch(() => {});
+                      }, 400);
+                    }}
+                    className="ios-btn w-full"
+                  >
+                    🔍 Buyurtma holatini kuzatish
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setOrderDone(null);
+                      setCartOpen(false);
+                    }}
+                    className="ios-btn secondary w-full"
+                  >
+                    <Check size={16} /> Yopish
+                  </button>
+                </div>
               </div>
             ) : cartState === null || cartState.lines.length === 0 ? (
               <div className="flex flex-col items-center gap-3 py-8 text-center">
@@ -727,9 +913,27 @@ export default function MarketClient() {
               </div>
             ) : (
               <>
-                <p className="mt-2 text-[18px] font-black text-[var(--brand-ink)]">
-                  Savat · {cartState.pharmacy.name}
-                </p>
+                <div className="mt-2 flex items-start justify-between">
+                  <div>
+                    <p className="text-[18px] font-black text-[var(--brand-ink)]">
+                      Savat · {cartState.pharmacy.name}
+                    </p>
+                    {cartState.pharmacy.address && (
+                      <p className="flex items-center gap-1 text-[11.5px] text-[var(--brand-muted)]">
+                        <MapPin size={11} className="shrink-0" />
+                        <span className="line-clamp-1">{cartState.pharmacy.address}</span>
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setCartOpen(false)}
+                    aria-label="Yopish"
+                    className="p-1 text-[var(--brand-muted)]"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
                 <ul className="mt-3 space-y-2">
                   {cartState.lines.map((l) => (
                     <li key={l.medicine.id} className="flex items-center gap-2 rounded-2xl bg-[var(--brand-bg)] p-2.5">
@@ -793,22 +997,23 @@ export default function MarketClient() {
                   Jami: <span className="text-[var(--brand-green)]">{shortSum(cartTotal)} so&apos;m</span>
                 </p>
 
-                <div className="mt-3 space-y-2.5">
+                <div className="mt-3 space-y-3">
                   <div>
                     <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-[var(--brand-muted)]">
-                      Ismingiz
+                      Ismingiz <span className="text-red-500">*</span>
                     </label>
                     <input
                       value={cartName}
                       onChange={(e) => setCartName(e.target.value)}
-                      placeholder="Ism"
+                      placeholder="Ismingizni kiriting"
                       maxLength={120}
                       className="ios-input"
                     />
                   </div>
+
                   <div>
                     <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-[var(--brand-muted)]">
-                      Telefon
+                      Telefon raqamingiz <span className="text-red-500">*</span>
                     </label>
                     <div className="flex items-center rounded-2xl bg-[var(--brand-bg)] pl-3">
                       <span className="pr-1 text-[15px] font-bold text-[var(--brand-muted)]">+998</span>
@@ -821,51 +1026,174 @@ export default function MarketClient() {
                       />
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setCartDelivery("pickup")}
-                      className={`flex-1 rounded-2xl py-2.5 text-[13px] font-bold ${cartDelivery === "pickup" ? "text-white" : "bg-white text-[var(--brand-ink)] shadow-sm"}`}
-                      style={cartDelivery === "pickup" ? { background: "var(--brand-green)" } : undefined}
-                    >
-                      🏪 Olib ketaman
-                    </button>
-                    <button
-                      onClick={() => setCartDelivery("delivery")}
-                      className={`flex-1 rounded-2xl py-2.5 text-[13px] font-bold ${cartDelivery === "delivery" ? "text-white" : "bg-white text-[var(--brand-ink)] shadow-sm"}`}
-                      style={cartDelivery === "delivery" ? { background: "var(--brand-green)" } : undefined}
-                    >
-                      🛵 Yetkazib berish
-                    </button>
+
+                  {/* Qabul qilish usulini tanlash */}
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-bold uppercase tracking-widest text-[var(--brand-muted)]">
+                      Qabul qilish usuli <span className="text-red-500">*</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCartDelivery("pickup")}
+                        className={`relative flex flex-col items-start justify-between rounded-2xl border-2 p-3 text-left transition active:scale-[0.98] ${
+                          cartDelivery === "pickup"
+                            ? "border-[var(--brand-green)] bg-[var(--brand-green-soft)]/50 shadow-xs"
+                            : "border-[var(--brand-sep)] bg-white hover:border-zinc-300"
+                        }`}
+                      >
+                        <div className="flex w-full items-center justify-between">
+                          <span className="text-xl">🏪</span>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+                              cartDelivery === "pickup"
+                                ? "bg-[var(--brand-green)] text-white"
+                                : "bg-emerald-100 text-emerald-800"
+                            }`}
+                          >
+                            Bepul
+                          </span>
+                        </div>
+                        <div className="mt-2">
+                          <p className="text-[13px] font-black text-[var(--brand-ink)]">
+                            O&apos;zim olib ketaman
+                          </p>
+                          <p className="text-[11px] text-[var(--brand-muted)]">
+                            Dorixonadan olish
+                          </p>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setCartDelivery("delivery")}
+                        className={`relative flex flex-col items-start justify-between rounded-2xl border-2 p-3 text-left transition active:scale-[0.98] ${
+                          cartDelivery === "delivery"
+                            ? "border-[var(--brand-green)] bg-[var(--brand-green-soft)]/50 shadow-xs"
+                            : "border-[var(--brand-sep)] bg-white hover:border-zinc-300"
+                        }`}
+                      >
+                        <div className="flex w-full items-center justify-between">
+                          <span className="text-xl">🛵</span>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+                              cartDelivery === "delivery"
+                                ? "bg-[var(--brand-green)] text-white"
+                                : "bg-blue-100 text-blue-800"
+                            }`}
+                          >
+                            Kuryer
+                          </span>
+                        </div>
+                        <div className="mt-2">
+                          <p className="text-[13px] font-black text-[var(--brand-ink)]">
+                            Yetkazib berilsin
+                          </p>
+                          <p className="text-[11px] text-[var(--brand-muted)]">
+                            Manzilga yetkazish
+                          </p>
+                        </div>
+                      </button>
+                    </div>
                   </div>
-                  {cartDelivery === "delivery" && (
-                    <input
-                      value={cartAddress}
-                      onChange={(e) => setCartAddress(e.target.value)}
-                      placeholder="Manzilingiz (qishloq, ko'cha, uy)"
-                      maxLength={300}
-                      className="ios-input"
-                    />
+
+                  {/* Qabul qilish usuliga mos ma'lumotlar bloki */}
+                  {cartDelivery === "pickup" ? (
+                    <div className="space-y-2 rounded-2xl border border-[var(--brand-sep)] bg-[var(--brand-bg)] p-3.5">
+                      <div className="flex items-center gap-1.5 text-[12.5px] font-bold text-[var(--brand-ink)]">
+                        <Store size={15} className="text-[var(--brand-green)] shrink-0" />
+                        <span>Dorixonadan olib ketish manzili:</span>
+                      </div>
+                      <p className="flex items-start gap-1.5 text-[12.5px] font-medium text-[var(--brand-ink)]">
+                        <MapPin size={14} className="mt-0.5 text-[var(--brand-green)] shrink-0" />
+                        <span>{cartState.pharmacy.address || "Dorixona manzili ko'rsatilmagan"}</span>
+                      </p>
+                      {cartState.pharmacy.phone && (
+                        <div className="flex items-center justify-between pt-1 border-t border-[var(--brand-sep)]">
+                          <span className="text-[11.5px] text-[var(--brand-muted)]">Dorixona telefoni:</span>
+                          <a
+                            href={`tel:${cartState.pharmacy.phone.replace(/\s/g, "")}`}
+                            className="inline-flex items-center gap-1 text-[12px] font-bold text-[var(--brand-green)] hover:underline"
+                          >
+                            <Phone size={12} /> +998 {cartState.pharmacy.phone}
+                          </a>
+                        </div>
+                      )}
+                      <p className="text-[11px] leading-relaxed text-[var(--brand-muted)]">
+                        💡 Buyurtma berganingizdan so&apos;ng, dorixona xodimi dorilarni tayyorlab qo&apos;yadi va siz istalgan vaqtda borib olib ketishingiz mumkin.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 rounded-2xl border border-[var(--brand-sep)] bg-[var(--brand-bg)] p-3.5">
+                      <div className="flex items-center justify-between">
+                        <label className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-widest text-[var(--brand-muted)]">
+                          <MapPin size={13} className="text-[var(--brand-green)]" />
+                          Yetkazish manzili <span className="text-red-500">*</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={detectLocationAddress}
+                          disabled={locDetecting}
+                          className="inline-flex items-center gap-1 text-[11.5px] font-bold text-[var(--brand-green)] hover:underline active:scale-95 disabled:opacity-50"
+                        >
+                          {locDetecting ? (
+                            <>
+                              <Loader2 size={12} className="animate-spin" /> Aniqlanmoqda...
+                            </>
+                          ) : (
+                            <>
+                              <Navigation size={12} /> Joylashuvimni aniqlash
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      <textarea
+                        value={cartAddress}
+                        onChange={(e) => setCartAddress(e.target.value)}
+                        placeholder="Viloyat/tuman, qishloq/mahalla, ko'cha, uy raqami yoki mo'ljal..."
+                        rows={2}
+                        maxLength={300}
+                        className="ios-input resize-none bg-white text-[13px]"
+                      />
+                      <div className="flex items-start gap-2 rounded-xl bg-amber-50 p-2.5 text-[11.5px] leading-snug text-amber-900 border border-amber-200/60">
+                        <AlertCircle size={15} className="mt-0.5 shrink-0 text-amber-600" />
+                        <span>
+                          Yetkazib berish narxi va vaqti masofaga qarab dorixona kuryeri tomonidan belgilanadi va siz bilan telefon orqali kelishiladi.
+                        </span>
+                      </div>
+                    </div>
                   )}
-                  <textarea
-                    value={cartNote}
-                    onChange={(e) => setCartNote(e.target.value)}
-                    placeholder="Izoh (ixtiyoriy): masalan, ertalab kerak bo'ladi"
-                    rows={2}
-                    maxLength={300}
-                    className="ios-input resize-none"
-                  />
+
+                  <div>
+                    <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-[var(--brand-muted)]">
+                      Izoh (ixtiyoriy)
+                    </label>
+                    <textarea
+                      value={cartNote}
+                      onChange={(e) => setCartNote(e.target.value)}
+                      placeholder="Qo'shimcha istaklaringiz (masalan, ertalab soat 10 gacha kerak)"
+                      rows={2}
+                      maxLength={300}
+                      className="ios-input resize-none"
+                    />
+                  </div>
                 </div>
 
                 {cartError && (
-                  <p className="mt-2 rounded-xl bg-[var(--brand-red-soft)] p-2.5 text-[12.5px] font-semibold text-[#d7263d]">
+                  <p className="mt-2.5 rounded-xl bg-[var(--brand-red-soft)] p-2.5 text-[12.5px] font-semibold text-[#d7263d]">
                     {cartError}
                   </p>
                 )}
 
                 <button
                   onClick={submitOrder}
-                  disabled={cartBusy || !cartName.trim() || cartPhone.length < 9}
-                  className="ios-btn mt-3 w-full disabled:opacity-50"
+                  disabled={
+                    cartBusy ||
+                    !cartName.trim() ||
+                    cartPhone.replace(/\D/g, "").length < 9 ||
+                    (cartDelivery === "delivery" && !cartAddress.trim())
+                  }
+                  className="ios-btn mt-3.5 w-full disabled:opacity-50"
                 >
                   <ShoppingCart size={17} />
                   {cartBusy ? "Yuborilmoqda..." : "Buyurtma berish"}

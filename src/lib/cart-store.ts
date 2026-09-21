@@ -18,6 +18,7 @@ export type CartStorePharmacy = {
   /** Dorixona nomi (organization yoki shaxsiy ism). */
   name: string;
   phone: string;
+  address?: string | null;
 };
 
 export type CartStoreState = {
@@ -42,6 +43,7 @@ export function loadCart(): CartStoreState {
       id: Number(parsed.pharmacy.id),
       name: String(parsed.pharmacy.name ?? "").slice(0, 200),
       phone: String(parsed.pharmacy.phone ?? "").slice(0, 32),
+      address: parsed.pharmacy.address ? String(parsed.pharmacy.address).slice(0, 300) : null,
     };
     if (!Number.isSafeInteger(pharmacy.id) || pharmacy.id <= 0) return null;
     const lines = parsed.lines

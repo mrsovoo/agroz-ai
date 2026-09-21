@@ -21,11 +21,13 @@ export const GET = withApiErrors(async (req: Request) => {
 
   const place = await reverseGeocode(lat, lng);
 
-  // Faqat birinchi 2-3 qismni ko'rsatamiz ("Toshkent sh., Mirzo Ulug'bek").
+  const isFull = url.searchParams.get("full") === "1";
+  // Agar full=1 bo'lsa to'liq manzil, aks holda dastlabki 2 qism ("Toshkent sh., Mirzo Ulug'bek").
   const short = place ? place.split(",").slice(0, 2).join(",").trim() : null;
+  const address = isFull ? place : short;
 
   return NextResponse.json(
-    { ok: Boolean(short), place: short },
+    { ok: Boolean(address), place: address },
     { headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=7200" } },
   );
 });
