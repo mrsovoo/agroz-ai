@@ -562,6 +562,8 @@ export default function MarketClient() {
                 name: c.pharmacy.organization ?? c.pharmacy.name,
                 phone: c.pharmacy.phone,
                 address: c.pharmacy.address,
+                ratingAvg: c.pharmacy.ratingAvg,
+                ratingCount: c.pharmacy.ratingCount,
               }}
             />
           ))}

@@ -38,6 +38,12 @@ export default async function FeaturedMedicines() {
         pharmacyName: specialists.name,
         pharmacyPhone: specialists.phone,
         pharmacyAddress: specialists.address,
+        ratingAvg: sql<number | null>`(
+          select avg(r.stars)::float from specialist_ratings r where r.specialist_id = ${specialists.id}
+        )`,
+        ratingCount: sql<number>`(
+          select count(*)::int from specialist_ratings r where r.specialist_id = ${specialists.id}
+        )`,
       })
       .from(specialistMedicines)
       .innerJoin(specialists, eq(specialists.id, specialistMedicines.specialistId))
@@ -55,6 +61,8 @@ export default async function FeaturedMedicines() {
       pharmacyName: r.pharmacyOrg ?? r.pharmacyName,
       pharmacyPhone: r.pharmacyPhone,
       pharmacyAddress: r.pharmacyAddress,
+      ratingAvg: r.ratingAvg,
+      ratingCount: r.ratingCount,
     }));
   } catch {
     // Baza bo'sh yoki ulanmagan — blok umuman ko'rinmaydi.
@@ -93,6 +101,8 @@ export default async function FeaturedMedicines() {
               name: m.pharmacyName,
               phone: m.pharmacyPhone,
               address: m.pharmacyAddress,
+              ratingAvg: m.ratingAvg,
+              ratingCount: m.ratingCount,
             }}
           />
         ))}

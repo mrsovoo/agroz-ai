@@ -110,6 +110,12 @@ export async function getSimilarMedicines(
       pharmacyName: specialists.name,
       pharmacyPhone: specialists.phone,
       pharmacyAddress: specialists.address,
+      ratingAvg: sql<number | null>`(
+        select avg(r.stars)::float from specialist_ratings r where r.specialist_id = ${specialists.id}
+      )`,
+      ratingCount: sql<number>`(
+        select count(*)::int from specialist_ratings r where r.specialist_id = ${specialists.id}
+      )`,
     })
     .from(specialistMedicines)
     .innerJoin(specialists, eq(specialists.id, specialistMedicines.specialistId))
@@ -136,6 +142,8 @@ export async function getSimilarMedicines(
     pharmacyName: r.pharmacyOrg ?? r.pharmacyName,
     pharmacyPhone: r.pharmacyPhone,
     pharmacyAddress: r.pharmacyAddress,
+    ratingAvg: r.ratingAvg,
+    ratingCount: r.ratingCount,
   }));
 }
 
@@ -324,6 +332,8 @@ export default async function MedicineDetail({ medicine }: { medicine: MedicineD
                   name: s.pharmacyName,
                   phone: s.pharmacyPhone,
                   address: s.pharmacyAddress,
+                  ratingAvg: s.ratingAvg,
+                  ratingCount: s.ratingCount,
                 }}
               />
             ))}

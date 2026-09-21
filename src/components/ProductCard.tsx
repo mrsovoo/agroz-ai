@@ -14,7 +14,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, Heart, ShoppingCart } from "lucide-react";
+import { Check, Heart, ShoppingCart, Star, Store } from "lucide-react";
 import FadeImage from "@/components/FadeImage";
 import {
   loadCart,
@@ -29,6 +29,8 @@ import { isFavorite, toggleFavorite, FAV_EVENT } from "@/lib/favorites-store";
 export type ProductCardMedicine = CartStoreMedicine & {
   /** Qo'shimcha: tafsilot sahifasi uchun (ixtiyoriy). */
   usage?: string | null;
+  ratingAvg?: number | null;
+  ratingCount?: number;
 };
 
 export default function ProductCard({
@@ -89,6 +91,9 @@ export default function ProductCard({
     }
     notifyCartChanged();
   }
+
+  const ratingAvg = medicine.ratingAvg ?? pharmacy.ratingAvg ?? null;
+  const ratingCount = medicine.ratingCount ?? pharmacy.ratingCount ?? 0;
 
   const href = linkHref ?? `/dori/${medicine.id}`;
   const badgeBg =
@@ -190,9 +195,9 @@ export default function ProductCard({
         </button>
       </div>
 
-      {/* Pastki qism: nomi, narxi, tavsifi, dorixona, Savatga */}
+      {/* Pastki qism: nomi, reyting, nima uchun ekanligi, narxi, dorixona, Savatga */}
       <div className="flex flex-1 flex-col justify-between p-2.5 sm:p-3">
-        <div>
+        <div className="space-y-1.5">
           {/* Nomi */}
           <Link href={href} className="group/title block">
             <h3
@@ -203,23 +208,34 @@ export default function ProductCard({
             </h3>
           </Link>
 
-          {/* Qo'llanilishi / Kasalliklarga qarshi tavsif */}
-          {medicine.usage ? (
-            <p
-              className="mt-0.5 sm:mt-1 line-clamp-1 text-[10.5px] sm:text-[11px] font-medium text-neutral-500"
-              title={medicine.usage}
-            >
-              💊 {medicine.usage}
-            </p>
-          ) : (
-            <p className="mt-0.5 sm:mt-1 text-[10.5px] sm:text-[11px] font-medium text-emerald-600/90 flex items-center gap-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              Mavjud
-            </p>
-          )}
+          {/* Reyting (yulduzchalar va baholar soni) */}
+          <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-0.5 text-[11px] sm:text-[11.5px] font-black text-amber-500">
+              <Star size={12} className="fill-amber-400 text-amber-400 shrink-0" />
+              <span>{ratingAvg !== null && ratingAvg > 0 ? ratingAvg.toFixed(1) : "5.0"}</span>
+            </div>
+            <span className="text-[10px] sm:text-[10.5px] font-medium text-neutral-400">
+              {ratingCount > 0 ? `(${ratingCount} baho)` : "(yangi)"}
+            </span>
+          </div>
+
+          {/* Nima uchun ekanligi / Qo'llanilishi */}
+          <div className="rounded-lg bg-emerald-50/80 px-2 py-1 border border-emerald-200/50">
+            <div className="flex items-start gap-1">
+              <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-wide text-emerald-800 shrink-0">
+                Qo&apos;llanishi:
+              </span>
+              <p
+                className="line-clamp-2 text-[10.5px] sm:text-[11px] font-medium leading-tight text-emerald-950"
+                title={medicine.usage ?? undefined}
+              >
+                {medicine.usage || (medicine.type === "crop" ? "Ekin kasalliklari va zararkunandalarga qarshi" : medicine.type === "animal" ? "Chorva mollari va parrandalar salomatligi uchun" : "Agro va veterinariya vositasi")}
+              </p>
+            </div>
+          </div>
 
           {/* Narxi */}
-          <div className="mt-1 sm:mt-1.5 flex items-baseline gap-1.5">
+          <div className="pt-0.5 flex items-baseline gap-1.5">
             {medicine.price ? (
               <span className="text-[13.5px] sm:text-[15px] font-black leading-tight text-[var(--brand-green)]">
                 {new Intl.NumberFormat("ru-RU").format(medicine.price).replace(/\u00a0/g, " ")} so&apos;m
@@ -233,10 +249,11 @@ export default function ProductCard({
 
           {/* Dorixona ma'lumoti */}
           <p
-            className="mt-0.5 sm:mt-1 truncate text-[10.5px] sm:text-[11px] font-medium text-neutral-500"
+            className="truncate text-[10.5px] sm:text-[11px] font-medium text-neutral-500 flex items-center gap-1"
             title={pharmacy.name}
           >
-            🏪 {pharmacy.name}
+            <Store size={12} className="shrink-0 text-neutral-400" />
+            <span className="truncate">{pharmacy.name}</span>
           </p>
         </div>
 
@@ -244,7 +261,7 @@ export default function ProductCard({
         <button
           type="button"
           onClick={add}
-          className={`mt-2 sm:mt-2.5 flex h-8 sm:h-9 w-full items-center justify-center gap-1 sm:gap-1.5 rounded-xl text-[11px] sm:text-[12.5px] font-bold transition active:scale-[0.97] ${
+          className={`mt-2.5 flex h-8 sm:h-9 w-full items-center justify-center gap-1 sm:gap-1.5 rounded-xl text-[11px] sm:text-[12.5px] font-bold transition active:scale-[0.97] ${
             qty > 0
               ? "bg-[var(--brand-green-soft)] text-[var(--brand-green)] border border-[var(--brand-green)]/20"
               : "bg-[var(--brand-green)] text-white hover:brightness-105 shadow-xs"

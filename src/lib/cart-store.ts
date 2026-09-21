@@ -19,6 +19,8 @@ export type CartStorePharmacy = {
   name: string;
   phone: string;
   address?: string | null;
+  ratingAvg?: number | null;
+  ratingCount?: number;
 };
 
 export type CartStoreState = {
