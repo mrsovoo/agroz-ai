@@ -51,8 +51,9 @@ router.post("/rate", async (req, res) => {
       return res.status(400).json({ error: "Baho 1 dan 5 gacha bo'lishi kerak" });
     }
 
+    const callId = typeof body.callId === "string" ? body.callId.trim() : null;
     const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress || "anon";
-    const raterKey = crypto.createHash("sha256").update(`${ip}:specialist_rating`).digest("hex").slice(0, 32);
+    const raterKey = callId ? `call:${callId.slice(0, 24)}` : crypto.createHash("sha256").update(`${ip}:specialist_rating`).digest("hex").slice(0, 32);
 
     const result = await rateSpecialist(specialistId, raterKey, stars);
     if (!result) {

@@ -15,8 +15,14 @@ import {
   UserRound,
   Pill,
   Star,
+  Clock,
+  UserCheck,
+  CheckCircle2,
 } from "lucide-react";
 import { RADIUS_OPTIONS } from "@/lib/constants";
+import SpecialistCallModal from "@/components/SpecialistCallModal";
+import SpecialistRatingModal from "@/components/SpecialistRatingModal";
+import { getSpecialistCalls, CALLS_EVENT, type SpecialistCall } from "@/lib/specialist-calls";
 
 type Medicine = { id: number; name: string; status: string; hasPhoto: boolean; price?: number | null };
 
@@ -359,6 +365,22 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
   const [loading, setLoading] = useState(true);
   const [locError, setLocError] = useState<string | null>(null);
 
+  // Mutaxassis chaqirish va xizmatni yakunlab baholash statelari
+  const [calls, setCalls] = useState<SpecialistCall[]>([]);
+  const [callModalSpecialist, setCallModalSpecialist] = useState<Specialist | null>(null);
+  const [ratingModalCall, setRatingModalCall] = useState<SpecialistCall | null>(null);
+
+  useEffect(() => {
+    const sync = () => setCalls(getSpecialistCalls());
+    sync();
+    window.addEventListener(CALLS_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(CALLS_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+
   // Joylashuvni bir marta o'qiymiz — 5 km radius shunga nisbatan hisoblanadi.
   useEffect(() => {
     const fallback = () => {
@@ -434,24 +456,6 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
     window.open(url, "_blank", "noopener");
   }
 
-  async function submitRating(s: Specialist, stars: number) {
-    const res = await fetch("/api/specialists/rate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ specialistId: s.id, stars }),
-    });
-    if (res.ok) {
-      const json = (await res.json()) as { ratingAvg: number; ratingCount: number };
-      setItems((list) =>
-        list.map((x) =>
-          x.id === s.id
-            ? { ...x, ratingAvg: json.ratingAvg, ratingCount: json.ratingCount }
-            : x,
-        ),
-      );
-    }
-  }
-
   return (
     <div className="px-5 pb-6">
       <div className="flex items-start justify-between pt-3">
@@ -516,6 +520,40 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
         </p>
       )}
 
+      {/* Faol chaqiruvlar bannerni ko'rsatish */}
+      {calls.filter((c) => c.status === "pending").length > 0 && (
+        <div className="mt-3 space-y-2">
+          {calls
+            .filter((c) => c.status === "pending")
+            .map((c) => (
+              <div
+                key={c.id}
+                className="flex items-center justify-between rounded-2xl bg-amber-50 p-3.5 border border-amber-200"
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500 text-white">
+                    <Clock size={16} />
+                  </span>
+                  <div>
+                    <p className="text-[13px] font-bold text-amber-950">
+                      Chaqiruv faol: {c.specialistName}
+                    </p>
+                    <p className="text-[11.5px] text-amber-800 font-medium">
+                      Ish yakunlandimi? Baholang va fikringizni qoldiring
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setRatingModalCall(c)}
+                  className="rounded-xl bg-amber-500 px-3 py-2 text-[12px] font-bold text-white shadow-xs hover:bg-amber-600 active:scale-95 transition"
+                >
+                  Yakunlash
+                </button>
+              </div>
+            ))}
+        </div>
+      )}
+
       <Link
         // Faqat "Mutaxassislar" filtri tanlanganda xaritada ham shu tur ochiladi;
         // dorixona egalari xaritada dorixona sifatida ko'rinadi.
@@ -540,6 +578,9 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
           {visible.map((s) => {
             const isPharmacy = s.role === "pharmacy";
             const inRange = !s.locked;
+            const activeCall = calls.find(
+              (c) => c.specialistId === s.id && c.status === "pending",
+            );
             return (
               <li
                 key={s.id}
@@ -684,29 +725,34 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
                   )}
                 </div>
 
-                {/* Reyting berish — bitta ovoz, qayta bossa yangilanadi. */}
-                <div className="mt-2.5 flex items-center justify-between rounded-2xl bg-[var(--brand-bg)] px-3 py-2">
-                  <span className="text-[12px] font-semibold text-[var(--brand-muted)]">
-                    Reytingingizni bering:
-                  </span>
-                  <div className="flex gap-0.5">
-                    {[1, 2, 3, 4, 5].map((n) => (
+                {/* Mutaxassisni chaqirish yoki chaqiruv yakunlanganda baholash */}
+                {!isPharmacy && (
+                  <div className="mt-2.5">
+                    {activeCall ? (
+                      <div className="flex flex-col gap-2 rounded-2xl bg-amber-50 p-3 border border-amber-200">
+                        <div className="flex items-center gap-1.5 text-[12px] font-bold text-amber-800">
+                          <Clock size={13} className="shrink-0" />
+                          <span>Chaqiruv yuborilgan (Jarayonda)</span>
+                        </div>
+                        <button
+                          onClick={() => setRatingModalCall(activeCall)}
+                          className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-amber-500 py-2.5 text-[13px] font-extrabold text-white shadow-xs hover:bg-amber-600 active:scale-95 transition"
+                        >
+                          <CheckCircle2 size={15} />
+                          <span>Ishni yakunlash va baholash</span>
+                        </button>
+                      </div>
+                    ) : (
                       <button
-                        key={n}
-                        onClick={() => submitRating(s, n)}
-                        aria-label={`${n} yulduz`}
-                        className="p-0.5 text-[#d1d1d6] transition hover:scale-110 hover:text-[#fcbd00] active:scale-95"
+                        onClick={() => setCallModalSpecialist(s)}
+                        className="flex w-full items-center justify-center gap-1.5 rounded-2xl bg-[var(--brand-ink)] py-3 text-[13.5px] font-bold text-white shadow-xs hover:bg-neutral-800 active:scale-95 transition"
                       >
-                        <Star
-                          size={16}
-                          fill={
-                            s.ratingAvg && Math.round(s.ratingAvg) >= n ? "currentColor" : "none"
-                          }
-                        />
+                        <UserCheck size={16} />
+                        <span>Mutaxassisni chaqirish</span>
                       </button>
-                    ))}
+                    )}
                   </div>
-                </div>
+                )}
               </li>
             );
           })}
@@ -737,6 +783,34 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
           )}
         </ul>
       )}
+      {/* Mutaxassisni chaqirish modali */}
+      <SpecialistCallModal
+        specialist={callModalSpecialist}
+        isOpen={!!callModalSpecialist}
+        onClose={() => setCallModalSpecialist(null)}
+        onSuccess={() => {
+          setCalls(getSpecialistCalls());
+        }}
+      />
+
+      {/* Xizmatni yakunlash va baholash modali */}
+      <SpecialistRatingModal
+        call={ratingModalCall}
+        isOpen={!!ratingModalCall}
+        onClose={() => setRatingModalCall(null)}
+        onSuccess={(avg, count) => {
+          setCalls(getSpecialistCalls());
+          if (typeof avg === "number" && ratingModalCall) {
+            setItems((list) =>
+              list.map((x) =>
+                x.id === ratingModalCall.specialistId
+                  ? { ...x, ratingAvg: avg, ratingCount: count ?? x.ratingCount + 1 }
+                  : x,
+              ),
+            );
+          }
+        }}
+      />
     </div>
   );
 }
