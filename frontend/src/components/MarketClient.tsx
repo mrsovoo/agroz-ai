@@ -40,7 +40,7 @@ import {
   X,
 } from "lucide-react";
 import CartButton from "@/components/CartButton";
-import { RADIUS_OPTIONS } from "@/lib/constants";
+import { RADIUS_OPTIONS, AUTH_BOT_URL } from "@/lib/constants";
 import FadeImage from "@/components/FadeImage";
 import {
   loadCart,
@@ -543,19 +543,75 @@ export default function MarketClient() {
           <Loader2 className="animate-spin text-[var(--brand-green)]" size={28} />
         </div>
       ) : cards.length === 0 ? (
-        <div className="ios-card mt-4 px-5 py-7 text-center">
+        <div className="mt-4 rounded-3xl bg-white p-6 sm:p-8 text-center border border-black/5 shadow-xs">
           <span
-            className="mx-auto flex h-14 w-14 items-center justify-center rounded-full"
+            className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl"
             style={{ background: "var(--brand-green-soft)", color: "var(--brand-green)" }}
           >
-            <Store size={26} />
+            <Store size={32} />
           </span>
-          <p className="mt-3 text-[16px] font-black text-[var(--brand-ink)]">
-            {query ? `«${query}» bo'yicha dori topilmadi` : "Bu bo'limda hozircha dori yo'q"}
-          </p>
-          <p className="mt-1.5 text-[13.5px] leading-relaxed text-[var(--brand-muted)]">
-            Radiusni kattalashtirib ko&apos;ring, boshqa bo&apos;limga o&apos;ting yoki qidiruvni tozalang.
-          </p>
+
+          {query ? (
+            <>
+              <p className="mt-3.5 text-[17px] font-bold text-[var(--brand-ink)]">
+                «{query}» bo&apos;yicha dori topilmadi
+              </p>
+              <p className="mt-1.5 text-[13.5px] leading-relaxed text-[var(--brand-muted)] max-w-md mx-auto">
+                Qidiruv so&apos;zini tekshirib ko&apos;ring, boshqa bo&apos;limga o&apos;ting yoki qidiruvni tozalang.
+              </p>
+              <button
+                onClick={() => setQuery("")}
+                className="mt-4 inline-flex items-center gap-2 rounded-xl bg-neutral-900 px-5 py-2.5 text-[13px] font-bold text-white hover:bg-neutral-800 active:scale-95 transition"
+              >
+                <X size={15} /> Qidiruvni tozalash
+              </button>
+            </>
+          ) : (
+            <div className="mt-3 max-w-lg mx-auto">
+              <p className="text-[18px] font-bold text-[var(--brand-ink)]">
+                Ushbu bo&apos;limda hozircha dorilar mavjud emas
+              </p>
+              <p className="mt-2 text-[13.5px] leading-relaxed text-neutral-600">
+                Yaqin atrofingizdagi agro-dorixonalar hali o&apos;z preparatlarini kiritmagan yoki ro&apos;yxatdan o&apos;tish jarayonida.
+              </p>
+
+              {/* Dorixona egalari uchun maxsus chaqiruv bloki */}
+              <div className="mt-6 rounded-2xl bg-emerald-50/70 p-5 text-left border border-emerald-200/80">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-green)] text-white">
+                    <Sparkles size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-[15px] font-bold text-emerald-950">
+                      Siz agro-dorixona egasimisiz?
+                    </h3>
+                    <p className="mt-1 text-[13px] leading-relaxed text-emerald-900/90">
+                      O&apos;z dorixonangiz va dorilaringizni Agroz platformasiga qo&apos;shing. Hududingizdagi minglab dehqonlar sizdan buyurtma qilishadi!
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                  <a
+                    href={AUTH_BOT_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-green)] px-5 py-3 text-center text-[13.5px] font-bold text-white shadow-xs hover:brightness-105 active:scale-95 transition"
+                  >
+                    <span>Dorixonani ro&apos;yxatdan o&apos;tkazish</span>
+                  </a>
+                  <a
+                    href={AUTH_BOT_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-300 bg-white px-4 py-3 text-center text-[12.5px] font-semibold text-emerald-900 hover:bg-emerald-50/50 active:scale-95 transition"
+                  >
+                    <span>Ro&apos;yxatdan o&apos;tganmisiz? Botga kirish</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="mt-4 grid grid-cols-2 gap-2.5 sm:gap-3.5 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 web:grid-cols-4 web:gap-4.5">

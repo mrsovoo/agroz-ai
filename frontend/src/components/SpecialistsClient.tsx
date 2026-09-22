@@ -18,8 +18,9 @@ import {
   Clock,
   UserCheck,
   CheckCircle2,
+  Sparkles,
 } from "lucide-react";
-import { RADIUS_OPTIONS } from "@/lib/constants";
+import { RADIUS_OPTIONS, AUTH_BOT_URL } from "@/lib/constants";
 import SpecialistCallModal from "@/components/SpecialistCallModal";
 import SpecialistRatingModal from "@/components/SpecialistRatingModal";
 import { getSpecialistCalls, CALLS_EVENT, type SpecialistCall } from "@/lib/specialist-calls";
@@ -565,6 +566,70 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
       {loading ? (
         <div className="flex justify-center py-14">
           <Loader2 className="animate-spin text-[var(--brand-green)]" size={28} />
+        </div>
+      ) : visible.length === 0 ? (
+        <div className="mt-4 rounded-3xl bg-white p-6 sm:p-8 text-center border border-black/5 shadow-xs">
+          <span
+            className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl"
+            style={{ background: "var(--brand-green-soft)", color: "var(--brand-green)" }}
+          >
+            <UserRound size={32} />
+          </span>
+
+          <p className="mt-3.5 text-[18px] font-bold text-[var(--brand-ink)]">
+            {role === "crop"
+              ? "Hozircha yaqin atrofda agronomlar ro'yxatdan o'tmagan"
+              : role === "animal"
+              ? "Hozircha yaqin atrofda veterinarlar ro'yxatdan o'tmagan"
+              : role === "pharmacy"
+              ? "Hozircha yaqin atrofda dorixonalar ro'yxatdan o'tmagan"
+              : "Hozircha bu hududda mutaxassislar ro'yxatdan o'tmagan"}
+          </p>
+          <p className="mt-2 text-[13.5px] leading-relaxed text-neutral-600 max-w-md mx-auto">
+            {role === "crop"
+              ? "Yaqin 5 km radiusda o'simlikshunos agronomlar hali ro'yxatdan o'tmagan yoki hozirda band."
+              : role === "animal"
+              ? "Yaqin 5 km radiusda chorva mollari bo'yicha veterinarlar hali ro'yxatdan o'tmagan."
+              : role === "pharmacy"
+              ? "Yaqin 5 km radiusda agro-dorixonalar topilmadi."
+              : "Yaqin 5 km radiusda faol agronom, veterinar yoki dorixonalar hali ro'yxatdan o'tmagan."}
+          </p>
+
+          {/* Mutaxassis va dorixonalar uchun ro'yxatdan o'tish chaqirig'i */}
+          <div className="mt-6 rounded-2xl bg-emerald-50/70 p-5 text-left border border-emerald-200/80 max-w-lg mx-auto">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-green)] text-white">
+                <Sparkles size={20} />
+              </div>
+              <div>
+                <h3 className="text-[15px] font-bold text-emerald-950">
+                  Siz agronom, veterinar yoki dorixona egasimisiz?
+                </h3>
+                <p className="mt-1 text-[13px] leading-relaxed text-emerald-900/90">
+                  Agroz tarmog&apos;iga qo&apos;shiling! O&apos;z xizmatingizni taqdim eting, buyurtma va chaqiruvlarni qabul qiling hamda dehqonlarga yordam bering.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+              <a
+                href={AUTH_BOT_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-green)] px-5 py-3 text-center text-[13.5px] font-bold text-white shadow-xs hover:brightness-105 active:scale-95 transition"
+              >
+                <span>Ro&apos;yxatdan o&apos;tish (@agroz_auth_bot)</span>
+              </a>
+              <a
+                href={AUTH_BOT_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-300 bg-white px-4 py-3 text-center text-[12.5px] font-semibold text-emerald-900 hover:bg-emerald-50/50 active:scale-95 transition"
+              >
+                <span>Profilga kirish / Boshqarish</span>
+              </a>
+            </div>
+          </div>
         </div>
       ) : (
         <ul className="mt-2 space-y-3 web:grid web:grid-cols-2 web:gap-4 web:space-y-0">

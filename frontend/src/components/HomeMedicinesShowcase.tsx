@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Pill, Search, Sprout, Syringe, Sparkles, Store, Filter } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
+import { AUTH_BOT_URL } from "@/lib/constants";
 
 export type ShowcaseMedicine = {
   id: number;
@@ -392,23 +393,58 @@ export default function HomeMedicinesShowcase({
 
       {/* Bo'sh holat */}
       {filtered.length === 0 && (
-        <div className="flex flex-col items-center justify-center rounded-2xl bg-white p-10 text-center border border-black/5">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-neutral-100 text-neutral-400 mb-2">
-            <Search size={24} />
-          </div>
-          <p className="text-[15px] font-bold text-neutral-800">Dori vositasi topilmadi</p>
-          <p className="text-[13px] text-neutral-500 mt-1">
-            Boshqa nom bilan qidirib ko&apos;ring yoki toifani o&apos;zgartiring
-          </p>
-          <button
-            onClick={() => {
-              setFilter("all");
-              setQuery("");
-            }}
-            className="mt-4 rounded-xl bg-neutral-900 px-4 py-2 text-[12.5px] font-bold text-white hover:bg-neutral-800"
-          >
-            Filtrni tozalash
-          </button>
+        <div className="flex flex-col items-center justify-center rounded-3xl bg-white p-6 sm:p-8 text-center border border-black/5 shadow-xs">
+          {query ? (
+            <>
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-100 text-neutral-400 mb-2">
+                <Search size={22} />
+              </div>
+              <p className="text-[16px] font-bold text-neutral-800">Dori vositasi topilmadi</p>
+              <p className="text-[13px] text-neutral-500 mt-1 max-w-sm">
+                Boshqa nom bilan qidirib ko&apos;ring yoki toifani o&apos;zgartiring
+              </p>
+              <button
+                onClick={() => {
+                  setFilter("all");
+                  setQuery("");
+                }}
+                className="mt-4 rounded-xl bg-neutral-900 px-5 py-2.5 text-[12.5px] font-bold text-white hover:bg-neutral-800 active:scale-95 transition"
+              >
+                Filtrni tozalash
+              </button>
+            </>
+          ) : (
+            <div className="max-w-md">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--brand-green-soft)] text-[var(--brand-green)] mb-3">
+                <Store size={28} />
+              </div>
+              <p className="text-[17px] font-bold text-[var(--brand-ink)]">
+                Dorilar katalogi shakllantirilmoqda
+              </p>
+              <p className="text-[13px] text-neutral-600 mt-1.5 leading-relaxed">
+                Hozircha dorilar ro&apos;yxatdan o&apos;tish jarayonida. Siz agro-dorixona egasimisiz? Dorilaringizni birinchilardan bo&apos;lib qo&apos;shing!
+              </p>
+              <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-2">
+                <a
+                  href={AUTH_BOT_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-green)] px-5 py-2.5 text-[13px] font-bold text-white shadow-xs hover:brightness-105 active:scale-95 transition"
+                >
+                  <Sparkles size={16} />
+                  <span>Dorixonani qo&apos;shish</span>
+                </a>
+                <a
+                  href={AUTH_BOT_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl border border-emerald-300 bg-white px-4 py-2.5 text-[12px] font-semibold text-emerald-900 hover:bg-emerald-50/50 active:scale-95 transition"
+                >
+                  <span>Ro&apos;yxatdan o&apos;tganmisiz? Botga kirish</span>
+                </a>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
