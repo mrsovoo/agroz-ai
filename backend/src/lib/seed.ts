@@ -430,9 +430,17 @@ const NEWS = [
 export async function ensureSeed() {
   if (seeded) return;
   try {
+    // Jadvallar mavjudligini tekshiramiz — migration bajarilmagan bo'lsa skip
     await seedInTransaction();
     seeded = true;
-  } catch (err) {
+  } catch (err: any) {
+    // PostgreSQL "relation does not exist" (42P01) — migration hali bajarilmagan
+    if (err?.cause?.code === "42P01" || err?.code === "42P01") {
+      console.warn(
+        "[seed] Jadvallar hali yaratilmagan (migration bajarilmagan). Seed o'tkazib yuborildi."
+      );
+      return;
+    }
     console.error("[seed] boshlang'ich ma'lumotlarni yozishda xato:", err);
   }
 }
