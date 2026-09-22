@@ -14,7 +14,8 @@
     "db:clear": "node scripts/db-clear.mjs",
     "db:seed": "node scripts/seed-data.mjs",
     "telegram:setup": "node scripts/telegram-setup.mjs",
-    "telegram:poll": "node scripts/telegram-poll.mjs"
+    "telegram:poll": "node scripts/telegram-poll.mjs",
+    "clean": "rm -rf node_modules dist && echo \"Backend cleaned\""
   },
   "dependencies": {
     "@google/genai": "^2.23.0",
