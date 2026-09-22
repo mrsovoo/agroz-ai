@@ -2,29 +2,25 @@ import Link from "next/link";
 import WeatherCard from "@/components/WeatherCard";
 import CompactAlertStrip from "@/components/CompactAlertStrip";
 import NotificationBell from "@/components/NotificationBell";
-import FeaturedMedicines from "@/components/FeaturedMedicines";
-import { getCurrentUser, getUserRecentDiagnoses } from "@/lib/session";
+import CartButton from "@/components/CartButton";
+import HomeMedicinesShowcase from "@/components/HomeMedicinesShowcase";
+import { getCurrentUser } from "@/lib/session";
 import {
-  Sprout,
-  PawPrint,
   MapPin,
   ChevronRight,
-  ArrowRight,
-  Clock,
-  Sparkles,
   ShieldCheck,
   Newspaper,
   UsersRound,
-  Tractor,
-  Wheat,
-  Lock,
+  Send,
+  Pill,
+  Clock,
+  Sparkles,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const user = await getCurrentUser();
-  const recent = user ? await getUserRecentDiagnoses() : [];
 
   return (
     <main className="px-5 pb-6">
@@ -43,24 +39,30 @@ export default async function HomePage() {
               Salom{user?.name ? `, ${user.name.split(" ")[0]}` : ""}
             </h1>
             <p className="mt-1 flex items-center gap-1.5 text-[15px] font-medium text-[var(--brand-muted)] web:text-[17px]">
-              <Sprout size={16} className="text-[var(--brand-green)]" />
-              Ekin va chorva uchun AI yordamchingiz
+              <Pill size={16} className="text-[var(--brand-green)]" />
+              Ekin va chorva dori vositalari platformasi
             </p>
 
             {/* Faqat katta ekranda ko'rinadigan asosiy harakatlar */}
             <div className="hidden web:mt-7 web:flex web:flex-wrap web:gap-3">
               <Link
-                href="/tashxis/crop"
+                href="/dorilar"
                 className="flex items-center gap-2 rounded-xl px-5 py-3.5 text-[15px] font-bold text-white shadow-[0_16px_30px_-18px_rgba(2,142,17,0.9)] transition hover:brightness-105"
                 style={{ background: "var(--brand-green)" }}
               >
-                <Sprout size={18} /> Tashxis boshlash
+                <Pill size={18} /> Barcha dorilar
               </Link>
               <Link
                 href="/xarita"
                 className="flex items-center gap-2 rounded-xl border border-black/10 bg-white px-5 py-3.5 text-[15px] font-bold text-[var(--brand-ink)] transition hover:border-[var(--brand-green)]/40 hover:text-[var(--brand-green)]"
               >
                 <MapPin size={18} /> Yaqin dorixonalar
+              </Link>
+              <Link
+                href="/mutaxassislar"
+                className="flex items-center gap-2 rounded-xl border border-black/10 bg-white px-5 py-3.5 text-[15px] font-bold text-[var(--brand-ink)] transition hover:border-[var(--brand-green)]/40 hover:text-[var(--brand-green)]"
+              >
+                <UsersRound size={18} /> Mutaxassislar
               </Link>
               <Link
                 href="/yangiliklar"
@@ -71,8 +73,9 @@ export default async function HomePage() {
             </div>
           </div>
 
-          {/* Mobil uchun bildirishnomalar va profil/kirish */}
+          {/* Mobil uchun savat, bildirishnomalar va profil/kirish */}
           <div className="mt-1 flex items-center gap-2 web:hidden">
+            <CartButton />
             <NotificationBell />
             <Link
               href={user ? "/profil" : "/kirish"}
@@ -86,153 +89,81 @@ export default async function HomePage() {
 
         <div className="mt-5 web:mt-0">
           <WeatherCard />
-          {/* Ixcham ob-havo xavf lentasi — ekranni to'sib qo'ymaydi */}
+          {/* Ixcham ob-havo xavf lentasi */}
           <CompactAlertStrip initialRegion={user?.region ?? "Toshkent"} />
         </div>
       </div>
 
-      <p className="ios-section-title mt-7">Xizmatlar</p>
+      {/* TO'LIQ DORILAR VITRINASI (Ekin va hayvon tashxisi o'rniga to'g'ridan-to'g'ri dori kartochkalari) */}
+      <HomeMedicinesShowcase />
 
-      <div className="space-y-3 web:mt-0 web:grid web:grid-cols-3 web:gap-6 web:space-y-0">
-        <Link href="/tashxis/crop" className="block">
-          <div
-            className="hover-lift flex h-full items-center gap-4 rounded-[28px] p-5 shadow-[0_20px_40px_-24px_rgba(2,142,17,0.5)] transition-transform active:scale-[0.98] web:flex-col web:items-start web:p-7"
-            style={{ background: "linear-gradient(135deg,#ffffff,#f2faec)" }}
-          >
-            <div
-              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[20px] text-white"
-              style={{ background: "var(--brand-green)" }}
-            >
-              <Sprout size={32} strokeWidth={2} />
-            </div>
-            <div className="flex-1 web:mt-1">
-              <p className="text-[20px] font-black text-[var(--brand-ink)]">Ekinlar uchun</p>
-              <p className="text-[14px] text-[var(--brand-muted)]">
-                Rasmga oling, AI tashxis qo&apos;yadi
-              </p>
-            </div>
-            <span
-              className="flex h-9 w-9 items-center justify-center rounded-full text-white"
-              style={{ background: "var(--brand-green)" }}
-            >
-              <ArrowRight size={18} />
-            </span>
-          </div>
-        </Link>
-
-        <Link href="/tashxis/animal" className="block">
-          <div
-            className="hover-lift flex h-full items-center gap-4 rounded-[28px] p-5 shadow-[0_20px_40px_-24px_rgba(252,189,0,0.55)] transition-transform active:scale-[0.98] web:flex-col web:items-start web:p-7"
-            style={{ background: "linear-gradient(135deg,#ffffff,#fff9e6)" }}
-          >
-            <div
-              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[20px] text-[var(--brand-ink)]"
-              style={{ background: "var(--brand-yellow)" }}
-            >
-              <PawPrint size={32} strokeWidth={2} />
-            </div>
-            <div className="flex-1 web:mt-1">
-              <p className="text-[20px] font-black text-[var(--brand-ink)]">Hayvonlar uchun</p>
-              <p className="text-[14px] text-[var(--brand-muted)]">
-                Chorva va parranda kasalliklari
-              </p>
-            </div>
-            <span
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--brand-ink)]"
-              style={{ background: "var(--brand-yellow)" }}
-            >
-              <ArrowRight size={18} />
-            </span>
-          </div>
-        </Link>
-
+      {/* Yaqin atrofdan dori topish va Mutaxassislar */}
+      <div className="mt-7 grid gap-3.5 sm:grid-cols-2 web:mt-9 web:gap-5">
         <Link href="/xarita" className="block">
-          <div className="hover-lift flex h-full items-center gap-4 rounded-[24px] bg-[var(--brand-ink)] p-5 text-white shadow-lg transition-transform active:scale-[0.98] web:flex-col web:items-start web:p-7">
+          <div className="hover-lift flex h-full items-center gap-4 rounded-[24px] bg-[var(--brand-ink)] p-5 text-white shadow-lg transition-transform active:scale-[0.98]">
             <div
-              className="flex h-12 w-12 items-center justify-center rounded-[16px] text-[var(--brand-ink)]"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] text-[var(--brand-ink)]"
               style={{ background: "var(--brand-yellow)" }}
             >
               <MapPin size={24} />
             </div>
-            <div className="flex-1 web:mt-1">
-              <p className="text-[18px] font-black">Yaqin atrofdan dori topish</p>
-              <p className="text-[13px] opacity-80">GPS bo&apos;yicha eng yaqin nuqtalar</p>
+            <div className="flex-1">
+              <p className="text-[17px] font-black">Yaqin dorixonalar xaritasi</p>
+              <p className="text-[13px] opacity-80">GPS bo&apos;yicha eng yaqin dorixonalarni toping</p>
             </div>
-            <ChevronRight size={22} className="web:hidden" />
+            <ChevronRight size={22} />
           </div>
         </Link>
 
-        {/* Tez kunda qo'shiladigan bo'limlar — qulflangan holda ko'rsatiladi */}
-        {[
-          {
-            title: "Mening fermam",
-            desc: "Chorva, yem va xo'jalik hisobi",
-            Icon: Tractor,
-          },
-          {
-            title: "Mening ekinim",
-            desc: "Ekin maydonlari va hosil nazorati",
-            Icon: Wheat,
-          },
-        ].map(({ title, desc, Icon }) => (
-          <div
-            key={title}
-            aria-disabled="true"
-            className="relative cursor-not-allowed select-none"
-          >
-            <div className="flex h-full items-center gap-4 rounded-[28px] border border-dashed border-black/15 bg-white/55 p-5 web:flex-col web:items-start web:p-7">
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[20px] bg-slate-200/80 text-slate-400">
-                <Icon size={30} />
-              </div>
-              <div className="flex-1 web:mt-1">
-                <p className="text-[20px] font-black text-[var(--brand-ink)]/70">{title}</p>
-                <p className="text-[14px] text-[var(--brand-muted)]">{desc}</p>
-              </div>
-              <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-slate-800 px-3 py-1.5 text-[11px] font-bold text-white">
-                <Lock size={12} /> Tez kunda
-              </span>
+        <div className="hover-lift flex flex-col justify-between gap-3 rounded-[24px] border border-black/5 bg-white p-5 shadow-sm">
+          <Link href="/mutaxassislar" className="flex items-center gap-4">
+            <span
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px]"
+              style={{ background: "#dbeafe", color: "#2563eb" }}
+            >
+              <UsersRound size={24} />
+            </span>
+            <div className="flex-1">
+              <p className="text-[17px] font-black text-[var(--brand-ink)]">
+                Mutaxassislar va dorixonalar
+              </p>
+              <p className="text-[13px] text-[var(--brand-muted)]">
+                Agronomlar, veterinar shifokorlar va dorixona egalari
+              </p>
             </div>
+            <ChevronRight size={20} className="shrink-0 text-[var(--brand-muted)]" />
+          </Link>
+
+          <div className="flex items-center justify-between border-t border-black/5 pt-3">
+            <span className="text-[12px] font-medium text-neutral-500">
+              Dorixona yoki mutaxassis bo&apos;lsangiz:
+            </span>
+            <a
+              href="https://t.me/agroz_auth_bot"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-sky-500 px-3 py-1.5 text-[11.5px] font-bold text-white shadow-xs hover:bg-sky-600 active:scale-95 transition"
+            >
+              <Send size={12} />
+              <span>Qo&apos;shilish</span>
+            </a>
           </div>
-        ))}
+        </div>
       </div>
 
-      {/* Agro Bozor — 4 ta dori kartochkasi, to'liq ro'yxat /dorilar sahifasida */}
-      <FeaturedMedicines />
-
-      {/* @agroz_auth_bot orqali ro'yxatdan o'tgan mutaxassislar */}
-      <Link href="/mutaxassislar" className="mt-3 block web:mt-6">
-        <div className="hover-lift flex items-center gap-4 rounded-[24px] border border-black/5 bg-white p-4 shadow-sm transition-transform active:scale-[0.98] web:p-5">
-          <span
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px]"
-            style={{ background: "#dbeafe", color: "#2563eb" }}
-          >
-            <UsersRound size={24} />
-          </span>
-          <div className="flex-1">
-            <p className="text-[16px] font-black text-[var(--brand-ink)]">
-              Mutaxassislar va dorixona egalari
-            </p>
-            <p className="text-[13px] text-[var(--brand-muted)]">
-              5 km ichidagi eng yaqin mutaxassisni toping — ro&apos;yxatdan o&apos;tish @agroz_auth_bot orqali
-            </p>
-          </div>
-          <ChevronRight size={20} className="shrink-0 text-[var(--brand-muted)]" />
-        </div>
-      </Link>
-
-      {/* Katta ekranda qo'shimcha kontekst */}
-      <div className="mt-6 hidden web:grid web:grid-cols-3 web:gap-6">
-        <div className="web-hero-note ios-card flex items-center gap-4 p-5">
+      {/* Katta ekranda qo'shimcha ishonch belgilari */}
+      <div className="mt-8 hidden web:grid web:grid-cols-3 web:gap-6">
+        <div className="ios-card flex items-center gap-4 p-5">
           <span
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px]"
             style={{ background: "var(--brand-green-soft)", color: "var(--brand-green)" }}
           >
-            <Sparkles size={20} />
+            <ShieldCheck size={20} />
           </span>
           <div>
-            <p className="text-[15px] font-bold text-[var(--brand-ink)]">AI tashxis</p>
-            <p className="text-[13.5px] leading-snug text-[var(--brand-muted)]">
-              Rasm, matn yoki ovoz bilan — 10 soniyada javob
+            <p className="text-[15px] font-bold text-[var(--brand-ink)]">Tasdiqlangan dorilar</p>
+            <p className="text-[13px] leading-snug text-[var(--brand-muted)]">
+              Faqat O&apos;zbekiston bozoridagi sertifikatlangan preparatlar
             </p>
           </div>
         </div>
@@ -242,12 +173,12 @@ export default async function HomePage() {
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px]"
             style={{ background: "var(--brand-yellow-soft)", color: "var(--brand-ink)" }}
           >
-            <ShieldCheck size={20} />
+            <Sparkles size={20} />
           </span>
           <div>
-            <p className="text-[15px] font-bold text-[var(--brand-ink)]">Tasdiqlangan dorilar</p>
-            <p className="text-[13.5px] leading-snug text-[var(--brand-muted)]">
-              Faqat O&apos;zbekiston bozoridagi preparatlar
+            <p className="text-[15px] font-bold text-[var(--brand-ink)]">To&apos;g&apos;ridan-to&apos;g'ri buyurtma</p>
+            <p className="text-[13px] leading-snug text-[var(--brand-muted)]">
+              Dorixonalar bilan vositachisiz to&apos;g'ridan-to'g'ri aloqa
             </p>
           </div>
         </div>
@@ -260,50 +191,13 @@ export default async function HomePage() {
             <Clock size={20} />
           </span>
           <div>
-            <p className="text-[15px] font-bold text-[var(--brand-ink)]">24/7 ishlaydi</p>
-            <p className="text-[13.5px] leading-snug text-[var(--brand-muted)]">
-              Telegram botda va saytda bir xil imkoniyat
+            <p className="text-[15px] font-bold text-[var(--brand-ink)]">Tezkor yetkazish</p>
+            <p className="text-[13px] leading-snug text-[var(--brand-muted)]">
+              Dorixonadan olib ketish yoki manzilingizga kuryer orqali
             </p>
           </div>
         </div>
       </div>
-
-      {recent.length > 0 && (
-        <>
-          <p className="ios-section-title mt-7">Oxirgi tashxislar</p>
-          <ul className="ios-card divide-y divide-[var(--brand-sep)] web:grid web:grid-cols-2 web:divide-y-0">
-            {recent.map((d) => (
-              <li key={d.id} className="web:border-b web:border-[var(--brand-sep)]">
-                <Link
-                  href={`/natija/${d.id}`}
-                  className="flex items-center gap-3 px-4 py-4 transition-colors active:bg-black/5 web:py-5"
-                >
-                  <span
-                    className="flex h-10 w-10 items-center justify-center rounded-full"
-                    style={{
-                      background:
-                        d.category === "crop" ? "var(--brand-green-soft)" : "var(--brand-yellow-soft)",
-                      color: d.category === "crop" ? "var(--brand-green)" : "var(--brand-ink)",
-                    }}
-                  >
-                    {d.category === "crop" ? <Sprout size={19} /> : <PawPrint size={19} />}
-                  </span>
-                  <div className="flex-1">
-                    <p className="text-[16px] font-semibold text-[var(--brand-ink)] line-clamp-1">
-                      {d.diseaseName}
-                    </p>
-                    <p className="flex items-center gap-1 text-[13px] text-[var(--brand-muted)]">
-                      <Clock size={12} />
-                      {new Date(d.createdAt).toLocaleDateString("uz-UZ")}
-                    </p>
-                  </div>
-                  <ChevronRight size={18} className="text-[var(--brand-muted)]" />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
     </main>
   );
 }

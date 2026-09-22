@@ -108,8 +108,13 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const data = (await res.json()) as { error?: string };
+      const data = (await res.json()) as { ok?: boolean; sessionId?: string; error?: string };
       if (!res.ok) throw new Error(data.error ?? "Kirishda xatolik yuz berdi");
+
+      // Session cookie'ni saqlash
+      if (data.sessionId) {
+        document.cookie = `agroai_session=${data.sessionId}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
+      }
 
       router.push("/profil");
       router.refresh();
@@ -130,23 +135,21 @@ export default function LoginPage() {
         body: JSON.stringify({ phone: phoneInput, initData: getTelegram()?.initData }),
       });
       const data = (await res.json()) as {
-        phone?: string;
-        mode?: DeliveryMode;
-        token?: string;
-        deepLink?: string;
+        method?: DeliveryMode;
+        botUsername?: string;
+        startLink?: string;
         chatLink?: string;
         devCode?: string;
-        expiresInMinutes?: number;
         error?: string;
       };
       if (!res.ok) throw new Error(data.error ?? "Xatolik");
-      setPhone(data.phone ?? "");
-      setMode(data.mode ?? "dev");
-      setToken(data.token ?? "");
-      setDeepLink(data.deepLink ?? "");
+      setPhone(`+998${normalize(phoneInput)}`);
+      setMode(data.method ?? "dev");
+      setToken("");
+      setDeepLink(data.startLink ?? "");
       setChatLink(data.chatLink ?? "");
       setDevCode(data.devCode ?? "");
-      setTtlMinutes(data.expiresInMinutes ?? OTP_TTL_MINUTES);
+      setTtlMinutes(OTP_TTL_MINUTES);
       setCode("");
       setStep(2);
     } catch (e) {
@@ -167,8 +170,14 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const data = (await res.json()) as { error?: string };
+      const data = (await res.json()) as { ok?: boolean; sessionId?: string; error?: string };
       if (!res.ok) throw new Error(data.error ?? "Kod noto'g'ri");
+
+      // Session cookie'ni saqlash
+      if (data.sessionId) {
+        document.cookie = `agroai_session=${data.sessionId}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
+      }
+
       router.push("/profil");
       router.refresh();
     } catch (e) {
@@ -352,15 +361,15 @@ export default function LoginPage() {
                     Telegram orqali tasdiqlash
                   </button>
 
-                  <div className="pt-2 text-center">
+                  <div className="pt-2">
                     <a
                       href="https://t.me/agroz_ai_bot"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-600 hover:underline"
+                      className="flex w-full items-center justify-center gap-2 rounded-2xl border border-sky-200 bg-sky-50 py-3 text-[13px] font-bold text-sky-700 hover:bg-sky-100 active:scale-[0.98] transition"
                     >
-                      <Sparkles size={13} />
-                      @agroz_ai_bot Telegram botimizni ochish
+                      <Send size={15} />
+                      <span>Telegram botimizni ochish</span>
                     </a>
                   </div>
                 </div>

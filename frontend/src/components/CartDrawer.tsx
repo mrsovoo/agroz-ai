@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import {
   X,
   Plus,
@@ -11,7 +12,6 @@ import {
   Loader2,
   Store,
   MapPin,
-  Phone,
   Pill,
   Sprout,
   Syringe,
@@ -22,9 +22,12 @@ import {
   notifyCartChanged,
   CART_EVENT,
   OPEN_CART_EVENT,
+  CLOSE_CART_EVENT,
+  TOGGLE_CART_EVENT,
   type CartStoreState,
 } from "@/lib/cart-store";
 import FadeImage from "@/components/FadeImage";
+import { onTelegramReady } from "@/lib/telegram";
 
 function shortSum(value: number): string {
   return new Intl.NumberFormat("ru-RU").format(value).replace(/\u00a0/g, " ");
@@ -37,6 +40,7 @@ function TypeIcon({ type, size = 18 }: { type: string; size?: number }) {
 }
 
 export default function CartDrawer() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [cart, setCart] = useState<CartStoreState>(null);
 
@@ -49,6 +53,15 @@ export default function CartDrawer() {
   const [error, setError] = useState<string | null>(null);
   const [successOrder, setSuccessOrder] = useState<{ id: number; total: number } | null>(null);
 
+  const close = useCallback(() => {
+    setOpen(false);
+  }, []);
+
+  // Har safar foydalanuvchi boshqa sahifaga (mutaxassis, dorilar, profil va h.k.) o'tsa savat yopiladi
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
   useEffect(() => {
     const sync = () => setCart(loadCart());
     sync();
@@ -60,16 +73,47 @@ export default function CartDrawer() {
       setSuccessOrder(null);
     };
 
+    const handleClose = () => setOpen(false);
+    const handleToggle = () => setOpen((prev) => !prev);
+
     window.addEventListener(CART_EVENT, sync);
     window.addEventListener(OPEN_CART_EVENT, handleOpen);
+    window.addEventListener(CLOSE_CART_EVENT, handleClose);
+    window.addEventListener(TOGGLE_CART_EVENT, handleToggle);
     window.addEventListener("storage", sync);
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
 
     return () => {
       window.removeEventListener(CART_EVENT, sync);
       window.removeEventListener(OPEN_CART_EVENT, handleOpen);
+      window.removeEventListener(CLOSE_CART_EVENT, handleClose);
+      window.removeEventListener(TOGGLE_CART_EVENT, handleToggle);
       window.removeEventListener("storage", sync);
+      window.removeEventListener("keydown", onKeyDown);
     };
   }, []);
+
+  // Telegram Mini App orqaga qaytish tugmasi savat ochiqligida uni yopadi
+  useEffect(() => {
+    if (!open) return;
+    return onTelegramReady((tg) => {
+      const back = tg.BackButton;
+      const handler = () => setOpen(false);
+      back.show();
+      back.onClick(handler);
+      return () => {
+        back.offClick(handler);
+        // Agar bosh sahifada bo'lmasa qayta ko'rsatiladi, aks holda yashiriladi
+        if (pathname === "/") {
+          back.hide();
+        }
+      };
+    });
+  }, [open, pathname]);
 
   function changeQty(medicineId: number, delta: number) {
     if (!cart) return;
@@ -140,7 +184,7 @@ export default function CartDrawer() {
       }
 
       setSuccessOrder({
-        id: Number(data.order?.id ?? 0),
+        id: Number(data.orderId ?? 0),
         total: cartTotal,
       });
 
@@ -159,8 +203,14 @@ export default function CartDrawer() {
   const cartQty = cart?.lines.reduce((s, l) => s + l.qty, 0) ?? 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in">
-      <div className="relative flex h-full w-full max-w-[500px] flex-col bg-white shadow-2xl animate-in slide-in-from-bottom web:slide-in-from-right">
+    <div
+      onClick={close}
+      className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative flex h-full w-full max-w-[500px] flex-col bg-white shadow-2xl animate-in slide-in-from-bottom web:slide-in-from-right"
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-black/5 px-5 py-4">
           <div className="flex items-center gap-2.5">
@@ -189,7 +239,7 @@ export default function CartDrawer() {
               </button>
             )}
             <button
-              onClick={() => setOpen(false)}
+              onClick={close}
               className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 hover:bg-neutral-200 active:scale-95 transition"
               aria-label="Yopish"
             >

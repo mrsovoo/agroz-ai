@@ -42,3 +42,4 @@ export default function NotificationBell({ className = "" }: { className?: strin
     </Link>
   );
 }
+

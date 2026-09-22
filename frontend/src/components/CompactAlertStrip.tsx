@@ -63,3 +63,4 @@ export default function CompactAlertStrip({ initialRegion = "Toshkent" }: { init
     </div>
   );
 }
+

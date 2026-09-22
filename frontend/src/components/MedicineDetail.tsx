@@ -67,7 +67,7 @@ export default async function MedicineDetail({ medicine }: { medicine: MedicineD
         href="/dorilar"
         className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[13px] font-bold text-[var(--brand-ink)] shadow-sm active:scale-95"
       >
-        <ArrowLeft size={15} /> Bozorga qaytish
+        <ArrowLeft size={15} /> Dorilarga qaytish
       </Link>
 
       {/* Mahsulot: chapda rasm, o'ngda ma'lumot (katta ekranda ustma-ust emas) */}

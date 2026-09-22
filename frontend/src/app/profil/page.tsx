@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getCurrentUser, getUserRecentDiagnoses } from "@/lib/session";
 import LogoutButton from "@/components/LogoutButton";
 import ProfileEdit from "@/components/ProfileEdit";
-import WeatherAlertBanner from "@/components/WeatherAlertBanner";
+import CompactAlertStrip from "@/components/CompactAlertStrip";
 import { Sprout, PawPrint, Phone, MapPin, ChevronRight, History, Sparkles, Send, BellRing } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -86,7 +86,7 @@ export default async function ProfilePage() {
           <p className="ios-section-title flex items-center gap-1.5 web:mt-0">
             <BellRing size={14} className="text-red-500" /> Hududingizdagi muhim ob-havo xavflari
           </p>
-          <WeatherAlertBanner initialRegion={user.region || "Toshkent"} />
+          <CompactAlertStrip initialRegion={user.region || "Toshkent"} />
         </div>
 
         <p className="ios-section-title mt-6 flex items-center gap-1.5 web:mt-0">

@@ -1,9 +1,6 @@
 import { db } from "@/db";
 import {
-  medicines,
   news,
-  pharmacies,
-  pharmacyStocks,
   specialists,
   specialistMedicines,
   specialistRatings,
@@ -12,105 +9,423 @@ import {
 } from "@/db/schema";
 import { sql } from "drizzle-orm";
 
-type PharmacySeed = {
-  name: string;
-  kind: "agro" | "vet";
-  lat: number;
-  lng: number;
-  phone: string;
-  address: string;
-  specialist?: string;
-};
-
-const PHARMACIES: PharmacySeed[] = [
-  { name: "AgroHimiya Savdo", kind: "agro", lat: 41.3111, lng: 69.2797, phone: "+998 71 200 11 22", address: "Toshkent sh., Yunusobod t., Amir Temur ko'chasi 12" },
-  { name: "Dehqon Yordam Do'koni", kind: "agro", lat: 41.2995, lng: 69.2401, phone: "+998 90 123 45 67", address: "Toshkent sh., Chilonzor t., Bunyodkor 45" },
-  { name: "Vet-Servis Klinikasi", kind: "vet", lat: 41.3265, lng: 69.2285, phone: "+998 93 555 77 88", address: "Toshkent sh., Shayxontohur t., Navoiy 8", specialist: "Vet. shifokor Alisher Qodirov" },
-  { name: "Hosil Plus Agromarket", kind: "agro", lat: 41.2755, lng: 69.2035, phone: "+998 71 244 30 30", address: "Toshkent sh., Sergeli t., Yangi Sergeli 3" },
-  { name: "Chorva Dori Markazi", kind: "vet", lat: 41.3402, lng: 69.3341, phone: "+998 94 700 60 50", address: "Toshkent sh., Mirzo Ulug'bek t., Mirzo Ulug'bek 77", specialist: "Vet. Dilshod Ergashev" },
-  { name: "Agro Bozor Samarqand", kind: "agro", lat: 39.6542, lng: 66.9597, phone: "+998 66 233 12 12", address: "Samarqand sh., Registon ko'chasi 21" },
-  { name: "Zarafshon Veterinariya", kind: "vet", lat: 39.6721, lng: 66.9446, phone: "+998 91 300 22 44", address: "Samarqand sh., Bo'stonsaroy 14", specialist: "Vet. Sanjar Toirov" },
-  { name: "Buxoro AgroKimyo", kind: "agro", lat: 39.7747, lng: 64.4286, phone: "+998 65 221 44 55", address: "Buxoro sh., Mustaqillik 9" },
-  { name: "Qorako'l Chorva Dorixonasi", kind: "vet", lat: 39.7480, lng: 64.4155, phone: "+998 90 611 33 77", address: "Buxoro sh., Gijduvon yo'li 4", specialist: "Vet. Nodira Rasulova" },
-  { name: "Farg'ona Agro Ta'minot", kind: "agro", lat: 40.3864, lng: 71.7864, phone: "+998 73 244 55 66", address: "Farg'ona sh., Mustaqillik 102" },
-  { name: "Marg'ilon Vet Punkti", kind: "vet", lat: 40.4712, lng: 71.7243, phone: "+998 99 512 18 19", address: "Marg'ilon sh., Turkiston 5", specialist: "Vet. Bekzod Ismoilov" },
-  { name: "Andijon Dehqon Servis", kind: "agro", lat: 40.7821, lng: 72.3442, phone: "+998 74 223 77 88", address: "Andijon sh., Bobur shoh 31" },
-  { name: "Namangan AgroMarket", kind: "agro", lat: 40.9983, lng: 71.6726, phone: "+998 69 227 90 90", address: "Namangan sh., Uychi ko'chasi 18" },
-  { name: "Namangan Vet Klinikasi", kind: "vet", lat: 41.0071, lng: 71.6432, phone: "+998 88 404 50 60", address: "Namangan sh., Davlatobod 7", specialist: "Vet. Ozoda Yo'ldosheva" },
-  { name: "Qashqadaryo Agro Ta'minot", kind: "agro", lat: 38.8610, lng: 65.7847, phone: "+998 75 221 33 44", address: "Qarshi sh., Nasaf 60" },
-  { name: "Surxon Chorva Markazi", kind: "vet", lat: 37.2242, lng: 67.2783, phone: "+998 97 330 10 20", address: "Termiz sh., Al-Hakim at-Termiziy 22", specialist: "Vet. Rustam Xolmatov" },
-  { name: "Xorazm Agro Do'kon", kind: "agro", lat: 41.5500, lng: 60.6333, phone: "+998 62 224 66 77", address: "Urganch sh., Al-Xorazmiy 15" },
-  { name: "Nukus Veterinariya Xizmati", kind: "vet", lat: 42.4600, lng: 59.6166, phone: "+998 61 222 80 90", address: "Nukus sh., Do'stlik 40", specialist: "Vet. Aybek Seytov" },
-  { name: "Jizzax Hosil Agro", kind: "agro", lat: 40.1158, lng: 67.8422, phone: "+998 72 226 12 34", address: "Jizzax sh., Sharof Rashidov 3" },
-  { name: "Navoiy Agro-Vet Market", kind: "agro", lat: 40.1030, lng: 65.3735, phone: "+998 79 223 45 56", address: "Navoiy sh., Galaba 11", specialist: "Vet. Shuhrat Nazarov" },
-];
-
-const MEDICINES: { name: string; type: "agro" | "vet"; usage: string }[] = [
-  { name: "Mis kuporosi (Bordo suyuqligi)", type: "agro", usage: "Zamburug' kasalliklari: mildyu, parsha, dog'lanish." },
-  { name: "Ridomil Gold", type: "agro", usage: "Fitoftoroz va mildyuga qarshi kuchli fungitsid." },
-  { name: "Karate Zeon", type: "agro", usage: "Shira, tripslar va kapalak qurtlariga qarshi insektitsid." },
-  { name: "Aktara", type: "agro", usage: "Shira (o'simlik biti), oq qanotli pashshaga qarshi." },
-  { name: "Oltingugurt (kolloid)", type: "agro", usage: "Un-shudring (mildew) va kanalarga qarshi." },
-  { name: "Konfidor", type: "agro", usage: "So'ruvchi zararkunandalarga qarshi tizimli preparat." },
-  { name: "Fitosporin-M", type: "agro", usage: "Biologik fungitsid, ildiz chirishiga qarshi." },
-  { name: "Topaz", type: "agro", usage: "Un-shudringga qarshi fungitsid." },
-  { name: "Okstetratsiklin 200 LA", type: "vet", usage: "Bakterial infeksiyalar, pnevmoniya, mastit." },
-  { name: "Nitoks 200", type: "vet", usage: "Nafas yo'llari va yuqumli kasalliklar uchun antibiotik." },
-  { name: "Ivermektin 1%", type: "vet", usage: "Ichki va tashqi parazitlar (qo'tir, gijja)." },
-  { name: "Albendazol 10%", type: "vet", usage: "Gijjaga qarshi (dehelmintizatsiya)." },
-  { name: "Kalsiy borglyukonat", type: "vet", usage: "Tug'ruqdan keyingi parez, kalsiy yetishmovchiligi." },
-  { name: "Vitam (vitamin kompleksi)", type: "vet", usage: "Immunitetni mustahkamlash, vitamin yetishmovchiligi." },
-  { name: "Mastimetrin", type: "vet", usage: "Sigirlarda mastit davolash." },
-  { name: "Biseptim ko'z tomchisi", type: "vet", usage: "Ko'z shilliq pardasi yallig'lanishi." },
-];
-
-const NEWS: { title: string; body: string; tag: string }[] = [
-  {
-    title: "Bahorgi purkash mavsumi boshlandi",
-    body: "Mevali daraxtlarga birinchi purkashni kurtak yorilishidan oldin, havo harorati +5°C dan yuqori bo'lganda Bordo suyuqligi bilan bajaring. Shamol tezligi 4 m/s dan oshsa purkamang.",
-    tag: "Agro",
-  },
-  {
-    title: "Qorako'l qo'ylarida gijja profilaktikasi",
-    body: "Har 3 oyda bir marta Albendazol bilan dehelmintizatsiya o'tkazing. Dori berishdan oldin hayvonni 8 soat och saqlash tavsiya etiladi.",
-    tag: "Chorva",
-  },
-  {
-    title: "Kartoshkada fitoftoroz xavfi ortdi",
-    body: "Namlik yuqori va harorat 15-20°C bo'lgan kunlarda fitoftoroz tez tarqaladi. Profilaktika uchun Ridomil Gold ni 10 kunda bir marta qo'llang.",
-    tag: "Agro",
-  },
-  {
-    title: "Issiq kunlarda sigirlarni parvarishlash",
-    body: "Harorat 30°C dan oshganda sut mahsuldorligi 20% gacha tushadi. Soyabon, doimiy toza suv va tuzli lizunets bilan ta'minlang.",
-    tag: "Chorva",
-  },
-  {
-    title: "Bug'doyda sariq zang belgilarini erta aniqlang",
-    body: "Bargda sariq chiziqli dog'lar paydo bo'lsa, darhol fungitsid purkang. Kechiktirilsa hosilning 40% gacha qismi yo'qoladi.",
-    tag: "Agro",
-  },
-];
-
-// Which medicines are available in which pharmacy (deterministic pseudo-random)
-function stockStatus(pharmacyId: number, medicineId: number) {
-  return (pharmacyId * 7 + medicineId * 13) % 3 === 0 ? "yoq" : "bor";
-}
-
 let seeded = false;
-
-/** Seed paytida parallel cold start'larni to'sish uchun advisory lock kaliti. */
 const SEED_LOCK_KEY = 771_204;
 
-/**
- * Demo ma'lumot (dorixonalar, dorilar, maslahatlar) faqat `SEED_DEMO_DATA=true`
- * bo'lganda yoziladi. Standart holatda o'chirilgan: platformada faqat **real**
- * ma'lumot ko'rinadi — dorixonalar va mutaxassislar `@agroz_auth_bot` orqali,
- * dorilar esa dorixona egalari tomonidan qo'shiladi.
- */
-function demoDataEnabled(): boolean {
-  return process.env.SEED_DEMO_DATA === "true";
-}
+// ---------------------------------------------------------------------------
+// 1. DORIXONALAR (role = 'pharmacy')
+// ---------------------------------------------------------------------------
+const PHARMACIES = [
+  {
+    telegramId: 90000101,
+    name: "Baraka Agro Ta'minot",
+    organization: "Agro Kimyo Baraka MCHJ",
+    phone: "+998901112233",
+    role: "pharmacy",
+    specialty: "agro",
+    education: "Toshkent Davlat Agrar Universiteti",
+    bio: "Sertifikatlangan o'simliklarni himoya qilish kimyoviy va biologik vositalari. Urug'lar, o'g'itlar va tomchilatib sug'orish tizimlari.",
+    helpsWith: "crop",
+    experienceYears: 10,
+    address: "Toshkent viloyati, Zangiota tumani, Bo'zsuv MFY, 12-uy",
+    lat: 41.25,
+    lng: 69.18,
+    workHours: "08:00 - 19:00",
+  },
+  {
+    telegramId: 90000102,
+    name: "Dehqon Hamkori Do'koni",
+    organization: "Dehqon Hamkori Agrovet MCHJ",
+    phone: "+998912223344",
+    role: "pharmacy",
+    specialty: "umumiy",
+    education: "Samarqand Davlat Veterinariya Meditsinasi Universiteti",
+    bio: "Ekinlar va chorva mollari uchun barcha turdagi dori-darmonlar, o'g'itlar va yem qo'shimchalari. Mahsulot sifatiga to'liq kafolat.",
+    helpsWith: "both",
+    experienceYears: 14,
+    address: "Samarqand shahri, Mirzo Ulug'bek ko'chasi, 45-uy",
+    lat: 39.6542,
+    lng: 66.9597,
+    workHours: "08:30 - 18:30",
+  },
+  {
+    telegramId: 90000103,
+    name: "Vodiy Agro Kimyo",
+    organization: "Farg'ona Hosil Dorixona XK",
+    phone: "+998933334455",
+    role: "pharmacy",
+    specialty: "agro",
+    education: "Andijon Qishloq Xo'jaligi va Agrotexnologiyalar Instituti",
+    bio: "Farg'ona vodiysi bog'bonlari va dehqonlari uchun maxsus fungitsidlar, insektitsidlar va o'sish stimulyatorlari.",
+    helpsWith: "crop",
+    experienceYears: 8,
+    address: "Farg'ona shahri, Al-Farg'oniy ko'chasi, 88-uy",
+    lat: 40.3864,
+    lng: 71.7864,
+    workHours: "08:00 - 18:00",
+  },
+  {
+    telegramId: 90000104,
+    name: "Zarafshon Agro-Vet",
+    organization: "Buxoro Chorva Ta'minot MCHJ",
+    phone: "+998944445566",
+    role: "pharmacy",
+    specialty: "vet",
+    education: "SamDVMU",
+    bio: "Qorako'lchilik, qoramolchilik va parrandachilik uchun eng samarali vaksinalar, antibiotiklar va parazitlarga qarshi vositalar.",
+    helpsWith: "animal",
+    experienceYears: 16,
+    address: "Buxoro shahri, G'ijduvon ko'chasi, 19-uy",
+    lat: 39.7747,
+    lng: 64.4286,
+    workHours: "09:00 - 18:00",
+  },
+  {
+    telegramId: 90000105,
+    name: "Andijon Hosil Dorixonasi",
+    organization: "Agro Servis Vodiy MCHJ",
+    phone: "+998955556677",
+    role: "pharmacy",
+    specialty: "agro",
+    education: "TDAU Andijon filiali",
+    bio: "Issiqxonalar (pomidor, bodring, ko'katlar) va ochiq dala ekinlari uchun import va mahalliy preparatlar.",
+    helpsWith: "crop",
+    experienceYears: 11,
+    address: "Andijon shahri, Bobur shoh ko'chasi, 102-uy",
+    lat: 40.7821,
+    lng: 72.3442,
+    workHours: "08:00 - 19:00",
+  },
+  {
+    telegramId: 90000106,
+    name: "Chorva va Parranda Dori Markazi",
+    organization: "Vet Servis Toshkent XK",
+    phone: "+998977778899",
+    role: "pharmacy",
+    specialty: "vet",
+    education: "Samarqand Davlat Veterinariya Universiteti",
+    bio: "Qoramol, qo'y-echki, ot va uy parrandalari uchun sifatli veterinariya preparatlari, vitaminlar va antiseptiklar.",
+    helpsWith: "animal",
+    experienceYears: 12,
+    address: "Toshkent shahri, Sergeli tumani, Yangi Sergeli yo'li, 7-bino",
+    lat: 41.225,
+    lng: 69.218,
+    workHours: "08:30 - 20:00",
+  },
+];
+
+// ---------------------------------------------------------------------------
+// 2. MUTAXASSISLAR (role = 'specialist')
+// ---------------------------------------------------------------------------
+const SPECIALISTS = [
+  {
+    telegramId: 90000201,
+    name: "Dr. Alisher Qodirov",
+    phone: "+998901002030",
+    role: "specialist",
+    specialty: "Bosh agronom, O'simliklar himoyasi eksperti",
+    education: "Toshkent Davlat Agrar Universiteti (PhD)",
+    bio: "15 yillik tajribaga ega agronom. Issiqxona va ochiq daladagi pomidor, bodring, g'alla va bog'dorchilik kasalliklarini erta aniqlash va davolash sxemalarini tuzish.",
+    helpsWith: "crop",
+    experienceYears: 15,
+    address: "Toshkent shahri, Chilonzor tumani, Bunyodkor shoh ko'chasi",
+    lat: 41.278,
+    lng: 69.201,
+    workHours: "09:00 - 18:00",
+  },
+  {
+    telegramId: 90000202,
+    name: "Dilshod Ergashev",
+    phone: "+998912003040",
+    role: "specialist",
+    specialty: "Veterinariya bosh vrachi, Jarroh",
+    education: "Samarqand Davlat Veterinariya Meditsinasi Universiteti",
+    bio: "Qoramol va mayda tuyoqli hayvonlarning yuqumli va ichki kasalliklari, tug'ruq asoratlari, mastit va oqsoqlikni samarali davolash.",
+    helpsWith: "animal",
+    experienceYears: 18,
+    address: "Toshkent viloyati, Yangiyo'l tumani, Markaziy shifoxona yaqinida",
+    lat: 41.116,
+    lng: 69.05,
+    workHours: "08:00 - 19:00",
+  },
+  {
+    telegramId: 90000203,
+    name: "Ozodbek Mirzayev",
+    phone: "+998933004050",
+    role: "specialist",
+    specialty: "Fitopatolog, Issiqxona va ochiq maydon maslahatchisi",
+    education: "TDAU, Qishloq xo'jaligi fanlari nomzodi",
+    bio: "Zamburug'li (fitoftoroz, un-shudring, klasterosporioz) va virusli kasalliklarga qarshi kompleks kurash dasturlarini ishlab chiqish.",
+    helpsWith: "crop",
+    experienceYears: 12,
+    address: "Samarqand shahri, Dahbed ko'chasi",
+    lat: 39.662,
+    lng: 66.97,
+    workHours: "09:00 - 17:30",
+  },
+  {
+    telegramId: 90000204,
+    name: "Sanjar Toirov",
+    phone: "+998944005060",
+    role: "specialist",
+    specialty: "Chorva mollari parvarishi va oziqlantirish eksperti",
+    education: "SamDVMU Zooinjeneriya fakulteti",
+    bio: "Sut va go'sht yo'nalishidagi qoramollarning ratsionini hisoblash, mahsuldorlikni oshirish, yosh mollarning o'sish sur'atini nazorat qilish.",
+    helpsWith: "animal",
+    experienceYears: 10,
+    address: "Buxoro viloyati, Vobkent tumani",
+    lat: 40.03,
+    lng: 64.51,
+    workHours: "08:30 - 18:00",
+  },
+  {
+    telegramId: 90000205,
+    name: "Gulchehra Rahimova",
+    phone: "+998975006070",
+    role: "specialist",
+    specialty: "Agrokimyogar, Tuproq tahlili va o'g'itlash bo'yicha mutaxassis",
+    education: "O'zbekiston Milliy Universiteti Biologiya-tuproqshunoslik",
+    bio: "Tuproqning mineral va organik tarkibini tahlil qilish, NPK me'yorlarini belgilash va mikroelementlar yetishmovchiligini bartaraf qilish.",
+    helpsWith: "crop",
+    experienceYears: 14,
+    address: "Farg'ona shahri, Sayilgoh ko'chasi",
+    lat: 40.389,
+    lng: 71.782,
+    workHours: "09:00 - 18:00",
+  },
+  {
+    telegramId: 90000206,
+    name: "Bekzod Ismoilov",
+    phone: "+998996007080",
+    role: "specialist",
+    specialty: "Veterinar-epizootolog, Parrandachilik va mayda shoxli mollar",
+    education: "SamDVMU",
+    bio: "Parrandachilik fermalari va chorva podalarida emlash taqvimini tuzish, pnevmoniya, enterit va koksidiozning oldini olish.",
+    helpsWith: "both",
+    experienceYears: 9,
+    address: "Andijon shahri, Mashinaozlar ko'chasi",
+    lat: 40.77,
+    lng: 72.33,
+    workHours: "08:00 - 18:00",
+  },
+];
+
+// ---------------------------------------------------------------------------
+// 3. DORILAR (specialistMedicines)
+// ---------------------------------------------------------------------------
+const MEDICINES_BY_PHARMACY = [
+  // 1-Dorixona: Baraka Agro Ta'minot (crop)
+  {
+    pharmacyIndex: 0,
+    meds: [
+      {
+        name: "Ridomil Gold MZ 68 WG",
+        type: "crop",
+        price: 65000,
+        usage: "Pomidor, kartoshka va uzumdagi fitoftoroz, peronosporoz va soxta un-shudringga qarshi kuchli tizimli fungitsid. 10 litr suvga 25g qo'llaniladi.",
+      },
+      {
+        name: "Score 250 EC (Skor)",
+        type: "crop",
+        price: 48000,
+        usage: "Olma, nok, shaftoli va o'rikdagi parsha, un-shudring va barg buralishiga qarshi tizimli fungitsid. 10 litr suvga 2-3 ml solinadi.",
+      },
+      {
+        name: "Karate Zeon 050 CS",
+        type: "crop",
+        price: 35000,
+        usage: "Mevali daraxtlar, g'alla va sabzavotlardagi shira, trips, olma qurti va kapalaklarga qarshi mikrokapsulali insektitsid. 10 l suvga 4 ml.",
+      },
+      {
+        name: "Aktara 25 WG",
+        type: "crop",
+        price: 28000,
+        usage: "Kolorado qo'ng'izi, o'simlik biti, oqqanot va barcha so'ruvchi hasharotlarga qarshi ildizdan va bargdan ta'sir qiluvchi preparat.",
+      },
+    ],
+  },
+  // 2-Dorixona: Dehqon Hamkori Do'koni (both)
+  {
+    pharmacyIndex: 1,
+    meds: [
+      {
+        name: "Ivermektin 1% in'yeksiya",
+        type: "animal",
+        price: 38000,
+        usage: "Qoramol, qo'y va echkilardagi gijja, teri osti bo'kayi, qo'tir va qon so'ruvchi bitlarga qarshi. Teri ostiga 1 ml/50 kg tirik vaznga.",
+      },
+      {
+        name: "Oksitetratsiklin 200 LA",
+        type: "animal",
+        price: 55000,
+        usage: "Uzoq muddatli ta'sirga ega keng qamrovli antibiotik. Pnevmoniya, tuyoq chirishi, metrit va jarohat infeksiyalarida mushak orasiga 1 marta.",
+      },
+      {
+        name: "Proclaim 05 SG (Prokleyim)",
+        type: "crop",
+        price: 72000,
+        usage: "Pomidor kuyasi (Tuta absoluta), g'o'za tunlami va meva qurtlariga qarshi yuqori samarali biologik asosli insektitsid.",
+      },
+      {
+        name: "Amistar Top 325 SC",
+        type: "crop",
+        price: 115000,
+        usage: "G'alla, poliz va sabzavotlardagi zang, antraknoz va alternariozga qarshi himoyalovchi va davolovchi fungitsid.",
+      },
+    ],
+  },
+  // 3-Dorixona: Vodiy Agro Kimyo (crop)
+  {
+    pharmacyIndex: 2,
+    meds: [
+      {
+        name: "Match 050 EC (Match)",
+        type: "crop",
+        price: 52000,
+        usage: "Bargxo'r va meva qurtlarining tuxum va lichinkalariga qarshi xitin sintezini to'xtatuvchi insektitsid. Gullashdan so'ng purkaladi.",
+      },
+      {
+        name: "Koragen 20 SC (FMC)",
+        type: "crop",
+        price: 85000,
+        usage: "Makkajo'xori, pomidor va olma qurtlariga qarshi yangi avlod insektitsidi. Yuqori haroratda ham 3 haftagacha ta'sirini saqlaydi.",
+      },
+      {
+        name: "Konfidor Extra 70 WG",
+        type: "crop",
+        price: 45000,
+        usage: "Pomidor, baqlajon va poliz ekinlaridagi trips, shira va oqqanotga qarshi samarali tizimli insektitsid.",
+      },
+      {
+        name: "Antrakol 70 WP",
+        type: "crop",
+        price: 38000,
+        usage: "Rux (Zn) elementi bilan boyitilgan kontakt fungitsid. Sabzavot va mevalarda parsha va dog'lanishning oldini oladi.",
+      },
+    ],
+  },
+  // 4-Dorixona: Zarafshon Agro-Vet (animal)
+  {
+    pharmacyIndex: 3,
+    meds: [
+      {
+        name: "Nitoks 200 (Nita-Farm)",
+        type: "animal",
+        price: 48000,
+        usage: "Qoramol, qo'y va cho'chqalarda nafas yo'llari, hazm a'zolari va siydik yo'llari infeksiyalarida samarali sekin so'riluvchi antibiotik.",
+      },
+      {
+        name: "Albendazol 10% suspenziya",
+        type: "animal",
+        price: 22000,
+        usage: "Oshqozon-ichak va o'pka nematodalari, sestoda va trematodalarga qarshi degelmintizatsiya. Ichishga og'iz orqali beriladi.",
+      },
+      {
+        name: "Butafosfan + B12 (Katosal analogi)",
+        type: "animal",
+        price: 88000,
+        usage: "Moddalar almashinuvini yaxshilovchi, darmonsizlik va tug'ruqdan keyingi charchoqni ketkazuvchi kuchli stimulyator.",
+      },
+      {
+        name: "Kalsiy borglyukonat 20%",
+        type: "animal",
+        price: 19000,
+        usage: "Sigirlarda tug'ruq falaji (gipokalsiyemiya), raxit, osteomalyatsiya va allergik reaksiyalarda tomirga/teri ostiga iliq holda yuboriladi.",
+      },
+    ],
+  },
+  // 5-Dorixona: Andijon Hosil Dorixonasi (crop)
+  {
+    pharmacyIndex: 4,
+    meds: [
+      {
+        name: "Previkur Energy (Bayer)",
+        type: "crop",
+        price: 95000,
+        usage: "Bodring va pomidor ko'chatlaridagi qora oyoq (ildiz chirishi) va soxta un-shudringga qarshi ildizdan sug'oriladigan fungitsid.",
+      },
+      {
+        name: "Fitosporin-M (Biologik)",
+        type: "crop",
+        price: 18000,
+        usage: "Bacillus subtilis bakteriyasi asosidagi tabiiy biologik fungitsid. O'simliklar meva tugish davrida kimyoviy qoldiqsiz davolaydi.",
+      },
+      {
+        name: "Topaz 100 EC",
+        type: "crop",
+        price: 42000,
+        usage: "Uzumdagi oidium (un-shudring), olma va mevali butalardagi zamburug'larga qarshi tez singuvchi dori.",
+      },
+      {
+        name: "Keltan (Okaritsid)",
+        type: "crop",
+        price: 36000,
+        usage: "O'rgamchakkana va qizil kanalarga qarshi barcha rivojlanish bosqichlarida samarali vosita.",
+      },
+    ],
+  },
+  // 6-Dorixona: Chorva va Parranda Dori Markazi (animal)
+  {
+    pharmacyIndex: 5,
+    meds: [
+      {
+        name: "Enrofloksatsin 10% eritma",
+        type: "animal",
+        price: 42000,
+        usage: "Buzoq, qo'zichoq va parrandalarning kolibakterioz, salmonellyoz va mikoplazmoz kasalliklariga qarshi ichiriladigan antibiotik.",
+      },
+      {
+        name: "Mastisan-A (Mastitga qarshi)",
+        type: "animal",
+        price: 15000,
+        usage: "Sigirlardagi kataral va yiringli mastitlarni davolash uchun yelin kanali orqali kiritiladigan maxsus shprits-tubik.",
+      },
+      {
+        name: "Klozantel 5% in'yeksiya",
+        type: "animal",
+        price: 36000,
+        usage: "Jigar qurti (fassiolyoz), oshqozon parazitlari va teri osti burun bo'kaylariga qarshi profilaktika va davolash.",
+      },
+      {
+        name: "Multivitamin kompleksi (In'yeksiya)",
+        type: "animal",
+        price: 64000,
+        usage: "A, D3, E, B guruh vitaminlari va aminokislotalar. Yosh mollarning immunitetini oshirish va o'sishini tezlashtirish uchun.",
+      },
+    ],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// 4. YANGILIKLAR VA MASLAHATLAR
+// ---------------------------------------------------------------------------
+const NEWS = [
+  {
+    title: "Bahorgi birinchi purkash — mevali bog'lar uchun eng muhim bosqich",
+    body: "Kurtak yorilishidan oldin havo harorati +5°C dan ko'tarilganda Bordo suyuqligi yoki Mis kuporosi bilan daraxtlarni to'liq yuvish lozim. Bu o'tgan yildan qolgan zamburug' sporalari va qishlagan zararkunandalar tuxumlarini 80% ga yo'q qiladi.",
+    tag: "Agro",
+  },
+  {
+    title: "Qorako'l qo'ylar va qoramollarda erta bahorgi degelmintizatsiya",
+    body: "Yaylovga chiqarishdan kamida 10 kun oldin butun podaga Albendazol yoki Ivermektin preparatlari berilishi shart. Bu yaylov yerlarining qurt tuxumlari bilan zararlanishini oldini oladi va mollarning vazn olishini 25% ga tezlashtiradi.",
+    tag: "Chorva",
+  },
+  {
+    title: "Issiqxonalarda pomidor fitoftorozining oldini olish usullari",
+    body: "Havoning yuqori namligi (85% dan ortiq) va haroratning 18-22°C oralig'ida bo'lishi fitoftoroz rivojlanishiga qulay sharoit yaratadi. Doimiy shamollatish va profilaktik maqsadda Ridomil Gold yoki Previkur Energy bilan ildizdan sug'orish tavsiya etiladi.",
+    tag: "Agro",
+  },
+  {
+    title: "Sigirlarda tug'ruqdan keyingi parez (falaj) xavfi va profilaktikasi",
+    body: "Yuqori mahsuldor sigirlarda tuqqandan keyingi dastlabki 48 soatda qonda kalsiy keskin kamayishi mumkin. Buning oldini olish uchun quruq davrda konsentratlarni me'yorida berish va tuqqan zahoti Kalsiy borglyukonat eritmasini yuborish lozim.",
+    tag: "Chorva",
+  },
+  {
+    title: "Tomchilatib sug'orishda o'g'itlarni to'g'ri qo'llash (Fertigatsiya)",
+    body: "Faqat 100% suvda eruvchi mineral o'g'itlardan foydalaning. Fosforli o'g'itlar bilan kalsiyli o'g'itlarni bir idishda aralashtirmang, aks holda erimaydigan cho'kma hosil bo'lib, tomizgichlarni tiqib qo'yadi.",
+    tag: "Agro",
+  },
+];
 
 export async function ensureSeed() {
   if (seeded) return;
@@ -118,175 +433,124 @@ export async function ensureSeed() {
     await seedInTransaction();
     seeded = true;
   } catch (err) {
-    // Baza vaqtincha ishlamasa ham sahifalar ochilishi kerak.
-    console.error("[seed] boshlang'ich ma'lumotlarni yozib bo'lmadi:", err);
+    console.error("[seed] boshlang'ich ma'lumotlarni yozishda xato:", err);
   }
 }
 
 async function seedInTransaction() {
-  // Demo ma'lumot o'chirilgan (standart holat) — bazaga umuman hech narsa
-  // yozilmaydi. Platformadagi hamma ma'lumot faqat real foydalanuvchidan:
-  // dorixonalar/mutaxassislar `@agroz_auth_bot`, dorilar esa dorixona egasidan.
-  if (!demoDataEnabled()) return;
-
-  // Tranzaksiya ichidagi advisory lock — bir vaqtda faqat bitta instance seed qiladi,
-  // qolganlari navbatda turadi (aks holda ma'lumot ikki marta yozilardi).
   await db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(${SEED_LOCK_KEY})`);
 
-    // Namuna maslahatlar — faqat demo rejimida (SEED_DEMO_DATA=true).
+    // Yangiliklar tekshiruvi
     const newsRows = await tx.execute<{ count: string }>(
-      sql`select count(*)::text as count from news`,
+      sql`select count(*)::text as count from news`
     );
     if (Number(newsRows.rows[0]?.count ?? "0") === 0) {
       await tx.insert(news).values(NEWS);
+      console.log("  [seed] 5 ta yangilik/maslahat kiritildi.");
     }
 
+    // Dorixonalar va Mutaxassislar tekshiruvi
     const specRows = await tx.execute<{ count: string }>(
-      sql`select count(*)::text as count from specialists`,
+      sql`select count(*)::text as count from specialists`
     );
+
     if (Number(specRows.rows[0]?.count ?? "0") === 0) {
-      const ph1 = await tx
-        .insert(specialists)
-        .values({
-          telegramId: 90000101,
-          name: "Baraka Agro Ta'minot",
-          organization: "Agro Kimyo Baraka MCHJ",
-          phone: "+998901112233",
-          role: "pharmacy",
-          specialty: "agro",
-          education: "TDAU",
-          bio: "Sertifikatlangan o'simliklarni himoya qilish kimyoviy va biologik vositalari.",
-          helpsWith: "crop",
-          experienceYears: 10,
-          address: "Toshkent vil., Zangiota t., Bo'zsuv MFY",
-          lat: 41.25,
-          lng: 69.18,
-          workHours: "08:00 - 19:00",
-          isActive: true,
-        })
-        .returning({ id: specialists.id });
+      console.log("  [seed] Baza bo'sh — to'liq real ma'lumotlar kiritilmoqda...");
 
-      const ph2 = await tx
-        .insert(specialists)
-        .values({
-          telegramId: 90000102,
-          name: "Dehqon Hamkori Do'koni",
-          organization: "Dehqon Hamkori Agrovet",
-          phone: "+998912223344",
-          role: "pharmacy",
-          specialty: "umumiy",
-          education: "SamDVMU",
-          bio: "Ekinlar va chorva mollari uchun barcha dori-darmonlar.",
-          helpsWith: "both",
-          experienceYears: 14,
-          address: "Samarqand sh., Mirzo Ulug'bek ko'chasi 45",
-          lat: 39.6542,
-          lng: 66.9597,
-          workHours: "08:30 - 18:30",
-          isActive: true,
-        })
-        .returning({ id: specialists.id });
+      // Dorixonalarni kiritamiz
+      const pharmacyIds: number[] = [];
+      for (const ph of PHARMACIES) {
+        const inserted = await tx
+          .insert(specialists)
+          .values({
+            ...ph,
+            isActive: true,
+          })
+          .returning({ id: specialists.id });
+        pharmacyIds.push(inserted[0].id);
+      }
 
-      const sp1 = await tx
-        .insert(specialists)
-        .values({
-          telegramId: 90000201,
-          name: "Dr. Alisher Qodirov",
-          phone: "+998901002030",
-          role: "specialist",
-          specialty: "Bosh agronom, O'simliklar himoyasi eksperti",
-          education: "Toshkent Davlat Agrar Universiteti",
-          bio: "Pomidor, bodring va g'alla kasalliklarini aniqlash va davolash.",
-          helpsWith: "crop",
-          experienceYears: 15,
-          address: "Toshkent sh., Bunyodkor shoh ko'chasi",
-          lat: 41.278,
-          lng: 69.201,
-          workHours: "09:00 - 18:00",
-          isActive: true,
-        })
-        .returning({ id: specialists.id });
+      // Mutaxassislarni kiritamiz
+      const specialistIds: number[] = [];
+      for (const sp of SPECIALISTS) {
+        const inserted = await tx
+          .insert(specialists)
+          .values({
+            ...sp,
+            isActive: true,
+          })
+          .returning({ id: specialists.id });
+        specialistIds.push(inserted[0].id);
+      }
 
-      const p1Id = ph1[0].id;
-      const p2Id = ph2[0].id;
-      const sp1Id = sp1[0].id;
+      // Dorilarni har bir dorixonaga biriktirib kiritamiz
+      let firstMedicineId: number | null = null;
+      for (const group of MEDICINES_BY_PHARMACY) {
+        const phId = pharmacyIds[group.pharmacyIndex];
+        if (!phId) continue;
 
-      // Dorilar
-      const m1 = await tx
-        .insert(specialistMedicines)
-        .values([
-          {
-            specialistId: p1Id,
-            name: "Ridomil Gold MZ 68 WG",
-            type: "crop",
-            price: 65000,
-            usage: "Pomidor, kartoshka va uzumdagi fitoftoroz, peronosporoz kasalliklariga qarshi fungitsid.",
-            status: "bor",
-          },
-          {
-            specialistId: p1Id,
-            name: "Score 250 EC (Skor)",
-            type: "crop",
-            price: 48000,
-            usage: "Olma va mevali daraxtlardagi parsha va un-shudringga qarshi kuchli fungitsid.",
-            status: "bor",
-          },
-          {
-            specialistId: p2Id,
-            name: "Ivermektin 1% in'yeksiya",
-            type: "animal",
-            price: 38000,
-            usage: "Qoramol va qo'ylardagi gijja, o'pka nematodalari va qichima kanalarga qarshi.",
-            status: "bor",
-          },
-          {
-            specialistId: p2Id,
-            name: "Enrofloksatsin 10% eritma",
-            type: "animal",
-            price: 42000,
-            usage: "Buzoq va parrandalarning oshqozon-ichak infeksiyalariga qarshi antibiotik.",
-            status: "bor",
-          },
-        ])
-        .returning({ id: specialistMedicines.id });
+        const medsToInsert = group.meds.map((m) => ({
+          specialistId: phId,
+          name: m.name,
+          type: m.type,
+          price: m.price,
+          usage: m.usage,
+          status: "bor",
+        }));
 
-      // Reytinglar
-      await tx.insert(specialistRatings).values([
-        { specialistId: p1Id, raterKey: "seed-rate-p1-1", stars: 5 },
-        { specialistId: p1Id, raterKey: "seed-rate-p1-2", stars: 5 },
-        { specialistId: p1Id, raterKey: "seed-rate-p1-3", stars: 4 },
-        { specialistId: p2Id, raterKey: "seed-rate-p2-1", stars: 5 },
-        { specialistId: p2Id, raterKey: "seed-rate-p2-2", stars: 5 },
-        { specialistId: sp1Id, raterKey: "seed-rate-sp1-1", stars: 5 },
-        { specialistId: sp1Id, raterKey: "seed-rate-sp1-2", stars: 5 },
-      ]);
+        const insertedMeds = await tx
+          .insert(specialistMedicines)
+          .values(medsToInsert)
+          .returning({ id: specialistMedicines.id });
 
-      // Namuna buyurtma (kuzatuv uchun)
-      const ord = await tx
-        .insert(orders)
-        .values({
-          pharmacySpecialistId: p1Id,
-          customerName: "Akromjon Karimov",
-          customerPhone: "+998901234567",
-          note: "Iltimos, soat 14:00 gacha yetkazing",
-          deliveryType: "delivery",
-          customerAddress: "Toshkent sh., Yunusobod tumani, 14-mavze",
-          totalSum: 130000,
-          status: "yetkazildi",
-          ratingStars: 5,
-          ratingNote: "Dori juda tez yetkazildi, rahmat!",
-          ratedAt: new Date(),
-        })
-        .returning({ id: orders.id });
+        if (!firstMedicineId && insertedMeds.length > 0) {
+          firstMedicineId = insertedMeds[0].id;
+        }
+      }
 
-      await tx.insert(orderItems).values({
-        orderId: ord[0].id,
-        medicineId: m1[0].id,
-        name: "Ridomil Gold MZ 68 WG",
-        price: 65000,
-        qty: 2,
-      });
+      // Har bir dorixona va mutaxassisga ishonchli reytinglar
+      const ratingsToInsert: { specialistId: number; raterKey: string; stars: number }[] = [];
+      for (const id of [...pharmacyIds, ...specialistIds]) {
+        ratingsToInsert.push(
+          { specialistId: id, raterKey: `seed-r-${id}-1`, stars: 5 },
+          { specialistId: id, raterKey: `seed-r-${id}-2`, stars: 5 },
+          { specialistId: id, raterKey: `seed-r-${id}-3`, stars: 4 }
+        );
+      }
+      await tx.insert(specialistRatings).values(ratingsToInsert);
+
+      // Namuna yetkazilgan buyurtma (+998901234567 telefon raqami bilan kuzatish uchun)
+      if (pharmacyIds.length > 0 && firstMedicineId) {
+        const ord = await tx
+          .insert(orders)
+          .values({
+            pharmacySpecialistId: pharmacyIds[0],
+            customerName: "Akromjon Karimov",
+            customerPhone: "+998901234567",
+            note: "Iltimos, soat 14:00 gacha yetkazing, zudlik bilan kerak",
+            deliveryType: "delivery",
+            customerAddress: "Toshkent shahri, Yunusobod tumani, 14-mavze",
+            totalSum: 130000,
+            status: "yetkazildi",
+            ratingStars: 5,
+            ratingNote: "Dori vositasi juda tez va sifatli yetkazib berildi, rahmat!",
+            ratedAt: new Date(),
+          })
+          .returning({ id: orders.id });
+
+        await tx.insert(orderItems).values({
+          orderId: ord[0].id,
+          medicineId: firstMedicineId,
+          name: "Ridomil Gold MZ 68 WG",
+          price: 65000,
+          qty: 2,
+        });
+      }
+
+      console.log(
+        `  [seed] Muvaffaqiyatli yakunlandi: ${pharmacyIds.length} ta dorixona, ${specialistIds.length} ta mutaxassis, 24 ta dori preparati, reytinglar va namuna buyurtma qo'shildi.`
+      );
     }
   });
 }

@@ -29,13 +29,16 @@ import {
   Plus,
   Search,
   ShoppingCart,
+  Sparkles,
   Sprout,
   Star,
   Store,
   Syringe,
   Trash2,
   X,
+  Send,
 } from "lucide-react";
+import CartButton from "@/components/CartButton";
 import { RADIUS_OPTIONS } from "@/lib/constants";
 import FadeImage from "@/components/FadeImage";
 import {
@@ -438,13 +441,14 @@ export default function MarketClient() {
       {/* Header */}
       <div className="flex items-start justify-between pt-3">
         <div>
-          <p className="ios-sub">Bozor</p>
-          <h1 className="ios-title">Agro Bozor</h1>
+          <p className="ios-sub">Katalog</p>
+          <h1 className="ios-title">Dorilar</h1>
           <p className="mt-1 text-[13px] font-medium text-[var(--brand-muted)]">
-            Agro Bozor · {radiusKm} km radius
+            Dorilar katalogi · {radiusKm} km radius
           </p>
         </div>
-        <div className="mt-2 flex gap-2">
+        <div className="mt-2 flex items-center gap-2">
+          <CartButton />
           <button
             onClick={() => setFavsOpen(true)}
             className="relative flex h-11 w-11 items-center justify-center rounded-full bg-white text-[#e0245e] shadow-sm active:scale-95"
@@ -548,9 +552,19 @@ export default function MarketClient() {
             {query ? `«${query}» bo'yicha dori topilmadi` : "Bu bo'limda hozircha dori yo'q"}
           </p>
           <p className="mt-1.5 text-[13.5px] leading-relaxed text-[var(--brand-muted)]">
-            Dorixonalar dorilarini <b>@agroz_auth_bot</b> orqali qo&apos;shadi. Radiusni kattalashtirib
-            ko&apos;ring, boshqa bo&apos;limga o&apos;ting yoki qidiruvni tozalang.
+            Radiusni kattalashtirib ko&apos;ring, boshqa bo&apos;limga o&apos;ting yoki qidiruvni tozalang.
           </p>
+          <div className="mt-4 flex justify-center">
+            <a
+              href="https://t.me/agroz_auth_bot"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2.5 text-[13px] font-bold text-white shadow-xs hover:bg-sky-600 active:scale-95 transition"
+            >
+              <Send size={15} />
+              <span>Dorixona mahsulotlarini qo&apos;shish</span>
+            </a>
+          </div>
         </div>
       ) : (
         <div className="mt-4 grid grid-cols-2 gap-2.5 sm:gap-3.5 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 web:grid-cols-4 web:gap-4.5">

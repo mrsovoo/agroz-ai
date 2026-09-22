@@ -15,8 +15,9 @@ import {
   UserRound,
   Pill,
   Star,
+  Send,
 } from "lucide-react";
-import { AUTH_BOT_URL, AUTH_BOT_USERNAME, RADIUS_OPTIONS } from "@/lib/constants";
+import { AUTH_BOT_URL, RADIUS_OPTIONS } from "@/lib/constants";
 
 type Medicine = { id: number; name: string; status: string; hasPhoto: boolean; price?: number | null };
 
@@ -460,10 +461,10 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
                 href={AUTH_BOT_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-4 inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3 text-[14px] font-bold text-white"
-                style={{ background: "var(--brand-green)" }}
+                className="mt-4 inline-flex items-center justify-center gap-2 rounded-2xl bg-sky-500 px-6 py-3 text-[14px] font-bold text-white shadow-xs hover:bg-sky-600 active:scale-95 transition"
               >
-                <Phone size={15} /> @{AUTH_BOT_USERNAME} orqali ro&apos;yxatdan o&apos;tish
+                <Send size={16} />
+                <span>Mutaxassis sifatida ro&apos;yxatdan o&apos;tish</span>
               </a>
               <button
                 onClick={refreshLocation}

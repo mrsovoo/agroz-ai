@@ -87,10 +87,23 @@ export function notifyCartChanged(): void {
   window.dispatchEvent(new Event(CART_EVENT));
 }
 
-/** Global savat oynasini ochish uchun hodisa. */
+/** Global savat oynasini ochish, yopish va almashtirish hodisalari. */
 export const OPEN_CART_EVENT = "agroz:open-cart";
+export const CLOSE_CART_EVENT = "agroz:close-cart";
+export const TOGGLE_CART_EVENT = "agroz:toggle-cart";
 
 export function openCart(): void {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(OPEN_CART_EVENT));
 }
+
+export function closeCart(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(CLOSE_CART_EVENT));
+}
+
+export function toggleCart(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(TOGGLE_CART_EVENT));
+}
+

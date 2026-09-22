@@ -68,5 +68,24 @@ router.post("/", async (req, res) => {
   }
 });
 
-export default router;
+// DELETE /api/profile — foydalanuvchi profilini o'chirish
+router.delete("/", async (req, res) => {
+  try {
+    const user = await getUserFromReq(req);
+    if (!user) {
+      return res.status(401).json({ error: "Avval tizimga kiring" });
+    }
 
+    // Barcha sessionlarni o'chirish
+    await db.delete(sessions).where(eq(sessions.userId, user.id));
+
+    // Foydalanuvchini o'chirish
+    await db.delete(users).where(eq(users.id, user.id));
+
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
+
+export default router;
