@@ -1,0 +1,586 @@
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+/*
+ * `web:` varianti — faqat katta ekranda va Telegram bo'lmaganda ishlaydi
+ * (html.is-web klassi layout skripti tomonidan birinchi kadrda qo'yiladi).
+ * Misol: `px-4 web:px-8`, `grid web:grid-cols-3`
+ */
+@custom-variant web {
+  @media (min-width: 900px) {
+    &:where(html.is-web *) {
+      @slot;
+    }
+  }
+}
+
+:root {
+  --brand-yellow: #fcbd00;
+  --brand-ink: #323232;
+  --brand-green-light: #76b44d;
+  --brand-green: #028e11;
+  --brand-bg: #f2f3f5;
+  --brand-card: #ffffff;
+  --brand-muted: #8a8a8e;
+  --brand-sep: #e6e6ea;
+  --brand-green-soft: #eaf5e1;
+  --brand-yellow-soft: #fff5d0;
+  --brand-red-soft: #ffe4e4;
+}
+
+html,
+body {
+  overscroll-behavior-y: none;
+  background: #e5e6ea;
+  color: var(--brand-ink);
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Display",
+    "SF Pro Text",
+    "Helvetica Neue",
+    Segoe UI,
+    Roboto,
+    Arial,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.01em;
+}
+
+body {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.web-top-nav,
+.web-footer {
+  display: none;
+}
+
+.app-shell {
+  max-width: 520px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  background: var(--brand-bg);
+  position: relative;
+  padding-bottom: 88px;
+  padding-top: max(8px, env(safe-area-inset-top));
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.08);
+}
+
+/* iOS-style large title */
+.ios-title {
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--brand-ink);
+  line-height: 1.1;
+}
+.ios-sub {
+  color: var(--brand-muted);
+  font-size: 15px;
+}
+
+/* Cards */
+.ios-card {
+  background: var(--brand-card);
+  border-radius: 24px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px -12px rgba(0, 0, 0, 0.08);
+}
+
+.ios-group {
+  background: var(--brand-card);
+  border-radius: 20px;
+  overflow: hidden;
+}
+.ios-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--brand-sep);
+}
+.ios-row:last-child {
+  border-bottom: 0;
+}
+
+.ios-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 13px;
+  background: #f0f1f4;
+  color: var(--brand-ink);
+}
+.ios-pill.active {
+  background: var(--brand-green);
+  color: #fff;
+}
+.ios-pill.yellow.active {
+  background: var(--brand-yellow);
+  color: var(--brand-ink);
+}
+
+.ios-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  border-radius: 18px;
+  padding: 16px 18px;
+  font-weight: 700;
+  font-size: 16px;
+  background: var(--brand-green);
+  color: #fff;
+  box-shadow: 0 6px 16px -6px rgba(2, 142, 17, 0.5);
+  transition: transform 0.08s ease;
+}
+.ios-btn:active {
+  transform: scale(0.98);
+}
+.ios-btn.secondary {
+  background: #fff;
+  color: var(--brand-ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+.ios-btn.yellow {
+  background: var(--brand-yellow);
+  color: var(--brand-ink);
+  box-shadow: 0 6px 16px -6px rgba(252, 189, 0, 0.7);
+}
+.ios-btn.ink {
+  background: var(--brand-ink);
+  color: #fff;
+}
+.ios-btn.danger {
+  background: #fff;
+  color: #d7263d;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+.ios-btn:disabled {
+  opacity: 0.5;
+}
+
+.ios-input {
+  width: 100%;
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px 18px;
+  font-size: 17px;
+  color: var(--brand-ink);
+  border: 1px solid transparent;
+  outline: none;
+}
+.ios-input:focus {
+  border-color: var(--brand-green-light);
+  box-shadow: 0 0 0 4px rgba(118, 180, 77, 0.18);
+}
+
+.ios-status-bar {
+  height: 44px;
+}
+
+/* Yuklanish skeleti (loading.tsx) — kuchsiz qurilmalarda ham yengil */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: #e3e4e8;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+  animation: skeleton-sweep 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-sweep {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation: none;
+  }
+}
+
+.ios-section-title {
+  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--brand-muted);
+  padding: 0 4px 8px;
+}
+
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  z-index: 0;
+  background: #e5e9ee;
+}
+
+.leaflet-control-attribution {
+  font-size: 10px;
+}
+
+@keyframes map-ping {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.7;
+  }
+  80%,
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+.my-location-dot {
+  position: relative;
+  width: 22px;
+  height: 22px;
+}
+.my-location-dot .core {
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: #2997ff;
+  border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+.my-location-dot .pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(41, 151, 255, 0.35);
+  animation: map-ping 2.2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.leaflet-div-icon {
+  background: transparent;
+  border: 0;
+}
+
+.sheet-handle {
+  width: 40px;
+  height: 5px;
+  border-radius: 999px;
+  background: #d1d1d6;
+  margin: 8px auto 14px;
+}
+
+@media (min-width: 900px) and (min-height: 500px) {
+  html.is-web {
+    background:
+      linear-gradient(180deg, rgba(252, 189, 0, 0.12), transparent 340px),
+      #f7f8f3;
+  }
+
+  html.is-web .web-top-nav {
+    display: block;
+    position: sticky;
+    top: 0;
+    z-index: 70;
+    border-bottom: 1px solid rgba(50, 50, 50, 0.08);
+    background: rgba(255, 255, 255, 0.9);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    backdrop-filter: blur(18px) saturate(160%);
+  }
+
+  html.is-web .web-top-nav-inner {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    width: min(1200px, calc(100% - 56px));
+    height: 80px;
+    margin: 0 auto;
+  }
+
+  html.is-web .web-links {
+    flex: 1;
+  }
+
+  html.is-web .web-actions {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+  }
+
+  html.is-web .web-brand,
+  html.is-web .web-links,
+  html.is-web .web-profile-link {
+    display: flex;
+    align-items: center;
+  }
+
+  html.is-web .web-brand {
+    gap: 12px;
+    color: var(--brand-ink);
+  }
+
+  html.is-web .web-brand-mark {
+    display: flex;
+    width: 42px;
+    height: 42px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: var(--brand-green);
+    color: #fff;
+    box-shadow: 0 10px 24px -14px rgba(2, 142, 17, 0.75);
+  }
+
+  html.is-web .web-brand strong,
+  html.is-web .web-brand small {
+    display: block;
+  }
+
+  html.is-web .web-brand strong {
+    font-size: 18px;
+    font-weight: 900;
+    line-height: 1.1;
+  }
+
+  html.is-web .web-brand small {
+    margin-top: 2px;
+    color: var(--brand-muted);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  html.is-web .web-links {
+    gap: 8px;
+  }
+
+  html.is-web .web-links a,
+  html.is-web .web-profile-link {
+    gap: 7px;
+    border-radius: 12px;
+    padding: 10px 13px;
+    color: rgba(50, 50, 50, 0.78);
+    font-size: 14px;
+    font-weight: 800;
+    transition:
+      background 0.15s ease,
+      color 0.15s ease;
+  }
+
+  html.is-web .web-links a:hover,
+  html.is-web .web-profile-link:hover {
+    background: rgba(2, 142, 17, 0.08);
+    color: var(--brand-green);
+  }
+
+  html.is-web .web-profile-link {
+    border: 1px solid rgba(2, 142, 17, 0.16);
+    background: #fff;
+    color: var(--brand-green);
+  }
+
+  html.is-web .mobile-bottom-nav {
+    display: none;
+  }
+
+  html.is-web .app-shell {
+    max-width: none;
+    width: min(1200px, calc(100% - 56px));
+    min-height: calc(100dvh - 80px);
+    margin: 0 auto;
+    padding-top: 36px;
+    padding-bottom: 64px;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  html.is-web main {
+    width: 100%;
+  }
+
+  html.is-web .ios-title {
+    font-size: 46px;
+    letter-spacing: 0;
+  }
+
+  html.is-web .ios-card,
+  html.is-web .ios-group {
+    border: 1px solid rgba(50, 50, 50, 0.08);
+    border-radius: 16px;
+    box-shadow: 0 20px 50px -38px rgba(50, 50, 50, 0.35);
+  }
+
+  html.is-web .ios-btn,
+  html.is-web .ios-input {
+    border-radius: 12px;
+  }
+
+  /* Sahifa layoutlari Tailwind'ning `web:` varianti bilan yoziladi —
+     bu yerda faqat global konteyner va karta uslublari qoladi. */
+  html.is-web main.px-5,
+  html.is-web main.flex {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  html.is-web .leaflet-container {
+    min-height: 100%;
+  }
+
+  /* Interaktiv kartalar uchun yumshoq hover */
+  html.is-web .hover-lift {
+    transition:
+      transform 0.16s ease,
+      box-shadow 0.16s ease;
+  }
+
+  html.is-web .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 26px 60px -42px rgba(2, 142, 17, 0.6);
+  }
+}
+
+@media (min-width: 900px) and (max-width: 1080px) {
+  html.is-web .web-links a {
+    padding-inline: 9px;
+    font-size: 13px;
+  }
+
+  html.is-web .web-top-nav-inner {
+    gap: 18px;
+  }
+}
+
+/* ===========================================================================
+   WEB: nav holatlari, brend matni va footer
+   =========================================================================== */
+@media (min-width: 900px) and (min-height: 500px) {
+  html.is-web .web-brand-text strong,
+  html.is-web .web-brand-text small {
+    display: block;
+  }
+
+  html.is-web .web-brand-text strong {
+    font-size: 19px;
+    font-weight: 900;
+    line-height: 1.1;
+  }
+
+  html.is-web .web-brand-text small {
+    margin-top: 2px;
+    color: var(--brand-muted);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  /* Faol (aktiv) havola */
+  html.is-web .web-links a.is-active,
+  html.is-web .web-links a.is-active:hover {
+    background: var(--brand-green);
+    color: #fff;
+    box-shadow: 0 12px 26px -18px rgba(2, 142, 17, 0.95);
+  }
+
+  /* ---- Footer ---- */
+  html.is-web .web-footer {
+    display: block;
+    margin-top: 24px;
+    border-top: 1px solid rgba(50, 50, 50, 0.08);
+    background: rgba(255, 255, 255, 0.72);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+
+  html.is-web .web-footer-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) repeat(2, minmax(0, 1fr));
+    gap: 40px;
+    width: min(1200px, calc(100% - 56px));
+    margin: 0 auto;
+    padding: 44px 0 32px;
+  }
+
+  html.is-web .web-footer-brand {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+
+  html.is-web .web-footer-brand strong {
+    font-size: 18px;
+    font-weight: 900;
+  }
+
+  html.is-web .web-footer-brand p {
+    margin-top: 6px;
+    max-width: 420px;
+    color: var(--brand-muted);
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  html.is-web .web-footer-col h2 {
+    margin-bottom: 12px;
+    color: var(--brand-muted);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  html.is-web .web-footer-col ul {
+    display: grid;
+    gap: 9px;
+    list-style: none;
+  }
+
+  html.is-web .web-footer-col a {
+    color: var(--brand-ink);
+    font-size: 14.5px;
+    font-weight: 600;
+  }
+
+  html.is-web .web-footer-col a:hover {
+    color: var(--brand-green);
+  }
+
+  html.is-web .web-footer-bottom {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    width: min(1200px, calc(100% - 56px));
+    margin: 0 auto;
+    padding: 18px 0 28px;
+    border-top: 1px solid rgba(50, 50, 50, 0.07);
+    color: var(--brand-muted);
+    font-size: 12.5px;
+  }
+
+  /* Kattaroq ekranda matn o'lchamlari */
+  html.is-web .ios-sub {
+    font-size: 16px;
+  }
+
+  html.is-web .ios-section-title {
+    font-size: 13px;
+  }
+
+  html.is-web .ios-card {
+    transition:
+      transform 0.16s ease,
+      box-shadow 0.16s ease,
+      border-color 0.16s ease;
+  }
+
+  html.is-web a:hover > .ios-card,
+  html.is-web a:hover > .ios-group {
+    border-color: rgba(2, 142, 17, 0.22);
+    box-shadow: 0 26px 60px -42px rgba(2, 142, 17, 0.6);
+    transform: translateY(-2px);
+  }
+}

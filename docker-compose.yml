@@ -1,0 +1,59 @@
+version: "3.8"
+
+services:
+  # 1. PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: agroz-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: agroz
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # 2. Express Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: agroz-backend
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      PORT: 4000
+      NODE_ENV: production
+      DATABASE_URL: postgres://postgres:postgrespassword@postgres:5432/agroz
+      CORS_ORIGIN: "http://localhost:3000,http://127.0.0.1:3000"
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_AUTH_BOT_TOKEN: ${TELEGRAM_AUTH_BOT_TOKEN:-}
+      TELEGRAM_ORDERS_BOT_TOKEN: ${TELEGRAM_ORDERS_BOT_TOKEN:-}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+    ports:
+      - "4000:4000"
+
+  # 3. Next.js Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: agroz-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+      INTERNAL_API_URL: http://backend:4000
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:

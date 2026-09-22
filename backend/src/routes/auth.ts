@@ -1,0 +1,205 @@
+import { Router } from "express";
+import { db } from "../db/index.js";
+import { otpCodes, sessions, users } from "../db/schema.js";
+import { and, eq, lt, or } from "drizzle-orm";
+import { randomBytes, randomInt } from "node:crypto";
+import { normalizePhone } from "../lib/validate.js";
+import { sendOtpSms, smsConfigured } from "../lib/sms.js";
+import {
+  botChatLink,
+  codeMessage,
+  getBotUsername,
+  isBotConfigured,
+  miniAppKeyboard,
+  sendMessage,
+  startLink,
+} from "../lib/telegram-bot.js";
+import { verifyInitData } from "../lib/tg-auth.js";
+import { BOT_OTP_TTL_MINUTES, OTP_LENGTH, OTP_TTL_MINUTES } from "../lib/constants.js";
+import { telegramBotToken } from "../lib/settings.js";
+
+const router = Router();
+
+function devOtpEnabled(): boolean {
+  return process.env.NODE_ENV !== "production" || process.env.OTP_DEV_MODE === "true";
+}
+
+async function telegramIdFromInitData(initData: unknown): Promise<number | null> {
+  if (typeof initData !== "string" || !initData) return null;
+  const botToken = await telegramBotToken();
+  if (!botToken || !verifyInitData(initData, botToken)) return null;
+  const raw = new URLSearchParams(initData).get("user");
+  if (!raw) return null;
+  try {
+    const id = Number((JSON.parse(raw) as { id?: number }).id);
+    return Number.isSafeInteger(id) && id > 0 ? id : null;
+  } catch {
+    return null;
+  }
+}
+
+// POST /api/auth/request-code
+router.post("/request-code", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const phone = normalizePhone(body.phone ?? "");
+    if (!phone) {
+      return res.status(400).json({ error: "Telefon raqami noto'g'ri (namuna: +998 90 123 45 67)" });
+    }
+
+    const min = 10 ** (OTP_LENGTH - 1);
+    const max = 10 ** OTP_LENGTH - 1;
+    const code = String(randomInt(min, max + 1));
+    const token = randomBytes(24).toString("hex");
+
+    const directTelegramId = await telegramIdFromInitData(body.initData);
+    const useBot = !directTelegramId && (await isBotConfigured());
+    const ttlMinutes = useBot ? BOT_OTP_TTL_MINUTES : OTP_TTL_MINUTES;
+    const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
+
+    await db
+      .delete(otpCodes)
+      .where(and(eq(otpCodes.phone, phone), or(eq(otpCodes.used, true), lt(otpCodes.expiresAt, new Date()))));
+
+    await db.insert(otpCodes).values({
+      phone,
+      code,
+      token,
+      telegramId: directTelegramId,
+      expiresAt,
+    });
+
+    if (directTelegramId) {
+      await sendMessage(directTelegramId, codeMessage(code, phone, OTP_TTL_MINUTES), {
+        keyboard: miniAppKeyboard(),
+      });
+      const botUser = await getBotUsername();
+      return res.json({
+        ok: true,
+        method: "telegram_direct",
+        chatLink: botChatLink(botUser),
+      });
+    }
+
+    if (useBot) {
+      const link = await startLink(token);
+      return res.json({
+        ok: true,
+        method: "telegram_bot",
+        botUsername: await getBotUsername(),
+        startLink: link,
+      });
+    }
+
+    if (await smsConfigured()) {
+      const ok = await sendOtpSms(phone, code);
+      if (ok) {
+        return res.json({ ok: true, method: "sms" });
+      }
+    }
+
+    if (devOtpEnabled()) {
+      return res.json({ ok: true, method: "dev", devCode: code });
+    }
+
+    res.status(503).json({ error: "SMS xizmati vaqtincha mavjud emas" });
+  } catch (err: any) {
+    console.error("[request-code error]:", err);
+    res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
+
+// POST /api/auth/verify
+router.post("/verify", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const phone = normalizePhone(body.phone ?? "");
+    const code = typeof body.code === "string" ? body.code.trim() : "";
+
+    if (!phone || !code) {
+      return res.status(400).json({ error: "Telefon va kod kiritilishi shart" });
+    }
+
+    const rows = await db
+      .select()
+      .from(otpCodes)
+      .where(and(eq(otpCodes.phone, phone), eq(otpCodes.used, false)))
+      .orderBy(otpCodes.id);
+
+    const match = rows.reverse().find((r) => r.code === code && r.expiresAt > new Date());
+    if (!match) {
+      return res.status(400).json({ error: "Kod noto'g'ri yoki muddati o'tgan" });
+    }
+
+    await db.update(otpCodes).set({ used: true }).where(eq(otpCodes.id, match.id));
+
+    let user = (await db.select().from(users).where(eq(users.phone, phone)).limit(1))[0];
+    if (!user) {
+      const created = await db
+        .insert(users)
+        .values({ phone, name: body.name || null, region: body.region || null })
+        .returning();
+      user = created[0];
+    }
+
+    const sessionId = randomBytes(32).toString("hex");
+    await db.insert(sessions).values({ id: sessionId, userId: user.id });
+
+    res.json({ ok: true, sessionId, user });
+  } catch (err: any) {
+    console.error("[verify error]:", err);
+    res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
+
+// POST /api/auth/telegram
+router.post("/telegram", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const initData = body.initData;
+    const botToken = await telegramBotToken();
+
+    if (!botToken || !initData || !verifyInitData(initData, botToken)) {
+      return res.status(401).json({ error: "Telegram ma'lumotlari haqiqiy emas" });
+    }
+
+    const params = new URLSearchParams(initData);
+    const tgUser = JSON.parse(params.get("user") || "{}");
+    const telegramId = Number(tgUser.id);
+
+    if (!telegramId) {
+      return res.status(400).json({ error: "Telegram ID topilmadi" });
+    }
+
+    let user = (await db.select().from(users).where(eq(users.telegramId, telegramId)).limit(1))[0];
+    if (!user) {
+      const name = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ");
+      const created = await db.insert(users).values({ telegramId, name }).returning();
+      user = created[0];
+    }
+
+    const sessionId = randomBytes(32).toString("hex");
+    await db.insert(sessions).values({ id: sessionId, userId: user.id });
+
+    res.json({ ok: true, sessionId, user });
+  } catch (err: any) {
+    console.error("[auth telegram error]:", err);
+    res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
+
+// POST /api/auth/logout
+router.post("/logout", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const sessionId = authHeader?.replace("Bearer ", "") || req.cookies?.agroz_session;
+    if (sessionId) {
+      await db.delete(sessions).where(eq(sessions.id, sessionId));
+    }
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
+
+export default router;
