@@ -65,6 +65,7 @@ export default function WeatherCard({
   const [w, setW] = useState<Weather | null>(null);
   const [place, setPlace] = useState("Hudud aniqlanmoqda");
   const [region, setRegion] = useState<string | null>(null);
+  const [activeAlert, setActiveAlert] = useState<{ title: string; region: string } | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
@@ -86,6 +87,18 @@ export default function WeatherCard({
           setLoadFailed(true);
         });
 
+      // Ogohlantirishlar mavjudligini tekshirish
+      fetch(`/api/weather/alerts?region=Toshkent&sample=1`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (d?.ok && Array.isArray(d.alerts) && d.alerts.length > 0) {
+            setActiveAlert({ title: d.alerts[0].title, region: d.alerts[0].region });
+          } else {
+            setActiveAlert(null);
+          }
+        })
+        .catch(() => setActiveAlert(null));
+
       if (showRegion && lat !== undefined && lng !== undefined) {
         fetch(`/api/location?lat=${lat}&lng=${lng}`)
           .then((r) => r.json())
@@ -104,8 +117,6 @@ export default function WeatherCard({
           setPlace("Toshkent");
           load();
         },
-        // Kuchsiz qurilmalar uchun: GPS'ni uzoq ushlamaymiz, keshdagi joylashuv
-        // bo'lsa darhol ishlatamiz va ob-havoni ko'rsatishni kechiktirmaymiz.
         { timeout: 8000, maximumAge: 15 * 60 * 1000, enableHighAccuracy: false },
       );
     } else {
@@ -165,13 +176,22 @@ export default function WeatherCard({
           className="mt-4 flex items-start gap-2.5 rounded-[18px] px-4 py-3 text-[14px] font-semibold leading-snug"
           style={{ background: "var(--brand-yellow)", color: "var(--brand-ink)" }}
         >
-          <span className="mt-0.5 shrink-0">{w ? levelIcon[w.level] : null}</span>
+          <span className="mt-0.5 shrink-0">
+            {activeAlert ? <TriangleAlert size={18} strokeWidth={2.4} className="text-red-700" /> : w ? levelIcon[w.level] : null}
+          </span>
           <span>
-            {w
-              ? w.advice
-              : loadFailed
-                ? "Ob-havo hozircha olinmadi — keyinroq qayta urinib ko'ring."
-                : "Ob-havo yuklanmoqda..."}
+            {activeAlert ? (
+              <>
+                <b className="font-extrabold text-red-700 mr-1">⚠️ Diqqat ({activeAlert.region}):</b>
+                {activeAlert.title}
+              </>
+            ) : w ? (
+              w.advice
+            ) : loadFailed ? (
+              "Ob-havo hozircha olinmadi — keyinroq qayta urinib ko'ring."
+            ) : (
+              "Ob-havo yuklanmoqda..."
+            )}
           </span>
         </div>
       </div>

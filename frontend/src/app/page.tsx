@@ -1,6 +1,5 @@
 import Link from "next/link";
 import WeatherCard from "@/components/WeatherCard";
-import CompactAlertStrip from "@/components/CompactAlertStrip";
 import NotificationBell from "@/components/NotificationBell";
 import CartButton from "@/components/CartButton";
 import HomeMedicinesShowcase from "@/components/HomeMedicinesShowcase";
@@ -88,8 +87,6 @@ export default async function HomePage() {
 
         <div className="mt-5 web:mt-0">
           <WeatherCard />
-          {/* Ixcham ob-havo xavf lentasi */}
-          <CompactAlertStrip initialRegion={user?.region ?? "Toshkent"} />
         </div>
       </div>
 
