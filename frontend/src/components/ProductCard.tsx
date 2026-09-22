@@ -259,10 +259,10 @@ export default function ProductCard({
           </div>
         </div>
 
-        {/* Savatga qo'shish yoki - {soni} + hisoblagichi */}
+        {/* Savatga qo'shish yoki - {soni} + hisoblagichi (Dehqonlar uchun qulay va katta tugmalar) */}
         <div className="mt-2.5">
           {qty > 0 ? (
-            <div className="flex h-8 w-full items-center justify-between rounded-xl bg-[var(--brand-green-soft)] border border-[var(--brand-green)]/25 p-0.5 text-[var(--brand-green)]">
+            <div className="flex h-9 sm:h-9.5 w-full items-center justify-between rounded-xl bg-[var(--brand-green-soft)] border border-[var(--brand-green)]/30 p-0.5 text-[var(--brand-green)]">
               <button
                 type="button"
                 onClick={(e) => {
@@ -270,13 +270,13 @@ export default function ProductCard({
                   e.stopPropagation();
                   changeQty(-1);
                 }}
-                className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-[var(--brand-green)] shadow-2xs hover:bg-neutral-50 active:scale-85 transition font-black"
+                className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-[var(--brand-green)] shadow-xs hover:bg-neutral-50 active:scale-90 transition font-black"
                 aria-label="Kamaytirish"
               >
-                <Minus size={13} strokeWidth={3} />
+                <Minus size={15} strokeWidth={3} />
               </button>
 
-              <span className="text-[12.5px] font-black tracking-tight select-none">
+              <span className="text-[13px] font-black tracking-tight select-none">
                 {qty} ta
               </span>
 
@@ -287,10 +287,10 @@ export default function ProductCard({
                   e.stopPropagation();
                   changeQty(1);
                 }}
-                className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--brand-green)] text-white shadow-2xs hover:brightness-105 active:scale-85 transition font-black"
+                className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--brand-green)] text-white shadow-xs hover:brightness-105 active:scale-90 transition font-black"
                 aria-label="Ko'paytirish"
               >
-                <Plus size={13} strokeWidth={3} />
+                <Plus size={15} strokeWidth={3} />
               </button>
             </div>
           ) : (
@@ -301,10 +301,10 @@ export default function ProductCard({
                 e.stopPropagation();
                 add();
               }}
-              className="flex h-8 w-full items-center justify-center gap-1 rounded-xl bg-[var(--brand-green)] text-[12px] font-bold text-white shadow-2xs hover:brightness-105 active:scale-95 transition"
+              className="flex h-9 sm:h-9.5 w-full items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-green)] text-[13px] font-black text-white shadow-xs hover:brightness-105 active:scale-95 transition"
             >
-              <Plus size={14} strokeWidth={2.5} />
-              <span>Savatga</span>
+              <Plus size={16} strokeWidth={2.5} />
+              <span>Savatga solish</span>
             </button>
           )}
         </div>

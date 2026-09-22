@@ -97,42 +97,58 @@ export default async function HomePage() {
       <HomeMedicinesShowcase />
 
       {/* Yaqin atrofdan dori topish va Mutaxassislar */}
-      <div className="mt-7 grid gap-3.5 sm:grid-cols-2 web:mt-9 web:gap-5">
-        <Link href="/xarita" className="block">
-          <div className="hover-lift flex h-full items-center gap-4 rounded-[24px] bg-[var(--brand-ink)] p-5 text-white shadow-lg transition-transform active:scale-[0.98]">
+      {/* Dehqonlar uchun asosiy 3 ta katta qulay bo'lim */}
+      <div className="mt-6 grid gap-3 sm:grid-cols-3 web:mt-8 web:gap-4">
+        {/* 1. Dorilar bozori */}
+        <Link href="/dorilar" className="block group">
+          <div className="flex h-full items-center gap-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-700 p-4 text-white shadow-md transition-all duration-200 group-hover:scale-[1.01] active:scale-[0.98]">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/20 text-white backdrop-blur-xs">
+              <Pill size={24} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[16px] font-black leading-tight">Dorilar bozori</p>
+              <p className="mt-0.5 text-[12px] text-emerald-100 truncate">
+                Ekin va chorva dorilari
+              </p>
+            </div>
+            <ChevronRight size={20} className="shrink-0 text-white/70 group-hover:text-white" />
+          </div>
+        </Link>
+
+        {/* 2. Mutaxassis chaqirish */}
+        <Link href="/mutaxassislar" className="block group">
+          <div className="flex h-full items-center gap-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 p-4 text-white shadow-md transition-all duration-200 group-hover:scale-[1.01] active:scale-[0.98]">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/20 text-white backdrop-blur-xs">
+              <UsersRound size={24} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[16px] font-black leading-tight">Mutaxassis chaqirish</p>
+              <p className="mt-0.5 text-[12px] text-blue-100 truncate">
+                Agronom va veterinarlar
+              </p>
+            </div>
+            <ChevronRight size={20} className="shrink-0 text-white/70 group-hover:text-white" />
+          </div>
+        </Link>
+
+        {/* 3. Yaqin dorixonalar xaritasi */}
+        <Link href="/xarita" className="block group">
+          <div className="flex h-full items-center gap-3.5 rounded-2xl bg-gradient-to-r from-neutral-800 to-neutral-900 p-4 text-white shadow-md transition-all duration-200 group-hover:scale-[1.01] active:scale-[0.98]">
             <div
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] text-[var(--brand-ink)]"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-neutral-900"
               style={{ background: "var(--brand-yellow)" }}
             >
               <MapPin size={24} />
             </div>
-            <div className="flex-1">
-              <p className="text-[17px] font-black">Yaqin dorixonalar xaritasi</p>
-              <p className="text-[13px] opacity-80">GPS bo&apos;yicha eng yaqin dorixonalarni toping</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-[16px] font-black leading-tight">Yaqin dorixonalar</p>
+              <p className="mt-0.5 text-[12px] text-neutral-300 truncate">
+                Xaritadan topish (5 km)
+              </p>
             </div>
-            <ChevronRight size={22} />
+            <ChevronRight size={20} className="shrink-0 text-white/70 group-hover:text-white" />
           </div>
         </Link>
-
-        <div className="hover-lift flex flex-col justify-between gap-3 rounded-[24px] border border-black/5 bg-white p-5 shadow-sm">
-          <Link href="/mutaxassislar" className="flex items-center gap-4">
-            <span
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px]"
-              style={{ background: "#dbeafe", color: "#2563eb" }}
-            >
-              <UsersRound size={24} />
-            </span>
-            <div className="flex-1">
-              <p className="text-[17px] font-black text-[var(--brand-ink)]">
-                Mutaxassislar va dorixonalar
-              </p>
-              <p className="text-[13px] text-[var(--brand-muted)]">
-                Agronomlar, veterinar shifokorlar va dorixona egalari
-              </p>
-            </div>
-            <ChevronRight size={20} className="shrink-0 text-[var(--brand-muted)]" />
-          </Link>
-        </div>
       </div>
 
       {/* Katta ekranda qo'shimcha ishonch belgilari */}

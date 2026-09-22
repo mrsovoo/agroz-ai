@@ -476,15 +476,17 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
         </button>
       </div>
 
-      <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+      <div className="mt-4 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
         {FILTERS.map((f) => {
           const active = role === f.v;
           return (
             <button
               key={f.v}
               onClick={() => setRole(f.v)}
-              className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-bold transition active:scale-95 ${
-                active ? "text-white" : "bg-white text-[var(--brand-ink)] shadow-sm"
+              className={`shrink-0 rounded-2xl px-4 py-2.5 text-[13.5px] font-bold transition-all active:scale-95 ${
+                active
+                  ? "text-white shadow-md shadow-emerald-700/20"
+                  : "bg-white text-[var(--brand-ink)] shadow-xs hover:bg-neutral-50"
               }`}
               style={active ? { background: "var(--brand-green)" } : undefined}
             >

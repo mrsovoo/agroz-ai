@@ -479,33 +479,39 @@ export default function MarketClient() {
         </div>
       </div>
 
-      {/* Qidiruv */}
-      <div className="mt-3 flex items-center gap-2 rounded-2xl bg-white px-3.5 py-2.5 shadow-sm">
-        <Search size={17} className="shrink-0 text-[var(--brand-muted)]" />
+      {/* Qidiruv — dehqonlar uchun qulay va katta maydon */}
+      <div className="mt-3.5 flex items-center gap-2.5 rounded-2xl bg-white px-4 py-3 shadow-xs border border-black/5 focus-within:border-[var(--brand-green)] focus-within:ring-2 focus-within:ring-[var(--brand-green-soft)] transition">
+        <Search size={19} className="shrink-0 text-[var(--brand-muted)]" />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Dori nomi, kasallik yoki dorixona..."
+          placeholder="Dori nomi, zararkunanda yoki dorixona..."
           maxLength={80}
-          className="w-full bg-transparent text-[14px] font-medium text-[var(--brand-ink)] outline-none placeholder:text-[var(--brand-muted)]"
+          className="w-full bg-transparent text-[15px] font-medium text-[var(--brand-ink)] outline-none placeholder:text-[var(--brand-muted)]"
         />
         {query && (
-          <button onClick={() => setQuery("")} aria-label="Tozalash" className="text-[var(--brand-muted)]">
-            <X size={16} />
+          <button
+            onClick={() => setQuery("")}
+            aria-label="Tozalash"
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+          >
+            <X size={15} />
           </button>
         )}
       </div>
 
-      {/* Bo'limlar */}
-      <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+      {/* Bo'limlar — katta va bosishga qulay */}
+      <div className="mt-3 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
         {sectionTabs.map((t) => {
           const active = section === t.v;
           return (
             <button
               key={t.v}
               onClick={() => setSection(t.v)}
-              className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-bold transition active:scale-95 ${
-                active ? "text-white" : "bg-white text-[var(--brand-ink)] shadow-sm"
+              className={`shrink-0 rounded-2xl px-4 py-2.5 text-[13.5px] font-bold transition-all active:scale-95 ${
+                active
+                  ? "text-white shadow-md shadow-emerald-700/20"
+                  : "bg-white text-[var(--brand-ink)] shadow-xs hover:bg-neutral-50"
               }`}
               style={active ? { background: "var(--brand-green)" } : undefined}
             >
