@@ -293,9 +293,7 @@ export default function SuperAdminPage() {
       <div className="flex min-h-screen items-center justify-center p-4 bg-slate-950">
         <div className="w-full max-w-md rounded-3xl bg-slate-900 p-8 border border-slate-800 shadow-2xl">
           <div className="flex justify-center mb-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <ShieldCheck size={36} />
-            </div>
+            <img src="/logo.svg" alt="Agroz AI" className="h-12 w-auto object-contain" />
           </div>
           <h1 className="text-center text-2xl font-black text-white tracking-tight">Super Admin Panel</h1>
           <p className="mt-1 text-center text-xs text-slate-400">admin.agroz.uz — Boshqaruv Markazi</p>
@@ -366,11 +364,9 @@ export default function SuperAdminPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                <ShieldCheck size={22} />
-              </div>
+              <img src="/logo.svg" alt="Agroz AI" className="h-9 w-auto object-contain" />
               <div>
-                <h1 className="text-base font-bold text-white leading-tight">Agroz Super Admin</h1>
+                <h1 className="text-base font-bold text-white leading-tight">Super Admin</h1>
                 <p className="text-[11px] font-medium text-emerald-400">admin.agroz.uz</p>
               </div>
             </div>

@@ -42,16 +42,10 @@ export default function WebTopNav() {
           href="/"
           prefetch={true}
           onClick={() => closeCart()}
-          className="web-brand"
+          className="flex items-center gap-2.5 py-1"
           aria-label="Agroz AI bosh sahifa"
         >
-          <span className="web-brand-mark">
-            <Sprout size={24} />
-          </span>
-          <span className="web-brand-text">
-            <strong>Agroz AI</strong>
-            <small>Dehqon va chorvador yordamchisi</small>
-          </span>
+          <img src="/logo.svg" alt="Agroz AI" className="h-9 sm:h-10 w-auto object-contain" />
         </Link>
 
         {/* Faqat matnli toza navigatsiya havolalari — tezkor prefetch bilan */}
