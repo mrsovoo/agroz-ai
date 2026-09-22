@@ -98,7 +98,13 @@ export type SpecialistDto = {
 };
 
 /** Telegram hisobi bo'yicha profilni yaratadi yoki yangilaydi (bitta profil qoidasi). */
-export async function upsertSpecialist(input: SpecialistInput) {
+export async function upsertSpecialist(input: SpecialistInput & { isApproved?: boolean }) {
+  const existing = await getSpecialistByTelegramId(input.telegramId);
+  const isApproved =
+    input.isApproved !== undefined
+      ? input.isApproved
+      : (existing?.isApproved ?? false);
+
   const values = {
     telegramId: input.telegramId,
     name: input.name,
@@ -115,6 +121,7 @@ export async function upsertSpecialist(input: SpecialistInput) {
     lng: input.lng,
     workHours: input.workHours ?? "09:00 - 18:00",
     isActive: true,
+    isApproved,
     updatedAt: new Date(),
   };
   const rows = await db
@@ -333,7 +340,10 @@ export async function listSpecialists(opts: {
   role?: string | null;
   meds?: string[];
 }): Promise<SpecialistDto[]> {
-  const rows = await db.select().from(specialists).where(eq(specialists.isActive, true));
+  const rows = await db
+    .select()
+    .from(specialists)
+    .where(and(eq(specialists.isActive, true), eq(specialists.isApproved, true)));
   const [medicineRows, ratingRows] = await Promise.all([
     db.select().from(specialistMedicines),
     db

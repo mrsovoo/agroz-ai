@@ -160,13 +160,9 @@ async function setupAuthBot() {
 
   try {
     await call("setChatMenuButton", {
-      menu_button: {
-        type: "web_app",
-        text: "Agro Bozor",
-        web_app: { url: `${miniAppUrl}/dorilar` },
-      },
+      menu_button: { type: "commands" },
     });
-    console.log("✓ Auth bot menyu tugmasi Agro Bozor (/dorilar) sahifasiga ulandi");
+    console.log("✓ Auth bot menyu tugmasi standart buyruqlarga o'rnatildi (Agro Bozor olib tashlandi)");
   } catch (err) {
     console.warn("⚠️  Menyu tugmasini o'rnatib bo'lmadi:", err.message);
   }

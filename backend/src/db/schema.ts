@@ -130,6 +130,8 @@ export const specialists = pgTable("specialists", {
   workHours: varchar("work_hours", { length: 60 }).default("09:00 - 18:00"),
   /** Admin bloklagan yoki o'zining o'chirgan profillar qidiruvda chiqmaydi. */
   isActive: boolean("is_active").default(true).notNull(),
+  /** Admin arizani tasdiqlaganmi. Yangi ro'yxatdan o'tganlar kutilmoqda (false) bo'ladi. */
+  isApproved: boolean("is_approved").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

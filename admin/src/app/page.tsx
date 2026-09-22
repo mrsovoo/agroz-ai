@@ -91,6 +91,26 @@ type SettingListItem = {
   preview: string | null;
 };
 
+type SpecialistItem = {
+  id: number;
+  telegramId: number | null;
+  name: string;
+  phone: string;
+  role: "pharmacy" | "specialist";
+  specialty: string | null;
+  organization: string | null;
+  address: string;
+  lat: number;
+  lng: number;
+  workHours: string | null;
+  isActive: boolean;
+  isApproved: boolean;
+  medicinesCount: number;
+  ordersCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
 const AI_PRESETS: { label: string; baseUrl: string; model: string; hint: string }[] = [
   {
     label: "Google AI Studio (Gemini 2.5 Flash — Tavsiya)",
@@ -119,8 +139,10 @@ export default function SuperAdminPage() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Tablar: dashboard | regions | reviews | settings | broadcast
-  const [activeTab, setActiveTab] = useState<"dashboard" | "regions" | "reviews" | "settings" | "broadcast">("dashboard");
+  // Tablar: dashboard | specialists | regions | reviews | settings | broadcast
+  const [activeTab, setActiveTab] = useState<
+    "dashboard" | "specialists" | "regions" | "reviews" | "settings" | "broadcast"
+  >("dashboard");
 
   const [stats, setStats] = useState<Stats | null>(null);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
@@ -128,6 +150,16 @@ export default function SuperAdminPage() {
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
   const [settingsList, setSettingsList] = useState<SettingListItem[]>([]);
   const [settingsValues, setSettingsValues] = useState<Record<string, string>>({});
+  const [specialistsList, setSpecialistsList] = useState<SpecialistItem[]>([]);
+  const [specialistsSummary, setSpecialistsSummary] = useState<{
+    total: number;
+    pending: number;
+    approved: number;
+  }>({ total: 0, pending: 0, approved: 0 });
+  const [specialistStatusFilter, setSpecialistStatusFilter] = useState<"all" | "pending" | "approved">("all");
+  const [specialistRoleFilter, setSpecialistRoleFilter] = useState<"all" | "pharmacy" | "specialist">("all");
+  const [specialistSearch, setSpecialistSearch] = useState("");
+
   const [notice, setNotice] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
 
   // Fikrlar filtrlash
@@ -146,11 +178,12 @@ export default function SuperAdminPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [statsRes, regionsRes, reviewsRes, settingsRes] = await Promise.all([
+      const [statsRes, regionsRes, reviewsRes, settingsRes, specsRes] = await Promise.all([
         fetch("/api/admin/stats").then((r) => (r.ok ? r.json() : null)).catch(() => null),
         fetch("/api/admin/regions").then((r) => (r.ok ? r.json() : null)).catch(() => null),
         fetch("/api/admin/reviews").then((r) => (r.ok ? r.json() : null)).catch(() => null),
         fetch("/api/admin/settings").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        fetch("/api/admin/specialists").then((r) => (r.ok ? r.json() : null)).catch(() => null),
       ]);
 
       if (statsRes?.ok) {
@@ -174,6 +207,12 @@ export default function SuperAdminPage() {
           map[item.key] = item.value || "";
         }
         setSettingsValues(map);
+      }
+      if (specsRes?.ok) {
+        setSpecialistsList(specsRes.specialists || []);
+        if (specsRes.summary) {
+          setSpecialistsSummary(specsRes.summary);
+        }
       }
     } catch (e) {
       console.error("Admin ma'lumotlarini yuklashda xatolik:", e);
@@ -261,6 +300,67 @@ export default function SuperAdminPage() {
       }
     } catch {
       alert("Tarmoq xatosi");
+    }
+  }
+
+  async function handleApproveSpecialist(id: number) {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/admin/specialists/${id}/approve`, { method: "POST" });
+      const data = await res.json();
+      if (data.ok) {
+        setNotice({ kind: "ok", text: "✅ Ariza tasdiqlandi va Telegram orqali xabar yuborildi!" });
+        loadData();
+      } else {
+        setNotice({ kind: "err", text: data.error || "Tasdiqlashda xatolik" });
+      }
+    } catch {
+      setNotice({ kind: "err", text: "Tarmoq xatosi" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleRejectSpecialist(id: number) {
+    const reason = prompt("Rad etish sababini yozing (foydalanuvchiga Telegramda boradi, ixtiyoriy):");
+    if (reason === null) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/admin/specialists/${id}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: reason.trim() || undefined }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setNotice({ kind: "ok", text: "⚠️ Ariza rad etildi va foydalanuvchiga xabar yuborildi." });
+        loadData();
+      } else {
+        setNotice({ kind: "err", text: data.error || "Rad etishda xatolik" });
+      }
+    } catch {
+      setNotice({ kind: "err", text: "Tarmoq xatosi" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDeleteSpecialist(id: number, name: string) {
+    if (!confirm(`Haqiqatan ham «${name}» profilini va unga tegishli barcha ma'lumotlarni o'chirmoqchimisiz?`)) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/admin/specialists/${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.ok) {
+        setNotice({ kind: "ok", text: "🗑 Profil va uning barcha dorilari o'chirildi." });
+        loadData();
+      } else {
+        setNotice({ kind: "err", text: data.error || "O'chirishda xatolik" });
+      }
+    } catch {
+      setNotice({ kind: "err", text: "Tarmoq xatosi" });
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -357,6 +457,22 @@ export default function SuperAdminPage() {
     );
   });
 
+  // Filtrlangan arizalar va mutaxassislar
+  const filteredSpecialists = specialistsList.filter((s) => {
+    if (specialistStatusFilter === "pending" && s.isApproved) return false;
+    if (specialistStatusFilter === "approved" && !s.isApproved) return false;
+    if (specialistRoleFilter !== "all" && s.role !== specialistRoleFilter) return false;
+    if (!specialistSearch.trim()) return true;
+    const q = specialistSearch.toLowerCase();
+    return (
+      s.name.toLowerCase().includes(q) ||
+      (s.organization && s.organization.toLowerCase().includes(q)) ||
+      s.phone.toLowerCase().includes(q) ||
+      s.address.toLowerCase().includes(q) ||
+      (s.specialty && s.specialty.toLowerCase().includes(q))
+    );
+  });
+
   return (
     <div className="min-h-screen bg-slate-950 pb-12">
       {/* Top Header */}
@@ -393,6 +509,12 @@ export default function SuperAdminPage() {
           <div className="flex space-x-1 overflow-x-auto pb-2 scrollbar-none">
             {[
               { id: "dashboard", label: "Dashboard", icon: BarChart3 },
+              {
+                id: "specialists",
+                label: "Arizalar & Dorixonalar",
+                icon: Store,
+                badge: specialistsSummary.pending > 0 ? specialistsSummary.pending : undefined,
+              },
               { id: "regions", label: "Viloyatlar Tahlili", icon: Globe },
               { id: "reviews", label: "Fikrlar & Sharhlar", icon: MessageSquare },
               { id: "settings", label: "Radius & Bot Sozlamalari", icon: Settings },
@@ -412,6 +534,11 @@ export default function SuperAdminPage() {
                 >
                   <Icon size={15} />
                   <span>{tab.label}</span>
+                  {tab.badge !== undefined && (
+                    <span className="rounded-full bg-amber-500/20 px-1.5 py-0.2 text-[10px] font-extrabold text-amber-300 border border-amber-500/30">
+                      {tab.badge}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -516,6 +643,274 @@ export default function SuperAdminPage() {
                             ) : (
                               "—"
                             )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 1.5. ARIZALAR VA DORIXONALAR TAB */}
+        {activeTab === "specialists" && (
+          <div className="space-y-6">
+            {/* Yuqori xulosa kartalari */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl bg-slate-900 p-5 border border-slate-800 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-400">Jami Ro&apos;yxatdagilar</span>
+                  <Store className="text-blue-400" size={20} />
+                </div>
+                <p className="mt-2 text-2xl font-black text-white">{specialistsSummary.total} ta</p>
+                <p className="mt-1 text-[11px] text-slate-500 font-medium">Barcha dorixona va mutaxassislar</p>
+              </div>
+
+              <div
+                onClick={() => setSpecialistStatusFilter("pending")}
+                className={`cursor-pointer rounded-2xl p-5 border transition ${
+                  specialistStatusFilter === "pending"
+                    ? "bg-amber-950/50 border-amber-500/50 ring-1 ring-amber-500/50"
+                    : "bg-slate-900 border-slate-800 hover:border-slate-700"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-amber-300">⏳ Yangi Arizalar</span>
+                  <AlertCircle className="text-amber-400" size={20} />
+                </div>
+                <p className="mt-2 text-2xl font-black text-amber-400">{specialistsSummary.pending} ta</p>
+                <p className="mt-1 text-[11px] text-amber-500/80 font-medium">
+                  Tasdiqlash kutilayotgan dorixonalar
+                </p>
+              </div>
+
+              <div
+                onClick={() => setSpecialistStatusFilter("approved")}
+                className={`cursor-pointer rounded-2xl p-5 border transition ${
+                  specialistStatusFilter === "approved"
+                    ? "bg-emerald-950/50 border-emerald-500/50 ring-1 ring-emerald-500/50"
+                    : "bg-slate-900 border-slate-800 hover:border-slate-700"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-emerald-300">✅ Tasdiqlanganlar</span>
+                  <CheckCircle2 className="text-emerald-400" size={20} />
+                </div>
+                <p className="mt-2 text-2xl font-black text-emerald-400">{specialistsSummary.approved} ta</p>
+                <p className="mt-1 text-[11px] text-emerald-500/80 font-medium">
+                  Platformada faol profil egalari
+                </p>
+              </div>
+            </div>
+
+            {/* Qidiruv va Filterlar */}
+            <div className="rounded-2xl bg-slate-900 p-5 border border-slate-800 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="relative flex-1 max-w-md">
+                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Ism, dorixona nomi, telefon yoki manzil..."
+                  value={specialistSearch}
+                  onChange={(e) => setSpecialistSearch(e.target.value)}
+                  className="w-full rounded-xl bg-slate-950 pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 border border-slate-800 focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Status filter */}
+                <div className="flex rounded-xl bg-slate-950 p-1 border border-slate-800 text-xs font-semibold">
+                  <button
+                    onClick={() => setSpecialistStatusFilter("all")}
+                    className={`px-3 py-1 rounded-lg transition ${
+                      specialistStatusFilter === "all"
+                        ? "bg-slate-800 text-white"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    Barchasi
+                  </button>
+                  <button
+                    onClick={() => setSpecialistStatusFilter("pending")}
+                    className={`px-3 py-1 rounded-lg transition flex items-center gap-1.5 ${
+                      specialistStatusFilter === "pending"
+                        ? "bg-amber-600 text-white"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    ⏳ Kutilmoqda ({specialistsSummary.pending})
+                  </button>
+                  <button
+                    onClick={() => setSpecialistStatusFilter("approved")}
+                    className={`px-3 py-1 rounded-lg transition ${
+                      specialistStatusFilter === "approved"
+                        ? "bg-emerald-600 text-white"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    ✅ Tasdiqlangan
+                  </button>
+                </div>
+
+                {/* Role filter */}
+                <div className="flex rounded-xl bg-slate-950 p-1 border border-slate-800 text-xs font-semibold">
+                  <button
+                    onClick={() => setSpecialistRoleFilter("all")}
+                    className={`px-3 py-1 rounded-lg transition ${
+                      specialistRoleFilter === "all"
+                        ? "bg-slate-800 text-white"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    Hammasi
+                  </button>
+                  <button
+                    onClick={() => setSpecialistRoleFilter("pharmacy")}
+                    className={`px-3 py-1 rounded-lg transition ${
+                      specialistRoleFilter === "pharmacy"
+                        ? "bg-slate-800 text-emerald-400"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    🏪 Dorixonalar
+                  </button>
+                  <button
+                    onClick={() => setSpecialistRoleFilter("specialist")}
+                    className={`px-3 py-1 rounded-lg transition ${
+                      specialistRoleFilter === "specialist"
+                        ? "bg-slate-800 text-blue-400"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    👨‍🌾 Mutaxassislar
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Ro'yxat jadvali */}
+            <div className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="bg-slate-950/60 border-b border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider">
+                      <th className="py-3 px-4">ID</th>
+                      <th className="py-3 px-4">Ism / Tashkilot</th>
+                      <th className="py-3 px-4">Turi</th>
+                      <th className="py-3 px-4">Aloqa</th>
+                      <th className="py-3 px-4">Manzil</th>
+                      <th className="py-3 px-4 text-center">Dorilar / Buyurtmalar</th>
+                      <th className="py-3 px-4">Holat</th>
+                      <th className="py-3 px-4 text-right">Amallar</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {filteredSpecialists.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="py-8 text-center text-slate-500 font-medium">
+                          Hech qanday ariza yoki profil topilmadi.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredSpecialists.map((s) => (
+                        <tr key={s.id} className="hover:bg-slate-800/40 transition">
+                          <td className="py-3 px-4 font-mono text-slate-500">#{s.id}</td>
+                          <td className="py-3 px-4">
+                            <p className="font-bold text-white">{s.name}</p>
+                            {s.organization && (
+                              <p className="text-[11px] text-emerald-400 font-medium flex items-center gap-1 mt-0.5">
+                                <Store size={12} /> {s.organization}
+                              </p>
+                            )}
+                            {s.specialty && !s.organization && (
+                              <p className="text-[11px] text-slate-400 mt-0.5">{s.specialty}</p>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-bold ${
+                                s.role === "pharmacy"
+                                  ? "bg-amber-950/80 text-amber-300 border border-amber-800/60"
+                                  : "bg-blue-950/80 text-blue-300 border border-blue-800/60"
+                              }`}
+                            >
+                              {s.role === "pharmacy" ? "🏪 Dorixona" : "👨‍🌾 Mutaxassis"}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <p className="font-semibold text-slate-200">{s.phone}</p>
+                            {s.telegramId && (
+                              <p className="text-[10px] text-slate-500 font-mono">TG: {s.telegramId}</p>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 max-w-xs truncate text-slate-300" title={s.address}>
+                            {s.address}
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <span
+                                title="Katalogdagi dorilari soni"
+                                className="inline-flex items-center gap-1 rounded-md bg-slate-950 px-2 py-0.5 text-[10.5px] font-semibold text-purple-300 border border-slate-800"
+                              >
+                                <Package size={11} /> {s.medicinesCount}
+                              </span>
+                              <span
+                                title="Qabul qilingan buyurtmalar soni"
+                                className="inline-flex items-center gap-1 rounded-md bg-slate-950 px-2 py-0.5 text-[10.5px] font-semibold text-cyan-300 border border-slate-800"
+                              >
+                                <ShoppingCart size={11} /> {s.ordersCount}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            {s.isApproved ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-950 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300 border border-emerald-800">
+                                <CheckCircle2 size={11} /> Tasdiqlangan
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-950 px-2.5 py-0.5 text-[10px] font-bold text-amber-300 border border-amber-800 animate-pulse">
+                                <AlertCircle size={11} /> Kutilmoqda
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {!s.isApproved ? (
+                                <>
+                                  <button
+                                    onClick={() => handleApproveSpecialist(s.id)}
+                                    disabled={busy}
+                                    className="flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow hover:bg-emerald-500 active:scale-95 transition"
+                                  >
+                                    <CheckCircle2 size={13} /> Ma&apos;qullash
+                                  </button>
+                                  <button
+                                    onClick={() => handleRejectSpecialist(s.id)}
+                                    disabled={busy}
+                                    className="flex items-center gap-1 rounded-lg bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-950 hover:border-red-800 border border-slate-700 transition"
+                                  >
+                                    Rad etish
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  onClick={() => handleRejectSpecialist(s.id)}
+                                  disabled={busy}
+                                  className="rounded-lg bg-slate-800 px-2.5 py-1.5 text-[11px] font-semibold text-slate-400 hover:bg-amber-950/60 hover:text-amber-300 transition"
+                                >
+                                  To&apos;xtatish
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDeleteSpecialist(s.id, s.organization || s.name)}
+                                disabled={busy}
+                                title="Profilni o'chirish"
+                                className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-800 text-slate-400 hover:bg-red-900/50 hover:text-red-200 transition"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))

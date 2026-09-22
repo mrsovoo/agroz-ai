@@ -27,6 +27,14 @@ import {
   defaultRadiusKmSetting,
   adminUsernameSetting,
 } from "../lib/settings.js";
+import {
+  sendAuthMessage,
+  approvedPharmacyMenuKeyboard,
+  approvedSpecialistMenuKeyboard,
+  pendingApprovalMenuKeyboard,
+  applicationApprovedNotification,
+  applicationRejectedNotification,
+} from "../lib/auth-bot.js";
 
 const router = Router();
 
@@ -590,5 +598,192 @@ function getSettingLabel(key: string): string {
       return key;
   }
 }
+
+// -------------------------------------------------------------
+// 6. ARIZALAR VA DORIXONALAR / MUTAXASSISLAR BOSHQARUVI
+// -------------------------------------------------------------
+
+// GET /api/admin/specialists
+router.get("/specialists", async (req, res) => {
+  try {
+    const role = typeof req.query.role === "string" ? req.query.role : undefined;
+    const status = typeof req.query.status === "string" ? req.query.status : undefined;
+
+    const allSpecs = await db
+      .select({
+        id: specialists.id,
+        telegramId: specialists.telegramId,
+        name: specialists.name,
+        phone: specialists.phone,
+        role: specialists.role,
+        specialty: specialists.specialty,
+        organization: specialists.organization,
+        address: specialists.address,
+        lat: specialists.lat,
+        lng: specialists.lng,
+        workHours: specialists.workHours,
+        isActive: specialists.isActive,
+        isApproved: specialists.isApproved,
+        createdAt: specialists.createdAt,
+        updatedAt: specialists.updatedAt,
+      })
+      .from(specialists)
+      .orderBy(desc(specialists.id));
+
+    // Dori va buyurtma sonlarini bir yo'la hisoblash
+    const [medCounts, orderCounts] = await Promise.all([
+      db
+        .select({
+          specialistId: specialistMedicines.specialistId,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(specialistMedicines)
+        .groupBy(specialistMedicines.specialistId),
+      db
+        .select({
+          specialistId: orders.pharmacySpecialistId,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(orders)
+        .where(isNotNull(orders.pharmacySpecialistId))
+        .groupBy(orders.pharmacySpecialistId),
+    ]);
+
+    const medMap = new Map<number, number>();
+    for (const m of medCounts) {
+      medMap.set(m.specialistId, m.count);
+    }
+    const orderMap = new Map<number, number>();
+    for (const o of orderCounts) {
+      if (o.specialistId) orderMap.set(o.specialistId, o.count);
+    }
+
+    let result = allSpecs.map((s) => ({
+      ...s,
+      medicinesCount: medMap.get(s.id) ?? 0,
+      ordersCount: orderMap.get(s.id) ?? 0,
+    }));
+
+    if (role && (role === "pharmacy" || role === "specialist")) {
+      result = result.filter((s) => s.role === role);
+    }
+
+    if (status === "pending") {
+      result = result.filter((s) => !s.isApproved);
+    } else if (status === "approved") {
+      result = result.filter((s) => s.isApproved);
+    }
+
+    const pendingCount = allSpecs.filter((s) => !s.isApproved).length;
+    const approvedCount = allSpecs.filter((s) => s.isApproved).length;
+
+    res.json({
+      ok: true,
+      specialists: result,
+      summary: {
+        total: allSpecs.length,
+        pending: pendingCount,
+        approved: approvedCount,
+      },
+    });
+  } catch (err: any) {
+    console.error("[admin specialists list error]:", err);
+    res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
+
+// POST /api/admin/specialists/:id/approve
+router.post("/specialists/:id/approve", requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      return res.status(400).json({ error: "Noto'g'ri ID" });
+    }
+
+    const updated = await db
+      .update(specialists)
+      .set({ isApproved: true, updatedAt: new Date() })
+      .where(eq(specialists.id, id))
+      .returning();
+
+    const spec = updated[0];
+    if (!spec) {
+      return res.status(404).json({ error: "Mutaxassis yoki dorixona topilmadi" });
+    }
+
+    // Foydalanuvchiga Telegram orqali xabarnoma yuborish va Panel tugmalarini faollashtirish
+    if (spec.telegramId) {
+      const keyboard =
+        spec.role === "pharmacy"
+          ? approvedPharmacyMenuKeyboard()
+          : approvedSpecialistMenuKeyboard();
+      await sendAuthMessage(
+        spec.telegramId,
+        applicationApprovedNotification(spec.name, spec.role),
+        { replyKeyboard: keyboard },
+      ).catch((err) => console.error("[admin approve telegram notification error]:", err));
+    }
+
+    res.json({ ok: true, message: "Ariza tasdiqlandi va panel faollashtirildi", specialist: spec });
+  } catch (err: any) {
+    console.error("[admin approve error]:", err);
+    res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
+
+// POST /api/admin/specialists/:id/reject
+router.post("/specialists/:id/reject", requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      return res.status(400).json({ error: "Noto'g'ri ID" });
+    }
+    const { reason } = req.body || {};
+
+    const updated = await db
+      .update(specialists)
+      .set({ isApproved: false, updatedAt: new Date() })
+      .where(eq(specialists.id, id))
+      .returning();
+
+    const spec = updated[0];
+    if (!spec) {
+      return res.status(404).json({ error: "Mutaxassis yoki dorixona topilmadi" });
+    }
+
+    if (spec.telegramId) {
+      await sendAuthMessage(
+        spec.telegramId,
+        applicationRejectedNotification(spec.name, spec.role, reason),
+        { replyKeyboard: pendingApprovalMenuKeyboard() },
+      ).catch((err) => console.error("[admin reject telegram notification error]:", err));
+    }
+
+    res.json({ ok: true, message: "Ariza rad etildi", specialist: spec });
+  } catch (err: any) {
+    console.error("[admin reject error]:", err);
+    res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
+
+// DELETE /api/admin/specialists/:id
+router.delete("/specialists/:id", requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      return res.status(400).json({ error: "Noto'g'ri ID" });
+    }
+
+    // Dorilarni o'chirish
+    await db.delete(specialistMedicines).where(eq(specialistMedicines.specialistId, id));
+    // Mutaxassisni o'chirish
+    await db.delete(specialists).where(eq(specialists.id, id));
+
+    res.json({ ok: true, message: "O'chirildi" });
+  } catch (err: any) {
+    console.error("[admin delete specialist error]:", err);
+    res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
 
 export default router;

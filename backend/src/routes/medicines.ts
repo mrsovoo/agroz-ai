@@ -16,6 +16,7 @@ router.get("/", async (req, res) => {
     const conditions = [
       eq(specialistMedicines.status, "bor"),
       eq(specialists.isActive, true),
+      eq(specialists.isApproved, true),
     ];
     if (type === "crop" || type === "animal") {
       conditions.push(eq(specialistMedicines.type, type));

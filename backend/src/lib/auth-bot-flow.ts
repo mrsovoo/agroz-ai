@@ -42,6 +42,14 @@ import {
   answerCallbackQuery,
   appKeyboard,
   profileKeyboard,
+  approvedPharmacyMenuKeyboard,
+  approvedSpecialistMenuKeyboard,
+  pendingApprovalMenuKeyboard,
+  applicationPendingMessage,
+  applicationStatusMessage,
+  applicationApprovedNotification,
+  applicationRejectedNotification,
+  pendingBlockedMessage,
   askAddress,
   askAddressConfirm,
   askLocation,
@@ -266,6 +274,19 @@ export async function handleAuthBotUpdate(update: AuthBotUpdate): Promise<void> 
       return;
     }
 
+    // 2c) Menyudagi doimiy tugmalar (Reply Keyboard) bosilganda
+    if (
+      text === "📦 Buyurtmalar" ||
+      text === "💊 Dorilarim" ||
+      text === "➕ Dori qo'shish" ||
+      text === "👤 Ma'lumotlarim" ||
+      text === "⏳ Ariza holati" ||
+      text === "✏️ Profilni tahrirlash"
+    ) {
+      await handleMenuButton(chatId, telegramId, firstName, text);
+      return;
+    }
+
     // 3) Buyruqlar.
     if (text.startsWith("/")) {
       await handleCommand(chatId, telegramId, firstName, text);
@@ -282,6 +303,101 @@ export async function handleAuthBotUpdate(update: AuthBotUpdate): Promise<void> 
   } catch (err) {
     console.error("[auth-bot] update xatosi:", err);
     await sendAuthMessage(chatId, errorMessage());
+  }
+}
+
+async function handleMenuButton(
+  chatId: number,
+  telegramId: number,
+  firstName: string | undefined,
+  btn: string,
+): Promise<void> {
+  const profile = await getSpecialistByTelegramId(telegramId);
+  if (!profile) {
+    await sendAuthMessage(chatId, welcomeMessage(firstName, false), { inline: NEXT_STEP_KEYBOARD });
+    return;
+  }
+
+  const menuKeyboard = profile.isApproved
+    ? profile.role === "pharmacy"
+      ? approvedPharmacyMenuKeyboard()
+      : approvedSpecialistMenuKeyboard()
+    : pendingApprovalMenuKeyboard();
+
+  if (btn === "⏳ Ariza holati") {
+    await sendAuthMessage(chatId, applicationStatusMessage(profile), {
+      inline: profileKeyboard(profile),
+      replyKeyboard: menuKeyboard,
+    });
+    return;
+  }
+
+  if (btn === "👤 Ma'lumotlarim") {
+    await sendAuthMessage(chatId, profileMessage(profile), {
+      inline: profileKeyboard(profile),
+      replyKeyboard: menuKeyboard,
+    });
+    return;
+  }
+
+  if (btn === "✏️ Profilni tahrirlash") {
+    await sendAuthMessage(chatId, "Quyidagi tugmalar orqali ma'lumotlaringizni tahrirlashingiz mumkin:", {
+      inline: profileKeyboard(profile),
+      replyKeyboard: menuKeyboard,
+    });
+    return;
+  }
+
+  // Qolgan amallar dorixonaga tegishli va admin tasdig'ini talab qiladi
+  if (!profile.isApproved) {
+    await sendAuthMessage(chatId, pendingBlockedMessage(), {
+      replyKeyboard: pendingApprovalMenuKeyboard(),
+    });
+    return;
+  }
+
+  if (profile.role !== "pharmacy") {
+    await sendAuthMessage(chatId, onlyPharmacyMessage(profile.role), {
+      replyKeyboard: approvedSpecialistMenuKeyboard(),
+    });
+    return;
+  }
+
+  if (btn === "➕ Dori qo'shish") {
+    await startMedicineAdd(chatId, telegramId);
+    return;
+  }
+
+  if (btn === "📦 Buyurtmalar") {
+    const { listOrders } = await import("@/lib/orders");
+    const { ordersListKeyboard, ordersEmptyMessage, ordersHintMessage } = await import("@/lib/orders-bot");
+    const orders = await listOrders({ pharmacySpecialistId: profile.id, limit: 20 });
+    if (orders.length === 0) {
+      await sendAuthMessage(chatId, ordersEmptyMessage(), {
+        replyKeyboard: approvedPharmacyMenuKeyboard(),
+      });
+      return;
+    }
+    await sendAuthMessage(chatId, ordersHintMessage(orders.length), {
+      inline: ordersListKeyboard(orders),
+      replyKeyboard: approvedPharmacyMenuKeyboard(),
+    });
+    return;
+  }
+
+  if (btn === "💊 Dorilarim") {
+    const data = await listMedicines(telegramId);
+    if (!data || data.medicines.length === 0) {
+      await sendAuthMessage(chatId, noMedicinesMessage(), {
+        replyKeyboard: approvedPharmacyMenuKeyboard(),
+      });
+      return;
+    }
+    await sendAuthMessage(chatId, medicinesListMessage(data.medicines), {
+      inline: medicinesListKeyboard(data.medicines),
+      replyKeyboard: approvedPharmacyMenuKeyboard(),
+    });
+    return;
   }
 }
 
@@ -309,7 +425,15 @@ async function handleCommand(
       await sendAuthMessage(chatId, welcomeMessage(firstName), { inline: NEXT_STEP_KEYBOARD });
       return;
     }
-    await sendAuthMessage(chatId, profileMessage(profile), { inline: profileKeyboard(profile) });
+    const keyboard = profile.isApproved
+      ? profile.role === "pharmacy"
+        ? approvedPharmacyMenuKeyboard()
+        : approvedSpecialistMenuKeyboard()
+      : pendingApprovalMenuKeyboard();
+    await sendAuthMessage(chatId, profileMessage(profile), {
+      inline: profileKeyboard(profile),
+      replyKeyboard: keyboard,
+    });
     return;
   }
 
@@ -328,24 +452,33 @@ async function handleCommand(
 
   // /buyurtmalar — dorixona egasiga kelgan buyurtmalar ro'yxati.
   if (command === "/buyurtmalar") {
-    const { listOrders } = await import("@/lib/orders");
-    const { ordersListKeyboard, ordersEmptyMessage, ordersHintMessage } = await import("@/lib/orders-bot");
     const profile = await getSpecialistByTelegramId(telegramId);
     if (!profile) {
       await sendAuthMessage(chatId, needRegistrationMessage(), { inline: NEXT_STEP_KEYBOARD });
+      return;
+    }
+    if (!profile.isApproved) {
+      await sendAuthMessage(chatId, pendingBlockedMessage(), {
+        replyKeyboard: pendingApprovalMenuKeyboard(),
+      });
       return;
     }
     if (profile.role !== "pharmacy") {
       await sendAuthMessage(chatId, onlyPharmacyMessage(profile.role));
       return;
     }
+    const { listOrders } = await import("@/lib/orders");
+    const { ordersListKeyboard, ordersEmptyMessage, ordersHintMessage } = await import("@/lib/orders-bot");
     const orders = await listOrders({ pharmacySpecialistId: profile.id, limit: 20 });
     if (orders.length === 0) {
-      await sendAuthMessage(chatId, ordersEmptyMessage());
+      await sendAuthMessage(chatId, ordersEmptyMessage(), {
+        replyKeyboard: approvedPharmacyMenuKeyboard(),
+      });
       return;
     }
     await sendAuthMessage(chatId, ordersHintMessage(orders.length), {
       inline: ordersListKeyboard(orders),
+      replyKeyboard: approvedPharmacyMenuKeyboard(),
     });
     return;
   }
@@ -357,16 +490,25 @@ async function handleCommand(
       await sendAuthMessage(chatId, needRegistrationMessage(), { inline: NEXT_STEP_KEYBOARD });
       return;
     }
+    if (!data.profile.isApproved) {
+      await sendAuthMessage(chatId, pendingBlockedMessage(), {
+        replyKeyboard: pendingApprovalMenuKeyboard(),
+      });
+      return;
+    }
     if (data.profile.role !== "pharmacy") {
       await sendAuthMessage(chatId, onlyPharmacyMessage(data.profile.role));
       return;
     }
     if (data.medicines.length === 0) {
-      await sendAuthMessage(chatId, noMedicinesMessage());
+      await sendAuthMessage(chatId, noMedicinesMessage(), {
+        replyKeyboard: approvedPharmacyMenuKeyboard(),
+      });
       return;
     }
     await sendAuthMessage(chatId, medicinesListMessage(data.medicines), {
       inline: medicinesListKeyboard(data.medicines),
+      replyKeyboard: approvedPharmacyMenuKeyboard(),
     });
     return;
   }
@@ -421,8 +563,17 @@ async function handleCommand(
   // /start va boshqa har qanday buyruq.
   const profile = await getSpecialistByTelegramId(telegramId);
   if (profile) {
-    await sendAuthMessage(chatId, `${welcomeMessage(firstName, true)}\n\n${profileMessage(profile)}`, {
+    const keyboard = profile.isApproved
+      ? profile.role === "pharmacy"
+        ? approvedPharmacyMenuKeyboard()
+        : approvedSpecialistMenuKeyboard()
+      : pendingApprovalMenuKeyboard();
+    const msg = profile.isApproved
+      ? `${welcomeMessage(firstName, true)}\n\n${profileMessage(profile)}`
+      : `${applicationStatusMessage(profile)}\n\n${profileMessage(profile)}`;
+    await sendAuthMessage(chatId, msg, {
       inline: profileKeyboard(profile),
+      replyKeyboard: keyboard,
     });
   } else {
     await sendAuthMessage(chatId, welcomeMessage(firstName, false), {
@@ -471,6 +622,12 @@ async function startMedicineAdd(chatId: number, telegramId: number): Promise<voi
   const profile = await getSpecialistByTelegramId(telegramId);
   if (!profile) {
     await sendAuthMessage(chatId, needRegistrationMessage(), { inline: NEXT_STEP_KEYBOARD });
+    return;
+  }
+  if (!profile.isApproved) {
+    await sendAuthMessage(chatId, pendingBlockedMessage(), {
+      replyKeyboard: pendingApprovalMenuKeyboard(),
+    });
     return;
   }
   if (profile.role !== "pharmacy") {
@@ -595,12 +752,12 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
       const savedProfile = await getSpecialistByTelegramId(telegramId);
       await clearState(telegramId);
       await sendAuthMessage(chatId, medicineSavedMessage(saved.name, saved.total, saved.price), {
+        replyKeyboard: approvedPharmacyMenuKeyboard(),
         inline: {
           inline_keyboard: [
             [{ text: "➕ Yana dori qo'shish", callback_data: "m:again" }],
             [{ text: "💊 Dorilarim ro'yxati", callback_data: "m:list" }],
             [{ text: "👤 Profilimni ko'rish", callback_data: "m:profile" }],
-            ...(appKeyboard()?.inline_keyboard ?? []),
           ],
         },
       });
@@ -935,23 +1092,59 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
         return;
       }
       await clearState(telegramId);
-      // Dorixona egasi bo'lsa — keyingi qadam sifatida dori qo'shish taklif qilinadi.
+
+      // Agar arizasi hali admin tomonidan tasdiqlanmagan bo'lsa:
+      if (!saved.isApproved) {
+        await sendAuthMessage(
+          chatId,
+          applicationPendingMessage(saved.name, saved.role, draft.organization),
+          { replyKeyboard: pendingApprovalMenuKeyboard() },
+        );
+        return;
+      }
+
+      // Agar avvaldan tasdiqlangan bo'lsa:
       const isPharmacy = saved.role === "pharmacy";
       await sendAuthMessage(chatId, savedMessage(saved.name, saved.role), {
+        replyKeyboard: isPharmacy ? approvedPharmacyMenuKeyboard() : approvedSpecialistMenuKeyboard(),
         inline: {
           inline_keyboard: [
             ...(isPharmacy ? [[{ text: "💊 Dorilar qo'shish", callback_data: "m:start" }]] : []),
             [{ text: "👤 Mening profilim", callback_data: "m:profile" }],
-            ...(appKeyboard()?.inline_keyboard ?? []),
           ],
         },
       });
       return;
     }
 
+    // Ariza holatini tekshirish
+    if (data === "app:status") {
+      await answerCallbackQuery(query.id);
+      const profile = await getSpecialistByTelegramId(telegramId);
+      if (profile) {
+        const keyboard = profile.isApproved
+          ? profile.role === "pharmacy"
+            ? approvedPharmacyMenuKeyboard()
+            : approvedSpecialistMenuKeyboard()
+          : pendingApprovalMenuKeyboard();
+        await sendAuthMessage(chatId, applicationStatusMessage(profile), {
+          inline: profileKeyboard(profile),
+          replyKeyboard: keyboard,
+        });
+      }
+      return;
+    }
+
     // Ro'yxatdan o'tishdan keyingi «Dorilar qo'shish» tugmasi.
     if (data === "m:start") {
       await answerCallbackQuery(query.id);
+      const profile = await getSpecialistByTelegramId(telegramId);
+      if (profile && !profile.isApproved) {
+        await sendAuthMessage(chatId, pendingBlockedMessage(), {
+          replyKeyboard: pendingApprovalMenuKeyboard(),
+        });
+        return;
+      }
       await startMedicineAdd(chatId, telegramId);
       return;
     }
@@ -1809,7 +2002,7 @@ function requiredMissing(draft: Draft): { step: Step; question: string } | null 
 async function saveDraft(
   telegramId: number,
   draft: Draft,
-): Promise<{ name: string; role: SpecialistRole } | null> {
+): Promise<{ name: string; role: SpecialistRole; isApproved: boolean } | null> {
   if (requiredMissing(draft)) return null;
   const role: SpecialistRole =
     draft.role === "pharmacy" || draft.role === "specialist" ? draft.role : "specialist";
@@ -1836,7 +2029,11 @@ async function saveDraft(
     workHours: draft.workHours ?? "09:00 - 18:00",
   });
   return saved
-    ? { name: saved.name, role: saved.role === "pharmacy" ? "pharmacy" : "specialist" }
+    ? {
+        name: saved.name,
+        role: saved.role === "pharmacy" ? "pharmacy" : "specialist",
+        isApproved: saved.isApproved,
+      }
     : null;
 }
 

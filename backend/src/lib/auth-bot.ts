@@ -214,8 +214,39 @@ export const MEDICINE_DONE_KEYBOARD: InlineKeyboard = {
   ],
 };
 
+/** Tasdiqlangan dorixona egasi uchun doimiy menyu tugmalari (Reply Keyboard). */
+export function approvedPharmacyMenuKeyboard(): ReplyKeyboard {
+  return {
+    keyboard: [
+      [{ text: "📦 Buyurtmalar" }, { text: "💊 Dorilarim" }],
+      [{ text: "➕ Dori qo'shish" }, { text: "👤 Ma'lumotlarim" }],
+    ],
+    resize_keyboard: true,
+  };
+}
+
+/** Tasdiqlangan mutaxassis uchun doimiy menyu tugmalari (Reply Keyboard). */
+export function approvedSpecialistMenuKeyboard(): ReplyKeyboard {
+  return {
+    keyboard: [
+      [{ text: "👤 Ma'lumotlarim" }, { text: "✏️ Profilni tahrirlash" }],
+    ],
+    resize_keyboard: true,
+  };
+}
+
+/** Hali tasdiqlanmagan (arizasi kutilayotgan) foydalanuvchi menyusi. */
+export function pendingApprovalMenuKeyboard(): ReplyKeyboard {
+  return {
+    keyboard: [
+      [{ text: "⏳ Ariza holati" }, { text: "👤 Ma'lumotlarim" }],
+    ],
+    resize_keyboard: true,
+  };
+}
+
 /** Profilni ko'rish va to'g'ridan-to'g'ri tahrirlash klaviaturasi. */
-export function profileKeyboard(s: { role: string; name: string }): InlineKeyboard {
+export function profileKeyboard(s: { role: string; name: string; isApproved?: boolean }): InlineKeyboard {
   const isPharmacy = s.role === "pharmacy";
   const rows: InlineKeyboard["inline_keyboard"] = [
     [
@@ -231,27 +262,35 @@ export function profileKeyboard(s: { role: string; name: string }): InlineKeyboa
   if (isPharmacy) {
     rows.push([
       { text: "🏪 Tashkilot nomi", callback_data: "ed:org" },
-      { text: "➕ Yangi dori qo'shish", callback_data: "m:again" },
     ]);
-    rows.push([
-      { text: "💊 Dorilarimni boshqarish", callback_data: "m:list" },
-      { text: "📦 Buyurtmalar", callback_data: "m:orders" },
-    ]);
+    if (s.isApproved) {
+      rows.push([
+        { text: "➕ Yangi dori qo'shish", callback_data: "m:again" },
+        { text: "💊 Dorilarimni boshqarish", callback_data: "m:list" },
+      ]);
+      rows.push([
+        { text: "📦 Buyurtmalar", callback_data: "m:orders" },
+      ]);
+    } else {
+      rows.push([
+        { text: "⏳ Ariza holati: Ko'rib chiqilmoqda...", callback_data: "app:status" },
+      ]);
+    }
   } else {
     rows.push([
       { text: "🎯 Mutaxassislikni o'zgartirish", callback_data: "ed:spec" },
     ]);
+    if (!s.isApproved) {
+      rows.push([
+        { text: "⏳ Ariza holati: Ko'rib chiqilmoqda...", callback_data: "app:status" },
+      ]);
+    }
   }
 
   rows.push([
     { text: "🔄 Barcha ma'lumotlarni qayta to'ldirish", callback_data: "r:start" },
     { text: "🗑 Profilni o'chirish", callback_data: "pd:ask" },
   ]);
-
-  const appK = appKeyboard();
-  if (appK?.inline_keyboard) {
-    rows.push(...appK.inline_keyboard);
-  }
 
   return { inline_keyboard: rows };
 }
@@ -479,7 +518,86 @@ export function savedMessage(name: string, role?: string): string {
     `${escapeHtml(name)}, siz endi <b>Agroz AI</b> platformasida ${isPharmacy ? "dorixona sifatida" : "mutaxassis sifatida"} faolsiz.`,
     "📍 Yaqin atrofdagi dehqon va chorvadorlar sizni xaritada topa oladi va bevosita bog'lanadi.",
     "",
-    "💡 Ma'lumotlaringizni ko'rish uchun <b>/malumotlarim</b>, yangilash uchun <b>/royxatdan_otish</b> buyrug'idan foydalaning.",
+    "💡 Pastdagi tugmalar orqali boshqaruv panelidan foydalanishingiz mumkin.",
+  ].join("\n");
+}
+
+export function applicationPendingMessage(name: string, role: string, orgName?: string | null): string {
+  const roleLabel = role === "pharmacy" ? "Dorixona egasi" : "Mutaxassis";
+  const rows = [
+    "📋 <b>Arizangiz qabul qilindi!</b>",
+    "",
+    `Hurmatli <b>${escapeHtml(name)}</b>! Sizning <b>${roleLabel}</b> sifatida yuborgan arizangiz Agroz AI ma'muriyatiga ko'rib chiqish uchun yuborildi.`,
+  ];
+  if (orgName) rows.push(`🏪 Dorixona: <b>${escapeHtml(orgName)}</b>`);
+  rows.push(
+    "",
+    "⏳ <b>Ariza holati: Ko'rib chiqilmoqda</b>",
+    "",
+    "Adminlar arizangizni tasdiqlagach, botda to'liq <b>Boshqaruv Paneli</b> (dori qo'shish, buyurtmalarni qabul qilish va boshqarish) avtomatik faollashadi.",
+    "",
+    "Ariza holatini tekshirish uchun pastdagi <b>«⏳ Ariza holati»</b> tugmasini bosing.",
+  );
+  return rows.join("\n");
+}
+
+export function applicationStatusMessage(s: {
+  name: string;
+  role: string;
+  organization?: string | null;
+  isApproved: boolean;
+}): string {
+  const roleLabel = s.role === "pharmacy" ? "Dorixona egasi" : "Mutaxassis";
+  if (s.isApproved) {
+    return [
+      "✅ <b>Arizangiz tasdiqlangan!</b>",
+      "",
+      `Hurmatli <b>${escapeHtml(s.name)}</b> (${roleLabel}), arizangiz ma'muriyat tomonidan tasdiqlangan va profilingiz platformada faol!`,
+      "",
+      "Pastdagi menyu tugmalari orqali boshqaruv panelidan foydalanishingiz mumkin.",
+    ].join("\n");
+  }
+  return [
+    "⏳ <b>Arizangiz ko'rib chiqilmoqda</b>",
+    "",
+    `Hurmatli <b>${escapeHtml(s.name)}</b>! Sizning <b>${roleLabel}</b> arizangiz hozirda Agroz AI ma'muriyati tomonidan ko'rib chiqilmoqda.`,
+    s.organization ? `🏪 Tashkilot: <b>${escapeHtml(s.organization)}</b>\n` : "",
+    "Adminlarimiz arizangizni tekshirib tasdiqlagach, sizga darhol xabarnoma yuboriladi va botdagi barcha funksiyalar ochiladi.",
+  ].filter(Boolean).join("\n");
+}
+
+export function applicationApprovedNotification(name: string, role: string): string {
+  const isPharmacy = role === "pharmacy";
+  return [
+    "🎉 <b>Tabriklaymiz! Arizangiz tasdiqlandi!</b>",
+    "",
+    `Hurmatli <b>${escapeHtml(name)}</b>, sizning ${isPharmacy ? "dorixona" : "mutaxassis"} arizangiz ma'muriyat tomonidan ma'qullandi va tasdiqlandi!`,
+    "",
+    isPharmacy
+      ? "🏪 Siz endi dorilaringizni qo'shishingiz va mijozlardan buyurtmalarni qabul qilishingiz mumkin."
+      : "👨‍🌾 Siz endi mutaxassis sifatida fermer va bog'bonlar bilan muloqot qilishingiz mumkin.",
+    "",
+    "Boshqaruv paneli faollashdi. Pastdagi menyu tugmalaridan foydalanishingiz mumkin! 👇",
+  ].join("\n");
+}
+
+export function applicationRejectedNotification(name: string, role: string, reason?: string): string {
+  return [
+    "⚠️ <b>Arizangiz holati: Tasdiqlanmadi</b>",
+    "",
+    `Hurmatli <b>${escapeHtml(name)}</b>, afsuski, sizning arizangiz ma'muriyat tomonidan tasdiqlanmadi.`,
+    reason ? `\nSabab: <i>${escapeHtml(reason)}</i>\n` : "",
+    "Ma'lumotlarni to'g'rilab qayta topshirish uchun <b>/royxatdan_otish</b> buyrug'idan foydalanishingiz mumkin.",
+  ].join("\n");
+}
+
+export function pendingBlockedMessage(): string {
+  return [
+    "⏳ <b>Arizangiz hali tasdiqlanmagan.</b>",
+    "",
+    "Dori qo'shish va buyurtmalarni boshqarish faqat administratorlar arizangizni tasdiqlaganidan so'ng faollashadi.",
+    "",
+    "Iltimos, arizangiz ko'rib chiqilishini kuting yoki <b>«⏳ Ariza holati»</b> tugmasini bosing.",
   ].join("\n");
 }
 
@@ -958,13 +1076,7 @@ export function invalidLocationMessage(): string {
   ].join("\n");
 }
 
-/** Ro'yxatdan o'tganlarga Mini Appni ochish uchun tugma. */
+/** Auth botda xaridor mini-ilovalari ko'rsatilmaydi. */
 export function appKeyboard(): InlineKeyboard | undefined {
-  const raw = process.env.NEXT_PUBLIC_APP_URL?.trim()?.replace(/\/+$/, "");
-  if (!raw) return undefined;
-  const rows: InlineKeyboard["inline_keyboard"] = [
-    [{ text: "🛒 Agro Bozor — dorilar bozori", url: `${raw}/dorilar` }],
-    [{ text: "🗺 Mutaxassislar xaritasi", url: `${raw}/mutaxassislar` }],
-  ];
-  return { inline_keyboard: rows };
+  return undefined;
 }
