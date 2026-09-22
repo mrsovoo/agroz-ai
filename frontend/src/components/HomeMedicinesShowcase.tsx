@@ -300,36 +300,36 @@ export default function HomeMedicinesShowcase({
         </Link>
       </div>
 
-      {/* Filterlar va Qidiruv */}
+      {/* Filterlar va Qidiruv — mobilda 3 ta teng ustun, bitta sokin yashil rang */}
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Filter tugmalari */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+        <div className="grid grid-cols-3 gap-1.5 sm:flex sm:items-center sm:gap-2 w-full sm:w-auto">
           <button
             type="button"
             onClick={() => setFilter("all")}
-            className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-[13px] font-bold transition-all ${
+            className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 px-2 text-[12.5px] sm:text-[13px] font-bold transition-all border ${
               filter === "all"
-                ? "bg-neutral-900 text-white shadow-xs"
-                : "bg-white text-neutral-600 border border-black/8 hover:bg-neutral-50"
+                ? "bg-[var(--brand-green)] text-white border-[var(--brand-green)] shadow-xs"
+                : "bg-white text-neutral-700 border-neutral-200/80 hover:bg-neutral-50"
             }`}
           >
             <Sparkles size={14} />
-            <span>Barchasi</span>
-            <span className="text-[11px] opacity-70">({allItems.length})</span>
+            <span className="truncate">Barchasi</span>
+            <span className="text-[11px] opacity-80 hidden sm:inline">({allItems.length})</span>
           </button>
 
           <button
             type="button"
             onClick={() => setFilter("crop")}
-            className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-[13px] font-bold transition-all ${
+            className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 px-2 text-[12.5px] sm:text-[13px] font-bold transition-all border ${
               filter === "crop"
-                ? "bg-[var(--brand-green)] text-white shadow-xs"
-                : "bg-white text-neutral-600 border border-black/8 hover:bg-neutral-50"
+                ? "bg-[var(--brand-green)] text-white border-[var(--brand-green)] shadow-xs"
+                : "bg-white text-neutral-700 border-neutral-200/80 hover:bg-neutral-50"
             }`}
           >
             <Sprout size={14} />
-            <span>Ekinlar uchun</span>
-            <span className="text-[11px] opacity-70">
+            <span className="truncate">Ekinlar</span>
+            <span className="text-[11px] opacity-80 hidden sm:inline">
               ({allItems.filter((m) => m.type === "crop").length})
             </span>
           </button>
@@ -337,15 +337,15 @@ export default function HomeMedicinesShowcase({
           <button
             type="button"
             onClick={() => setFilter("animal")}
-            className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-[13px] font-bold transition-all ${
+            className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 px-2 text-[12.5px] sm:text-[13px] font-bold transition-all border ${
               filter === "animal"
-                ? "bg-amber-500 text-white shadow-xs"
-                : "bg-white text-neutral-600 border border-black/8 hover:bg-neutral-50"
+                ? "bg-[var(--brand-green)] text-white border-[var(--brand-green)] shadow-xs"
+                : "bg-white text-neutral-700 border-neutral-200/80 hover:bg-neutral-50"
             }`}
           >
             <Syringe size={14} />
-            <span>Hayvonlar uchun</span>
-            <span className="text-[11px] opacity-70">
+            <span className="truncate">Chorva</span>
+            <span className="text-[11px] opacity-80 hidden sm:inline">
               ({allItems.filter((m) => m.type === "animal").length})
             </span>
           </button>

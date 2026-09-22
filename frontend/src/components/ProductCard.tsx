@@ -175,21 +175,8 @@ export default function ProductCard({
               }
             />
           ) : (
-            <div
-              className="flex h-full w-full items-center justify-center"
-              style={{
-                background:
-                  medicine.type === "animal"
-                    ? "linear-gradient(135deg,#fff8e6,#ffefc2)"
-                    : "linear-gradient(135deg,#f0fbe8,#def5d2)",
-              }}
-            >
-              <span
-                className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/90 shadow-2xs"
-                style={{
-                  color: medicine.type === "animal" ? "#b45309" : "var(--brand-green)",
-                }}
-              >
+            <div className="flex h-full w-full items-center justify-center bg-emerald-50/50 text-[var(--brand-green)]">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-[var(--brand-green)] shadow-2xs border border-emerald-100">
                 {medicine.type === "animal" ? <Syringe size={22} /> : <Sprout size={22} />}
               </span>
             </div>

@@ -97,56 +97,53 @@ export default async function HomePage() {
       <HomeMedicinesShowcase />
 
       {/* Yaqin atrofdan dori topish va Mutaxassislar */}
-      {/* Dehqonlar uchun asosiy 3 ta katta qulay bo'lim */}
+      {/* Dehqonlar uchun asosiy 3 ta qulay va sokin bo'lim */}
       <div className="mt-6 grid gap-3 sm:grid-cols-3 web:mt-8 web:gap-4">
         {/* 1. Dorilar bozori */}
         <Link href="/dorilar" className="block group">
-          <div className="flex h-full items-center gap-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-700 p-4 text-white shadow-md transition-all duration-200 group-hover:scale-[1.01] active:scale-[0.98]">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/20 text-white backdrop-blur-xs">
+          <div className="flex h-full items-center gap-3.5 rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-2xs transition-all duration-150 hover:border-[var(--brand-green)] hover:shadow-xs active:scale-[0.98]">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-green-soft)] text-[var(--brand-green)]">
               <Pill size={24} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[16px] font-black leading-tight">Dorilar bozori</p>
-              <p className="mt-0.5 text-[12px] text-emerald-100 truncate">
+              <p className="text-[16px] font-black leading-tight text-neutral-900">Dorilar bozori</p>
+              <p className="mt-0.5 text-[12px] text-neutral-500 truncate">
                 Ekin va chorva dorilari
               </p>
             </div>
-            <ChevronRight size={20} className="shrink-0 text-white/70 group-hover:text-white" />
+            <ChevronRight size={19} className="shrink-0 text-neutral-400 group-hover:text-[var(--brand-green)] transition-colors" />
           </div>
         </Link>
 
         {/* 2. Mutaxassis chaqirish */}
         <Link href="/mutaxassislar" className="block group">
-          <div className="flex h-full items-center gap-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 p-4 text-white shadow-md transition-all duration-200 group-hover:scale-[1.01] active:scale-[0.98]">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/20 text-white backdrop-blur-xs">
+          <div className="flex h-full items-center gap-3.5 rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-2xs transition-all duration-150 hover:border-[var(--brand-green)] hover:shadow-xs active:scale-[0.98]">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-green-soft)] text-[var(--brand-green)]">
               <UsersRound size={24} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[16px] font-black leading-tight">Mutaxassis chaqirish</p>
-              <p className="mt-0.5 text-[12px] text-blue-100 truncate">
+              <p className="text-[16px] font-black leading-tight text-neutral-900">Mutaxassis chaqirish</p>
+              <p className="mt-0.5 text-[12px] text-neutral-500 truncate">
                 Agronom va veterinarlar
               </p>
             </div>
-            <ChevronRight size={20} className="shrink-0 text-white/70 group-hover:text-white" />
+            <ChevronRight size={19} className="shrink-0 text-neutral-400 group-hover:text-[var(--brand-green)] transition-colors" />
           </div>
         </Link>
 
         {/* 3. Yaqin dorixonalar xaritasi */}
         <Link href="/xarita" className="block group">
-          <div className="flex h-full items-center gap-3.5 rounded-2xl bg-gradient-to-r from-neutral-800 to-neutral-900 p-4 text-white shadow-md transition-all duration-200 group-hover:scale-[1.01] active:scale-[0.98]">
-            <div
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-neutral-900"
-              style={{ background: "var(--brand-yellow)" }}
-            >
+          <div className="flex h-full items-center gap-3.5 rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-2xs transition-all duration-150 hover:border-[var(--brand-green)] hover:shadow-xs active:scale-[0.98]">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-green-soft)] text-[var(--brand-green)]">
               <MapPin size={24} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[16px] font-black leading-tight">Yaqin dorixonalar</p>
-              <p className="mt-0.5 text-[12px] text-neutral-300 truncate">
+              <p className="text-[16px] font-black leading-tight text-neutral-900">Yaqin dorixonalar</p>
+              <p className="mt-0.5 text-[12px] text-neutral-500 truncate">
                 Xaritadan topish (5 km)
               </p>
             </div>
-            <ChevronRight size={20} className="shrink-0 text-white/70 group-hover:text-white" />
+            <ChevronRight size={19} className="shrink-0 text-neutral-400 group-hover:text-[var(--brand-green)] transition-colors" />
           </div>
         </Link>
       </div>

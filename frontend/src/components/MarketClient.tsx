@@ -500,22 +500,21 @@ export default function MarketClient() {
         )}
       </div>
 
-      {/* Bo'limlar — katta va bosishga qulay */}
-      <div className="mt-3 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+      {/* Bo'limlar — barcha ekranlarga to'liq moslashuvchan (mobilda 3 ta teng ustun) */}
+      <div className="mt-3 grid grid-cols-3 gap-1.5 sm:gap-2">
         {sectionTabs.map((t) => {
           const active = section === t.v;
           return (
             <button
               key={t.v}
               onClick={() => setSection(t.v)}
-              className={`shrink-0 rounded-2xl px-4 py-2.5 text-[13.5px] font-bold transition-all active:scale-95 ${
+              className={`flex items-center justify-center rounded-2xl py-2.5 px-2 text-center text-[12px] sm:text-[14px] font-bold transition-all active:scale-95 border ${
                 active
-                  ? "text-white shadow-md shadow-emerald-700/20"
-                  : "bg-white text-[var(--brand-ink)] shadow-xs hover:bg-neutral-50"
+                  ? "bg-[var(--brand-green)] text-white border-[var(--brand-green)] shadow-xs"
+                  : "bg-white text-neutral-800 border-neutral-200/80 hover:bg-neutral-50"
               }`}
-              style={active ? { background: "var(--brand-green)" } : undefined}
             >
-              {t.l}
+              <span className="truncate">{t.l}</span>
             </button>
           );
         })}
