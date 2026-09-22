@@ -71,7 +71,6 @@ export default function WeatherCard({
   const [mode, setMode] = useState<"day" | "night">("day");
   const [place, setPlace] = useState("Hudud aniqlanmoqda");
   const [region, setRegion] = useState<string | null>(null);
-  const [activeAlert, setActiveAlert] = useState<{ title: string; region: string } | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
@@ -93,18 +92,6 @@ export default function WeatherCard({
           setW(null);
           setLoadFailed(true);
         });
-
-      // Real ogohlantirishlar mavjudligini tekshirish
-      fetch(`/api/weather/alerts${q}`)
-        .then((r) => r.json())
-        .then((d) => {
-          if (d?.ok && Array.isArray(d.alerts) && d.alerts.length > 0) {
-            setActiveAlert({ title: d.alerts[0].title, region: d.alerts[0].region });
-          } else {
-            setActiveAlert(null);
-          }
-        })
-        .catch(() => setActiveAlert(null));
 
       if (showRegion && lat !== undefined && lng !== undefined) {
         fetch(`/api/location?lat=${lat}&lng=${lng}`)
@@ -201,6 +188,7 @@ export default function WeatherCard({
           </div>
         </div>
 
+        {/* Shamol, Namlik, Yog'in */}
         <div className="mt-4 grid grid-cols-3 gap-2 text-center">
           <div className="rounded-2xl bg-white/15 py-2.5 backdrop-blur">
             <div className="flex items-center justify-center gap-1 text-[11px] opacity-80">
@@ -222,6 +210,7 @@ export default function WeatherCard({
           </div>
         </div>
 
+        {/* Aniq agronomik maslahat (Ogohlantirishlarsiz, sof tavsiya matni) */}
         <div
           className="mt-4 flex items-start gap-2.5 rounded-[18px] px-4 py-3 text-[14px] font-semibold leading-snug transition-colors duration-300"
           style={{
@@ -231,23 +220,10 @@ export default function WeatherCard({
           }}
         >
           <span className="mt-0.5 shrink-0">
-            {activeAlert ? (
-              <TriangleAlert size={18} strokeWidth={2.4} className="text-red-700" />
-            ) : w ? (
-              isNight ? (
-                <Moon size={18} className="text-amber-300" />
-              ) : (
-                levelIcon[w.level]
-              )
-            ) : null}
+            {w ? (isNight ? <Moon size={18} className="text-amber-300" /> : levelIcon[w.level]) : null}
           </span>
           <span>
-            {activeAlert ? (
-              <>
-                <b className="font-extrabold text-red-700 mr-1">⚠️ Diqqat ({activeAlert.region}):</b>
-                {activeAlert.title}
-              </>
-            ) : w ? (
+            {w ? (
               isNight ? (
                 w.adviceNight ?? w.advice
               ) : (
