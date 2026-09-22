@@ -4,3 +4,4 @@ export const NEWS_SOURCES = [
   { label: "Kun.uz", url: "https://kun.uz/uz" },
   { label: "Gazeta.uz", url: "https://www.gazeta.uz/uz/" },
 ];
+

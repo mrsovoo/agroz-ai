@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Map, Pill, UserRound, UsersRound, Lightbulb } from "lucide-react";
+import { Home, Map, Pill, UserRound, UsersRound } from "lucide-react";
+import { loadCart, CART_EVENT } from "@/lib/cart-store";
 
 const items = [
   { href: "/", label: "Asosiy", Icon: Home },
@@ -14,6 +16,22 @@ const items = [
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const [cartCount, setCartCount] = useState(0);
+
+  useEffect(() => {
+    const sync = () => {
+      const c = loadCart();
+      setCartCount(c?.lines?.reduce((s, l) => s + l.qty, 0) ?? 0);
+    };
+    sync();
+    window.addEventListener(CART_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(CART_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+
   return (
     <nav
       className="mobile-bottom-nav fixed bottom-0 left-1/2 z-50 w-full max-w-[520px] -translate-x-1/2"
@@ -25,7 +43,7 @@ export default function BottomNav() {
       }}
     >
       <ul className="grid grid-cols-5 pb-[max(10px,env(safe-area-inset-bottom))] pt-2.5">
-        {items.slice(0, 5).map(({ href, label, Icon }) => {
+        {items.map(({ href, label, Icon }) => {
           const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
           return (
             <li key={href}>
@@ -35,7 +53,14 @@ export default function BottomNav() {
                   active ? "text-[var(--brand-green)]" : "text-[var(--brand-muted)]"
                 }`}
               >
-                <Icon size={24} strokeWidth={active ? 2.4 : 1.8} />
+                <div className="relative">
+                  <Icon size={24} strokeWidth={active ? 2.4 : 1.8} />
+                  {href === "/dorilar" && cartCount > 0 && (
+                    <span className="absolute -top-1 -right-2.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9.5px] font-black text-white shadow-xs">
+                      {cartCount > 9 ? "9+" : cartCount}
+                    </span>
+                  )}
+                </div>
                 {label}
               </Link>
             </li>
@@ -45,3 +70,4 @@ export default function BottomNav() {
     </nav>
   );
 }
+

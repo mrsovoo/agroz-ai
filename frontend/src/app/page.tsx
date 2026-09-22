@@ -1,6 +1,7 @@
 import Link from "next/link";
 import WeatherCard from "@/components/WeatherCard";
-import WeatherAlertBanner from "@/components/WeatherAlertBanner";
+import CompactAlertStrip from "@/components/CompactAlertStrip";
+import NotificationBell from "@/components/NotificationBell";
 import FeaturedMedicines from "@/components/FeaturedMedicines";
 import { getCurrentUser, getUserRecentDiagnoses } from "@/lib/session";
 import {
@@ -70,24 +71,24 @@ export default async function HomePage() {
             </div>
           </div>
 
-          {/* Mobil uchun profil/kirish havolasi */}
-          <Link
-            href={user ? "/profil" : "/kirish"}
-            className="mt-1 flex h-11 items-center gap-1.5 rounded-full bg-white px-4 text-[15px] font-bold text-[var(--brand-ink)] shadow-sm active:scale-95 web:hidden"
-          >
-            {user ? "Profil" : "Kirish"}
-            <ChevronRight size={16} className="text-[var(--brand-muted)]" />
-          </Link>
+          {/* Mobil uchun bildirishnomalar va profil/kirish */}
+          <div className="mt-1 flex items-center gap-2 web:hidden">
+            <NotificationBell />
+            <Link
+              href={user ? "/profil" : "/kirish"}
+              className="flex h-11 items-center gap-1.5 rounded-full bg-white px-4 text-[15px] font-bold text-[var(--brand-ink)] shadow-sm active:scale-95"
+            >
+              {user ? "Profil" : "Kirish"}
+              <ChevronRight size={16} className="text-[var(--brand-muted)]" />
+            </Link>
+          </div>
         </header>
 
         <div className="mt-5 web:mt-0">
           <WeatherCard />
+          {/* Ixcham ob-havo xavf lentasi — ekranni to'sib qo'ymaydi */}
+          <CompactAlertStrip initialRegion={user?.region ?? "Toshkent"} />
         </div>
-      </div>
-
-      {/* Shoshilinch ob-havo ogohlantirishlari (sovuq urishi, kuchli yomg'ir) */}
-      <div className="mt-6">
-        <WeatherAlertBanner initialRegion={user?.region ?? "Toshkent"} />
       </div>
 
       <p className="ios-section-title mt-7">Xizmatlar</p>

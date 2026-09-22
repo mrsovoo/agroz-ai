@@ -86,3 +86,11 @@ export function notifyCartChanged(): void {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(CART_EVENT));
 }
+
+/** Global savat oynasini ochish uchun hodisa. */
+export const OPEN_CART_EVENT = "agroz:open-cart";
+
+export function openCart(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(OPEN_CART_EVENT));
+}

@@ -1,1 +1,0 @@
-ALTER TABLE "specialist_medicines" ADD COLUMN "photo_data" text;

@@ -1,8 +1,20 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MapPin, Newspaper, PawPrint, Pill, Sprout, UserRound, UsersRound } from "lucide-react";
+import {
+  Bell,
+  MapPin,
+  Newspaper,
+  PawPrint,
+  Pill,
+  ShoppingCart,
+  Sprout,
+  UserRound,
+  UsersRound,
+} from "lucide-react";
+import { loadCart, openCart, CART_EVENT } from "@/lib/cart-store";
 
 const links = [
   { href: "/", label: "Asosiy", Icon: Sprout },
@@ -16,6 +28,21 @@ const links = [
 
 export default function WebTopNav() {
   const pathname = usePathname();
+  const [cartCount, setCartCount] = useState(0);
+
+  useEffect(() => {
+    const sync = () => {
+      const c = loadCart();
+      setCartCount(c?.lines?.reduce((s, l) => s + l.qty, 0) ?? 0);
+    };
+    sync();
+    window.addEventListener(CART_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(CART_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href.split("?")[0]);
@@ -47,7 +74,31 @@ export default function WebTopNav() {
           ))}
         </nav>
 
-        <div className="web-actions">
+        <div className="web-actions flex items-center gap-2.5">
+          {/* Bildirishnomalar */}
+          <Link
+            href="/bildirishnomalar"
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-black/10 text-neutral-700 hover:text-black hover:border-black/20 transition active:scale-95"
+            title="Bildirishnomalar"
+          >
+            <Bell size={18} />
+          </Link>
+
+          {/* Savat */}
+          <button
+            type="button"
+            onClick={() => openCart()}
+            className="relative flex items-center gap-2 rounded-xl bg-white border border-black/10 px-3.5 py-2 text-[14px] font-bold text-neutral-800 hover:border-[var(--brand-green)]/40 hover:text-[var(--brand-green)] transition active:scale-95"
+          >
+            <ShoppingCart size={18} />
+            <span>Savat</span>
+            {cartCount > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--brand-green)] px-1.5 text-[11px] font-black text-white">
+                {cartCount}
+              </span>
+            )}
+          </button>
+
           <Link href="/profil" className="web-profile-link">
             <UserRound size={18} />
             Profil
@@ -57,3 +108,4 @@ export default function WebTopNav() {
     </header>
   );
 }
+

@@ -85,3 +85,4 @@ router.get("/alerts", async (req, res) => {
 });
 
 export default router;
+
