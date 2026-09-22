@@ -93,6 +93,9 @@ export async function getSimilarMedicines(
     pharmacyId: number;
     pharmacyName: string;
     pharmacyPhone: string;
+    pharmacyAddress: string;
+    ratingAvg: number | null;
+    ratingCount: number;
   }[]
 > {
   const rows = await db

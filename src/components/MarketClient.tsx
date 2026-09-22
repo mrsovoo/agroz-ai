@@ -124,6 +124,7 @@ export default function MarketClient() {
   const [cartDelivery, setCartDelivery] = useState<"pickup" | "delivery">("pickup");
   const [cartAddress, setCartAddress] = useState("");
   const [cartBusy, setCartBusy] = useState(false);
+  const [cartError, setCartError] = useState<string | null>(null);
   const [orderDone, setOrderDone] = useState<{
     orderId: number;
     total: number;

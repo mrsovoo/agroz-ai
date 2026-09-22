@@ -21,6 +21,9 @@ export default async function FeaturedMedicines() {
     pharmacyId: number;
     pharmacyName: string;
     pharmacyPhone: string;
+    pharmacyAddress: string;
+    ratingAvg: number | null;
+    ratingCount: number;
   }[] = [];
 
   try {

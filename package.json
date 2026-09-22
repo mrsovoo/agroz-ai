@@ -15,6 +15,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:clear": "node scripts/db-clear.mjs",
+    "db:seed": "node scripts/seed-data.mjs",
     "telegram:setup": "node scripts/telegram-setup.mjs",
     "telegram:poll": "node scripts/telegram-poll.mjs"
   },

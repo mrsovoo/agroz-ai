@@ -1,5 +1,15 @@
 import { db } from "@/db";
-import { medicines, news, pharmacies, pharmacyStocks } from "@/db/schema";
+import {
+  medicines,
+  news,
+  pharmacies,
+  pharmacyStocks,
+  specialists,
+  specialistMedicines,
+  specialistRatings,
+  orders,
+  orderItems,
+} from "@/db/schema";
 import { sql } from "drizzle-orm";
 
 type PharmacySeed = {
@@ -132,33 +142,151 @@ async function seedInTransaction() {
       await tx.insert(news).values(NEWS);
     }
 
-    const rows = await tx.execute<{ count: string }>(
-      sql`select count(*)::text as count from pharmacies`,
+    const specRows = await tx.execute<{ count: string }>(
+      sql`select count(*)::text as count from specialists`,
     );
-    if (Number(rows.rows[0]?.count ?? "0") > 0) return;
+    if (Number(specRows.rows[0]?.count ?? "0") === 0) {
+      const ph1 = await tx
+        .insert(specialists)
+        .values({
+          telegramId: 90000101,
+          name: "Baraka Agro Ta'minot",
+          organization: "Agro Kimyo Baraka MCHJ",
+          phone: "+998901112233",
+          role: "pharmacy",
+          specialty: "agro",
+          education: "TDAU",
+          bio: "Sertifikatlangan o'simliklarni himoya qilish kimyoviy va biologik vositalari.",
+          helpsWith: "crop",
+          experienceYears: 10,
+          address: "Toshkent vil., Zangiota t., Bo'zsuv MFY",
+          lat: 41.25,
+          lng: 69.18,
+          workHours: "08:00 - 19:00",
+          isActive: true,
+        })
+        .returning({ id: specialists.id });
 
-    const insertedPharmacies = await tx
-      .insert(pharmacies)
-      .values(PHARMACIES.map((p) => ({ ...p, specialist: p.specialist ?? null })))
-      .returning({ id: pharmacies.id });
+      const ph2 = await tx
+        .insert(specialists)
+        .values({
+          telegramId: 90000102,
+          name: "Dehqon Hamkori Do'koni",
+          organization: "Dehqon Hamkori Agrovet",
+          phone: "+998912223344",
+          role: "pharmacy",
+          specialty: "umumiy",
+          education: "SamDVMU",
+          bio: "Ekinlar va chorva mollari uchun barcha dori-darmonlar.",
+          helpsWith: "both",
+          experienceYears: 14,
+          address: "Samarqand sh., Mirzo Ulug'bek ko'chasi 45",
+          lat: 39.6542,
+          lng: 66.9597,
+          workHours: "08:30 - 18:30",
+          isActive: true,
+        })
+        .returning({ id: specialists.id });
 
-    const insertedMedicines = await tx
-      .insert(medicines)
-      .values(MEDICINES)
-      .returning({ id: medicines.id });
+      const sp1 = await tx
+        .insert(specialists)
+        .values({
+          telegramId: 90000201,
+          name: "Dr. Alisher Qodirov",
+          phone: "+998901002030",
+          role: "specialist",
+          specialty: "Bosh agronom, O'simliklar himoyasi eksperti",
+          education: "Toshkent Davlat Agrar Universiteti",
+          bio: "Pomidor, bodring va g'alla kasalliklarini aniqlash va davolash.",
+          helpsWith: "crop",
+          experienceYears: 15,
+          address: "Toshkent sh., Bunyodkor shoh ko'chasi",
+          lat: 41.278,
+          lng: 69.201,
+          workHours: "09:00 - 18:00",
+          isActive: true,
+        })
+        .returning({ id: specialists.id });
 
-    const stockRows: { pharmacyId: number; medicineId: number; status: string; price: number }[] =
-      [];
-    for (const p of insertedPharmacies) {
-      for (const m of insertedMedicines) {
-        stockRows.push({
-          pharmacyId: p.id,
-          medicineId: m.id,
-          status: stockStatus(p.id, m.id),
-          price: 20000 + ((p.id * m.id * 3700) % 180000),
-        });
-      }
+      const p1Id = ph1[0].id;
+      const p2Id = ph2[0].id;
+      const sp1Id = sp1[0].id;
+
+      // Dorilar
+      const m1 = await tx
+        .insert(specialistMedicines)
+        .values([
+          {
+            specialistId: p1Id,
+            name: "Ridomil Gold MZ 68 WG",
+            type: "crop",
+            price: 65000,
+            usage: "Pomidor, kartoshka va uzumdagi fitoftoroz, peronosporoz kasalliklariga qarshi fungitsid.",
+            status: "bor",
+          },
+          {
+            specialistId: p1Id,
+            name: "Score 250 EC (Skor)",
+            type: "crop",
+            price: 48000,
+            usage: "Olma va mevali daraxtlardagi parsha va un-shudringga qarshi kuchli fungitsid.",
+            status: "bor",
+          },
+          {
+            specialistId: p2Id,
+            name: "Ivermektin 1% in'yeksiya",
+            type: "animal",
+            price: 38000,
+            usage: "Qoramol va qo'ylardagi gijja, o'pka nematodalari va qichima kanalarga qarshi.",
+            status: "bor",
+          },
+          {
+            specialistId: p2Id,
+            name: "Enrofloksatsin 10% eritma",
+            type: "animal",
+            price: 42000,
+            usage: "Buzoq va parrandalarning oshqozon-ichak infeksiyalariga qarshi antibiotik.",
+            status: "bor",
+          },
+        ])
+        .returning({ id: specialistMedicines.id });
+
+      // Reytinglar
+      await tx.insert(specialistRatings).values([
+        { specialistId: p1Id, raterKey: "seed-rate-p1-1", stars: 5 },
+        { specialistId: p1Id, raterKey: "seed-rate-p1-2", stars: 5 },
+        { specialistId: p1Id, raterKey: "seed-rate-p1-3", stars: 4 },
+        { specialistId: p2Id, raterKey: "seed-rate-p2-1", stars: 5 },
+        { specialistId: p2Id, raterKey: "seed-rate-p2-2", stars: 5 },
+        { specialistId: sp1Id, raterKey: "seed-rate-sp1-1", stars: 5 },
+        { specialistId: sp1Id, raterKey: "seed-rate-sp1-2", stars: 5 },
+      ]);
+
+      // Namuna buyurtma (kuzatuv uchun)
+      const ord = await tx
+        .insert(orders)
+        .values({
+          pharmacySpecialistId: p1Id,
+          customerName: "Akromjon Karimov",
+          customerPhone: "+998901234567",
+          note: "Iltimos, soat 14:00 gacha yetkazing",
+          deliveryType: "delivery",
+          customerAddress: "Toshkent sh., Yunusobod tumani, 14-mavze",
+          totalSum: 130000,
+          status: "yetkazildi",
+          ratingStars: 5,
+          ratingNote: "Dori juda tez yetkazildi, rahmat!",
+          ratedAt: new Date(),
+        })
+        .returning({ id: orders.id });
+
+      await tx.insert(orderItems).values({
+        orderId: ord[0].id,
+        medicineId: m1[0].id,
+        name: "Ridomil Gold MZ 68 WG",
+        price: 65000,
+        qty: 2,
+      });
     }
-    if (stockRows.length > 0) await tx.insert(pharmacyStocks).values(stockRows);
   });
 }

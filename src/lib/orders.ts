@@ -136,6 +136,7 @@ export async function createOrder(input: CreateOrderInput) {
   return {
     ok: true as const,
     orderId,
+    total,
     pharmacy: {
       id: pharmacyRow.id,
       name: pharmacyRow.organization ?? pharmacyRow.name,
