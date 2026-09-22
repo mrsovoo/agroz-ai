@@ -21,6 +21,7 @@ import {
   listMedicines,
   setMedicinePrice,
   setMedicineStatus,
+  updateSpecialistFields,
   upsertSpecialist,
   type SpecialistRole,
 } from "@/lib/specialists";
@@ -32,6 +33,7 @@ import {
   MEDICINE_CONFIRM_KEYBOARD,
   MEDICINE_CANCEL_KEYBOARD,
   MEDICINE_DONE_KEYBOARD,
+  MEDICINE_PHOTO_KEYBOARD,
   MEDICINE_TYPE_KEYBOARD,
   MEDICINE_TYPE_LABELS,
   formatSum,
@@ -39,6 +41,7 @@ import {
   ROLE_KEYBOARD,
   answerCallbackQuery,
   appKeyboard,
+  profileKeyboard,
   askAddress,
   askAddressConfirm,
   askLocation,
@@ -147,7 +150,14 @@ type Step =
   | "med_price"
   | "med_confirm"
   // /dorilarim → bitta dorining narxini o'zgartirish.
-  | "med_price_edit";
+  | "med_price_edit"
+  // Profil ma'lumotlarini qisman tahrirlash
+  | "edit_name"
+  | "edit_phone"
+  | "edit_hours"
+  | "edit_loc"
+  | "edit_org"
+  | "edit_spec";
 
 type Draft = {
   role?: SpecialistRole;
@@ -299,7 +309,7 @@ async function handleCommand(
       await sendAuthMessage(chatId, welcomeMessage(firstName), { inline: NEXT_STEP_KEYBOARD });
       return;
     }
-    await sendAuthMessage(chatId, profileMessage(profile), { inline: appKeyboard() });
+    await sendAuthMessage(chatId, profileMessage(profile), { inline: profileKeyboard(profile) });
     return;
   }
 
@@ -410,9 +420,15 @@ async function handleCommand(
 
   // /start va boshqa har qanday buyruq.
   const profile = await getSpecialistByTelegramId(telegramId);
-  await sendAuthMessage(chatId, welcomeMessage(firstName, Boolean(profile)), {
-    inline: profile ? appKeyboard() ?? NEXT_STEP_KEYBOARD : NEXT_STEP_KEYBOARD,
-  });
+  if (profile) {
+    await sendAuthMessage(chatId, `${welcomeMessage(firstName, true)}\n\n${profileMessage(profile)}`, {
+      inline: profileKeyboard(profile),
+    });
+  } else {
+    await sendAuthMessage(chatId, welcomeMessage(firstName, false), {
+      inline: NEXT_STEP_KEYBOARD,
+    });
+  }
 }
 
 async function startRegistration(chatId: number, telegramId: number): Promise<void> {
@@ -466,6 +482,7 @@ async function startMedicineAdd(chatId: number, telegramId: number): Promise<voi
   await sendAuthMessage(
     chatId,
     medicineIntroMessage(profile.organization ?? profile.name, await countMedicines(profile.id)),
+    { inline: MEDICINE_PHOTO_KEYBOARD },
   );
 }
 
@@ -517,13 +534,28 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
     if (data.startsWith("sp:")) {
       const value = data.slice(3);
       if (value === "__other__") {
-        step = "specialty_text";
+        step = state.step === "edit_spec" ? "edit_spec" : "specialty_text";
         await setState(telegramId, step, draft);
         await answerCallbackQuery(query.id);
         await clearReplyKeyboard(chatId, askSpecialtyText());
         return;
       }
-      draft.specialty = value.slice(0, 160);
+      const specialty = value.slice(0, 160);
+      if (state.step === "edit_spec") {
+        await updateSpecialistFields(telegramId, { specialty });
+        await clearState(telegramId);
+        const updated = await getSpecialistByTelegramId(telegramId);
+        await answerCallbackQuery(query.id);
+        if (updated) {
+          await sendAuthMessage(
+            chatId,
+            `✅ <b>Mutaxassisligingiz muvaffaqiyatli yangilandi:</b> ${escapeHtml(specialty)}\n\n${profileMessage(updated)}`,
+            { inline: profileKeyboard(updated) },
+          );
+        }
+        return;
+      }
+      draft.specialty = specialty;
       // Mutaxassis uchun keyingi bosqich — kimga yordam beradi.
       step = "helps_with";
       await setState(telegramId, step, draft);
@@ -566,9 +598,9 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
         inline: {
           inline_keyboard: [
             [{ text: "➕ Yana dori qo'shish", callback_data: "m:again" }],
-            ...(savedProfile
-              ? appKeyboard()?.inline_keyboard ?? []
-              : []),
+            [{ text: "💊 Dorilarim ro'yxati", callback_data: "m:list" }],
+            [{ text: "👤 Profilimni ko'rish", callback_data: "m:profile" }],
+            ...(appKeyboard()?.inline_keyboard ?? []),
           ],
         },
       });
@@ -588,14 +620,122 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
       await startMedicineAdd(chatId, telegramId);
       return;
     }
-
     // Saqlagandan keyin «Profilimni ko'rish».
     if (data === "m:profile") {
       await answerCallbackQuery(query.id);
       const profile = await getSpecialistByTelegramId(telegramId);
       if (profile) {
-        await sendAuthMessage(chatId, profileMessage(profile), { inline: appKeyboard() });
+        await sendAuthMessage(chatId, profileMessage(profile), { inline: profileKeyboard(profile) });
       }
+      return;
+    }
+
+    // Rasmsiz dori qo'shishni davom etish
+    if (data === "m:skip_photo") {
+      await answerCallbackQuery(query.id);
+      await setState(telegramId, "med_name", draft);
+      await sendAuthMessage(
+        chatId,
+        `${medicineStepIndicator("name")}\n\n✍️ Dorining <b>nomini yozing</b>:\n\nMasalan: <i>Ridomil Gold</i>, <i>Ivermektin 1%</i>`,
+        { inline: MEDICINE_CANCEL_KEYBOARD },
+      );
+      return;
+    }
+
+    // Buyurtmalar bo'limi (profil klaviaturasidan)
+    if (data === "m:orders") {
+      await answerCallbackQuery(query.id);
+      const { listOrders } = await import("@/lib/orders");
+      const { ordersListKeyboard, ordersEmptyMessage, ordersHintMessage } = await import("@/lib/orders-bot");
+      const profile = await getSpecialistByTelegramId(telegramId);
+      if (!profile || profile.role !== "pharmacy") {
+        await sendAuthMessage(chatId, onlyPharmacyMessage(profile?.role));
+        return;
+      }
+      const orders = await listOrders({ pharmacySpecialistId: profile.id, limit: 20 });
+      if (orders.length === 0) {
+        await sendAuthMessage(chatId, ordersEmptyMessage());
+        return;
+      }
+      await sendAuthMessage(chatId, ordersHintMessage(orders.length), {
+        inline: ordersListKeyboard(orders),
+      });
+      return;
+    }
+
+    // Profilni o'chirish tasdig'ini so'rash
+    if (data === "pd:ask") {
+      await answerCallbackQuery(query.id);
+      const profile = await getSpecialistByTelegramId(telegramId);
+      if (!profile) return;
+      await sendAuthMessage(chatId, askProfileDelete(profile.name, profile.role), {
+        inline: PROFILE_DELETE_KEYBOARD,
+      });
+      return;
+    }
+
+    // ---- QISMAN TAHRIRLASH CALLBACKLARI ----
+    if (data === "ed:name") {
+      await answerCallbackQuery(query.id);
+      await setState(telegramId, "edit_name", {});
+      await sendAuthMessage(
+        chatId,
+        "✏️ <b>Yangi ism va familiyangizni yozing:</b>\n\nMasalan: <i>Dilshod Ergashev</i>\n\nBekor qilish uchun: /bekor",
+      );
+      return;
+    }
+
+    if (data === "ed:phone") {
+      await answerCallbackQuery(query.id);
+      await setState(telegramId, "edit_phone", {});
+      await sendAuthMessage(
+        chatId,
+        "📞 <b>Yangi telefon raqamingizni yuboring:</b>\n\nPastdagi «📱 Telefon raqamni yuborish» tugmasini bosing yoki qo'lda yozing (masalan: <i>+998901234567</i>):",
+        { replyKeyboard: contactKeyboard() },
+      );
+      return;
+    }
+
+    if (data === "ed:hours") {
+      await answerCallbackQuery(query.id);
+      await setState(telegramId, "edit_hours", {});
+      await sendAuthMessage(
+        chatId,
+        "⏰ <b>Yangi ish vaqtingizni tanlang yoki yozing:</b>",
+        { inline: WORK_HOURS_KEYBOARD },
+      );
+      return;
+    }
+
+    if (data === "ed:loc") {
+      await answerCallbackQuery(query.id);
+      await setState(telegramId, "edit_loc", {});
+      await sendAuthMessage(
+        chatId,
+        "📍 <b>Yangi lokatsiyangizni yuboring:</b>\n\nPastdagi «📍 Lokatsiyani yuborish» tugmasini bosing:",
+        { replyKeyboard: locationKeyboard() },
+      );
+      return;
+    }
+
+    if (data === "ed:org") {
+      await answerCallbackQuery(query.id);
+      await setState(telegramId, "edit_org", {});
+      await sendAuthMessage(
+        chatId,
+        "🏪 <b>Dorixona yoki tashkilotingizning yangi nomini yozing:</b>\n\nMasalan: <i>Baraka Agro Pharm</i>\n\nBekor qilish uchun: /bekor",
+      );
+      return;
+    }
+
+    if (data === "ed:spec") {
+      await answerCallbackQuery(query.id);
+      await setState(telegramId, "edit_spec", {});
+      await sendAuthMessage(
+        chatId,
+        "🎯 <b>Yangi mutaxassisligingizni tanlang:</b>",
+        { inline: SPECIALTY_KEYBOARD },
+      );
       return;
     }
 
@@ -674,6 +814,21 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
     // Ish vaqti tanlanganda yoki o'tkazib yuborilganda: wh:08:00 - 18:00 | wh:09:00 - 20:00 | wh:24/7 | wh:skip
     if (data.startsWith("wh:")) {
       const val = data.slice(3);
+      if (state.step === "edit_hours") {
+        const hours = val === "skip" ? "09:00 - 18:00" : val;
+        await updateSpecialistFields(telegramId, { workHours: hours });
+        await clearState(telegramId);
+        const updated = await getSpecialistByTelegramId(telegramId);
+        await answerCallbackQuery(query.id);
+        if (updated) {
+          await sendAuthMessage(
+            chatId,
+            `✅ <b>Ish vaqtingiz muvaffaqiyatli yangilandi:</b> ${escapeHtml(hours)}\n\n${profileMessage(updated)}`,
+            { inline: profileKeyboard(updated) },
+          );
+        }
+        return;
+      }
       if (val === "skip") {
         delete draft.workHours;
       } else {
@@ -1212,12 +1367,133 @@ async function handleText(
       );
       return;
 
-    case "med_photo":
-      // Hali rasm yuborilmagan — qayta so'raymiz (bekor qilish imkoni bilan).
+    case "med_photo": {
+      const skip = text === "/skip" || text === "/otkaz";
+      if (skip) {
+        await setState(telegramId, "med_name", draft);
+        await sendAuthMessage(
+          chatId,
+          `${medicineStepIndicator("name")}\n\n📸 Rasm o'tkazib yuborildi.\n✍️ Endi dorining <b>nomini yozing</b>:\n\nMasalan: <i>Ridomil Gold</i>, <i>Ivermektin 1%</i>`,
+          { inline: MEDICINE_CANCEL_KEYBOARD },
+        );
+        return;
+      }
+      const name = cleanText(text, 160);
+      if (name && name.length >= 2) {
+        draft.medName = name;
+        await setState(telegramId, "med_type", draft);
+        await sendAuthMessage(
+          chatId,
+          `✅ Dori nomi: <b>${escapeHtml(name)}</b>\n\n${medicineStepIndicator("type")}\n\n${askMedicineType()}`,
+          { inline: MEDICINE_TYPE_KEYBOARD },
+        );
+        return;
+      }
       await sendAuthMessage(chatId, `${medicineStepIndicator("photo")}\n\n${askMedicinePhoto()}`, {
-        inline: MEDICINE_CANCEL_KEYBOARD,
+        inline: MEDICINE_PHOTO_KEYBOARD,
       });
       return;
+    }
+
+    // ---- QISMAN TAHRIRLASH CASE-LARI ----
+    case "edit_name": {
+      const name = cleanText(text, 120);
+      if (!name || name.length < 2) {
+        await sendAuthMessage(chatId, "⚠️ Iltimos, to'liq ism va familiyangizni yozing (kamida 2 harf):");
+        return;
+      }
+      await updateSpecialistFields(telegramId, { name });
+      await clearState(telegramId);
+      const updated = await getSpecialistByTelegramId(telegramId);
+      if (updated) {
+        await sendAuthMessage(
+          chatId,
+          `✅ <b>Ism-familiyangiz muvaffaqiyatli yangilandi:</b> ${escapeHtml(name)}\n\n${profileMessage(updated)}`,
+          { inline: profileKeyboard(updated) },
+        );
+      }
+      return;
+    }
+
+    case "edit_hours": {
+      const hours = text === "/skip" ? "09:00 - 18:00" : cleanText(text, 60);
+      await updateSpecialistFields(telegramId, { workHours: hours });
+      await clearState(telegramId);
+      const updated = await getSpecialistByTelegramId(telegramId);
+      if (updated) {
+        await sendAuthMessage(
+          chatId,
+          `✅ <b>Ish vaqtingiz muvaffaqiyatli yangilandi:</b> ${escapeHtml(hours ?? "09:00 - 18:00")}\n\n${profileMessage(updated)}`,
+          { inline: profileKeyboard(updated) },
+        );
+      }
+      return;
+    }
+
+    case "edit_org": {
+      const org = cleanText(text, 160);
+      if (!org) {
+        await sendAuthMessage(chatId, "⚠️ Iltimos, tashkilot yoki dorixona nomini yozing:");
+        return;
+      }
+      await updateSpecialistFields(telegramId, { organization: org });
+      await clearState(telegramId);
+      const updated = await getSpecialistByTelegramId(telegramId);
+      if (updated) {
+        await sendAuthMessage(
+          chatId,
+          `✅ <b>Tashkilot nomi yangilandi:</b> ${escapeHtml(org)}\n\n${profileMessage(updated)}`,
+          { inline: profileKeyboard(updated) },
+        );
+      }
+      return;
+    }
+
+    case "edit_phone": {
+      await handleContact(chatId, telegramId, text);
+      return;
+    }
+
+    case "edit_loc": {
+      // Agar koordinata o'rniga manzil matnini yozib yuborsa
+      const addr = cleanText(text, 300);
+      if (addr && addr.length > 3) {
+        await updateSpecialistFields(telegramId, { address: addr });
+        await clearState(telegramId);
+        const updated = await getSpecialistByTelegramId(telegramId);
+        if (updated) {
+          await sendAuthMessage(
+            chatId,
+            `✅ <b>Manzilingiz yangilandi:</b> ${escapeHtml(addr)}\n\n${profileMessage(updated)}`,
+            { inline: profileKeyboard(updated) },
+          );
+        }
+        return;
+      }
+      await sendAuthMessage(chatId, "📍 Iltimos, pastdagi «📍 Lokatsiyani yuborish» tugmasini bosing:", {
+        replyKeyboard: locationKeyboard(),
+      });
+      return;
+    }
+
+    case "edit_spec": {
+      const spec = cleanText(text, 160);
+      if (spec) {
+        await updateSpecialistFields(telegramId, { specialty: spec });
+        await clearState(telegramId);
+        const updated = await getSpecialistByTelegramId(telegramId);
+        if (updated) {
+          await sendAuthMessage(
+            chatId,
+            `✅ <b>Mutaxassisligingiz yangilandi:</b> ${escapeHtml(spec)}\n\n${profileMessage(updated)}`,
+            { inline: profileKeyboard(updated) },
+          );
+        }
+        return;
+      }
+      await sendAuthMessage(chatId, askSpecialty(), { inline: SPECIALTY_KEYBOARD });
+      return;
+    }
 
     case "med_confirm":
       // Nom yozilgan, tasdiqlash kutilmoqda — tugmalarni qayta ko'rsatamiz.
@@ -1268,7 +1544,7 @@ async function handleContact(
   rawPhone: string | undefined,
 ): Promise<void> {
   const state = await getState(telegramId);
-  if (!state || state.step !== "phone") {
+  if (!state || (state.step !== "phone" && state.step !== "edit_phone")) {
     await sendAuthMessage(chatId, helpMessage(), { inline: NEXT_STEP_KEYBOARD });
     return;
   }
@@ -1277,8 +1553,6 @@ async function handleContact(
     await sendAuthMessage(chatId, invalidPhoneMessage(), { replyKeyboard: contactKeyboard() });
     return;
   }
-  const draft = state.draft;
-  draft.phone = phone;
 
   // Bir raqam — bitta profil: boshqa hisobda band bo'lsa o'tkazmaymiz.
   const owner = await findPhoneOwner(phone, telegramId);
@@ -1289,6 +1563,25 @@ async function handleContact(
     return;
   }
 
+  // Tahrirlash rejimi bo'lsa darhol bazaga yozib profilni ko'rsatamiz
+  if (state.step === "edit_phone") {
+    await updateSpecialistFields(telegramId, { phone });
+    await clearState(telegramId);
+    const updated = await getSpecialistByTelegramId(telegramId);
+    if (updated) {
+      await clearReplyKeyboard(
+        chatId,
+        `✅ <b>Telefon raqamingiz muvaffaqiyatli yangilandi:</b> ${escapeHtml(phone)}\n\n${profileMessage(updated)}`,
+      );
+      await sendAuthMessage(chatId, "Quyidagi menyu orqali boshqarishingiz mumkin:", {
+        inline: profileKeyboard(updated),
+      });
+    }
+    return;
+  }
+
+  const draft = state.draft;
+  draft.phone = phone;
   await setState(telegramId, "location", draft);
   await sendAuthMessage(chatId, askLocation(), { replyKeyboard: locationKeyboard() });
 }
@@ -1300,7 +1593,7 @@ async function handleLocation(
   lng: number | undefined,
 ): Promise<void> {
   const state = await getState(telegramId);
-  if (!state || state.step !== "location") {
+  if (!state || (state.step !== "location" && state.step !== "edit_loc")) {
     await sendAuthMessage(chatId, helpMessage(), { inline: NEXT_STEP_KEYBOARD });
     return;
   }
@@ -1308,6 +1601,31 @@ async function handleLocation(
     await sendAuthMessage(chatId, invalidLocationMessage(), { replyKeyboard: locationKeyboard() });
     return;
   }
+
+  // Tahrirlash rejimi bo'lsa manzilni aniqlab darhol bazaga yozamiz
+  if (state.step === "edit_loc") {
+    const detected = await reverseGeocode(lat as number, lng as number);
+    const profile = await getSpecialistByTelegramId(telegramId);
+    const newAddress = detected || profile?.address || "O'zbekiston";
+    await updateSpecialistFields(telegramId, {
+      lat: lat as number,
+      lng: lng as number,
+      address: newAddress,
+    });
+    await clearState(telegramId);
+    const updated = await getSpecialistByTelegramId(telegramId);
+    if (updated) {
+      await clearReplyKeyboard(
+        chatId,
+        `✅ <b>Lokatsiya va manzilingiz yangilandi:</b>\n📍 ${escapeHtml(newAddress)}\n\n${profileMessage(updated)}`,
+      );
+      await sendAuthMessage(chatId, "Quyidagi menyu orqali boshqarishingiz mumkin:", {
+        inline: profileKeyboard(updated),
+      });
+    }
+    return;
+  }
+
   const draft = state.draft;
   draft.lat = lat;
   draft.lng = lng;

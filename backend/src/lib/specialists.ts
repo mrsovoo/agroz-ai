@@ -125,6 +125,23 @@ export async function upsertSpecialist(input: SpecialistInput) {
   return rows[0];
 }
 
+/** Mutaxassis yoki dorixona profilining ma'lum maydonlarini qisman yangilash. */
+export async function updateSpecialistFields(
+  telegramId: number,
+  fields: Partial<Omit<SpecialistInput, "telegramId">>,
+) {
+  const values = {
+    ...fields,
+    updatedAt: new Date(),
+  };
+  const rows = await db
+    .update(specialists)
+    .set(values)
+    .where(eq(specialists.telegramId, telegramId))
+    .returning();
+  return rows[0] ?? null;
+}
+
 /**
  * Profilingizni o'chirish — foydalanuvchining o'zi o'chiradi.
  * Jadvaldan butunlay o'chiriladi (qayta ro'yxatdan o'tsa yangi profil yaratiladi).

@@ -192,6 +192,14 @@ export const MEDICINE_CONFIRM_KEYBOARD: InlineKeyboard = {
   ],
 };
 
+/** Dori qo'shish boshida rasm yoki rasmsiz davom etish. */
+export const MEDICINE_PHOTO_KEYBOARD: InlineKeyboard = {
+  inline_keyboard: [
+    [{ text: "⏩ Rasmsiz davom etish (nomini yozish)", callback_data: "m:skip_photo" }],
+    [{ text: "❌ Bekor qilish", callback_data: "m:no" }],
+  ],
+};
+
 /** Dori qo'shish jarayonida har bir etapda ko'rinadigan bekor tugmasi. */
 export const MEDICINE_CANCEL_KEYBOARD: InlineKeyboard = {
   inline_keyboard: [[{ text: "❌ Bekor qilish", callback_data: "m:no" }]],
@@ -201,9 +209,52 @@ export const MEDICINE_CANCEL_KEYBOARD: InlineKeyboard = {
 export const MEDICINE_DONE_KEYBOARD: InlineKeyboard = {
   inline_keyboard: [
     [{ text: "➕ Yana dori qo'shish", callback_data: "m:again" }],
+    [{ text: "💊 Dorilarim ro'yxati", callback_data: "m:list" }],
     [{ text: "👤 Profilimni ko'rish", callback_data: "m:profile" }],
   ],
 };
+
+/** Profilni ko'rish va to'g'ridan-to'g'ri tahrirlash klaviaturasi. */
+export function profileKeyboard(s: { role: string; name: string }): InlineKeyboard {
+  const isPharmacy = s.role === "pharmacy";
+  const rows: InlineKeyboard["inline_keyboard"] = [
+    [
+      { text: "✏️ Ismni o'zgartirish", callback_data: "ed:name" },
+      { text: "📞 Telefonni o'zgartirish", callback_data: "ed:phone" },
+    ],
+    [
+      { text: "📍 Manzil/Lokatsiya", callback_data: "ed:loc" },
+      { text: "⏰ Ish vaqti", callback_data: "ed:hours" },
+    ],
+  ];
+
+  if (isPharmacy) {
+    rows.push([
+      { text: "🏪 Tashkilot nomi", callback_data: "ed:org" },
+      { text: "➕ Yangi dori qo'shish", callback_data: "m:again" },
+    ]);
+    rows.push([
+      { text: "💊 Dorilarimni boshqarish", callback_data: "m:list" },
+      { text: "📦 Buyurtmalar", callback_data: "m:orders" },
+    ]);
+  } else {
+    rows.push([
+      { text: "🎯 Mutaxassislikni o'zgartirish", callback_data: "ed:spec" },
+    ]);
+  }
+
+  rows.push([
+    { text: "🔄 Barcha ma'lumotlarni qayta to'ldirish", callback_data: "r:start" },
+    { text: "🗑 Profilni o'chirish", callback_data: "pd:ask" },
+  ]);
+
+  const appK = appKeyboard();
+  if (appK?.inline_keyboard) {
+    rows.push(...appK.inline_keyboard);
+  }
+
+  return { inline_keyboard: rows };
+}
 
 /** Lokatsiyadan topilgan manzilni tasdiqlash yoki qo'lda yozish. */
 export const ADDRESS_CONFIRM_KEYBOARD: InlineKeyboard = {
