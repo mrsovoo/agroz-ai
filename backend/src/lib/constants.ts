@@ -24,19 +24,18 @@ export const MAX_AUDIO_BYTES = 8 * 1024 * 1024;
 /** Tashxis tavsifi maksimal uzunligi. */
 export const MAX_DIAGNOSIS_TEXT = 2000;
 
-/** Yaqin atrofdagi qidiruv uchun standart radius (km). */
+/** Yaqin atrofdagi qidiruv uchun yagona standart radius (km). */
 export const NEARBY_RADIUS_KM = 5;
+export const DEFAULT_SEARCH_RADIUS_KM = 5;
 
 /**
- * Yaqin atrof qidiruvining maksimal chegarasi (km).
- * Foydalanuvchi 5/10/25/50 km tanlay oladi — qishloq hududlarida 5 km ichida
- * hech kim bo'lmasa kattaroq radiusdan foydalanadi. Radiusdan tashqaridagilar
- * baribir qulflangan holatda ko'rinadi (telefon ishlaydi).
+ * Yaqin atrof qidiruvining chegarasi (km).
+ * Standart yagona 5 km radius belgilanadi.
  */
-export const MAX_NEARBY_RADIUS_KM = 50;
+export const MAX_NEARBY_RADIUS_KM = 5;
 
-/** UI'da taklif qilinadigan radius variantlari (km). */
-export const RADIUS_OPTIONS = [5, 10, 25, 50] as const;
+/** UI'da qo'llaniladigan standart yagona radius (5 km). */
+export const RADIUS_OPTIONS = [5] as const;
 
 /**
  * AI tashxisi shu foizdan past ishonch bilan qaytsa — foydalanuvchi

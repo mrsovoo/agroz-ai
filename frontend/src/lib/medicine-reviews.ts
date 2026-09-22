@@ -234,3 +234,4 @@ export function calculateMedicineRating(medicineId: number): { avg: number; coun
     count: reviews.length,
   };
 }
+

@@ -494,24 +494,15 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
         })}
       </div>
 
-      {/* Radius tanlash — qishloqda 5 km kam bo'lsa kengaytirish mumkin. */}
-      <div className="mt-2.5 flex items-center gap-2 overflow-x-auto pb-1">
-        <span className="shrink-0 text-[12px] font-bold text-[var(--brand-muted)]">Radius:</span>
-        {RADIUS_OPTIONS.map((r) => {
-          const active = selectedRadius === r;
-          return (
-            <button
-              key={r}
-              onClick={() => setSelectedRadius(r)}
-              className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-bold transition active:scale-95 ${
-                active ? "text-white" : "bg-white text-[var(--brand-ink)] shadow-sm"
-              }`}
-              style={active ? { background: "var(--brand-ink)" } : undefined}
-            >
-              {r} km
-            </button>
-          );
-        })}
+      {/* Standart 5 km radius ko'rsatkichi */}
+      <div className="mt-2.5 flex items-center justify-between rounded-xl bg-white px-3 py-2 text-[12px] text-[var(--brand-muted)] shadow-xs">
+        <span className="flex items-center gap-1.5 font-bold">
+          <MapPin size={13} className="text-[var(--brand-green)]" />
+          Yaqin atrof radiusi: <b className="text-[var(--brand-ink)]">5 km</b>
+        </span>
+        <span className="rounded-full border border-emerald-200/60 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-800">
+          Eng yaqin mutaxassislar
+        </span>
       </div>
 
       {locError && (

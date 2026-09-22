@@ -5,8 +5,6 @@ import AdminWeatherAlertsBroadcast from "@/components/AdminWeatherAlertsBroadcas
 import {
   Users,
   MapPin,
-  Send,
-  Phone,
   Sparkles,
   Bot,
   Activity,
@@ -14,122 +12,103 @@ import {
   Calendar,
   Layers,
   FileText,
+  BarChart3,
+  Globe,
+  MessageSquare,
+  Settings,
+  ShieldCheck,
+  Star,
+  Store,
+  Trash2,
+  ShoppingCart,
+  Package,
+  TrendingUp,
+  RefreshCw,
+  Search,
+  Filter,
+  Lock,
+  ArrowRight,
+  LogOut,
+  AlertCircle,
+  Building,
 } from "lucide-react";
 
 type Me = { enabled: boolean; authenticated: boolean; username: string | null };
 
-type SettingsStatus = {
-  key: string;
-  label: string;
-  secret: boolean;
-  source: "db" | "env" | "none";
-  preview: string | null;
-  updatedAt: string | null;
-};
-
 type Stats = {
   users: number;
+  telegramUsers: number;
+  phoneUsers: number;
   specialists: number;
   pharmacies: number;
   medicines: number;
+  orders: number;
+  ordersDelivered: number;
+  totalSalesSum: number;
+  averageRating: number;
   diagnoses: number;
-  aiDiagnoses: number;
-  offlineDiagnoses: number;
-  activeBotSessions: number;
-  otpSent24h: number;
-  otpVerified24h: number;
-  telegramUsers?: number;
-  phoneUsers?: number;
+  defaultRadiusKm: number;
 };
 
-type RecentDiagnosis = {
+type RecentOrder = {
   id: number;
-  diseaseName: string;
-  category: string;
-  source: string;
-  confidence: number | null;
+  customerName: string;
+  customerPhone: string;
+  totalSum: number | null;
+  status: string;
+  ratingStars: number | null;
   createdAt: string;
 };
 
-type UserByRegion = {
+type RegionStat = {
   region: string;
-  n: number;
+  users: number;
+  pharmacies: number;
+  specialists: number;
+  orders: number;
+  totalSales: number;
+  sharePercent: number;
 };
 
-type RecentUser = {
+type ReviewItem = {
   id: number;
-  name: string | null;
-  phone: string | null;
-  telegramId: number | null;
-  region: string | null;
-  district: string | null;
-  createdAt: string;
+  type: "order" | "specialist";
+  customerName?: string;
+  customerPhone?: string;
+  targetName: string;
+  role?: string;
+  stars: number;
+  comment?: string;
+  date: string;
 };
 
-type BotInfo =
-  | { configured: false }
-  | {
-      configured: true;
-      valid: boolean;
-      error?: string;
-      username?: string | null;
-      name?: string | null;
-      webhookUrl?: string | null;
-      pending?: number;
-      lastError?: string | null;
-    };
-
-type TelegramStatus = {
-  appUrl: string | null;
-  main: BotInfo;
-  auth: BotInfo;
-  secrets: { main: boolean; auth: boolean };
+type SettingListItem = {
+  key: string;
+  name: string;
+  label: string;
+  secret: boolean;
+  value: string | null;
+  preview: string | null;
 };
 
-/** AI provayder presetlari: Gemini asosiy o'rinda */
 const AI_PRESETS: { label: string; baseUrl: string; model: string; hint: string }[] = [
   {
-    label: "Google AI Studio (Gemini 3.8 Flash — Asosiy tavsiya)",
-    baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai/",
-    model: "gemini-3.8-flash",
-    hint: "Kalit: aistudio.google.com/apikey — bepul, o'zbek tilini mukammal tushunadi",
-  },
-  {
-    label: "Google Gemini (gemini-2.5-flash)",
+    label: "Google AI Studio (Gemini 2.5 Flash — Tavsiya)",
     baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai/",
     model: "gemini-2.5-flash",
     hint: "Tezkor, barqaror va bepul Gemini modeli",
   },
   {
-    label: "Gemini Transcribe (Ovozli xabarlar uchun)",
+    label: "Google AI Studio (Gemini 3.8 Flash)",
     baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai/",
-    model: "gemini-3.5-transcribe",
-    hint: "O'zbek tilidagi nutqni aniq matnga aylantiradi",
+    model: "gemini-3.8-flash",
+    hint: "Eng so'nggi Gemini modeli — chuqur agronomik tahlil",
   },
   {
     label: "Groq (Llama 4 Scout)",
     baseUrl: "https://api.groq.com/openai/v1",
     model: "meta-llama/llama-4-scout-17b-16e-instruct",
-    hint: "Kalit: console.groq.com",
-  },
-];
-
-const SETTING_GROUPS: { title: string; keys: string[] }[] = [
-  {
-    title: "🤖 Telegram botlar",
-    keys: ["telegram_bot_token", "telegram_auth_bot_token", "telegram_webhook_secret", "telegram_auth_webhook_secret"],
-  },
-  {
-    title: "🧠 Gemini AI sozlamalari (Tashxis va Ovoz tahlili)",
-    keys: ["openai_api_key", "openai_base_url", "ai_model", "asr_model"],
-  },
-  {
-    title: "📱 SMS (Eskiz.uz)",
-    keys: ["eskiz_email", "eskiz_password", "eskiz_from"],
-  },
-  {
-    title: "👤 Admin hisobi (login/parolni shu yerda o'zgartirasiz)",
-    keys: ["admin_username", "admin_password"],
+    hint: "Yuqori tezlikdagi ochiq manbali model",
   },
 ];
 
@@ -140,55 +119,81 @@ export default function AdminPanelPage() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // Tablar: dashboard | regions | reviews | settings | broadcast
+  const [activeTab, setActiveTab] = useState<"dashboard" | "regions" | "reviews" | "settings" | "broadcast">("dashboard");
+
   const [stats, setStats] = useState<Stats | null>(null);
-  const [recent, setRecent] = useState<RecentDiagnosis[]>([]);
-  const [topDiseases, setTopDiseases] = useState<{ disease: string; n: number }[]>([]);
-  const [usersByRegion, setUsersByRegion] = useState<UserByRegion[]>([]);
-  const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
-  const [settings, setSettings] = useState<SettingsStatus[]>([]);
-  const [values, setValues] = useState<Record<string, string>>({});
-  const [tg, setTg] = useState<TelegramStatus | null>(null);
+  const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
+  const [regions, setRegions] = useState<RegionStat[]>([]);
+  const [reviews, setReviews] = useState<ReviewItem[]>([]);
+  const [settingsList, setSettingsList] = useState<SettingListItem[]>([]);
+  const [settingsValues, setSettingsValues] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
 
-  const loadAll = useCallback(async () => {
-    const [statsRes, settingsRes, tgRes] = await Promise.all([
-      fetch("/api/admin/stats").then((r) => (r.ok ? r.json() : null)).catch(() => null),
-      fetch("/api/admin/settings").then((r) => (r.ok ? r.json() : null)).catch(() => null),
-      fetch("/api/admin/telegram").then((r) => (r.ok ? r.json() : null)).catch(() => null),
-    ]);
-    if (statsRes) {
-      setStats(statsRes.stats);
-      setRecent(statsRes.recentDiagnoses ?? []);
-      setTopDiseases(statsRes.topDiseases ?? []);
-      setUsersByRegion(statsRes.usersByRegion ?? []);
-      setRecentUsers(statsRes.recentUsers ?? []);
+  // Fikrlar filtrlash
+  const [reviewSearch, setReviewSearch] = useState("");
+  const [reviewFilterStars, setReviewFilterStars] = useState<number | "all">("all");
+
+  const checkAuth = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/me");
+      const data = await res.json();
+      setMe(data);
+    } catch {
+      setMe({ enabled: true, authenticated: false, username: null });
     }
-    if (settingsRes) {
-      setSettings(settingsRes.settings);
-      setValues((v) => {
-        const next = { ...v };
-        for (const s of settingsRes.settings as SettingsStatus[]) if (!(s.key in next)) next[s.key] = "";
-        return next;
-      });
+  }, []);
+
+  const loadData = useCallback(async () => {
+    try {
+      const [statsRes, regionsRes, reviewsRes, settingsRes] = await Promise.all([
+        fetch("/api/admin/stats").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        fetch("/api/admin/regions").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        fetch("/api/admin/reviews").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        fetch("/api/admin/settings").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      ]);
+
+      if (statsRes?.ok) {
+        setStats(statsRes.stats);
+        setRecentOrders(statsRes.recentOrders || []);
+      }
+      if (regionsRes?.ok) {
+        setRegions(regionsRes.regions || []);
+      }
+      if (reviewsRes?.ok) {
+        const list: ReviewItem[] = [
+          ...(reviewsRes.orderReviews || []),
+          ...(reviewsRes.specialistReviews || []),
+        ];
+        setReviews(list);
+      }
+      if (settingsRes?.ok) {
+        setSettingsList(settingsRes.list || []);
+        const map: Record<string, string> = {};
+        for (const item of settingsRes.list || []) {
+          map[item.key] = item.value || "";
+        }
+        setSettingsValues(map);
+      }
+    } catch (e) {
+      console.error("Admin ma'lumotlarini yuklashda xatolik:", e);
     }
-    if (tgRes) setTg(tgRes);
   }, []);
 
   useEffect(() => {
-    fetch("/api/admin/me")
-      .then((r) => r.json())
-      .then(setMe)
-      .catch(() => setMe({ enabled: false, authenticated: false, username: null }));
-  }, []);
+    checkAuth();
+  }, [checkAuth]);
 
   useEffect(() => {
-    if (me?.authenticated) void loadAll();
-  }, [me?.authenticated, loadAll]);
+    if (me?.authenticated) {
+      loadData();
+    }
+  }, [me?.authenticated, loadData]);
 
-  async function login(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    setBusy(true);
     setLoginError(null);
+    setBusy(true);
     try {
       const res = await fetch("/api/admin/login", {
         method: "POST",
@@ -196,471 +201,841 @@ export default function AdminPanelPage() {
         body: JSON.stringify({ username, password }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Login yoki parol noto'g'ri");
-      setMe({ enabled: true, authenticated: true, username });
-      await loadAll();
-    } catch (err) {
-      setLoginError(err instanceof Error ? err.message : "Xatolik");
+      if (!res.ok) {
+        setLoginError(data.error || "Login yoki parol noto'g'ri");
+      } else {
+        await checkAuth();
+      }
+    } catch {
+      setLoginError("Server bilan bog'lanishda xatolik");
     } finally {
       setBusy(false);
     }
   }
 
-  async function logout() {
+  async function handleLogout() {
     await fetch("/api/admin/logout", { method: "POST" });
     setMe({ enabled: true, authenticated: false, username: null });
   }
 
-  async function saveSettings(keysToSave: string[]) {
+  async function saveSettings(e: React.FormEvent) {
+    e.preventDefault();
     setBusy(true);
     setNotice(null);
     try {
-      const payload: Record<string, string> = {};
-      for (const k of keysToSave) {
-        if (values[k] !== undefined && values[k].trim() !== "") {
-          payload[k] = values[k];
-        }
-      }
       const res = await fetch("/api/admin/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ settings: payload }),
+        body: JSON.stringify(settingsValues),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Saqlanmadi");
-      setNotice({ kind: "ok", text: "Sozlashlar muvaffaqiyatli saqlandi!" });
-      await loadAll();
-    } catch (err) {
-      setNotice({ kind: "err", text: err instanceof Error ? err.message : "Xatolik" });
+      if (res.ok) {
+        setNotice({ kind: "ok", text: "Sozlamalar muvaffaqiyatli saqlandi!" });
+        loadData();
+      } else {
+        const d = await res.json();
+        setNotice({ kind: "err", text: d.error || "Saqlashda xatolik" });
+      }
+    } catch {
+      setNotice({ kind: "err", text: "Serverga ulanishda xato" });
     } finally {
       setBusy(false);
     }
   }
 
-  async function tgAction(bot: "main" | "auth", action: "connect" | "disconnect" | "test") {
-    setBusy(true);
-    setNotice(null);
+  async function deleteReview(type: "order" | "specialist", id: number) {
+    if (!confirm("Haqiqatan ham ushbu fikr/sharhni o'chirmoqchimisiz?")) return;
     try {
-      const res = await fetch("/api/admin/telegram", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bot, action }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Amal bajarilmadi");
-      setNotice({ kind: "ok", text: data.message ?? "Bajarildi" });
-      await loadAll();
-    } catch (err) {
-      setNotice({ kind: "err", text: err instanceof Error ? err.message : "Xatolik" });
-    } finally {
-      setBusy(false);
+      const res = await fetch(`/api/admin/reviews/${type}/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setReviews((prev) => prev.filter((r) => !(r.type === type && r.id === id)));
+        setNotice({ kind: "ok", text: "Sharh muvaffaqiyatli olib tashlandi" });
+      } else {
+        alert("O'chirishda xatolik");
+      }
+    } catch {
+      alert("Server xatosi");
     }
   }
 
-  function applyPreset(p: (typeof AI_PRESETS)[number]) {
-    setValues((v) => ({
-      ...v,
-      openai_base_url: p.baseUrl,
-      ai_model: p.model,
-    }));
-    setNotice({
-      kind: "ok",
-      text: `«${p.label}» preset tanlandi. Gemini API kalitini kiritib «Saqlash» tugmasini bosing.`,
-    });
+  function formatSum(num: number): string {
+    return new Intl.NumberFormat("uz-UZ").format(num) + " so'm";
   }
 
-  // ----------------------------------------------------------------- login
-  if (!me?.authenticated) {
+  // Filtrlangan sharhlar
+  const filteredReviews = reviews.filter((r) => {
+    if (reviewFilterStars !== "all" && r.stars !== reviewFilterStars) return false;
+    if (reviewSearch.trim()) {
+      const q = reviewSearch.toLowerCase();
+      const matchComment = r.comment?.toLowerCase().includes(q);
+      const matchCustomer = r.customerName?.toLowerCase().includes(q);
+      const matchTarget = r.targetName?.toLowerCase().includes(q);
+      if (!matchComment && !matchCustomer && !matchTarget) return false;
+    }
+    return true;
+  });
+
+  // Kirish oynasi
+  if (!me || !me.authenticated) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 text-slate-100">
-        <form onSubmit={login} className="w-full max-w-sm rounded-2xl bg-slate-900 p-6 shadow-xl ring-1 ring-slate-800">
-          <div className="flex items-center gap-2">
-            <Sparkles className="text-emerald-400" size={24} />
-            <h1 className="text-xl font-bold text-white">Agroz AI — Admin</h1>
+      <div className="flex min-h-screen items-center justify-center bg-slate-900 p-4 font-sans text-slate-100">
+        <div className="w-full max-w-md rounded-3xl bg-slate-800/90 p-7 shadow-2xl border border-slate-700/80 backdrop-blur-xl">
+          <div className="mb-6 text-center">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-white shadow-lg">
+              <ShieldCheck size={28} />
+            </div>
+            <h1 className="text-2xl font-black tracking-tight text-white">AgroZ Super Admin</h1>
+            <p className="mt-1 text-xs font-medium text-slate-400">
+              Tizim statistikasi, viloyatlar va sozlamalar boshqaruvi
+            </p>
           </div>
-          <p className="mt-1 text-xs text-slate-400">Tizim boshqaruv paneliga kirish</p>
-          <label className="mt-5 block text-sm text-slate-300">
-            Login
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="mt-1 w-full rounded-lg bg-slate-800 px-3 py-2 text-white outline-none ring-1 ring-slate-700 focus:ring-emerald-500"
-              autoComplete="username"
-            />
-          </label>
-          <label className="mt-4 block text-sm text-slate-300">
-            Parol
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded-lg bg-slate-800 px-3 py-2 text-white outline-none ring-1 ring-slate-700 focus:ring-emerald-500"
-              autoComplete="current-password"
-            />
-          </label>
-          {loginError && <p className="mt-3 text-sm text-red-400">{loginError}</p>}
-          <button
-            type="submit"
-            disabled={busy}
-            className="mt-6 w-full rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
-          >
-            {busy ? "Kirilmoqda..." : "Kirish"}
-          </button>
-        </form>
-      </main>
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">
+                Login (Username)
+              </label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="admin"
+                className="w-full rounded-2xl border border-slate-600 bg-slate-900/80 px-4 py-3 text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">
+                Parol
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full rounded-2xl border border-slate-600 bg-slate-900/80 px-4 py-3 text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                required
+              />
+            </div>
+
+            {loginError && (
+              <div className="rounded-2xl border border-red-500/40 bg-red-500/10 p-3 text-xs font-semibold text-red-400">
+                {loginError}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={busy}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 py-3.5 text-sm font-bold text-slate-950 transition hover:bg-emerald-400 active:scale-[0.98] disabled:opacity-50"
+            >
+              <Lock size={16} />
+              {busy ? "Tekshirilmoqda..." : "Super Admin Panelga Kirish"}
+            </button>
+          </form>
+        </div>
+      </div>
     );
   }
 
-  // ----------------------------------------------------------------- panel
-  const settingOf = (key: string) => settings.find((s) => s.key === key);
-  const totalUsers = stats?.users || 1;
-  const maxRegionCount = Math.max(...usersByRegion.map((r) => r.n), 1);
-
   return (
-    <main className="min-h-screen bg-slate-950 px-4 py-8 text-slate-200">
-      <div className="mx-auto max-w-5xl">
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-5">
-          <div>
-            <div className="flex items-center gap-2">
-              <Sparkles className="text-emerald-400" size={24} />
-              <h1 className="text-2xl font-black text-white">Agroz AI — Admin Panel</h1>
+    <div className="min-h-screen bg-slate-950 font-sans text-slate-100 pb-16">
+      {/* Header */}
+      <header className="sticky top-0 z-30 border-b border-slate-800 bg-slate-900/80 backdrop-blur-md">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 shadow-md">
+              <ShieldCheck size={22} />
             </div>
-            <p className="mt-1 text-sm text-slate-400">
-              {tg?.appUrl ? (
-                <>
-                  Sayt domeni: <span className="font-semibold text-emerald-400">{tg.appUrl}</span>
-                </>
-              ) : (
-                "Sayt manzili NEXT_PUBLIC_APP_URL orqali sozlanadi"
-              )}
-            </p>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-base font-black tracking-tight text-white sm:text-lg">
+                  AgroZ Boshqaruv Markazi
+                </h1>
+                <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-400 border border-emerald-500/30">
+                  Super Admin
+                </span>
+              </div>
+              <p className="text-xs text-slate-400">
+                Radius boshqaruvi, viloyatlar tahlili va sharhlar moderatsiyasi
+              </p>
+            </div>
           </div>
-          <button onClick={logout} className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold hover:bg-slate-700">
-            Chiqish
-          </button>
-        </header>
 
-        {notice && (
-          <p
-            className={`mt-4 rounded-lg px-4 py-3 text-sm font-medium ${
-              notice.kind === "ok" ? "bg-emerald-900/40 text-emerald-300" : "bg-red-900/40 text-red-300"
-            }`}
-          >
-            {notice.text}
-          </p>
-        )}
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={loadData}
+              title="Yangilash"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-700 bg-slate-800 text-slate-300 transition hover:bg-slate-700 hover:text-white"
+            >
+              <RefreshCw size={15} />
+            </button>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-400 transition hover:bg-red-500/20"
+            >
+              <LogOut size={14} />
+              <span className="hidden sm:inline">Chiqish</span>
+            </button>
+          </div>
+        </div>
 
-        {/* Asosiy metrikalar */}
-        <section className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {/* Tab Navigation */}
+        <div className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 pb-2 sm:px-6">
           {[
-            { label: "Jami Foydalanuvchilar", value: stats?.users, icon: Users, color: "text-emerald-400" },
-            { label: "Telegram orqali", value: stats?.telegramUsers ?? 0, icon: Send, color: "text-sky-400" },
-            { label: "Telefon orqali", value: stats?.phoneUsers ?? 0, icon: Phone, color: "text-amber-400" },
-            { label: "AI Tashxislar", value: stats?.aiDiagnoses, icon: Sparkles, color: "text-purple-400" },
-            { label: "Jami Tashxislar", value: stats?.diagnoses, icon: Activity, color: "text-emerald-400" },
-            { label: "Mutaxassislar", value: stats?.specialists, icon: Users, color: "text-slate-300" },
-            { label: "Dorixonalar", value: stats?.pharmacies, icon: MapPin, color: "text-slate-300" },
-            { label: "Dorilar soni", value: stats?.medicines, icon: Layers, color: "text-slate-300" },
-            { label: "Bot sessiyalari", value: stats?.activeBotSessions, icon: Bot, color: "text-slate-300" },
-            { label: "Tasdiqlangan OTP (24s)", value: stats?.otpVerified24h, icon: CheckCircle2, color: "text-emerald-400" },
-          ].map((c) => (
-            <div key={c.label} className="rounded-xl bg-slate-900 p-4 ring-1 ring-slate-800">
-              <div className="flex items-center justify-between">
-                <p className="text-2xl font-black text-white">{c.value ?? "0"}</p>
-                <c.icon size={18} className={c.color} />
-              </div>
-              <p className="mt-1 text-xs text-slate-400">{c.label}</p>
-            </div>
-          ))}
-        </section>
-
-        {/* HUDUDLAR BO'YICHA VA KIMLAR RO'YXATDAN O'TGANLIGI TAHLILI (FOYDALANUVCHI SO'ROVI) */}
-        <section className="mt-8 grid gap-6 lg:grid-cols-[400px_minmax(0,1fr)]">
-          {/* Qayerdan ko'proq ro'yxatdan o'tyapti */}
-          <div className="rounded-xl bg-slate-900 p-5 ring-1 ring-slate-800">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <MapPin className="text-emerald-400" size={18} />
-                <h2 className="font-bold text-white">Hududlar tahlili</h2>
-              </div>
-              <span className="text-xs text-slate-400">Qayerdan ko'p ro'yxatdan o'tgan</span>
-            </div>
-
-            <div className="mt-4 space-y-3">
-              {usersByRegion.length === 0 ? (
-                <p className="py-6 text-center text-sm text-slate-500">Hozircha foydalanuvchilar mavjud emas</p>
-              ) : (
-                usersByRegion.map((r) => {
-                  const percent = Math.round((r.n / totalUsers) * 100);
-                  const barWidth = Math.round((r.n / maxRegionCount) * 100);
-                  return (
-                    <div key={r.region} className="space-y-1">
-                      <div className="flex items-center justify-between text-xs font-semibold">
-                        <span className="truncate text-slate-200">{r.region}</span>
-                        <span className="text-emerald-400">
-                          {r.n} ta <span className="text-slate-500">({percent}%)</span>
-                        </span>
-                      </div>
-                      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500"
-                          style={{ width: `${barWidth}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          {/* Kimlar ro'yxatdan o'tyapti (Oxirgi foydalanuvchilar) */}
-          <div className="rounded-xl bg-slate-900 p-5 ring-1 ring-slate-800">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Users className="text-sky-400" size={18} />
-                <h2 className="font-bold text-white">Oxirgi ro'yxatdan o'tganlar</h2>
-              </div>
-              <span className="text-xs text-slate-400">So'nggi 15 nafar</span>
-            </div>
-
-            <div className="mt-3 overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-300">
-                <thead>
-                  <tr className="border-b border-slate-800 text-slate-400">
-                    <th className="py-2">F.I.SH / Ism</th>
-                    <th className="py-2">Aloqa</th>
-                    <th className="py-2">Hudud</th>
-                    <th className="py-2 text-right">Vaqti</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {recentUsers.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="py-6 text-center text-slate-500">
-                        Hozircha ro'yxatdan o'tgan foydalanuvchilar yo'q
-                      </td>
-                    </tr>
-                  ) : (
-                    recentUsers.map((u) => (
-                      <tr key={u.id} className="hover:bg-slate-800/30">
-                        <td className="py-2.5 font-semibold text-white">
-                          {u.name || `Foydalanuvchi #${u.id}`}
-                        </td>
-                        <td className="py-2.5">
-                          {u.phone ? (
-                            <span className="flex items-center gap-1 text-slate-200">
-                              <Phone size={11} className="text-amber-400" /> {u.phone}
-                            </span>
-                          ) : u.telegramId ? (
-                            <span className="flex items-center gap-1 text-sky-400">
-                              <Send size={11} /> TG: {u.telegramId}
-                            </span>
-                          ) : (
-                            <span className="text-slate-500">—</span>
-                          )}
-                        </td>
-                        <td className="py-2.5 text-slate-300">
-                          {u.region ? (
-                            <span className="flex items-center gap-1">
-                              <MapPin size={11} className="text-emerald-400" />
-                              {u.region}
-                              {u.district ? `, ${u.district}` : ""}
-                            </span>
-                          ) : (
-                            <span className="text-slate-500">Ko'rsatilmagan</span>
-                          )}
-                        </td>
-                        <td className="py-2.5 text-right text-slate-400">
-                          {new Date(u.createdAt).toLocaleDateString("uz-UZ", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        {/* Botlar holati */}
-        <section className="mt-8 grid gap-4 md:grid-cols-2">
-          {(["main", "auth"] as const).map((bot) => {
-            const info = bot === "main" ? tg?.main : tg?.auth;
-            const title = bot === "main" ? "Asosiy bot (OTP / Mini App)" : "Auth bot (@agroz_auth_bot)";
+            { id: "dashboard", label: "Dashboard", icon: BarChart3 },
+            { id: "regions", label: "Viloyatlar Tahlili", icon: Globe },
+            { id: "reviews", label: "Fikrlar & Sharhlar", icon: MessageSquare, count: reviews.length },
+            { id: "settings", label: "Radius & Sozlamalar", icon: Settings },
+            { id: "broadcast", label: "Ob-havo Xabarnomasi", icon: AlertCircle },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const active = activeTab === tab.id;
             return (
-              <div key={bot} className="rounded-xl bg-slate-900 p-5 ring-1 ring-slate-800">
-                <h2 className="font-semibold text-white">{title}</h2>
-                {!info?.configured ? (
-                  <p className="mt-2 text-sm text-amber-400">Token kiritilmagan</p>
-                ) : !info.valid ? (
-                  <p className="mt-2 text-sm text-red-400">Token yaroqsiz: {info.error}</p>
-                ) : (
-                  <div className="mt-2 space-y-1 text-sm text-slate-300">
-                    <p>
-                      Bot: <span className="text-emerald-400">@{info.username}</span>
-                    </p>
-                    <p>
-                      Webhook:{" "}
-                      {info.webhookUrl ? (
-                        <span className="text-emerald-400">ulangan</span>
-                      ) : (
-                        <span className="text-amber-400">uzilgan</span>
-                      )}
-                    </p>
-                    {info.webhookUrl && <p className="break-all text-xs text-slate-500">{info.webhookUrl}</p>}
-                    {(info.pending ?? 0) > 0 && (
-                      <p className="text-amber-400">Kutayotgan update: {info.pending}</p>
-                    )}
-                    {info.lastError && <p className="text-red-400">Oxirgi xato: {info.lastError}</p>}
-                  </div>
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition active:scale-95 ${
+                  active
+                    ? "bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20"
+                    : "bg-slate-800/60 text-slate-300 hover:bg-slate-800 hover:text-white"
+                }`}
+              >
+                <Icon size={15} />
+                <span>{tab.label}</span>
+                {typeof tab.count === "number" && tab.count > 0 && (
+                  <span
+                    className={`rounded-full px-1.5 py-0.2 text-[10px] font-black ${
+                      active ? "bg-slate-950 text-white" : "bg-slate-700 text-emerald-400"
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
                 )}
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <button
-                    onClick={() => tgAction(bot, "connect")}
-                    disabled={busy}
-                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
-                  >
-                    Webhook ulash
-                  </button>
-                  <button
-                    onClick={() => tgAction(bot, "test")}
-                    disabled={busy || !info?.configured}
-                    className="rounded-lg bg-slate-800 px-3 py-1.5 text-sm hover:bg-slate-700 disabled:opacity-50"
-                  >
-                    Tekshirish
-                  </button>
-                  <button
-                    onClick={() => tgAction(bot, "disconnect")}
-                    disabled={busy || !info?.configured}
-                    className="rounded-lg bg-red-900/60 px-3 py-1.5 text-sm hover:bg-red-900 disabled:opacity-50"
-                  >
-                    Uzish
-                  </button>
-                </div>
-              </div>
+              </button>
             );
           })}
-        </section>
+        </div>
+      </header>
 
-        {/* SHOSHILINCH OB-HAVO OGOHLANTIRISHLARI (SOVUQ URISHI / KUCHLI YOMG'IR) */}
-        <AdminWeatherAlertsBroadcast />
-
-        {/* AI PRESETLAR */}
-        <section className="mt-8 rounded-xl bg-slate-900 p-5 ring-1 ring-slate-800">
-          <div className="flex items-center gap-2">
-            <Sparkles className="text-emerald-400" size={20} />
-            <h2 className="font-bold text-white">⚡ Google Gemini AI (Tavsiya etilgan sozlash)</h2>
+      {/* Main Content */}
+      <main className="mx-auto max-w-7xl px-4 pt-6 sm:px-6">
+        {notice && (
+          <div
+            className={`mb-5 flex items-center justify-between rounded-2xl p-4 text-xs font-bold border ${
+              notice.kind === "ok"
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                : "border-red-500/30 bg-red-500/10 text-red-400"
+            }`}
+          >
+            <span>{notice.text}</span>
+            <button onClick={() => setNotice(null)} className="text-sm">✕</button>
           </div>
-          <p className="mt-1 text-sm text-slate-400">
-            Agroz AI rasmiy tarzda Google AI Studio (Gemini SDK) bilan integratsiya qilingan. Bepul API kalitini oling va quyidagi tugmani bosib bir zumda sozlang:
-          </p>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            {AI_PRESETS.map((p) => (
+        )}
+
+        {/* ------------------------------------------------------------- */}
+        {/* TAB 1: DASHBOARD METRIKALARI */}
+        {/* ------------------------------------------------------------- */}
+        {activeTab === "dashboard" && stats && (
+          <div className="space-y-6">
+            {/* Metrikalar grid */}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+                <div className="flex items-center justify-between text-slate-400 mb-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider">Foydalanuvchilar</span>
+                  <Users size={16} className="text-blue-400" />
+                </div>
+                <p className="text-2xl font-black text-white">{stats.users}</p>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Telegram: <b>{stats.telegramUsers}</b>
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+                <div className="flex items-center justify-between text-slate-400 mb-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider">Dorixonalar</span>
+                  <Store size={16} className="text-emerald-400" />
+                </div>
+                <p className="text-2xl font-black text-white">{stats.pharmacies}</p>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Mutaxassis: <b>{stats.specialists} ta</b>
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+                <div className="flex items-center justify-between text-slate-400 mb-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider">Dorilar turi</span>
+                  <Package size={16} className="text-teal-400" />
+                </div>
+                <p className="text-2xl font-black text-white">{stats.medicines}</p>
+                <p className="text-[11px] text-slate-400 mt-1">Barcha dorixonalar</p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+                <div className="flex items-center justify-between text-slate-400 mb-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider">Buyurtmalar</span>
+                  <ShoppingCart size={16} className="text-amber-400" />
+                </div>
+                <p className="text-2xl font-black text-white">{stats.orders}</p>
+                <p className="text-[11px] text-emerald-400 mt-1 font-semibold">
+                  Yetkazildi: <b>{stats.ordersDelivered} ta</b>
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+                <div className="flex items-center justify-between text-slate-400 mb-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider">Jami Savdo</span>
+                  <TrendingUp size={16} className="text-emerald-400" />
+                </div>
+                <p className="text-lg font-black text-white">{formatSum(stats.totalSalesSum)}</p>
+                <p className="text-[11px] text-slate-400 mt-1">Yetkazilgan buyurtmalar</p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+                <div className="flex items-center justify-between text-slate-400 mb-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider">Standart Radius</span>
+                  <MapPin size={16} className="text-indigo-400" />
+                </div>
+                <p className="text-2xl font-black text-indigo-400">{stats.defaultRadiusKm} km</p>
+                <p className="text-[11px] text-slate-400 mt-1">Yaqin atrof chegarasi</p>
+              </div>
+            </div>
+
+            {/* Qidiruv radiusi tezkor banner */}
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-indigo-500/30 bg-gradient-to-r from-indigo-950/40 via-slate-900 to-indigo-950/20 p-4 sm:p-5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                  <MapPin size={22} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Yagona Standart Radius: {stats.defaultRadiusKm} km</h3>
+                  <p className="text-xs text-slate-400">
+                    Barcha foydalanuvchilar (xaridorlar) uchun chalkashliksiz qat&apos;iy 5 km radius joriy qilingan.
+                  </p>
+                </div>
+              </div>
               <button
-                key={p.label}
-                onClick={() => applyPreset(p)}
-                className="rounded-lg bg-slate-800 p-3 text-left text-sm transition hover:bg-slate-700 hover:ring-1 hover:ring-emerald-500/50"
+                onClick={() => setActiveTab("settings")}
+                className="flex items-center gap-1.5 rounded-xl bg-indigo-500 px-3.5 py-2 text-xs font-bold text-slate-950 hover:bg-indigo-400 transition"
               >
-                <p className="font-semibold text-white">{p.label}</p>
-                <p className="mt-0.5 text-xs text-slate-400">{p.hint}</p>
+                Radiusni sozlash <ArrowRight size={13} />
               </button>
-            ))}
-          </div>
-        </section>
+            </div>
 
-        {/* Sozlashlar guruhi */}
-        {SETTING_GROUPS.map((group) => (
-          <section key={group.title} className="mt-8 rounded-xl bg-slate-900 p-5 ring-1 ring-slate-800">
-            <h2 className="font-semibold text-white">{group.title}</h2>
-            <div className="mt-4 space-y-4">
-              {group.keys.map((key) => {
-                const s = settingOf(key);
-                if (!s) return null;
-                const placeholder =
-                  s.source === "db"
-                    ? `saqlangan: ${s.preview}`
-                    : s.source === "env"
-                      ? `env: ${s.preview}`
-                      : "kiritilmagan";
-                return (
-                  <div key={key}>
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm text-slate-300">{s.label}</label>
-                      <span
-                        className={`text-xs ${
-                          s.source === "db" ? "text-emerald-400" : s.source === "env" ? "text-amber-400" : "text-slate-500"
-                        }`}
-                      >
-                        {s.source === "db" ? "bazada" : s.source === "env" ? "env'dan" : "bo'sh"}
+            {/* Oxirgi buyurtmalar */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-300">
+                  Oxirgi buyurtmalar
+                </h3>
+                <span className="text-xs text-slate-400">Real vaqt yangilanishi</span>
+              </div>
+
+              {recentOrders.length === 0 ? (
+                <p className="text-xs text-slate-500">Hozircha buyurtmalar mavjud emas.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-slate-300">
+                    <thead className="border-b border-slate-800 text-[11px] font-bold uppercase text-slate-500">
+                      <tr>
+                        <th className="pb-2.5"># ID</th>
+                        <th className="pb-2.5">Mijoz</th>
+                        <th className="pb-2.5">Telefon</th>
+                        <th className="pb-2.5">Summa</th>
+                        <th className="pb-2.5">Holat</th>
+                        <th className="pb-2.5">Mijoz Bahosi</th>
+                        <th className="pb-2.5">Sana</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60 font-medium">
+                      {recentOrders.map((o) => (
+                        <tr key={o.id} className="hover:bg-slate-800/30">
+                          <td className="py-3 font-bold text-white">#{o.id}</td>
+                          <td className="py-3 font-semibold text-slate-200">{o.customerName}</td>
+                          <td className="py-3 text-slate-400">{o.customerPhone}</td>
+                          <td className="py-3 font-bold text-emerald-400">
+                            {o.totalSum ? formatSum(o.totalSum) : "Kelishuv asosida"}
+                          </td>
+                          <td className="py-3">
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold ${
+                                o.status === "yetkazildi"
+                                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                                  : o.status === "tasdiqlandi"
+                                  ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                                  : o.status === "bekor"
+                                  ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                                  : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                              }`}
+                            >
+                              {o.status}
+                            </span>
+                          </td>
+                          <td className="py-3">
+                            {o.ratingStars ? (
+                              <span className="flex items-center gap-1 font-bold text-amber-400">
+                                <Star size={13} fill="currentColor" /> {o.ratingStars} / 5
+                              </span>
+                            ) : (
+                              <span className="text-slate-500">-</span>
+                            )}
+                          </td>
+                          <td className="py-3 text-slate-500">
+                            {new Date(o.createdAt).toLocaleDateString("uz-UZ")}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ------------------------------------------------------------- */}
+        {/* TAB 2: VILOYATLAR TAHLILI */}
+        {/* ------------------------------------------------------------- */}
+        {activeTab === "regions" && (
+          <div className="space-y-6">
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-base font-bold text-white">
+                    O&apos;zbekiston Viloyatlari Kesimida Statistika
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Qaysi viloyatda qancha foydalanuvchi, dorixona, mutaxassis va buyurtmalar hajmi
+                  </p>
+                </div>
+                <span className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-bold text-emerald-400">
+                  14 ta ma&apos;muriy hudud
+                </span>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {regions.map((reg, idx) => (
+                  <div
+                    key={reg.region}
+                    className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/70 p-4 transition hover:border-slate-700"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <span className="text-[10px] font-bold text-emerald-400 uppercase">
+                          #{idx + 1} Viloyat
+                        </span>
+                        <h4 className="text-sm font-black text-white">{reg.region}</h4>
+                      </div>
+                      <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[11px] font-bold text-slate-300">
+                        {reg.sharePercent}% ulush
                       </span>
                     </div>
+
+                    {/* Progress bar */}
+                    <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+                      <div
+                        className="h-full bg-gradient-to-r from-emerald-500 to-teal-400"
+                        style={{ width: `${Math.max(5, reg.sharePercent)}%` }}
+                      />
+                    </div>
+
+                    <div className="mt-3.5 grid grid-cols-2 gap-2 border-t border-slate-800/80 pt-3 text-xs">
+                      <div>
+                        <span className="text-[11px] text-slate-400">Foydalanuvchilar:</span>
+                        <p className="font-bold text-white">{reg.users} ta</p>
+                      </div>
+                      <div>
+                        <span className="text-[11px] text-slate-400">Dorixonalar:</span>
+                        <p className="font-bold text-emerald-400">{reg.pharmacies} ta</p>
+                      </div>
+                      <div>
+                        <span className="text-[11px] text-slate-400">Mutaxassislar:</span>
+                        <p className="font-bold text-teal-400">{reg.specialists} ta</p>
+                      </div>
+                      <div>
+                        <span className="text-[11px] text-slate-400">Buyurtmalar:</span>
+                        <p className="font-bold text-amber-400">{reg.orders} ta</p>
+                      </div>
+                    </div>
+
+                    {reg.totalSales > 0 && (
+                      <div className="mt-2.5 rounded-xl bg-emerald-500/10 p-2 text-center text-[11.5px] font-bold text-emerald-400 border border-emerald-500/20">
+                        Jami aylanma: {formatSum(reg.totalSales)}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ------------------------------------------------------------- */}
+        {/* TAB 3: FIKRLAR VA SHARHLAR MODERATSIYASI */}
+        {/* ------------------------------------------------------------- */}
+        {activeTab === "reviews" && (
+          <div className="space-y-6">
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+                <div>
+                  <h3 className="text-base font-bold text-white">
+                    Fermer va Mijozlarning Fikrlari & Izohlari
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Dori vositalari va mutaxassislar bo&apos;yicha yozilgan sharhlarni nazorat qilish
+                  </p>
+                </div>
+
+                {/* Filterlar */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="relative">
+                    <Search size={14} className="absolute left-3 top-2.5 text-slate-500" />
                     <input
-                      type={s.secret ? "password" : "text"}
-                      value={values[key] ?? ""}
-                      onChange={(e) => setValues((v) => ({ ...v, [key]: e.target.value }))}
-                      placeholder={placeholder}
-                      className="mt-1 w-full rounded-lg bg-slate-800 px-3 py-2 text-sm text-white outline-none ring-1 ring-slate-700 focus:ring-emerald-500"
+                      type="text"
+                      value={reviewSearch}
+                      onChange={(e) => setReviewSearch(e.target.value)}
+                      placeholder="Qidiruv (ism, dorixona, izoh)..."
+                      className="rounded-xl border border-slate-700 bg-slate-800 pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
                     />
                   </div>
-                );
-              })}
+
+                  <select
+                    value={reviewFilterStars}
+                    onChange={(e) =>
+                      setReviewFilterStars(e.target.value === "all" ? "all" : Number(e.target.value))
+                    }
+                    className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs text-white focus:outline-none"
+                  >
+                    <option value="all">Barcha baholar</option>
+                    <option value="5">⭐️ 5 yulduz</option>
+                    <option value="4">⭐️ 4 yulduz</option>
+                    <option value="3">⭐️ 3 yulduz</option>
+                    <option value="2">⭐️ 2 yulduz</option>
+                    <option value="1">⭐️ 1 yulduz</option>
+                  </select>
+                </div>
+              </div>
+
+              {filteredReviews.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-800 p-8 text-center text-xs text-slate-500">
+                  Hech qanday fikr yoki sharh topilmadi.
+                </div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {filteredReviews.map((rev) => (
+                    <div
+                      key={`${rev.type}-${rev.id}`}
+                      className="flex flex-col justify-between rounded-2xl border border-slate-800 bg-slate-950 p-4 transition hover:border-slate-700"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                              rev.type === "order"
+                                ? "bg-amber-500/20 text-amber-400"
+                                : "bg-teal-500/20 text-teal-400"
+                            }`}
+                          >
+                            {rev.type === "order" ? "📦 Buyurtma / Dorixona" : "👨‍⚕️ Mutaxassis"}
+                          </span>
+
+                          <div className="flex items-center gap-0.5 text-amber-400">
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <Star
+                                key={s}
+                                size={13}
+                                fill={s <= rev.stars ? "currentColor" : "none"}
+                                className={s <= rev.stars ? "text-amber-400" : "text-slate-700"}
+                              />
+                            ))}
+                            <span className="ml-1 text-xs font-black">{rev.stars} / 5</span>
+                          </div>
+                        </div>
+
+                        <div className="mt-2.5">
+                          <h4 className="text-sm font-bold text-white">
+                            {rev.customerName || "Foydalanuvchi"}
+                          </h4>
+                          {rev.customerPhone && (
+                            <p className="text-[11px] text-slate-500">{rev.customerPhone}</p>
+                          )}
+                          <p className="mt-1 text-[11px] text-emerald-400">
+                            Manzil / Dorixona: <b>{rev.targetName}</b>
+                          </p>
+                        </div>
+
+                        {rev.comment && (
+                          <p className="mt-2.5 rounded-xl bg-slate-900/90 p-2.5 text-xs text-slate-300 italic border border-slate-800">
+                            &ldquo;{rev.comment}&rdquo;
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="mt-4 flex items-center justify-between border-t border-slate-800/80 pt-3 text-[11px] text-slate-500">
+                        <span>{new Date(rev.date).toLocaleDateString("uz-UZ")}</span>
+                        <button
+                          onClick={() => deleteReview(rev.type, rev.id)}
+                          className="flex items-center gap-1 rounded-lg bg-red-500/10 px-2 py-1 text-[11px] font-bold text-red-400 transition hover:bg-red-500/20"
+                        >
+                          <Trash2 size={12} /> O&apos;chirish
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            <p className="mt-2 text-xs text-slate-500">
-              Faqat to&apos;ldirilgan maydonlar saqlanadi — bo&apos;sh qoldirsangiz eski qiymat o&apos;zgarmaydi.
-            </p>
+          </div>
+        )}
+
+        {/* ------------------------------------------------------------- */}
+        {/* TAB 4: RADIUS VA SOZLAMALAR */}
+        {/* ------------------------------------------------------------- */}
+        {activeTab === "settings" && (
+          <form onSubmit={saveSettings} className="space-y-6">
+            {/* Radius boshqaruvi bloki */}
+            <div className="rounded-2xl border border-indigo-500/40 bg-slate-900 p-5 shadow-lg">
+              <div className="flex items-center gap-2.5 mb-2">
+                <MapPin size={20} className="text-indigo-400" />
+                <h3 className="text-base font-black text-white">
+                  Tizim Qidiruv Radiusi Boshqaruvi
+                </h3>
+              </div>
+              <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+                Ushbu parametr platforma bo&apos;ylab dorixonalar va mutaxassislarni qidirishning yagona standart radiusini (km) belgilaydi. Standart tavsiya etilgan qiymat: <b>5 km</b>.
+              </p>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="w-full sm:w-64">
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    Standart Radius (km)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={settingsValues["default_radius_km"] || "5"}
+                    onChange={(e) =>
+                      setSettingsValues((prev) => ({
+                        ...prev,
+                        default_radius_km: e.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-sm font-bold text-indigo-400 focus:border-indigo-500 focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 pt-4 sm:pt-5">
+                  {[3, 5, 10, 15, 25].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() =>
+                        setSettingsValues((prev) => ({
+                          ...prev,
+                          default_radius_km: String(preset),
+                        }))
+                      }
+                      className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+                        settingsValues["default_radius_km"] === String(preset)
+                          ? "bg-indigo-500 text-slate-950"
+                          : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                      }`}
+                    >
+                      {preset} km
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* AI provayder sozlamalari */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles size={18} className="text-emerald-400" />
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-300">
+                  Sun&apos;iy Intellekt (Gemini AI) Sozlamalari
+                </h3>
+              </div>
+
+              <div className="mb-4 grid gap-2 sm:grid-cols-3">
+                {AI_PRESETS.map((p) => (
+                  <button
+                    key={p.model}
+                    type="button"
+                    onClick={() => {
+                      setSettingsValues((prev) => ({
+                        ...prev,
+                        openai_base_url: p.baseUrl,
+                        ai_model: p.model,
+                      }));
+                    }}
+                    className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-left transition hover:border-emerald-500/50"
+                  >
+                    <p className="text-xs font-bold text-emerald-400">{p.label}</p>
+                    <p className="mt-1 text-[11px] text-slate-400">{p.hint}</p>
+                  </button>
+                ))}
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    Gemini API Kaliti (GEMINI_API_KEY / OPENAI_API_KEY)
+                  </label>
+                  <input
+                    type="password"
+                    value={settingsValues["openai_api_key"] || ""}
+                    onChange={(e) =>
+                      setSettingsValues((prev) => ({ ...prev, openai_api_key: e.target.value }))
+                    }
+                    placeholder="AI kalitini kiriting (••••••••)"
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-xs text-white focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+                      AI Model Nomi
+                    </label>
+                    <input
+                      type="text"
+                      value={settingsValues["ai_model"] || "gemini-2.5-flash"}
+                      onChange={(e) =>
+                        setSettingsValues((prev) => ({ ...prev, ai_model: e.target.value }))
+                      }
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-xs text-white focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+                      AI Base URL
+                    </label>
+                    <input
+                      type="text"
+                      value={
+                        settingsValues["openai_base_url"] ||
+                        "https://generativelanguage.googleapis.com/v1beta/openai/"
+                      }
+                      onChange={(e) =>
+                        setSettingsValues((prev) => ({ ...prev, openai_base_url: e.target.value }))
+                      }
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-xs text-white focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Telegram botlar */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <Bot size={18} className="text-blue-400" />
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-300">
+                  Telegram Bot Sozlamalari
+                </h3>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    Mutaxassis & Dorixona Boti (@agroz_auth_bot) Tokeni
+                  </label>
+                  <input
+                    type="password"
+                    value={settingsValues["telegram_auth_bot_token"] || ""}
+                    onChange={(e) =>
+                      setSettingsValues((prev) => ({
+                        ...prev,
+                        telegram_auth_bot_token: e.target.value,
+                      }))
+                    }
+                    placeholder="Bot tokenini kiriting..."
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-xs text-white focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    Asosiy Bot Tokeni
+                  </label>
+                  <input
+                    type="password"
+                    value={settingsValues["telegram_bot_token"] || ""}
+                    onChange={(e) =>
+                      setSettingsValues((prev) => ({
+                        ...prev,
+                        telegram_bot_token: e.target.value,
+                      }))
+                    }
+                    placeholder="Asosiy bot tokeni..."
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-xs text-white focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Admin paroli va xavfsizlik */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <ShieldCheck size={18} className="text-emerald-400" />
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-300">
+                  Super Admin Hisobi (Login & Parol)
+                </h3>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    Admin Login
+                  </label>
+                  <input
+                    type="text"
+                    value={settingsValues["admin_username"] || ""}
+                    onChange={(e) =>
+                      setSettingsValues((prev) => ({ ...prev, admin_username: e.target.value }))
+                    }
+                    placeholder="admin"
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-xs text-white focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    Yangi Parol (o&apos;zgartirish uchun)
+                  </label>
+                  <input
+                    type="password"
+                    value={settingsValues["admin_password"] || ""}
+                    onChange={(e) =>
+                      setSettingsValues((prev) => ({ ...prev, admin_password: e.target.value }))
+                    }
+                    placeholder="Yangi parol kiriting..."
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-xs text-white focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
             <button
-              onClick={() => saveSettings(group.keys)}
+              type="submit"
               disabled={busy}
-              className="mt-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 py-4 text-sm font-bold text-slate-950 transition hover:bg-emerald-400 active:scale-[0.99] disabled:opacity-50"
             >
-              Saqlash
+              <CheckCircle2 size={18} />
+              {busy ? "Saqlanmoqda..." : "Barcha Sozlamalarni Saqlash"}
             </button>
-          </section>
-        ))}
+          </form>
+        )}
 
-        {/* Oxirgi tashxislar va kasalliklar */}
-        <section className="mt-8 grid gap-4 md:grid-cols-2">
-          <div className="rounded-xl bg-slate-900 p-5 ring-1 ring-slate-800">
-            <h2 className="font-semibold text-white">🩺 Oxirgi tashxislar</h2>
-            <ul className="mt-3 space-y-2 text-sm">
-              {recent.length === 0 && <li className="text-slate-500">Hali tashxis yo'q</li>}
-              {recent.map((d) => (
-                <li key={d.id} className="flex items-center justify-between gap-2 border-b border-slate-800 pb-2">
-                  <span className="truncate">
-                    {d.category === "crop" ? "🌿" : "🐄"} {d.diseaseName}
-                  </span>
-                  <span className="shrink-0 text-xs text-slate-500">
-                    {d.source === "ai" ? "Gemini AI" : "offlayn"} · {d.confidence ?? "—"}%
-                  </span>
-                </li>
-              ))}
-            </ul>
+        {/* ------------------------------------------------------------- */}
+        {/* TAB 5: OB-HAVO VA AGRO OGOHLANTIRISHLAR */}
+        {/* ------------------------------------------------------------- */}
+        {activeTab === "broadcast" && (
+          <div className="space-y-6">
+            <AdminWeatherAlertsBroadcast />
           </div>
-          <div className="rounded-xl bg-slate-900 p-5 ring-1 ring-slate-800">
-            <h2 className="font-semibold text-white">📊 Eng ko'p tashxis qilingan kasalliklar</h2>
-            <ul className="mt-3 space-y-2 text-sm">
-              {topDiseases.length === 0 && <li className="text-slate-500">Ma'lumot yo'q</li>}
-              {topDiseases.map((d) => (
-                <li key={d.disease} className="flex items-center justify-between gap-2 border-b border-slate-800 pb-2">
-                  <span className="truncate">{d.disease}</span>
-                  <span className="shrink-0 text-xs text-emerald-400">{d.n} ta</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
-        <footer className="mt-10 pb-6 text-center text-xs text-slate-600">
-          Agroz AI Admin Panel · Gemini AI & Telegram integratsiyasi faol
-        </footer>
-      </div>
-    </main>
+        )}
+      </main>
+    </div>
   );
 }

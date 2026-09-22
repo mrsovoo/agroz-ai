@@ -106,7 +106,7 @@ function typeBadge(type: string): { label: string; bg: string; color: string } {
 export default function MarketClient() {
   const [items, setItems] = useState<Pharmacy[]>([]);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [radiusKm, setRadiusKm] = useState(25);
+  const [radiusKm] = useState(5);
   const [loading, setLoading] = useState(true);
   const [locError, setLocError] = useState<string | null>(null);
 
@@ -515,21 +515,15 @@ export default function MarketClient() {
         })}
       </div>
 
-      {/* Radius */}
-      <div className="mt-2.5 flex items-center gap-2 overflow-x-auto pb-1">
-        <span className="shrink-0 text-[12px] font-bold text-[var(--brand-muted)]">Radius:</span>
-        {RADIUS_OPTIONS.map((r) => (
-          <button
-            key={r}
-            onClick={() => setRadiusKm(r)}
-            className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-bold transition active:scale-95 ${
-              radiusKm === r ? "text-white" : "bg-white text-[var(--brand-ink)] shadow-sm"
-            }`}
-            style={radiusKm === r ? { background: "var(--brand-ink)" } : undefined}
-          >
-            {r} km
-          </button>
-        ))}
+      {/* Radius (standart 5 km) */}
+      <div className="mt-2.5 flex items-center justify-between rounded-xl bg-white px-3 py-2 text-[12px] text-[var(--brand-muted)] shadow-xs">
+        <span className="flex items-center gap-1.5 font-bold">
+          <MapPin size={13} className="text-[var(--brand-green)]" />
+          Yaqin atrof radiusi: <b className="text-[var(--brand-ink)]">5 km</b>
+        </span>
+        <span className="rounded-full border border-emerald-200/60 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-800">
+          Eng yaqin dorixonalar
+        </span>
       </div>
 
       {locError && (

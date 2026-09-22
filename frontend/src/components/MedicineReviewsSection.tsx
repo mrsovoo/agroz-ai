@@ -304,3 +304,4 @@ export default function MedicineReviewsSection({ medicineId, medicineName }: { m
     </section>
   );
 }
+

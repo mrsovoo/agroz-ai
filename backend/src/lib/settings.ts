@@ -23,6 +23,7 @@ export const SETTING_KEYS = {
   eskizFrom: "eskiz_from",
   adminUsername: "admin_username",
   adminPassword: "admin_password",
+  defaultRadiusKm: "default_radius_km",
 } as const;
 
 export type SettingKey = (typeof SETTING_KEYS)[keyof typeof SETTING_KEYS];
@@ -89,6 +90,7 @@ export function envFallback(key: SettingKey): string | null {
     [SETTING_KEYS.eskizFrom]: process.env.ESKIZ_FROM,
     [SETTING_KEYS.adminUsername]: process.env.ADMIN_USERNAME,
     [SETTING_KEYS.adminPassword]: process.env.ADMIN_PASSWORD,
+    [SETTING_KEYS.defaultRadiusKm]: process.env.DEFAULT_RADIUS_KM || "5",
   };
   const raw = envMap[key]?.trim();
   return raw ? raw : null;
@@ -146,6 +148,7 @@ const LABELS: Record<SettingKey, string> = {
   [SETTING_KEYS.eskizFrom]: "Eskiz.uz sender nomi",
   [SETTING_KEYS.adminUsername]: "Admin login",
   [SETTING_KEYS.adminPassword]: "Admin parol",
+  [SETTING_KEYS.defaultRadiusKm]: "Qidiruv radiusi (km) — Standart: 5 km",
 };
 
 function mask(value: string): string {
@@ -204,6 +207,12 @@ export async function aiModel(): Promise<string | null> {
 export async function asrModel(): Promise<string | null> {
   return getSetting(SETTING_KEYS.asrModel);
 }
+export async function defaultRadiusKmSetting(): Promise<number> {
+  const val = await getSetting(SETTING_KEYS.defaultRadiusKm);
+  const num = Number(val);
+  return Number.isFinite(num) && num > 0 ? num : 5;
+}
+
 export async function adminUsernameSetting(): Promise<string | null> {
   return getSetting(SETTING_KEYS.adminUsername);
 }
