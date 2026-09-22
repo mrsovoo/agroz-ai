@@ -20,6 +20,7 @@
     "build:frontend": "npm run build --workspace=frontend",
     "build:admin": "npm run build --workspace=admin",
     "build:backend": "npm run build --workspace=backend",
+    "vercel-build": "npm run build:frontend",
     "typecheck": "npm run typecheck:frontend && npm run typecheck:admin && npm run typecheck:backend",
     "typecheck:all": "npm run typecheck:frontend && npm run typecheck:admin && npm run typecheck:backend",
     "typecheck:frontend": "npm run typecheck --workspace=frontend",
