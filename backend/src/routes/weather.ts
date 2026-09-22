@@ -17,7 +17,7 @@ router.get("/", async (req, res) => {
 
   try {
     const apiRes = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,is_day&daily=temperature_2m_max,temperature_2m_min&timezone=auto`
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,is_day&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=auto`
     );
     if (!apiRes.ok) throw new Error("weather API error");
     const json = (await apiRes.json()) as any;
@@ -29,11 +29,19 @@ router.get("/", async (req, res) => {
     const tempNight = typeof d.temperature_2m_min?.[0] === "number" ? Math.round(d.temperature_2m_min[0]) : Math.round(tempCurrent - 7);
     const isDayTime = c.is_day !== undefined ? c.is_day === 1 : true;
 
+    const formatTime = (iso?: string) => {
+      if (!iso) return undefined;
+      const parts = iso.split("T");
+      return parts[1] ?? iso;
+    };
+
     const snapshot = {
       temp: tempCurrent,
       tempDay,
       tempNight,
       isDay: isDayTime,
+      sunrise: formatTime(d.sunrise?.[0]),
+      sunset: formatTime(d.sunset?.[0]),
       wind: Math.round((c.wind_speed_10m ?? 2) * 10) / 10,
       humidity: Math.round(c.relative_humidity_2m ?? 45),
       rain: c.precipitation ?? 0,
