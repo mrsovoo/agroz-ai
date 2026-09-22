@@ -159,9 +159,120 @@ export async function notifyPharmacyNewOrder(
     ratingStars: null,
     ratingNote: null,
     createdAt: new Date(),
-    items: order.items.map((i) => ({ id: i.medicineId, name: i.name, price: i.price, qty: i.qty })),
+    items: order.items.map((i) => ({
+      id: i.medicineId,
+      medicineId: i.medicineId,
+      name: i.name,
+      price: i.price,
+      qty: i.qty,
+    })),
   };
   await sendAuthMessage(telegramId, orderMessage(asOrder), {
     inline: orderActionsKeyboard(asOrder),
   });
 }
+
+/**
+ * Buyurtma yetkazilganda mijozga Telegram bot orqali xabar yuboradi:
+ * - Yetkazilgan buyurtma va dorilar ro'yxati
+ * - Xizmat va dorilarni baholash (1-5 yulduzli inline keyboard)
+ * - Dori sahifasida fikr bildirish uchun havola
+ */
+export async function notifyCustomerOrderDelivered(orderId: number): Promise<void> {
+  if (!(await isAuthBotConfigured())) return;
+
+  const { db } = await import("@/db");
+  const { orders, orderItems, specialists, users } = await import("@/db/schema");
+  const { eq, sql } = await import("drizzle-orm");
+
+  const orderRows = await db
+    .select({
+      id: orders.id,
+      customerName: orders.customerName,
+      customerPhone: orders.customerPhone,
+      pharmacyName: specialists.organization,
+      pharmacyContact: specialists.name,
+      ratingStars: orders.ratingStars,
+    })
+    .from(orders)
+    .leftJoin(specialists, eq(specialists.id, orders.pharmacySpecialistId))
+    .where(eq(orders.id, orderId))
+    .limit(1);
+
+  const order = orderRows[0];
+  if (!order) return;
+
+  // Mijozning Telegram akkauntini users jadvalidan telefon raqami orqali topamiz
+  const clean = order.customerPhone.replace(/\D/g, "");
+  const suffix = clean.slice(-9);
+
+  const userRows = await db
+    .select({ telegramId: users.telegramId })
+    .from(users)
+    .where(sql`replace(replace(${users.phone}, '+', ''), ' ', '') like ${'%' + suffix}`)
+    .limit(1);
+
+  const customerTelegramId = userRows[0]?.telegramId;
+  if (!customerTelegramId) {
+    return; // Mijoz bot orqali ro'yxatdan o'tmagan yoki telegramId mavjud emas
+  }
+
+  const items = await db
+    .select({
+      id: orderItems.id,
+      medicineId: orderItems.medicineId,
+      name: orderItems.name,
+      qty: orderItems.qty,
+    })
+    .from(orderItems)
+    .where(eq(orderItems.orderId, orderId));
+
+  const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL?.trim()?.replace(/\/+$/, "");
+  const pharmacyName = order.pharmacyName || order.pharmacyContact || "Dorixona";
+
+  const msg = [
+    "📦 <b>Buyurtmangiz yetkazildi!</b>",
+    "",
+    `Hurmatli <b>${escapeHtml(order.customerName)}</b>, siz <b>${escapeHtml(pharmacyName)}</b> dan buyurtma qilgan dori vositalaringiz muvaffaqiyatli yetkazildi!`,
+    "",
+    "<b>Yetkazilgan dorilar:</b>",
+    items.map((i) => `• ${escapeHtml(i.name)} × ${i.qty}`).join("\n"),
+    "",
+    "⭐️ <b>Dorilar va xizmat sifatini baholang:</b>",
+    "Yetkazib berish xizmati va dorilar sifatiga qanday baho berasiz? O'z bahoyingizni belgilang va fikringizni qoldiring:",
+  ].join("\n");
+
+  const firstItem = items[0];
+  const medReviewUrl =
+    firstItem && rawAppUrl
+      ? `${rawAppUrl}/dori/${firstItem.medicineId}`
+      : rawAppUrl
+        ? `${rawAppUrl}/dorilar`
+        : "";
+
+  const keyboardRows: InlineKeyboard["inline_keyboard"] = [
+    [
+      { text: "⭐️ 5 - A'lo", callback_data: `cr:rate:${order.id}:5` },
+      { text: "⭐️ 4", callback_data: `cr:rate:${order.id}:4` },
+      { text: "⭐️ 3", callback_data: `cr:rate:${order.id}:3` },
+    ],
+    [
+      { text: "⭐️ 2", callback_data: `cr:rate:${order.id}:2` },
+      { text: "⭐️ 1", callback_data: `cr:rate:${order.id}:1` },
+    ],
+  ];
+
+  if (medReviewUrl) {
+    keyboardRows.push([
+      {
+        text: "💬 Fermerlar fikrlariga o'tish / Fikr qoldirish",
+        url: medReviewUrl,
+      },
+    ]);
+  }
+
+  await sendAuthMessage(customerTelegramId, msg, {
+    inline: { inline_keyboard: keyboardRows },
+  });
+}
+

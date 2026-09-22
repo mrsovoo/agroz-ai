@@ -46,7 +46,7 @@ export type OrderWithItems = {
   ratingStars: number | null;
   ratingNote: string | null;
   createdAt: Date;
-  items: { id: number; name: string; price: number | null; qty: number }[];
+  items: { id: number; medicineId: number; name: string; price: number | null; qty: number }[];
 };
 
 /**
@@ -173,7 +173,7 @@ export async function listOrders(opts: {
   const byOrder = new Map<number, OrderWithItems["items"]>();
   for (const it of items) {
     const list = byOrder.get(it.orderId) ?? [];
-    list.push({ id: it.id, name: it.name, price: it.price, qty: it.qty });
+    list.push({ id: it.id, medicineId: it.medicineId, name: it.name, price: it.price, qty: it.qty });
     byOrder.set(it.orderId, list);
   }
 
@@ -256,21 +256,18 @@ export async function setOrderStatus(
 }
 
 /**
- * Mijoz buyurtmani baholaydi: yulduz + izoh. Yulduzlar **dorixona reytingiga
- * qo'shiladi** (bir buyurtma = bitta ovoz) va buyurtma `ratingStars` bilan
- * belgilanadi. Reyting qancha yaxshi bo'lsa — reyting shuncha oshadi.
+ * Buyurtmani to'g'ridan-to'g'ri baholash (bot yoki avtorizatsiyalangan oqim uchun).
  */
-export async function rateOrder(
+export async function rateOrderDirectly(
   orderId: number,
-  customerPhone: string,
   stars: number,
-  note: string | null,
+  note: string | null = null,
 ): Promise<{ ok: boolean; error?: string }> {
   const clamped = Math.max(1, Math.min(5, Math.round(stars)));
   const rows = await db
     .select()
     .from(orders)
-    .where(and(eq(orders.id, orderId), eq(orders.customerPhone, customerPhone)))
+    .where(eq(orders.id, orderId))
     .limit(1);
   const order = rows[0];
   if (!order) return { ok: false, error: "Buyurtma topilmadi" };
@@ -297,3 +294,29 @@ export async function rateOrder(
 
   return { ok: true };
 }
+
+/**
+ * Mijoz buyurtmani baholaydi: yulduz + izoh. Yulduzlar **dorixona reytingiga
+ * qo'shiladi** (bir buyurtma = bitta ovoz) va buyurtma `ratingStars` bilan
+ * belgilanadi. Reyting qancha yaxshi bo'lsa — reyting shuncha oshadi.
+ */
+export async function rateOrder(
+  orderId: number,
+  customerPhone: string,
+  stars: number,
+  note: string | null,
+): Promise<{ ok: boolean; error?: string }> {
+  const rows = await db
+    .select({ customerPhone: orders.customerPhone })
+    .from(orders)
+    .where(eq(orders.id, orderId))
+    .limit(1);
+  const order = rows[0];
+  if (!order) return { ok: false, error: "Buyurtma topilmadi" };
+  if (order.customerPhone !== customerPhone) {
+    return { ok: false, error: "Buyurtma bu telefon raqamiga tegishli emas" };
+  }
+
+  return rateOrderDirectly(orderId, stars, note);
+}
+

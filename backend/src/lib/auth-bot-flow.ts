@@ -849,9 +849,70 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
       const order = orders[0];
       if (order) {
         await sendAuthMessage(chatId, orderMessage(order), { inline: orderActionsKeyboard(order) });
+        if (nextStatus === "yetkazildi") {
+          const { notifyCustomerOrderDelivered } = await import("@/lib/orders-bot");
+          notifyCustomerOrderDelivered(orderId).catch((err) =>
+            console.error("[orders] mijozga yetkazildi xabarnomasi yuborilmadi:", err),
+          );
+        }
       }
       return;
     }
+
+    // Mijoz buyurtmani bot orqali baholashi (cr:rate:<orderId>:<stars>)
+    if (data.startsWith("cr:rate:")) {
+      await answerCallbackQuery(query.id);
+      const [, , orderIdStr, starsStr] = data.split(":");
+      const orderId = Number(orderIdStr);
+      const stars = Number(starsStr);
+      if (!Number.isSafeInteger(orderId) || !Number.isSafeInteger(stars)) return;
+
+      const { rateOrderDirectly, listOrders } = await import("@/lib/orders");
+      const res = await rateOrderDirectly(orderId, stars);
+      if (!res.ok) {
+        await sendAuthMessage(
+          chatId,
+          `⚠️ ${res.error || "Ushbu buyurtma allaqachon baholangan yoki mavjud emas."}`,
+        );
+        return;
+      }
+
+      const orders = await listOrders({ orderId });
+      const order = orders[0];
+      const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL?.trim()?.replace(/\/+$/, "");
+      const firstMed = order?.items?.[0];
+      const medReviewUrl =
+        firstMed && rawAppUrl
+          ? `${rawAppUrl}/dori/${firstMed.medicineId ?? firstMed.id}`
+          : rawAppUrl
+            ? `${rawAppUrl}/dorilar`
+            : "";
+
+      const starEmoji = "⭐️".repeat(Math.max(1, Math.min(5, stars)));
+      const reviewMsg = [
+        `⭐️ <b>Katta rahmat!</b>`,
+        `Sizning ${starEmoji} (${stars}/5) bahoyingiz qabul qilindi.`,
+        "",
+        "Sizning fikringiz boshqa fermer va bog'bonlar uchun eng to'g'ri dori vositalarini tanlashda yordam beradi.",
+      ].join("\n");
+
+      await sendAuthMessage(chatId, reviewMsg, {
+        inline: medReviewUrl
+          ? {
+              inline_keyboard: [
+                [
+                  {
+                    text: "💬 Fermerlar sharhlariga o'tish / Fikr bildirish",
+                    url: medReviewUrl,
+                  },
+                ],
+              ],
+            }
+          : undefined,
+      });
+      return;
+    }
+
 
     // Profil o'chirish tasdiqlash.
     if (data === "pd:yes") {

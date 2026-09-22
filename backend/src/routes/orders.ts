@@ -132,6 +132,7 @@ router.get("/track", async (req, res) => {
     const itemRows = await db
       .select({
         orderId: orderItems.orderId,
+        medicineId: orderItems.medicineId,
         name: orderItems.name,
         qty: orderItems.qty,
         price: orderItems.price,
@@ -139,10 +140,10 @@ router.get("/track", async (req, res) => {
       .from(orderItems)
       .where(sql`${orderItems.orderId} in (${sql.join(orderIds.map((id) => sql`${id}`), sql`, `)})`);
 
-    const itemsByOrder = new Map<number, { name: string; qty: number; price: number | null }[]>();
+    const itemsByOrder = new Map<number, { medicineId: number; name: string; qty: number; price: number | null }[]>();
     for (const it of itemRows) {
       const arr = itemsByOrder.get(it.orderId) ?? [];
-      arr.push({ name: it.name, qty: it.qty, price: it.price });
+      arr.push({ medicineId: it.medicineId, name: it.name, qty: it.qty, price: it.price });
       itemsByOrder.set(it.orderId, arr);
     }
 

@@ -15,6 +15,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   AlertCircle,
   Check,
@@ -22,6 +23,7 @@ import {
   Loader2,
   Lock,
   MapPin,
+  MessageSquare,
   Minus,
   Navigation,
   Phone,
@@ -142,7 +144,14 @@ export default function MarketClient() {
   // Buyurtma kuzatuvi va reyting
   const [trackPhone, setTrackPhone] = useState("");
   const [trackResult, setTrackResult] = useState<
-    { id: number; status: string; totalSum: number | null; pharmacyName: string | null; ratingStars: number | null; items: { name: string; qty: number }[] }[] | null
+    {
+      id: number;
+      status: string;
+      totalSum: number | null;
+      pharmacyName: string | null;
+      ratingStars: number | null;
+      items: { medicineId?: number; name: string; qty: number }[];
+    }[] | null
   >(null);
   const [trackBusy, setTrackBusy] = useState(false);
   const [trackError, setTrackError] = useState<string | null>(null);
@@ -625,32 +634,63 @@ export default function MarketClient() {
                       {o.status === "yangi" ? "🆕 Yangi" : o.status === "tasdiqlandi" ? "✅ Tasdiqlandi" : o.status === "yetkazildi" ? "📦 Yetkazildi" : "❌ Bekor"}
                     </span>
                   </div>
-                  <p className="mt-1 text-[12px] text-[var(--brand-muted)]">
-                    {o.items.map((i) => `${i.name} ×${i.qty}`).join(", ")}
-                    {o.totalSum !== null ? ` · ${shortSum(o.totalSum)} so'm` : ""}
-                  </p>
+                  <div className="mt-2 space-y-1.5 border-t border-[var(--brand-sep)]/60 pt-2">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--brand-muted)]">
+                      Buyurtma qilingan dorilar:
+                    </p>
+                    <div className="space-y-1">
+                      {o.items.map((i, idx) => (
+                        <div key={idx} className="flex items-center justify-between gap-2 text-[12.5px]">
+                          <span className="font-semibold text-[var(--brand-ink)]">
+                            {i.name} <span className="font-normal text-[var(--brand-muted)]">×{i.qty}</span>
+                          </span>
+                          {i.medicineId ? (
+                            <Link
+                              href={`/dori/${i.medicineId}`}
+                              className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 hover:bg-emerald-100 transition"
+                            >
+                              <MessageSquare size={11} />
+                              {o.status === "yetkazildi" ? "Fikr va baho" : "Batafsil"}
+                            </Link>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                    {o.totalSum !== null && (
+                      <p className="text-right text-[12px] font-black text-[var(--brand-ink)] pt-1">
+                        Jami: {shortSum(o.totalSum)} so&apos;m
+                      </p>
+                    )}
+                  </div>
                   {o.status === "yetkazildi" && (
-                    <div className="mt-2 flex items-center gap-2">
-                      <span className="text-[12px] font-semibold text-[var(--brand-muted)]">
-                        {o.ratingStars ? "Bahoyingiz:" : "Baholash:"}
-                      </span>
-                      <div className="flex gap-0.5">
-                        {[1, 2, 3, 4, 5].map((n) => (
-                          <button
-                            key={n}
-                            onClick={() => !o.ratingStars && rateOrder(o.id, n)}
-                            aria-label={`${n} yulduz`}
-                            className="p-0.5 text-[#d1d1d6] transition hover:scale-110 hover:text-[#fcbd00] disabled:cursor-default"
-                            disabled={Boolean(o.ratingStars)}
-                          >
-                            <Star
-                              size={15}
-                              fill={o.ratingStars && o.ratingStars >= n ? "#fcbd00" : "none"}
-                              className={o.ratingStars && o.ratingStars >= n ? "text-[#fcbd00]" : ""}
-                            />
-                          </button>
-                        ))}
+                    <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white p-2.5 border border-[var(--brand-sep)]">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[12px] font-bold text-[var(--brand-ink)]">
+                          {o.ratingStars ? "Xizmatga bahoyingiz:" : "Xizmatni baholang:"}
+                        </span>
+                        <div className="flex gap-1">
+                          {[1, 2, 3, 4, 5].map((n) => (
+                            <button
+                              key={n}
+                              onClick={() => !o.ratingStars && rateOrder(o.id, n)}
+                              aria-label={`${n} yulduz`}
+                              className="p-0.5 text-[#d1d1d6] transition hover:scale-125 hover:text-[#fcbd00] disabled:cursor-default"
+                              disabled={Boolean(o.ratingStars)}
+                            >
+                              <Star
+                                size={17}
+                                fill={o.ratingStars && o.ratingStars >= n ? "#fcbd00" : "none"}
+                                className={o.ratingStars && o.ratingStars >= n ? "text-[#fcbd00]" : ""}
+                              />
+                            </button>
+                          ))}
+                        </div>
                       </div>
+                      {o.ratingStars && (
+                        <span className="text-[11px] font-bold text-emerald-700">
+                          ✓ Qabul qilindi
+                        </span>
+                      )}
                     </div>
                   )}
                 </li>

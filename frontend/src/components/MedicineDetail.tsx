@@ -5,6 +5,7 @@ import { ArrowLeft, MapPin, Phone, Pill, ShieldCheck, Sprout, Store } from "luci
 import FadeImage from "@/components/FadeImage";
 import ProductCardActions from "@/components/ProductCardActions";
 import ProductCard from "@/components/ProductCard";
+import MedicineReviewsSection from "@/components/MedicineReviewsSection";
 import { shortSum } from "@/lib/format";
 import { apiUrl } from "@/lib/api-config";
 
@@ -219,6 +220,9 @@ export default async function MedicineDetail({ medicine }: { medicine: MedicineD
           />
         </div>
       </div>
+
+      {/* Fermer va dehqonlar fikrlari va reytingi */}
+      <MedicineReviewsSection medicineId={medicine.id} medicineName={medicine.name} />
 
       {/* O'xshash mahsulotlar */}
       {similar.length > 0 && (

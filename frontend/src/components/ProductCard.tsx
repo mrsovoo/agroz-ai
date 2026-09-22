@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Minus, Heart, Pill, Sprout, Syringe, MapPin } from "lucide-react";
+import { Plus, Minus, Heart, Pill, Sprout, Syringe, MapPin, Star } from "lucide-react";
 import FadeImage from "@/components/FadeImage";
 import {
   loadCart,
@@ -14,6 +14,7 @@ import {
   type CartStoreLine,
 } from "@/lib/cart-store";
 import { isFavorite, toggleFavorite, FAV_EVENT } from "@/lib/favorites-store";
+import { calculateMedicineRating } from "@/lib/medicine-reviews";
 
 export type ProductCardMedicine = CartStoreMedicine & {
   usage?: string | null;
@@ -139,6 +140,7 @@ export default function ProductCard({
 
   const href = linkHref ?? `/dori/${medicine.id}`;
   const shortCity = getShortCity(pharmacy.address, pharmacy.name);
+  const medRating = calculateMedicineRating(medicine.id);
 
   return (
     <div className="group flex w-full flex-col justify-between overflow-hidden rounded-[18px] border border-black/8 bg-white shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
@@ -232,10 +234,16 @@ export default function ProductCard({
             </h3>
           </Link>
 
-          {/* Dorixona manzili (qisqa: Toshkent sh., Toshkent vil., Samarqand va h.k.) */}
-          <div className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-neutral-500">
-            <MapPin size={11} className="shrink-0 text-[var(--brand-green)]" />
-            <span className="truncate">{shortCity}</span>
+          {/* Dorixona manzili va dori reytingi */}
+          <div className="mt-1 flex items-center justify-between text-[11px] font-semibold text-neutral-500">
+            <span className="flex items-center gap-1 truncate max-w-[65%]">
+              <MapPin size={11} className="shrink-0 text-[var(--brand-green)]" />
+              <span className="truncate">{shortCity}</span>
+            </span>
+            <span className="flex items-center gap-0.5 text-amber-600 font-bold shrink-0">
+              <Star size={11} className="text-amber-400 fill-amber-400" />
+              <span>{medRating.avg}</span>
+            </span>
           </div>
 
           {/* Narxi */}
