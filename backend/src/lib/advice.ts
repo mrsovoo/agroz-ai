@@ -56,6 +56,14 @@ export function shortAdvice({ temp, wind, rain, humidity }: WeatherInput): strin
   return "Ob-havo qulay — purkash va dala ishlari uchun yaxshi kun.";
 }
 
+/** Kechasi uchun agronomik va veterinariya maslahati. */
+export function nightAdvice(tempNight: number): string {
+  if (tempNight <= 0) return `⚠️ Kechasi ayoz (${tempNight}°C) kutilmoqda! Issiqxonalarni mahkam yoping, ko'chatlarni himoyalang.`;
+  if (tempNight <= 5) return `Tungi harorat sovuq (${tempNight}°C). Chorvaning molxonada shamollashiga yo'l qo'ymang.`;
+  if (tempNight <= 15) return `Tungi harorat salqin (${tempNight}°C). Issiqxona darchalarini kechqurun yoping va chorvaga issiq ozuqa bering.`;
+  return `Tungi harorat mo'tadil va iliq (${tempNight}°C). Ekin va chorva uchun barcha sharoitlar qulay.`;
+}
+
 export type Season = "bahor" | "yoz" | "kuz" | "qish";
 
 export function seasonOf(month: number): Season {

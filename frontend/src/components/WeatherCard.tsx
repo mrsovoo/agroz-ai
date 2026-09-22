@@ -6,6 +6,7 @@ import {
   Droplets,
   CloudRain,
   Sun,
+  Moon,
   ThermometerSun,
   TriangleAlert,
   CheckCircle2,
@@ -21,11 +22,15 @@ type Tip = { id: string; scope: AdviceScope; title: string; body: string };
 
 type Weather = {
   temp: number;
+  tempDay?: number;
+  tempNight?: number;
+  isDay?: boolean;
   wind: number;
   humidity: number;
   rain: number;
   level: "ok" | "caution" | "warning" | "danger";
   advice: string;
+  adviceNight?: string;
   tips?: Tip[];
 };
 
@@ -63,6 +68,7 @@ export default function WeatherCard({
   showRegion?: boolean;
 }) {
   const [w, setW] = useState<Weather | null>(null);
+  const [mode, setMode] = useState<"day" | "night">("day");
   const [place, setPlace] = useState("Hudud aniqlanmoqda");
   const [region, setRegion] = useState<string | null>(null);
   const [activeAlert, setActiveAlert] = useState<{ title: string; region: string } | null>(null);
@@ -76,6 +82,7 @@ export default function WeatherCard({
         .then((d: Weather) => {
           if (typeof d?.temp === "number") {
             setW(d);
+            setMode(d.isDay === false ? "night" : "day");
             setLoadFailed(false);
           } else {
             setW(null);
@@ -87,7 +94,7 @@ export default function WeatherCard({
           setLoadFailed(true);
         });
 
-      // Real ogohlantirishlar mavjudligini tekshirish (sun'iy sample=1 siz)
+      // Real ogohlantirishlar mavjudligini tekshirish
       fetch(`/api/weather/alerts${q}`)
         .then((r) => r.json())
         .then((d) => {
@@ -125,29 +132,72 @@ export default function WeatherCard({
     }
   }, [showRegion]);
 
+  const isNight = mode === "night";
+
   return (
     <div>
       <div
-        className="overflow-hidden rounded-[28px] p-5 text-white shadow-[0_20px_40px_-20px_rgba(2,142,17,0.45)]"
-        style={{ background: "linear-gradient(135deg,#028e11 0%,#0a9c1b 50%,#76b44d 100%)" }}
+        className="overflow-hidden rounded-[28px] p-5 text-white transition-all duration-500 shadow-xl"
+        style={{
+          background: isNight
+            ? "linear-gradient(135deg,#0f172a 0%,#1e1b4b 50%,#312e81 100%)"
+            : "linear-gradient(135deg,#028e11 0%,#0a9c1b 50%,#76b44d 100%)",
+        }}
       >
         <div className="flex items-start justify-between">
           <div>
-            <p className="flex items-center gap-1.5 text-[13px] font-medium text-white/80">
-              <Sun size={14} /> Bugun · {place}
+            <p className="flex items-center gap-1.5 text-[13px] font-medium text-white/90">
+              {isNight ? (
+                <span className="flex items-center gap-1 font-bold text-indigo-200">
+                  <Moon size={14} className="text-amber-300" /> Kechasi (Tun)
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 font-bold text-amber-200">
+                  <Sun size={14} /> Kunduzi (Kun)
+                </span>
+              )}
+              · {place}
             </p>
+
             <div className="mt-2 flex items-end gap-2">
               <span className="text-[54px] font-black leading-none tracking-tight">
-                {w ? w.temp : "—"}
+                {w
+                  ? isNight
+                    ? (w.tempNight ?? Math.round(w.temp - 7))
+                    : (w.tempDay ?? w.temp)
+                  : "—"}
               </span>
               <span className="pb-2 text-2xl font-semibold text-white/80">°C</span>
+              {w && (
+                <span className="mb-2 text-[11.5px] font-bold px-2.5 py-0.5 rounded-full bg-white/20 text-white/90 backdrop-blur-xs">
+                  {isNight ? "Tungi harorat" : "Kunduzgi harorat"}
+                </span>
+              )}
             </div>
           </div>
-          <div
-            className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--brand-ink)]"
-            style={{ background: "var(--brand-yellow)" }}
-          >
-            <Sun size={22} strokeWidth={2.2} />
+
+          {/* Kun/Tun almashtirish tugmasi */}
+          <div className="flex flex-col items-center">
+            <button
+              type="button"
+              onClick={() => setMode((prev) => (prev === "day" ? "night" : "day"))}
+              title={isNight ? "Kunlik rejimga o'tish" : "Tungi rejimga o'tish"}
+              aria-label="Kun va Tun rejimini almashtirish"
+              className={`group relative flex h-12 w-12 cursor-pointer items-center justify-center rounded-full transition-all duration-300 active:scale-90 ${
+                isNight
+                  ? "bg-indigo-950 text-amber-300 border border-amber-300/30 shadow-[0_0_15px_rgba(252,189,0,0.3)] hover:scale-105"
+                  : "bg-[var(--brand-yellow)] text-[var(--brand-ink)] shadow-md hover:scale-105"
+              }`}
+            >
+              {isNight ? (
+                <Moon size={24} strokeWidth={2.2} className="text-amber-300 transition-transform duration-300 group-hover:-rotate-12" />
+              ) : (
+                <Sun size={24} strokeWidth={2.2} className="transition-transform duration-300 group-hover:rotate-45" />
+              )}
+            </button>
+            <span className="mt-1 text-[10px] font-extrabold text-white/75 tracking-tight">
+              {isNight ? "Kun ga o'tish" : "Tun ga o'tish"}
+            </span>
           </div>
         </div>
 
@@ -173,11 +223,23 @@ export default function WeatherCard({
         </div>
 
         <div
-          className="mt-4 flex items-start gap-2.5 rounded-[18px] px-4 py-3 text-[14px] font-semibold leading-snug"
-          style={{ background: "var(--brand-yellow)", color: "var(--brand-ink)" }}
+          className="mt-4 flex items-start gap-2.5 rounded-[18px] px-4 py-3 text-[14px] font-semibold leading-snug transition-colors duration-300"
+          style={{
+            background: isNight ? "rgba(255, 255, 255, 0.15)" : "var(--brand-yellow)",
+            color: isNight ? "#ffffff" : "var(--brand-ink)",
+            backdropFilter: isNight ? "blur(12px)" : "none",
+          }}
         >
           <span className="mt-0.5 shrink-0">
-            {activeAlert ? <TriangleAlert size={18} strokeWidth={2.4} className="text-red-700" /> : w ? levelIcon[w.level] : null}
+            {activeAlert ? (
+              <TriangleAlert size={18} strokeWidth={2.4} className="text-red-700" />
+            ) : w ? (
+              isNight ? (
+                <Moon size={18} className="text-amber-300" />
+              ) : (
+                levelIcon[w.level]
+              )
+            ) : null}
           </span>
           <span>
             {activeAlert ? (
@@ -186,7 +248,11 @@ export default function WeatherCard({
                 {activeAlert.title}
               </>
             ) : w ? (
-              w.advice
+              isNight ? (
+                w.adviceNight ?? w.advice
+              ) : (
+                w.advice
+              )
             ) : loadFailed ? (
               "Ob-havo hozircha olinmadi — keyinroq qayta urinib ko'ring."
             ) : (

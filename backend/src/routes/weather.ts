@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { locationAdvice, shortAdvice, weatherLevel } from "../lib/advice.js";
+import { locationAdvice, shortAdvice, weatherLevel, nightAdvice } from "../lib/advice.js";
 import {
   fetchWeatherForecast,
   analyzeForecastAlerts,
@@ -17,13 +17,23 @@ router.get("/", async (req, res) => {
 
   try {
     const apiRes = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m`
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,is_day&daily=temperature_2m_max,temperature_2m_min&timezone=auto`
     );
     if (!apiRes.ok) throw new Error("weather API error");
     const json = (await apiRes.json()) as any;
     const c = json.current ?? {};
+    const d = json.daily ?? {};
+
+    const tempCurrent = Math.round(c.temperature_2m ?? 22);
+    const tempDay = typeof d.temperature_2m_max?.[0] === "number" ? Math.round(d.temperature_2m_max[0]) : tempCurrent;
+    const tempNight = typeof d.temperature_2m_min?.[0] === "number" ? Math.round(d.temperature_2m_min[0]) : Math.round(tempCurrent - 7);
+    const isDayTime = c.is_day !== undefined ? c.is_day === 1 : true;
+
     const snapshot = {
-      temp: Math.round(c.temperature_2m ?? 22),
+      temp: tempCurrent,
+      tempDay,
+      tempNight,
+      isDay: isDayTime,
       wind: Math.round((c.wind_speed_10m ?? 2) * 10) / 10,
       humidity: Math.round(c.relative_humidity_2m ?? 45),
       rain: c.precipitation ?? 0,
@@ -36,6 +46,7 @@ router.get("/", async (req, res) => {
       ...snapshot,
       level: weatherLevel(snapshot),
       advice: shortAdvice(snapshot),
+      adviceNight: nightAdvice(tempNight),
       tips: locationAdvice(snapshot),
     });
   } catch (err: any) {
