@@ -1,9 +1,20 @@
 import Link from "next/link";
-import { getCurrentUser, getUserRecentDiagnoses } from "@/lib/session";
+import { getCurrentUser } from "@/lib/session";
 import LogoutButton from "@/components/LogoutButton";
 import ProfileEdit from "@/components/ProfileEdit";
 import CompactAlertStrip from "@/components/CompactAlertStrip";
-import { Sprout, PawPrint, Phone, MapPin, ChevronRight, History, Sparkles, Send, BellRing } from "lucide-react";
+import {
+  Sprout,
+  PawPrint,
+  Phone,
+  MapPin,
+  ChevronRight,
+  Send,
+  BellRing,
+  Pill,
+  UsersRound,
+  Newspaper,
+} from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +34,7 @@ export default async function ProfilePage() {
             <Sprout size={32} />
           </div>
           <p className="text-[15px] leading-relaxed text-[var(--brand-ink)]">
-            Tashxis tarixini saqlash, yaqin dorixonalarni ko&apos;rish va savatingizni boshqarish uchun profilingizga kiring.
+            Yaqin dorixonalarni ko&apos;rish, mutaxassislar bilan bog&apos;lanish va savatingizni boshqarish uchun profilingizga kiring.
           </p>
           <div className="w-full max-w-sm space-y-2.5 pt-2">
             <Link href="/kirish" className="block w-full">
@@ -43,8 +54,6 @@ export default async function ProfilePage() {
       </main>
     );
   }
-
-  const history = await getUserRecentDiagnoses();
 
   return (
     <main className="px-5 pb-6 pt-3 web:grid web:grid-cols-[340px_minmax(0,1fr)] web:items-start web:gap-10">
@@ -100,48 +109,61 @@ export default async function ProfilePage() {
         </div>
 
         <p className="ios-section-title mt-6 flex items-center gap-1.5 web:mt-0">
-          <History size={14} /> Tashxislar tarixi
+          <Pill size={14} /> Asosiy bo&apos;limlar
         </p>
-        {history.length === 0 ? (
-          <div className="ios-card flex flex-col items-center gap-3 p-6 text-center text-[var(--brand-muted)] web:p-10">
-            <Sparkles size={28} className="text-[var(--brand-green-light)]" />
-            Hali tashxis qo&apos;yilmagan.
-            <Link href="/" className="w-full web:max-w-xs">
-              <button className="ios-btn yellow">Birinchi tashxisni boshlash</button>
-            </Link>
-          </div>
-        ) : (
-          <ul className="ios-card divide-y divide-[var(--brand-sep)] web:grid web:grid-cols-2 web:divide-y-0">
-            {history.map((d) => (
-              <li key={d.id} className="web:border-b web:border-[var(--brand-sep)]">
-                <Link
-                  href={`/natija/${d.id}`}
-                  className="flex items-center gap-3 px-4 py-3.5 transition-colors active:bg-black/5 web:py-4 web:hover:bg-black/[0.03]"
-                >
-                  <span
-                    className="flex h-10 w-10 items-center justify-center rounded-full"
-                    style={{
-                      background:
-                        d.category === "crop" ? "var(--brand-green-soft)" : "var(--brand-yellow-soft)",
-                      color: d.category === "crop" ? "var(--brand-green)" : "var(--brand-ink)",
-                    }}
-                  >
-                    {d.category === "crop" ? <Sprout size={19} /> : <PawPrint size={19} />}
-                  </span>
-                  <div className="flex-1">
-                    <p className="text-[15px] font-semibold text-[var(--brand-ink)] line-clamp-1">
-                      {d.diseaseName}
-                    </p>
-                    <p className="text-[12px] text-[var(--brand-muted)]">
-                      {d.source === "ai" ? "Gemini AI" : "Offlayn"} · {d.confidence ?? "—"}%
-                    </p>
-                  </div>
-                  <ChevronRight size={18} className="text-[var(--brand-muted)]" />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Link href="/dorilar" className="block">
+            <div className="flex items-center gap-3.5 rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-2xs transition hover:border-[var(--brand-green)] active:scale-[0.98]">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-green-soft)] text-[var(--brand-green)]">
+                <Pill size={22} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[15px] font-black text-neutral-900 leading-tight">Dorilar bozori</p>
+                <p className="text-[12px] text-neutral-500 mt-0.5 truncate">Ekin va chorva dori vositalari</p>
+              </div>
+              <ChevronRight size={18} className="text-neutral-400" />
+            </div>
+          </Link>
+
+          <Link href="/xarita" className="block">
+            <div className="flex items-center gap-3.5 rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-2xs transition hover:border-[var(--brand-green)] active:scale-[0.98]">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-green-soft)] text-[var(--brand-green)]">
+                <MapPin size={22} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[15px] font-black text-neutral-900 leading-tight">Yaqin dorixonalar</p>
+                <p className="text-[12px] text-neutral-500 mt-0.5 truncate">Xaritadan 5 km radiusda topish</p>
+              </div>
+              <ChevronRight size={18} className="text-neutral-400" />
+            </div>
+          </Link>
+
+          <Link href="/mutaxassislar" className="block">
+            <div className="flex items-center gap-3.5 rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-2xs transition hover:border-[var(--brand-green)] active:scale-[0.98]">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-green-soft)] text-[var(--brand-green)]">
+                <UsersRound size={22} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[15px] font-black text-neutral-900 leading-tight">Mutaxassislar</p>
+                <p className="text-[12px] text-neutral-500 mt-0.5 truncate">Agronom va veterinarlar</p>
+              </div>
+              <ChevronRight size={18} className="text-neutral-400" />
+            </div>
+          </Link>
+
+          <Link href="/yangiliklar" className="block">
+            <div className="flex items-center gap-3.5 rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-2xs transition hover:border-[var(--brand-green)] active:scale-[0.98]">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-green-soft)] text-[var(--brand-green)]">
+                <Newspaper size={22} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[15px] font-black text-neutral-900 leading-tight">Maslahatlar</p>
+                <p className="text-[12px] text-neutral-500 mt-0.5 truncate">Foydali agro qo&apos;llanmalar</p>
+              </div>
+              <ChevronRight size={18} className="text-neutral-400" />
+            </div>
+          </Link>
+        </div>
       </div>
     </main>
   );

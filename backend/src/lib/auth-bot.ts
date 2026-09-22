@@ -884,8 +884,8 @@ export function medicineConfirmCaption(
     ...(price ? [`💰 Narx: <b>${formatSum(price)}</b>`] : ["💰 Narx: kiritilmagan"]),
     ...(pharmacyName ? [`🏪 Dorixona: ${escapeHtml(pharmacyName)}`] : []),
     "",
-    "Tasdiqlasangiz, dori platformaga chiqadi va tashxis qo'ygan",
-    "mijozlarga <b>shu dori kerak</b> bo'lganda dorixonangiz bilan ko'rsatiladi.",
+    "Tasdiqlasangiz, dori platformaga chiqadi va dehqon/chorvadorlar",
+    "dori qidirganda yoki yaqin dorixonalarni ko'rganda dorixonangiz bilan ko'rsatiladi.",
   ].join("\n");
 }
 
@@ -905,8 +905,8 @@ export function medicineSavedMessage(name: string, total: number, price?: number
     ...(price ? [`💰 Narx: <b>${formatSum(price)}</b>`] : []),
     `📦 Jami dorilar: <b>${total}</b> ta`,
     "",
-    "🧑‍🌾 Endi mijoz tashxis qo'yib, shu dori tavsiya etilsa —",
-    "dorixonangiz <b>manzili, telefon va rasmi bilan</b> ko'rsatiladi.",
+    "🧑‍🌾 Endi mijozlar dori qidirganda yoki yaqin dorixonalarni ko'rganda —",
+    "dorixonangiz <b>manzili, telefon va doringiz bilan</b> ko'rsatiladi.",
   ].join("\n");
 }
 
@@ -916,7 +916,7 @@ export function pharmacyNextStepMessage(): string {
     "💊 <b>Keyingi qadam: dorilaringizni qo'shing!</b>",
     "",
     "/dori_qoshish buyrug'i bilan har bir doringizning rasmi va nomini qo'shasiz.",
-    "Dorilar mijozlarga <b>tashxis natijasida tavsiya etilganda</b> ko'rinadi.",
+    "Dorilar mijozlarga platforma katalogida va xaritada to'g'ridan-to'g'ri ko'rinadi.",
   ].join("\n");
 }
 

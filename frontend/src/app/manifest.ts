@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Agroz AI — Dehqon va chorvador yordamchisi",
     short_name: "Agroz",
     description:
-      "Sun'iy intellekt yordamida ekin va chorva kasalliklariga tashxis, yaqin dorixonalar va veterinarlar xaritasi.",
+      "Ekin va chorva dori vositalari platformasi, yaqin dorixonalar va mutaxassislar xaritasi.",
     start_url: "/",
     display: "standalone",
     background_color: "#f2f3f5",

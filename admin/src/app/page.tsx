@@ -443,7 +443,7 @@ export default function SuperAdminPage() {
                 { label: "Agronom & Vets", val: stats?.specialists ?? 0, sub: "Sertifikatlangan", icon: Activity, color: "text-emerald-400" },
                 { label: "Agro-Dorixonalar", val: stats?.pharmacies ?? 0, sub: "Ro'yxatdan o'tgan", icon: Store, color: "text-amber-400" },
                 { label: "Dori Vositalari", val: stats?.medicines ?? 0, sub: "Katalogda", icon: Package, color: "text-purple-400" },
-                { label: "AI Tashxislar", val: stats?.diagnoses ?? 0, sub: "Ekin va Chorva", icon: Sparkles, color: "text-pink-400" },
+                { label: "Jami Buyurtmalar", val: stats?.orders ?? 0, sub: "Barcha xaridlar", icon: ShoppingCart, color: "text-pink-400" },
                 { label: "Buyurtmalar Summasi", val: `${(stats?.totalSalesSum ?? 0).toLocaleString()} so'm`, sub: `${stats?.ordersDelivered ?? 0} yetkazildi`, icon: TrendingUp, color: "text-cyan-400" },
               ].map((s, idx) => {
                 const Icon = s.icon;

@@ -34,8 +34,7 @@ export default function WebFooter() {
           <div>
             <strong>Agroz AI</strong>
             <p>
-              Ekin va chorva kasalliklariga AI tashxis, yaqin dorixonalar va ob-havoga mos
-              tavsiyalar.
+              Ekin va chorva dori vositalari platformasi, yaqin dorixonalar va mutaxassislar.
             </p>
           </div>
         </div>

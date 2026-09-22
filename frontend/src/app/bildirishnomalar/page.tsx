@@ -61,16 +61,16 @@ export default async function NotificationsPage() {
             <Sprout size={20} />
           </div>
           <div>
-            <h4 className="text-[14px] font-bold text-neutral-900">Mavsumiy Fitotashxis Tayyorgarligi</h4>
+            <h4 className="text-[14px] font-bold text-neutral-900">Mavsumiy Ekin Himoyasi</h4>
             <p className="mt-1 text-[13px] leading-snug text-neutral-600">
               Ushbu mavsumda harorat o&apos;zgarishi sababli ekinlarda zang va chirish xavfi kuchayadi.
-              Zararlangan barglar rasmini AI tashxisiga yuklab, bepul profilaktika rejasini oling.
+              Tegishli dori vositalarini katalogdan tanlab, yaqin dorixonadan buyurtma qilishingiz mumkin.
             </p>
             <Link
-              href="/tashxis/crop"
+              href="/dorilar"
               className="mt-2.5 inline-flex items-center gap-1 text-[12.5px] font-bold text-[var(--brand-green)] hover:underline"
             >
-              Tashxisdan o&apos;tish &rarr;
+              Dorilar katalogi &rarr;
             </Link>
           </div>
         </div>

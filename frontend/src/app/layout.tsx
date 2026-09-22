@@ -22,7 +22,7 @@ function metadataBase(): URL | undefined {
 }
 
 const DESCRIPTION =
-  "Sun'iy intellekt yordamida ekin va chorva kasalliklariga tashxis, yaqin dorixonalar va veterinarlar xaritasi.";
+  "Ekin va chorva dori vositalari platformasi, yaqin dorixonalar va mutaxassislar xaritasi.";
 
 export const metadata: Metadata = {
   metadataBase: metadataBase(),
