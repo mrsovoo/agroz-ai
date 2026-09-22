@@ -140,7 +140,9 @@ export type SettingsStatus = {
 
 const LABELS: Record<SettingKey, string> = {
   [SETTING_KEYS.telegramBotToken]: "Asosiy bot tokeni (TELEGRAM_BOT_TOKEN)",
+  [SETTING_KEYS.telegramBotUsername]: "Mijoz boti username (@agroz_bot)",
   [SETTING_KEYS.telegramAuthBotToken]: "Auth bot tokeni (@agroz_auth_bot)",
+  [SETTING_KEYS.telegramAuthBotUsername]: "Auth bot username (@agroz_auth_bot)",
   [SETTING_KEYS.telegramWebhookSecret]: "Webhook maxfiy kaliti (asosiy bot)",
   [SETTING_KEYS.telegramAuthWebhookSecret]: "Webhook maxfiy kaliti (auth bot)",
   [SETTING_KEYS.openaiApiKey]: "AI kaliti (OpenAI/Gemini/Groq/...)",
