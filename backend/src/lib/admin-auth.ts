@@ -26,7 +26,7 @@ const ADMIN_TTL_MS = 12 * 60 * 60 * 1000; // 12 soat
 async function credentials(): Promise<{ username: string; password: string | null }> {
   const [dbUser, dbPass] = await Promise.all([adminUsernameSetting(), adminPasswordSetting()]);
   const username = dbUser || process.env.ADMIN_USERNAME?.trim() || "admin";
-  const password = dbPass || process.env.ADMIN_PASSWORD?.trim() || null;
+  const password = dbPass || process.env.ADMIN_PASSWORD?.trim() || "admin123";
   return { username, password };
 }
 
