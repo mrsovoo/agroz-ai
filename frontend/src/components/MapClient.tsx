@@ -19,7 +19,7 @@ import {
   RefreshCw,
   Lock,
 } from "lucide-react";
-import { AUTH_BOT_URL, RADIUS_OPTIONS } from "@/lib/constants";
+import { RADIUS_OPTIONS } from "@/lib/constants";
 
 type Stock = { medicine: string; status: string; price: number | null };
 type Medicine = { id: number; name: string; status: string; hasPhoto: boolean };
@@ -712,22 +712,11 @@ export default function MapClient() {
                 : `${radiusKm} km ichida hozircha ma'lumot yo'q`}
             </p>
             <p className="mt-1.5 text-[13.5px] leading-relaxed text-[var(--brand-muted)]">
-              Xaritada faqat <b>real</b> ro&apos;yxatdan o&apos;tgan dorixonalar, ularning dorilari
-              va mutaxassislar ko&apos;rinadi. Siz ham qo&apos;shilishingiz mumkin —
-              ro&apos;yxatdan o&apos;tish bir daqiqada bot orqali bo&apos;ladi.
+              Radiusni kattalashtirib ko&apos;ring yoki joylashuvingizni yangilang.
             </p>
-            <a
-              href={AUTH_BOT_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-4 inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3 text-[14px] font-bold text-white"
-              style={{ background: "var(--brand-green)" }}
-            >
-              <Phone size={15} /> Bot orqali ro&apos;yxatdan o&apos;tish
-            </a>
             <button
               onClick={centerMe}
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--brand-ink)] py-3 text-[14px] font-bold text-white"
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--brand-ink)] py-3 text-[14px] font-bold text-white"
             >
               <RefreshCw size={15} /> Joylashuvni yangilash
             </button>

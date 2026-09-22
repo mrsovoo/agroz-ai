@@ -15,9 +15,8 @@ import {
   UserRound,
   Pill,
   Star,
-  Send,
 } from "lucide-react";
-import { AUTH_BOT_URL, RADIUS_OPTIONS } from "@/lib/constants";
+import { RADIUS_OPTIONS } from "@/lib/constants";
 
 type Medicine = { id: number; name: string; status: string; hasPhoto: boolean; price?: number | null };
 
@@ -57,6 +56,277 @@ const FILTERS = [
   { v: "all", l: "Hammasi" },
   { v: "specialist", l: "Mutaxassislar" },
   { v: "pharmacy", l: "Dorixona egalari" },
+];
+
+export const DEFAULT_SPECIALISTS: Specialist[] = [
+  {
+    id: 1,
+    name: "Baraka Agro Ta'minot",
+    organization: "Agro Kimyo Baraka MCHJ",
+    phone: "+998 90 111 22 33",
+    role: "pharmacy",
+    specialty: "O'simliklar himoyasi kimyoviy va biologik vositalari",
+    education: "Toshkent Davlat Agrar Universiteti",
+    bio: "Sertifikatlangan fungitsidlar, insektitsidlar, urug'lar va tomchilatib sug'orish o'g'itlari.",
+    helpsWith: "crop",
+    experienceYears: 10,
+    address: "Toshkent viloyati, Zangiota tumani, Bo'zsuv MFY, 12-uy",
+    lat: 41.25,
+    lng: 69.18,
+    workHours: "08:00 - 19:00",
+    distanceKm: 2.4,
+    locked: false,
+    ratingAvg: 4.9,
+    ratingCount: 38,
+    medicines: [
+      { id: 101, name: "Ridomil Gold MZ 68 WG", status: "bor", hasPhoto: false, price: 65000 },
+      { id: 102, name: "Score 250 EC (Skor)", status: "bor", hasPhoto: false, price: 48000 },
+      { id: 104, name: "Karate Zeon 050 CS", status: "bor", hasPhoto: false, price: 35000 },
+    ],
+  },
+  {
+    id: 2,
+    name: "Dr. Alisher Qodirov",
+    organization: null,
+    phone: "+998 90 100 20 30",
+    role: "specialist",
+    specialty: "Bosh agronom, O'simliklar himoyasi eksperti (PhD)",
+    education: "Toshkent Davlat Agrar Universiteti",
+    bio: "15 yillik tajribaga ega agronom. Pomidor, bodring, g'alla va bog'dorchilik kasalliklarini erta aniqlash va davolash.",
+    helpsWith: "crop",
+    experienceYears: 15,
+    address: "Toshkent shahri, Chilonzor tumani, Bunyodkor shoh ko'chasi",
+    lat: 41.278,
+    lng: 69.201,
+    workHours: "09:00 - 18:00",
+    distanceKm: 3.1,
+    locked: false,
+    ratingAvg: 5.0,
+    ratingCount: 42,
+  },
+  {
+    id: 3,
+    name: "Dehqon Hamkori Do'koni",
+    organization: "Dehqon Hamkori Agrovet MCHJ",
+    phone: "+998 91 222 33 44",
+    role: "pharmacy",
+    specialty: "Ekinlar va chorva mollari uchun barcha dori vositalari",
+    education: "Samarqand Davlat Veterinariya Universiteti",
+    bio: "Ekin va chorva dori-darmonlari, sifatli o'g'itlar va yem qo'shimchalari.",
+    helpsWith: "both",
+    experienceYears: 14,
+    address: "Samarqand shahri, Mirzo Ulug'bek ko'chasi, 45-uy",
+    lat: 39.6542,
+    lng: 66.9597,
+    workHours: "08:30 - 18:30",
+    distanceKm: 4.2,
+    locked: false,
+    ratingAvg: 4.9,
+    ratingCount: 29,
+    medicines: [
+      { id: 103, name: "Ivermektin 1% in'yeksiya", status: "bor", hasPhoto: false, price: 38000 },
+      { id: 105, name: "Oksitetratsiklin 200 LA", status: "bor", hasPhoto: false, price: 55000 },
+    ],
+  },
+  {
+    id: 4,
+    name: "Dilshod Ergashev",
+    organization: null,
+    phone: "+998 91 200 30 40",
+    role: "specialist",
+    specialty: "Veterinariya bosh vrachi, Jarroh",
+    education: "SamDVMU Veterinariya fakulteti",
+    bio: "Qoramol va qo'ylarning yuqumli va ichki kasalliklari, tug'ruq asoratlari, mastit va oqsoqlikni samarali davolash.",
+    helpsWith: "animal",
+    experienceYears: 18,
+    address: "Toshkent viloyati, Yangiyo'l tumani, Markaziy shifoxona yaqinida",
+    lat: 41.116,
+    lng: 69.05,
+    workHours: "08:00 - 19:00",
+    distanceKm: 4.8,
+    locked: false,
+    ratingAvg: 5.0,
+    ratingCount: 36,
+  },
+  {
+    id: 5,
+    name: "Vodiy Agro Kimyo",
+    organization: "Farg'ona Hosil Dorixona XK",
+    phone: "+998 93 333 44 55",
+    role: "pharmacy",
+    specialty: "Fungitsidlar, insektitsidlar va o'sish stimulyatorlari",
+    education: "Andijon Qishloq Xo'jaligi Instituti",
+    bio: "Bog'bonlar va polizchilar uchun import va litsenziyalangan preparatlar.",
+    helpsWith: "crop",
+    experienceYears: 8,
+    address: "Farg'ona shahri, Al-Farg'oniy ko'chasi, 88-uy",
+    lat: 40.3864,
+    lng: 71.7864,
+    workHours: "08:00 - 18:00",
+    distanceKm: 3.5,
+    locked: false,
+    ratingAvg: 4.8,
+    ratingCount: 25,
+    medicines: [
+      { id: 106, name: "Aktara 25 WG", status: "bor", hasPhoto: false, price: 28000 },
+      { id: 108, name: "Proclaim 05 SG", status: "bor", hasPhoto: false, price: 72000 },
+      { id: 114, name: "Koragen 20 SC", status: "bor", hasPhoto: false, price: 85000 },
+    ],
+  },
+  {
+    id: 6,
+    name: "Ozodbek Mirzayev",
+    organization: null,
+    phone: "+998 93 300 40 50",
+    role: "specialist",
+    specialty: "Fitopatolog, Issiqxona va ochiq maydon maslahatchisi",
+    education: "TDAU Qishloq xo'jaligi fanlari nomzodi",
+    bio: "Fitoftoroz, un-shudring, klasterosporioz va virusli kasalliklarga qarshi kurash sxemalari.",
+    helpsWith: "crop",
+    experienceYears: 12,
+    address: "Samarqand shahri, Dahbed ko'chasi",
+    lat: 39.662,
+    lng: 66.97,
+    workHours: "09:00 - 17:30",
+    distanceKm: 5.1,
+    locked: false,
+    ratingAvg: 4.9,
+    ratingCount: 21,
+  },
+  {
+    id: 7,
+    name: "Zarafshon Agro-Vet",
+    organization: "Buxoro Chorva Ta'minot MCHJ",
+    phone: "+998 94 444 55 66",
+    role: "pharmacy",
+    specialty: "Veterinariya preparatlari, vaksina va antibiotiklar",
+    education: "SamDVMU",
+    bio: "Qorako'lchilik va qoramolchilik uchun eng samarali dori vositalari.",
+    helpsWith: "animal",
+    experienceYears: 16,
+    address: "Buxoro shahri, G'ijduvon ko'chasi, 19-uy",
+    lat: 39.7747,
+    lng: 64.4286,
+    workHours: "09:00 - 18:00",
+    distanceKm: 2.9,
+    locked: false,
+    ratingAvg: 4.9,
+    ratingCount: 31,
+    medicines: [
+      { id: 107, name: "Nitoks 200", status: "bor", hasPhoto: false, price: 48000 },
+      { id: 109, name: "Albendazol 10%", status: "bor", hasPhoto: false, price: 22000 },
+      { id: 115, name: "Kalsiy borglyukonat 20%", status: "bor", hasPhoto: false, price: 19000 },
+    ],
+  },
+  {
+    id: 8,
+    name: "Sanjar Toirov",
+    organization: null,
+    phone: "+998 94 400 50 60",
+    role: "specialist",
+    specialty: "Chorva mollari parvarishi va oziqlantirish eksperti",
+    education: "SamDVMU Zooinjeneriya fakulteti",
+    bio: "Sut va go'sht qoramollarining ozuqa ratsionini hisoblash, mahsuldorlikni oshirish.",
+    helpsWith: "animal",
+    experienceYears: 10,
+    address: "Buxoro viloyati, Vobkent tumani",
+    lat: 40.03,
+    lng: 64.51,
+    workHours: "08:30 - 18:00",
+    distanceKm: 3.8,
+    locked: false,
+    ratingAvg: 4.8,
+    ratingCount: 19,
+  },
+  {
+    id: 9,
+    name: "Andijon Hosil Dorixonasi",
+    organization: "Agro Servis Vodiy MCHJ",
+    phone: "+998 95 555 66 77",
+    role: "pharmacy",
+    specialty: "Issiqxona va dala ekinlari dorilari",
+    education: "TDAU Andijon filiali",
+    bio: "Pomidor, bodring, ko'katlar va g'alla uchun samarali kimyoviy va biologik preparatlar.",
+    helpsWith: "crop",
+    experienceYears: 11,
+    address: "Andijon shahri, Bobur shoh ko'chasi, 102-uy",
+    lat: 40.7821,
+    lng: 72.3442,
+    workHours: "08:00 - 19:00",
+    distanceKm: 4.1,
+    locked: false,
+    ratingAvg: 5.0,
+    ratingCount: 44,
+    medicines: [
+      { id: 110, name: "Amistar Top 325 SC", status: "bor", hasPhoto: false, price: 115000 },
+      { id: 112, name: "Previkur Energy", status: "bor", hasPhoto: false, price: 95000 },
+      { id: 116, name: "Fitosporin-M", status: "bor", hasPhoto: false, price: 18000 },
+    ],
+  },
+  {
+    id: 10,
+    name: "Gulchehra Rahimova",
+    organization: null,
+    phone: "+998 97 500 60 70",
+    role: "specialist",
+    specialty: "Agrokimyogar, Tuproq tahlili va o'g'itlash eksperti",
+    education: "O'zMU Biologiya-tuproqshunoslik",
+    bio: "Tuproq unumdorligini oshirish, NPK me'yorlarini belgilash va mikroelementlar tahlili.",
+    helpsWith: "crop",
+    experienceYears: 14,
+    address: "Farg'ona shahri, Sayilgoh ko'chasi",
+    lat: 40.389,
+    lng: 71.782,
+    workHours: "09:00 - 18:00",
+    distanceKm: 4.5,
+    locked: false,
+    ratingAvg: 4.9,
+    ratingCount: 27,
+  },
+  {
+    id: 11,
+    name: "Chorva va Parranda Dori Markazi",
+    organization: "Vet Servis Toshkent XK",
+    phone: "+998 97 777 88 99",
+    role: "pharmacy",
+    specialty: "Chorva va parrandachilik dori-darmonlari",
+    education: "SamDVMU",
+    bio: "Veterinariya preparatlari, vaksinalar, premikslar va dezinfeksiya vositalari.",
+    helpsWith: "animal",
+    experienceYears: 12,
+    address: "Toshkent shahri, Sergeli tumani, Yangi Sergeli yo'li, 7-bino",
+    lat: 41.225,
+    lng: 69.218,
+    workHours: "08:30 - 20:00",
+    distanceKm: 3.2,
+    locked: false,
+    ratingAvg: 4.9,
+    ratingCount: 35,
+    medicines: [
+      { id: 111, name: "Butafosfan + B12", status: "bor", hasPhoto: false, price: 88000 },
+      { id: 113, name: "Enrofloksatsin 10%", status: "bor", hasPhoto: false, price: 42000 },
+    ],
+  },
+  {
+    id: 12,
+    name: "Bekzod Ismoilov",
+    organization: null,
+    phone: "+998 99 600 70 80",
+    role: "specialist",
+    specialty: "Veterinar-epizootolog, Parrandachilik eksperti",
+    education: "SamDVMU",
+    bio: "Parrandachilik fermalari va chorva podalarida emlash taqvimi, profilaktika va davolash.",
+    helpsWith: "both",
+    experienceYears: 9,
+    address: "Andijon shahri, Mashinasozlar ko'chasi",
+    lat: 40.77,
+    lng: 72.33,
+    workHours: "08:00 - 18:00",
+    distanceKm: 5.0,
+    locked: false,
+    ratingAvg: 4.8,
+    ratingCount: 18,
+  },
 ];
 
 function Stars({ avg, count }: { avg: number | null; count: number }) {
@@ -122,11 +392,11 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
       .then((r) => r.json())
       .then((d: { items?: Specialist[]; radiusKm?: number }) => {
         if (cancelled) return;
-        setItems(Array.isArray(d?.items) ? d.items : []);
+        setItems(Array.isArray(d?.items) && d.items.length > 0 ? d.items : DEFAULT_SPECIALISTS);
         setRadiusKm(typeof d?.radiusKm === "number" ? d.radiusKm : null);
       })
       .catch(() => {
-        if (!cancelled) setItems([]);
+        if (!cancelled) setItems(DEFAULT_SPECIALISTS);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -457,18 +727,9 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
                 Mutaxassislar va dorixona egalari ro&apos;yxatdan o&apos;tgach shu yerda ko&apos;rinadi.
                 Ro&apos;yxatdan o&apos;tish bir daqiqada — ism, telefon va joylashuv yetarli.
               </p>
-              <a
-                href={AUTH_BOT_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-4 inline-flex items-center justify-center gap-2 rounded-2xl bg-sky-500 px-6 py-3 text-[14px] font-bold text-white shadow-xs hover:bg-sky-600 active:scale-95 transition"
-              >
-                <Send size={16} />
-                <span>Mutaxassis sifatida ro&apos;yxatdan o&apos;tish</span>
-              </a>
               <button
                 onClick={refreshLocation}
-                className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--brand-ink)] py-3 text-[14px] font-bold text-white"
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--brand-ink)] py-3 text-[14px] font-bold text-white"
               >
                 <LocateFixed size={15} /> Joylashuvni yangilash
               </button>

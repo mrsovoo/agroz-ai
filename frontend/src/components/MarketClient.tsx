@@ -36,7 +36,6 @@ import {
   Syringe,
   Trash2,
   X,
-  Send,
 } from "lucide-react";
 import CartButton from "@/components/CartButton";
 import { RADIUS_OPTIONS } from "@/lib/constants";
@@ -554,17 +553,6 @@ export default function MarketClient() {
           <p className="mt-1.5 text-[13.5px] leading-relaxed text-[var(--brand-muted)]">
             Radiusni kattalashtirib ko&apos;ring, boshqa bo&apos;limga o&apos;ting yoki qidiruvni tozalang.
           </p>
-          <div className="mt-4 flex justify-center">
-            <a
-              href="https://t.me/agroz_auth_bot"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2.5 text-[13px] font-bold text-white shadow-xs hover:bg-sky-600 active:scale-95 transition"
-            >
-              <Send size={15} />
-              <span>Dorixona mahsulotlarini qo&apos;shish</span>
-            </a>
-          </div>
         </div>
       ) : (
         <div className="mt-4 grid grid-cols-2 gap-2.5 sm:gap-3.5 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 web:grid-cols-4 web:gap-4.5">

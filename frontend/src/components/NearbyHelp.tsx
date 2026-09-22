@@ -16,7 +16,7 @@ import {
   Lock,
   Star,
 } from "lucide-react";
-import { AUTH_BOT_URL, AUTH_BOT_USERNAME, CONFIDENCE_THRESHOLD } from "@/lib/constants";
+import { CONFIDENCE_THRESHOLD } from "@/lib/constants";
 
 type Stock = { medicine: string; status: string; price: number | null };
 type Medicine = { id: number; name: string; status: string; hasPhoto: boolean; price?: number | null };
@@ -289,19 +289,8 @@ export default function NearbyHelp({
               Hozircha ro&apos;yxatdan o&apos;tgan dorixona yo&apos;q
             </p>
             <p className="mt-1 text-[13px] leading-relaxed text-[var(--brand-muted)]">
-              Dorixonalar faqat real ro&apos;yxatdan o&apos;tgan egalardan yig&apos;iladi. Dorixona
-              egasi bo&apos;lsangiz, <b>@{AUTH_BOT_USERNAME}</b> orqali qo&apos;shiling — dorilaringiz
-              rasmi bilan shu yerda ko&apos;rinadi.
+              Ushbu hududda hozircha ro&apos;yxatdan o&apos;tgan dorixonalar mavjud emas.
             </p>
-            <a
-              href={AUTH_BOT_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-3 inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-[13px] font-bold text-white"
-              style={{ background: "var(--brand-green)" }}
-            >
-              <Store size={14} /> Dorixonani qo&apos;shish
-            </a>
           </div>
         ) : (
           <ul>
@@ -471,18 +460,8 @@ export default function NearbyHelp({
                   5 km ichida ro&apos;yxatdan o&apos;tgan mutaxassis topilmadi
                 </p>
                 <p className="mt-1 text-[13px] leading-relaxed text-[var(--brand-muted)]">
-                  Agronom, veterinar yoki zootexnik bo&apos;lsangiz, <b>@{AUTH_BOT_USERNAME}</b> orqali
-                  ro&apos;yxatdan o&apos;tib mijozlarga ko&apos;rinishingiz mumkin.
+                  Ushbu radiusda mutaxassislar topilmadi. Radiusni kengaytirib ko&apos;ring.
                 </p>
-                <a
-                  href={AUTH_BOT_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-3 inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-[13px] font-bold text-white"
-                  style={{ background: "var(--brand-green)" }}
-                >
-                  <UserRound size={14} /> Ro&apos;yxatdan o&apos;tish
-                </a>
               </div>
             ) : (
               <ul>

@@ -11,7 +11,6 @@ import {
   ShieldCheck,
   Newspaper,
   UsersRound,
-  Send,
   Pill,
   Clock,
   Sparkles,
@@ -133,21 +132,6 @@ export default async function HomePage() {
             </div>
             <ChevronRight size={20} className="shrink-0 text-[var(--brand-muted)]" />
           </Link>
-
-          <div className="flex items-center justify-between border-t border-black/5 pt-3">
-            <span className="text-[12px] font-medium text-neutral-500">
-              Dorixona yoki mutaxassis bo&apos;lsangiz:
-            </span>
-            <a
-              href="https://t.me/agroz_auth_bot"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-xl bg-sky-500 px-3 py-1.5 text-[11.5px] font-bold text-white shadow-xs hover:bg-sky-600 active:scale-95 transition"
-            >
-              <Send size={12} />
-              <span>Qo&apos;shilish</span>
-            </a>
-          </div>
         </div>
       </div>
 
