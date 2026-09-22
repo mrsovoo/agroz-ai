@@ -30,25 +30,26 @@ export function shortSum(value: number): string {
 /** Bitta buyurtma matni (dorixona egasi ko'radi). */
 export function orderMessage(order: OrderWithItems): string {
   const st = orderStatusLabel(order.status);
-  const delivery =
-    order.deliveryType === "delivery"
-      ? [
-          "🛵 <b>Qabul qilish:</b> Yetkazib berish (kuryer orqali)",
-          `📍 <b>Yetkazish manzili:</b> <code>${escapeHtml(order.customerAddress ?? "Ko'rsatilmadi")}</code>`,
-          order.customerAddress
-            ? `🗺 <a href="https://maps.google.com/?q=${encodeURIComponent(order.customerAddress)}">Xaritada manzilni ochish</a>`
-            : "",
-        ]
-          .filter(Boolean)
-          .join("\n")
-      : "🏪 <b>Qabul qilish:</b> Mijoz dorixonaga borib O'ZI OLIB KETADI (bepul)";
+  const isDelivery = order.deliveryType === "delivery";
+  const delivery = isDelivery
+    ? [
+        "🚚 <b>Yetkazib berish usuli:</b> <b>Yetkazib berish (Kuryer orqali)</b>",
+        `📍 <b>Yetkazish manzili:</b> <code>${escapeHtml(order.customerAddress ?? "Ko'rsatilmadi")}</code>`,
+        order.customerAddress
+          ? `🗺 <a href="https://maps.google.com/?q=${encodeURIComponent(order.customerAddress)}">Xaritada manzilni ochish</a>`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("\n")
+    : "🏪 <b>Yetkazib berish usuli:</b> <b>Olib ketish (mijoz dorixonadan o'zi olib ketadi)</b>";
+
   const items = order.items
     .map(
-      (i) =>
-        `• ${escapeHtml(i.name)} × ${i.qty}${i.price ? ` — ${shortSum(i.price * i.qty)} so'm` : ""}`,
+      (i, idx) =>
+        `${idx + 1}. 💊 <b>${escapeHtml(i.name)}</b> × ${i.qty} ta${i.price ? ` — <b>${shortSum(i.price * i.qty)} so'm</b>` : ""}`,
     )
     .join("\n");
-  // Mijoz bahosi: yulduzcha + izoh (yetkazilgan buyurtma baholangan bo'lsa).
+
   const rating = order.ratingStars
     ? [
         "",
@@ -56,18 +57,21 @@ export function orderMessage(order: OrderWithItems): string {
         ...(order.ratingNote ? [`💬 "${escapeHtml(order.ratingNote)}"`] : []),
       ]
     : [];
+
   return [
-    `${st.emoji} <b>Buyurtma #${order.id}</b> — ${st.label}`,
+    `🔔 <b>YANGI BUYURTMA KELIB TUSHDI! (#${order.id})</b>`,
     "",
+    `Holati: ${st.emoji} <b>${st.label}</b>`,
     `👤 <b>Mijoz:</b> ${escapeHtml(order.customerName)}`,
     `📞 <b>Telefon:</b> <code>${escapeHtml(order.customerPhone)}</code>`,
+    "",
     delivery,
     "",
-    "<b>Buyurtma qilingan dorilar:</b>",
+    "📦 <b>Buyurtma qilingan dori vositalari:</b>",
     items,
     "",
-    `💰 Jami summa: <b>${order.totalSum !== null ? `${shortSum(order.totalSum)} so'm` : "narx yo'q"}</b>`,
-    order.note ? `📝 <b>Mijoz izohi:</b> <i>${escapeHtml(order.note)}</i>` : "",
+    `💰 <b>Jami to'lov: ${order.totalSum !== null ? `${shortSum(order.totalSum)} so'm` : "kelishiladi"}</b>`,
+    order.note ? `\n📝 <b>Mijoz izohi:</b> <i>${escapeHtml(order.note)}</i>` : "",
     ...rating,
   ]
     .filter(Boolean)
@@ -146,7 +150,6 @@ export async function notifyPharmacyNewOrder(
     items: { medicineId: number; name: string; price: number | null; qty: number }[];
   },
 ): Promise<void> {
-  if (!(await isAuthBotConfigured())) return;
   const asOrder: OrderWithItems = {
     id: order.id,
     status: "yangi",
@@ -167,9 +170,36 @@ export async function notifyPharmacyNewOrder(
       qty: i.qty,
     })),
   };
-  await sendAuthMessage(telegramId, orderMessage(asOrder), {
-    inline: orderActionsKeyboard(asOrder),
-  });
+
+  const text = orderMessage(asOrder);
+  const kb = orderActionsKeyboard(asOrder);
+
+  let sent = false;
+  if (await isAuthBotConfigured()) {
+    try {
+      sent = await sendAuthMessage(telegramId, text, { inline: kb });
+      if (sent) {
+        console.log(`[orders] Buyurtma #${order.id} dorixona egasiga (@agroz_auth_bot, TG: ${telegramId}) yuborildi`);
+      }
+    } catch (e) {
+      console.error("[orders] Auth bot orqali xabar yuborishda xato:", e);
+    }
+  }
+
+  // Fallback: Agar auth bot orqali bormasa, asosiy bot orqali yuborish
+  if (!sent) {
+    try {
+      const { sendMessage, isBotConfigured } = await import("@/lib/telegram-bot");
+      if (await isBotConfigured()) {
+        sent = await sendMessage(telegramId, text, { keyboard: kb });
+        if (sent) {
+          console.log(`[orders] Buyurtma #${order.id} dorixona egasiga (@agrozai_bot, TG: ${telegramId}) yuborildi`);
+        }
+      }
+    } catch (e) {
+      console.error("[orders] Asosiy bot orqali xabar yuborishda xato:", e);
+    }
+  }
 }
 
 /**

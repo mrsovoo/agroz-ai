@@ -15,6 +15,8 @@ import {
   Pill,
   Sprout,
   Syringe,
+  Check,
+  Navigation,
 } from "lucide-react";
 import {
   loadCart,
@@ -27,7 +29,8 @@ import {
   type CartStoreState,
 } from "@/lib/cart-store";
 import FadeImage from "@/components/FadeImage";
-import { onTelegramReady } from "@/lib/telegram";
+import { onTelegramReady, getTelegramUser, requestDeviceLocation } from "@/lib/telegram";
+import { apiUrl } from "@/lib/api-config";
 
 function shortSum(value: number): string {
   return new Intl.NumberFormat("ru-RU").format(value).replace(/\u00a0/g, " ");
@@ -44,30 +47,58 @@ export default function CartDrawer() {
   const [open, setOpen] = useState(false);
   const [cart, setCart] = useState<CartStoreState>(null);
 
+  // Tanlangan dorilar (id'lar to'plami) — mijoz faqat tanlanganlarini buyurtma qiladi
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
   // Form states
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [deliveryType, setDeliveryType] = useState<"pickup" | "delivery">("pickup");
   const [address, setAddress] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [locDetecting, setLocDetecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [successOrder, setSuccessOrder] = useState<{ id: number; total: number } | null>(null);
+  const [successOrder, setSuccessOrder] = useState<{
+    id: number;
+    total: number;
+    deliveryType: string;
+    pharmacyName: string;
+  } | null>(null);
 
   const close = useCallback(() => {
     setOpen(false);
   }, []);
 
-  // Har safar foydalanuvchi boshqa sahifaga (mutaxassis, dorilar, profil va h.k.) o'tsa savat yopiladi
+  // Har safar foydalanuvchi boshqa sahifaga o'tsa savat yopiladi
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
 
+  // Savat va tanlangan dorilarni sinxronlash
   useEffect(() => {
-    const sync = () => setCart(loadCart());
+    const sync = () => {
+      const c = loadCart();
+      setCart(c);
+      if (c && c.lines.length > 0) {
+        setSelectedIds((prev) => {
+          if (prev.size === 0) {
+            return new Set(c.lines.map((l) => l.medicine.id));
+          }
+          const next = new Set<number>();
+          for (const l of c.lines) {
+            if (prev.has(l.medicine.id)) next.add(l.medicine.id);
+          }
+          return next.size > 0 ? next : new Set(c.lines.map((l) => l.medicine.id));
+        });
+      } else {
+        setSelectedIds(new Set());
+      }
+    };
+
     sync();
 
     const handleOpen = () => {
-      setCart(loadCart());
+      sync();
       setOpen(true);
       setError(null);
       setSuccessOrder(null);
@@ -97,7 +128,17 @@ export default function CartDrawer() {
     };
   }, []);
 
-  // Telegram Mini App orqaga qaytish tugmasi savat ochiqligida uni yopadi
+  // Telegram foydalanuvchi ma'lumotlarini auto-fill qilish
+  useEffect(() => {
+    if (!open) return;
+    const tgUser = getTelegramUser();
+    if (tgUser && !name) {
+      const fullName = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ");
+      if (fullName) setName(fullName);
+    }
+  }, [open, name]);
+
+  // Telegram Mini App orqaga qaytish tugmasi
   useEffect(() => {
     if (!open) return;
     return onTelegramReady((tg) => {
@@ -107,13 +148,32 @@ export default function CartDrawer() {
       back.onClick(handler);
       return () => {
         back.offClick(handler);
-        // Agar bosh sahifada bo'lmasa qayta ko'rsatiladi, aks holda yashiriladi
         if (pathname === "/") {
           back.hide();
         }
       };
     });
   }, [open, pathname]);
+
+  // Bitta dorini tanlash / bekor qilish
+  function toggleSelect(medId: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(medId)) next.delete(medId);
+      else next.add(medId);
+      return next;
+    });
+  }
+
+  // Barchasini tanlash / yechish
+  function toggleSelectAll() {
+    if (!cart) return;
+    if (selectedIds.size === cart.lines.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(cart.lines.map((l) => l.medicine.id)));
+    }
+  }
 
   function changeQty(medicineId: number, delta: number) {
     if (!cart) return;
@@ -135,12 +195,33 @@ export default function CartDrawer() {
   function clearAll() {
     saveCart(null);
     setCart(null);
+    setSelectedIds(new Set());
     notifyCartChanged();
+  }
+
+  // GPS orqali joylashuvni aniqlash
+  async function detectLocation() {
+    try {
+      setLocDetecting(true);
+      setError(null);
+      const loc = await requestDeviceLocation();
+      setAddress(`GPS: ${loc.lat.toFixed(6)}, ${loc.lng.toFixed(6)}`);
+    } catch {
+      setError("Joylashuvni avtomatik aniqlab bo'lmadi. Manzilni o'zingiz yozing.");
+    } finally {
+      setLocDetecting(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!cart || cart.lines.length === 0) return;
+
+    const selectedLines = cart.lines.filter((l) => selectedIds.has(l.medicine.id));
+    if (selectedLines.length === 0) {
+      setError("Buyurtma berish uchun kamida bitta dori tanlang");
+      return;
+    }
 
     if (!name.trim() || name.trim().length < 2) {
       setError("Iltimos, ismingizni kiriting");
@@ -161,17 +242,23 @@ export default function CartDrawer() {
     setSubmitting(true);
     setError(null);
 
+    const pharmacyId = selectedLines[0]?.pharmacy?.id || cart.pharmacy?.id || 1;
+    const selectedTotal = selectedLines.reduce(
+      (s, l) => s + (l.medicine.price ?? 0) * l.qty,
+      0,
+    );
+
     try {
-      const res = await fetch("/api/orders", {
+      const res = await fetch(apiUrl("/api/orders"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          pharmacySpecialistId: cart.lines[0]?.pharmacy?.id || cart.pharmacy?.id || 1,
+          pharmacySpecialistId: pharmacyId,
           customerName: name.trim(),
           customerPhone: `+998${cleanPhoneDigits}`,
           deliveryType,
           customerAddress: deliveryType === "delivery" ? address.trim() : null,
-          items: cart.lines.map((l) => ({
+          items: selectedLines.map((l) => ({
             medicineId: l.medicine.id,
             qty: l.qty,
           })),
@@ -185,11 +272,21 @@ export default function CartDrawer() {
 
       setSuccessOrder({
         id: Number(data.orderId ?? 0),
-        total: cartTotal,
+        total: selectedTotal,
+        deliveryType,
+        pharmacyName: data.pharmacy?.name || cart.pharmacy.name,
       });
 
-      // Savatni tozalaymiz
-      clearAll();
+      // Faqat buyurtma qilingan dorilarni savatdan o'chiramiz
+      const remaining = cart.lines.filter((l) => !selectedIds.has(l.medicine.id));
+      if (remaining.length > 0) {
+        const nextCart = { pharmacy: cart.pharmacy, lines: remaining };
+        saveCart(nextCart);
+        setCart(nextCart);
+        setSelectedIds(new Set(remaining.map((l) => l.medicine.id)));
+      } else {
+        clearAll();
+      }
     } catch (err: any) {
       setError(err.message || "Tarmoq xatosi yuz berdi");
     } finally {
@@ -199,8 +296,14 @@ export default function CartDrawer() {
 
   if (!open) return null;
 
-  const cartTotal = cart?.lines.reduce((s, l) => s + (l.medicine.price ?? 0) * l.qty, 0) ?? 0;
-  const cartQty = cart?.lines.reduce((s, l) => s + l.qty, 0) ?? 0;
+  // Faqat tanlangan dorilar hisoblanadi
+  const selectedLines = cart?.lines.filter((l) => selectedIds.has(l.medicine.id)) ?? [];
+  const selectedTotal = selectedLines.reduce(
+    (s, l) => s + (l.medicine.price ?? 0) * l.qty,
+    0,
+  );
+  const selectedCount = selectedLines.reduce((s, l) => s + l.qty, 0);
+  const allSelected = cart ? selectedIds.size === cart.lines.length && cart.lines.length > 0 : false;
 
   return (
     <div
@@ -223,7 +326,7 @@ export default function CartDrawer() {
               </h2>
               {cart && (
                 <p className="text-[12px] font-medium text-neutral-500">
-                  {cart.pharmacy.name} ({cartQty} ta)
+                  {cart.pharmacy.name} ({cart.lines.length} xil dori)
                 </p>
               )}
             </div>
@@ -255,20 +358,30 @@ export default function CartDrawer() {
               <CheckCircle2 size={36} />
             </div>
             <h3 className="text-xl font-extrabold text-neutral-900">
-              Buyurtmangiz qabul qilindi!
+              Buyurtmangiz muvaffaqiyatli qabul qilindi!
             </h3>
             <p className="mt-2 text-[14px] text-neutral-600 max-w-sm">
-              Buyurtma raqami: <strong className="text-neutral-900 font-mono">#{successOrder.id}</strong>.
-              Dorixona tez orada xabarnoma orqali siz bilan bog&apos;lanadi.
+              Buyurtma raqami: <strong className="text-neutral-900 font-mono">#{successOrder.id}</strong>
             </p>
-            {successOrder.total > 0 && (
-              <p className="mt-3 text-[16px] font-black text-[var(--brand-green)]">
-                Jami: {shortSum(successOrder.total)} so&apos;m
+            <div className="mt-4 rounded-2xl bg-neutral-50 p-4 border border-black/5 text-left w-full max-w-sm space-y-1.5 text-[13px]">
+              <p className="text-neutral-700">
+                🏪 <b>Dorixona:</b> {successOrder.pharmacyName}
               </p>
-            )}
+              <p className="text-neutral-700">
+                {successOrder.deliveryType === "delivery" ? "🚚 Yetkazib berish (Kuryer)" : "🏬 Olib ketish (Dorixonadan)"}
+              </p>
+              {successOrder.total > 0 && (
+                <p className="font-extrabold text-[var(--brand-green)] pt-1 text-[15px]">
+                  Jami: {shortSum(successOrder.total)} so&apos;m
+                </p>
+              )}
+            </div>
+            <p className="mt-3 text-[12.5px] text-neutral-500 max-w-xs">
+              Dorixona egasiga Telegram orqali xabarnoma yuborildi. Tez orada siz bilan bog&apos;lanishadi.
+            </p>
             <button
               onClick={() => setOpen(false)}
-              className="mt-8 rounded-2xl bg-[var(--brand-green)] px-8 py-3 text-[14px] font-bold text-white shadow-sm hover:brightness-105 active:scale-95 transition"
+              className="mt-6 rounded-2xl bg-[var(--brand-green)] px-8 py-3 text-[14px] font-bold text-white shadow-sm hover:brightness-105 active:scale-95 transition"
             >
               Tushunarli
             </button>
@@ -283,7 +396,7 @@ export default function CartDrawer() {
               Savatingiz hozircha bo&apos;sh
             </h3>
             <p className="mt-1 text-[13px] text-neutral-500 max-w-xs">
-              Agro Bozor yoki bosh sahifadagi dori kartochkalaridan kerakli dori vositalarini savatga qo&apos;shing.
+              Dorilar bozoridan kerakli dori vositalarini savatga qo&apos;shing.
             </p>
             <button
               onClick={() => setOpen(false)}
@@ -304,96 +417,137 @@ export default function CartDrawer() {
                 </div>
                 {cart.pharmacy.address && (
                   <p className="mt-1 text-[12px] text-neutral-500 flex items-center gap-1.5 truncate">
-                    <MapPin size={12} className="shrink-0" />
+                    <MapPin size={12} className="shrink-0 text-neutral-400" />
                     <span>{cart.pharmacy.address}</span>
                   </p>
                 )}
               </div>
 
-              {/* Dori vositalari ro'yxati */}
-              <ul className="space-y-2">
-                {cart.lines.map((line) => (
-                  <li
-                    key={line.medicine.id}
-                    className="flex items-center gap-3 rounded-2xl border border-black/5 bg-white p-2.5 shadow-2xs"
+              {/* Dori tanlash paneli (Select all) */}
+              <div className="flex items-center justify-between border-b border-black/5 pb-2">
+                <button
+                  type="button"
+                  onClick={toggleSelectAll}
+                  className="flex items-center gap-2 text-[13px] font-bold text-neutral-800 hover:text-[var(--brand-green)] transition"
+                >
+                  <div
+                    className={`flex h-5 w-5 items-center justify-center rounded-md border transition ${
+                      allSelected
+                        ? "bg-[var(--brand-green)] border-[var(--brand-green)] text-white"
+                        : "border-neutral-300 bg-white"
+                    }`}
                   >
-                    {/* Rasm yoki belgi */}
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-neutral-100 overflow-hidden border border-black/5">
-                      {line.medicine.hasPhoto ? (
-                        <FadeImage
-                          src={`/api/medicines/${line.medicine.id}/photo`}
-                          alt={line.medicine.name}
-                          className="h-full w-full object-cover"
-                          fallback={
-                            <span className="text-[var(--brand-green)]">
-                              <TypeIcon type={line.medicine.type} size={20} />
-                            </span>
-                          }
-                        />
-                      ) : (
-                        <span className="text-[var(--brand-green)]">
-                          <TypeIcon type={line.medicine.type} size={20} />
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[13.5px] font-bold text-neutral-900 truncate">
-                        {line.medicine.name}
-                      </p>
-                      <p className="flex items-center gap-1 text-[11px] font-medium text-neutral-500 truncate">
-                        <MapPin size={10} className="text-[var(--brand-green)] shrink-0" />
-                        <span className="truncate">
-                          {line.pharmacy?.name} ({line.pharmacy?.address ? line.pharmacy.address.split(",")[0] : "O'zbekiston"})
-                        </span>
-                      </p>
-                      <p className="text-[12.5px] font-extrabold text-[var(--brand-green)]">
-                        {line.medicine.price ? `${shortSum(line.medicine.price)} so'm` : "Kelishiladi"}
-                      </p>
-                    </div>
-
-                    {/* Miqdor tugmalari */}
-                    <div className="flex items-center gap-1.5 rounded-xl bg-neutral-100 p-1">
-                      <button
-                        type="button"
-                        onClick={() => changeQty(line.medicine.id, -1)}
-                        className="flex h-6 w-6 items-center justify-center rounded-lg bg-white text-neutral-800 shadow-xs active:scale-90"
-                      >
-                        <Minus size={13} />
-                      </button>
-                      <span className="w-5 text-center text-[13px] font-black text-neutral-900">
-                        {line.qty}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => changeQty(line.medicine.id, 1)}
-                        className="flex h-6 w-6 items-center justify-center rounded-lg bg-white text-neutral-800 shadow-xs active:scale-90"
-                      >
-                        <Plus size={13} />
-                      </button>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => changeQty(line.medicine.id, -line.qty)}
-                      className="text-neutral-400 hover:text-red-600 p-1 transition"
-                      aria-label="O'chirish"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-
-              {/* Jami hisob */}
-              <div className="flex items-center justify-between border-t border-black/5 pt-3">
-                <span className="text-[14px] font-bold text-neutral-600">Jami hisob:</span>
-                <span className="text-[17px] font-black text-[var(--brand-green)]">
-                  {cartTotal > 0 ? `${shortSum(cartTotal)} so'm` : "Kelishiladi"}
+                    {allSelected && <Check size={13} strokeWidth={3} />}
+                  </div>
+                  <span>Barchasini tanlash</span>
+                </button>
+                <span className="text-[12px] font-semibold text-neutral-500">
+                  {selectedIds.size} / {cart.lines.length} ta tanlandi
                 </span>
               </div>
 
-              {/* Yetkazib berish usuli */}
+              {/* Dori vositalari ro'yxati */}
+              <ul className="space-y-2.5">
+                {cart.lines.map((line) => {
+                  const isSelected = selectedIds.has(line.medicine.id);
+                  return (
+                    <li
+                      key={line.medicine.id}
+                      className={`flex items-center gap-3 rounded-2xl border p-2.5 transition-all ${
+                        isSelected
+                          ? "border-[var(--brand-green)]/40 bg-white shadow-2xs"
+                          : "border-neutral-200 bg-neutral-50/60 opacity-70"
+                      }`}
+                    >
+                      {/* Tanlash checkboxi */}
+                      <button
+                        type="button"
+                        onClick={() => toggleSelect(line.medicine.id)}
+                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border transition ${
+                          isSelected
+                            ? "bg-[var(--brand-green)] border-[var(--brand-green)] text-white shadow-xs"
+                            : "border-neutral-300 bg-white hover:border-neutral-400"
+                        }`}
+                        aria-label={isSelected ? "Tanlangan" : "Tanlanmagan"}
+                      >
+                        {isSelected && <Check size={14} strokeWidth={3} />}
+                      </button>
+
+                      {/* Rasm yoki belgi */}
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-neutral-100 overflow-hidden border border-black/5">
+                        {line.medicine.hasPhoto ? (
+                          <FadeImage
+                            src={apiUrl(`/api/medicines/${line.medicine.id}/photo`)}
+                            alt={line.medicine.name}
+                            className="h-full w-full object-cover"
+                            fallback={
+                              <span className="text-[var(--brand-green)]">
+                                <TypeIcon type={line.medicine.type} size={20} />
+                              </span>
+                            }
+                          />
+                        ) : (
+                          <span className="text-[var(--brand-green)]">
+                            <TypeIcon type={line.medicine.type} size={20} />
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[13.5px] font-bold text-neutral-900 truncate">
+                          {line.medicine.name}
+                        </p>
+                        <p className="text-[12.5px] font-black text-[var(--brand-green)]">
+                          {line.medicine.price ? `${shortSum(line.medicine.price)} so'm` : "Kelishiladi"}
+                        </p>
+                      </div>
+
+                      {/* Miqdor tugmalari */}
+                      <div className="flex items-center gap-1.5 rounded-xl bg-neutral-100 p-1">
+                        <button
+                          type="button"
+                          onClick={() => changeQty(line.medicine.id, -1)}
+                          className="flex h-6 w-6 items-center justify-center rounded-lg bg-white text-neutral-800 shadow-xs active:scale-90"
+                        >
+                          <Minus size={13} />
+                        </button>
+                        <span className="w-5 text-center text-[13px] font-black text-neutral-900">
+                          {line.qty}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => changeQty(line.medicine.id, 1)}
+                          className="flex h-6 w-6 items-center justify-center rounded-lg bg-white text-neutral-800 shadow-xs active:scale-90"
+                        >
+                          <Plus size={13} />
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => changeQty(line.medicine.id, -line.qty)}
+                        className="text-neutral-400 hover:text-red-600 p-1 transition"
+                        aria-label="O'chirish"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              {/* Tanlanganlar jami hisobi */}
+              <div className="flex items-center justify-between border-t border-black/5 pt-3">
+                <div>
+                  <span className="text-[13px] font-bold text-neutral-600">Tanlanganlar hisobi:</span>
+                  <p className="text-[11px] text-neutral-400">{selectedCount} dona dori</p>
+                </div>
+                <span className="text-[18px] font-black text-[var(--brand-green)]">
+                  {selectedTotal > 0 ? `${shortSum(selectedTotal)} so'm` : "0 so'm"}
+                </span>
+              </div>
+
+              {/* Yetkazib berish usuli: Olib ketish / Yetkazib berish */}
               <div className="space-y-1.5 pt-2">
                 <label className="text-[11.5px] font-bold text-neutral-500 uppercase tracking-wider">
                   Yetkazib berish usuli:
@@ -402,39 +556,52 @@ export default function CartDrawer() {
                   <button
                     type="button"
                     onClick={() => setDeliveryType("pickup")}
-                    className={`flex items-center gap-2 rounded-xl border-2 p-3 text-left transition ${
+                    className={`flex items-start gap-2.5 rounded-2xl border-2 p-3 text-left transition ${
                       deliveryType === "pickup"
-                        ? "border-[var(--brand-green)] bg-[var(--brand-green-soft)]"
+                        ? "border-[var(--brand-green)] bg-[var(--brand-green-soft)]/50"
                         : "border-neutral-200 bg-white"
                     }`}
                   >
-                    <span className="text-lg">🏬</span>
+                    <span className="text-xl">🏬</span>
                     <div>
-                      <p className="text-[13px] font-bold text-neutral-900 leading-tight">Olib ketish</p>
-                      <p className="text-[11px] text-neutral-500">Dorixonadan</p>
+                      <p className="text-[13.5px] font-black text-neutral-900 leading-tight">Olib ketish</p>
+                      <p className="text-[11px] font-medium text-neutral-500 mt-0.5">Dorixonadan (bepul)</p>
                     </div>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setDeliveryType("delivery")}
-                    className={`flex items-center gap-2 rounded-xl border-2 p-3 text-left transition ${
+                    className={`flex items-start gap-2.5 rounded-2xl border-2 p-3 text-left transition ${
                       deliveryType === "delivery"
-                        ? "border-[var(--brand-green)] bg-[var(--brand-green-soft)]"
+                        ? "border-[var(--brand-green)] bg-[var(--brand-green-soft)]/50"
                         : "border-neutral-200 bg-white"
                     }`}
                   >
-                    <span className="text-lg">🚚</span>
+                    <span className="text-xl">🚚</span>
                     <div>
-                      <p className="text-[13px] font-bold text-neutral-900 leading-tight">Yetkazib berish</p>
-                      <p className="text-[11px] text-neutral-500">Kuryer orqali</p>
+                      <p className="text-[13.5px] font-black text-neutral-900 leading-tight">Yetkazib berish</p>
+                      <p className="text-[11px] font-medium text-neutral-500 mt-0.5">Kuryer orqali</p>
                     </div>
                   </button>
                 </div>
+
+                {deliveryType === "pickup" ? (
+                  <div className="mt-2 rounded-xl bg-amber-50/70 border border-amber-200/60 p-2.5 text-[12px] text-amber-900">
+                    💡 Buyurtma tasdiqlangach, dorixonaga borib o&apos;zingiz olib ketasiz.
+                    {cart.pharmacy.address && (
+                      <span className="block font-semibold mt-0.5">Manzil: {cart.pharmacy.address}</span>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-2 rounded-xl bg-blue-50/70 border border-blue-200/60 p-2.5 text-[12px] text-blue-900">
+                    🚚 Dorixona kuryeri buyurtmani ko&apos;rsatilgan manzilga yetkazib beradi.
+                  </div>
+                )}
               </div>
 
               {/* Mijoz ma'lumotlari */}
-              <div className="space-y-3 pt-1">
+              <div className="space-y-3 pt-2">
                 <div>
                   <label className="text-[12px] font-bold text-neutral-700">
                     Ismingiz <span className="text-red-500">*</span>
@@ -470,14 +637,25 @@ export default function CartDrawer() {
 
                 {deliveryType === "delivery" && (
                   <div>
-                    <label className="text-[12px] font-bold text-neutral-700">
-                      Yetkazish manzili <span className="text-red-500">*</span>
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-[12px] font-bold text-neutral-700">
+                        Yetkazish manzili <span className="text-red-500">*</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={detectLocation}
+                        disabled={locDetecting}
+                        className="flex items-center gap-1 text-[11.5px] font-bold text-[var(--brand-green)] hover:underline"
+                      >
+                        <Navigation size={12} className={locDetecting ? "animate-spin" : ""} />
+                        <span>{locDetecting ? "Aniqlanmoqda..." : "📍 Joylashuvni olish"}</span>
+                      </button>
+                    </div>
                     <input
                       type="text"
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
-                      placeholder="Tuman, ko'cha, uy raqami"
+                      placeholder="Tuman, ko'cha, uy raqami yoki mo'ljal"
                       className="ios-input mt-1"
                       required
                     />
@@ -496,15 +674,19 @@ export default function CartDrawer() {
             <div className="border-t border-black/10 bg-neutral-50 p-4">
               <button
                 type="submit"
-                disabled={submitting}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--brand-green)] py-3.5 text-[15px] font-extrabold text-white shadow-md hover:brightness-105 active:scale-[0.98] transition disabled:opacity-60"
+                disabled={submitting || selectedLines.length === 0}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--brand-green)] py-3.5 text-[15px] font-extrabold text-white shadow-md hover:brightness-105 active:scale-[0.98] transition disabled:opacity-50"
               >
                 {submitting ? (
                   <Loader2 size={18} className="animate-spin" />
                 ) : (
                   <ShoppingCart size={18} />
                 )}
-                <span>Buyurtmani tasdiqlash</span>
+                <span>
+                  {selectedLines.length === 0
+                    ? "Dorini tanlang"
+                    : `Buyurtma berish (${shortSum(selectedTotal)} so'm)`}
+                </span>
               </button>
             </div>
           </form>

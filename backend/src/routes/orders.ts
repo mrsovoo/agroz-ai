@@ -65,16 +65,20 @@ router.post("/", async (req, res) => {
     }
 
     // Telegram orqali dorixonaga xabar
-    notifyPharmacyNewOrder(result.pharmacy.telegramId, {
-      id: result.orderId,
-      customerName: name,
-      customerPhone: phone,
-      note: cleanText(body.note, 300) ?? null,
-      deliveryType,
-      customerAddress: deliveryType === "delivery" ? customerAddress ?? null : null,
-      total: result.total,
-      items: result.items,
-    }).catch((err) => console.error("[orders] bot xabari yuborilmadi:", err));
+    if (result.pharmacy.telegramId) {
+      notifyPharmacyNewOrder(result.pharmacy.telegramId, {
+        id: result.orderId,
+        customerName: name,
+        customerPhone: phone,
+        note: cleanText(body.note, 300) ?? null,
+        deliveryType,
+        customerAddress: deliveryType === "delivery" ? customerAddress ?? null : null,
+        total: result.total,
+        items: result.items,
+      }).catch((err) => console.error("[orders] bot xabari yuborilmadi:", err));
+    } else {
+      console.warn(`[orders] Dorixona (#${result.pharmacy.id}) uchun telegramId mavjud emas`);
+    }
 
     res.json({
       ok: true,
