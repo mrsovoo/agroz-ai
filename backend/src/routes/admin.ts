@@ -488,16 +488,77 @@ router.get("/telegram", async (_req, res) => {
   try {
     const botToken = await getSetting(SETTING_KEYS.telegramBotToken);
     const authBotToken = await getSetting(SETTING_KEYS.telegramAuthBotToken);
+    const botUsername = await getSetting(SETTING_KEYS.telegramBotUsername);
+    const authBotUsername = await getSetting(SETTING_KEYS.telegramAuthBotUsername);
+
+    // Telegram API orqali bot holatini tekshirish
+    async function checkBot(token: string | null) {
+      if (!token) return { configured: false, name: null, username: null };
+      try {
+        const resp = await fetch(`https://api.telegram.org/bot${token}/getMe`);
+        const data: any = await resp.json();
+        if (data?.ok) {
+          return {
+            configured: true,
+            name: data.result.first_name,
+            username: data.result.username,
+            canJoinGroups: data.result.can_join_groups,
+          };
+        }
+        return { configured: false, error: data?.description || "Yaroqsiz token" };
+      } catch (err: any) {
+        return { configured: false, error: err.message || "Ulanishda xatolik" };
+      }
+    }
+
+    const [mainStatus, authStatus] = await Promise.all([
+      checkBot(botToken),
+      checkBot(authBotToken),
+    ]);
 
     res.json({
       ok: true,
       appUrl: process.env.NEXT_PUBLIC_APP_URL || null,
-      main: { configured: Boolean(botToken) },
-      auth: { configured: Boolean(authBotToken), username: "agroz_auth_bot" },
+      main: {
+        ...mainStatus,
+        configuredUsername: botUsername || mainStatus.username || "agroz_bot",
+      },
+      auth: {
+        ...authStatus,
+        configuredUsername: authBotUsername || authStatus.username || "agroz_auth_bot",
+      },
       secrets: { main: Boolean(botToken), auth: Boolean(authBotToken) },
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
+
+// POST /api/admin/telegram/test-token
+router.post("/telegram/test-token", requireAdmin, async (req, res) => {
+  try {
+    const { token } = req.body || {};
+    if (!token || typeof token !== "string") {
+      return res.status(400).json({ error: "Token ko'rsatilmadi" });
+    }
+    const resp = await fetch(`https://api.telegram.org/bot${token.trim()}/getMe`);
+    const data: any = await resp.json();
+    if (data?.ok) {
+      return res.json({
+        ok: true,
+        bot: {
+          id: data.result.id,
+          name: data.result.first_name,
+          username: data.result.username,
+        },
+      });
+    }
+    return res.status(400).json({
+      ok: false,
+      error: data?.description || "Telegram token yaroqsiz",
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Telegram bilan bog'lanib bo'lmadi" });
   }
 });
 
@@ -506,9 +567,13 @@ function getSettingLabel(key: string): string {
     case SETTING_KEYS.defaultRadiusKm:
       return "Qidiruv radiusi (km) — Standart: 5 km";
     case SETTING_KEYS.telegramBotToken:
-      return "Asosiy bot tokeni (TELEGRAM_BOT_TOKEN)";
+      return "Mijoz (Dehqon) boti tokeni (TELEGRAM_BOT_TOKEN)";
+    case SETTING_KEYS.telegramBotUsername:
+      return "Mijoz (Dehqon) boti username (@agroz_bot)";
     case SETTING_KEYS.telegramAuthBotToken:
       return "Mutaxassis va dorixona boti tokeni (TELEGRAM_AUTH_BOT_TOKEN)";
+    case SETTING_KEYS.telegramAuthBotUsername:
+      return "Mutaxassis va dorixona boti username (@agroz_auth_bot)";
     case SETTING_KEYS.openaiApiKey:
       return "AI API kaliti (Google Gemini yoki OpenAI)";
     case SETTING_KEYS.aiModel:

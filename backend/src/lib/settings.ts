@@ -11,7 +11,9 @@ import { appSettings } from "@/db/schema";
 
 export const SETTING_KEYS = {
   telegramBotToken: "telegram_bot_token",
+  telegramBotUsername: "telegram_bot_username",
   telegramAuthBotToken: "telegram_auth_bot_token",
+  telegramAuthBotUsername: "telegram_auth_bot_username",
   telegramWebhookSecret: "telegram_webhook_secret",
   telegramAuthWebhookSecret: "telegram_auth_webhook_secret",
   openaiApiKey: "openai_api_key",
@@ -78,7 +80,9 @@ function eqKey(key: string) {
 export function envFallback(key: SettingKey): string | null {
   const envMap: Record<SettingKey, string | undefined> = {
     [SETTING_KEYS.telegramBotToken]: process.env.TELEGRAM_BOT_TOKEN,
+    [SETTING_KEYS.telegramBotUsername]: process.env.TELEGRAM_BOT_USERNAME || process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "agroz_bot",
     [SETTING_KEYS.telegramAuthBotToken]: process.env.TELEGRAM_AUTH_BOT_TOKEN,
+    [SETTING_KEYS.telegramAuthBotUsername]: process.env.TELEGRAM_AUTH_BOT_USERNAME || process.env.NEXT_PUBLIC_TELEGRAM_AUTH_BOT_USERNAME || "agroz_auth_bot",
     [SETTING_KEYS.telegramWebhookSecret]: process.env.TELEGRAM_WEBHOOK_SECRET,
     [SETTING_KEYS.telegramAuthWebhookSecret]: process.env.TELEGRAM_AUTH_WEBHOOK_SECRET,
     [SETTING_KEYS.openaiApiKey]: process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY,

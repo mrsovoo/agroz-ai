@@ -1,8 +1,23 @@
 # Agroz AI — Intelligent Agro & Veterinary Platform
 
-O'zbekiston fermerlari, tomorqachilari va chorvadorlari uchun sun'iy intellektga asoslangan ekin va chorva kasalliklarini tashxislash, yaqin agro-dorixonalar va mutaxassislar xaritasi, Agro Bozor yetkazib berish hamda Telegram Mini App tizimi.
+O'zbekiston fermerlari, tomorqachilari va chorvadorlari uchun sun'iy intellektga asoslangan ekin va chorva kasalliklarini tashxislash, yaqin agro-dorixonalar va mutaxassislar xaritasi (5 km yagona radius), Agro Bozor buyurtmalari hamda Telegram Mini App tizimi.
 
-Loyiha arxitekturasi to'liq **Frontend** va **Backend** mustaqil qismlarga ajratilgan bo'lib, turli serverlarga mustaqil joylashtirish (deploy) uchun optimallashtirilgan.
+Loyiha arxitekturasi to'liq **Frontend**, **Backend** hamda **Super Admin Panel** qismlariga ajratilgan bo'lib, alohida serverlarda va mustaqil do'menlarda (masalan: `agroz.uz`, `api.agroz.uz`, `admin.agroz.uz`) deploy qilish uchun optimallashtirilgan.
+
+---
+
+## 🚀 Asosiy Imkoniyatlar va Imtiyozlar
+
+* **🤖 AI Tashxis (Crop & Vet AI):** Ekin va chorva kasalligi rasmi yoki ovozli xabarini yuklab, aniq diagnoz, davolash sxemasi va kerakli preparatlar ro'yxatini tezkor olish.
+* **📍 5 km Yagona Radius & Xarita:** Dehqon joylashuvidan kelib chiqib 5 km atrofidagi eng yaqin agro-dorixona va mutaxassislarni topish. Radius Super Admin panel orqali dinamik ravishda o'zgartirilishi mumkin.
+* **🛒 Agro Bozor & Savat:** Dori vositalarini kartochkadan oson qidirish, savatga qo'shish (`- {soni} +` tugmalari), dorixona manzili (viloyat darajasida) hamda Telegram orqali buyurtma yuborish.
+* **👨‍🌾 Agronom va Veterinarlar Chaqiruvi:** Hududdagi mutaxassislarga bir tugma bilan murojaat qilish, ish yakunlangach 1–5 yulduzli baholash va izoh qoldirish.
+* **📊 Super Admin Boshqaruv Markazi (`/admin/panel`):**
+  * Tizim statistikasi va 14 ta viloyat bo'yicha tahlillar.
+  * Sharhlar va reytinglar moderatsiyasi (o'chirish, filtrlash).
+  * Ob-havo ogohlantirishlari yuborish.
+  * **Bot & Tizim Sozlamalari:** Asosiy va Auth bot tokenlarini, bot username'larini (`@agroz_bot`, `@agroz_auth_bot`) hamda standart radiusni real-vaqtda o'zgartirish va tokenlarni Telegram API orqali test qilish (`/api/admin/telegram/test-token`).
+* **✨ Data 0 (Bo'sh holat / Empty State):** Bazada dorilar yoki mutaxassislar hali 0 ta bo'lganida bo'sh sahifa emas, balki agronomi, veterinar va dorixona egalarini `@agroz_auth_bot` orqali bepul ro'yxatdan o'tishga va dorilarni kiritishga chaqiruvchi chiroyli CTA bannerlar.
 
 ---
 
@@ -11,9 +26,9 @@ Loyiha arxitekturasi to'liq **Frontend** va **Backend** mustaqil qismlarga ajrat
 ```
 agroz-ai/
 ├── frontend/                 # Mustaqil Next.js 16 (App Router, Tailwind CSS 4)
-│   ├── src/app/             # UI sahifalar (Tashxis, Bozor, Xarita, Mutaxassislar, Yangiliklar)
-│   ├── src/components/      # React komponentlar
-│   ├── src/lib/             # Frontend yordamchilari, stores, api-client
+│   ├── src/app/             # UI sahifalar (Tashxis, Bozor, Xarita, Mutaxassislar, Profil, Admin Panel)
+│   ├── src/components/      # ProductCard, MarketClient, SpecialistsClient, HomeMedicinesShowcase va boshqalar
+│   ├── src/lib/             # Frontend constants, stores (savat, yoqtirilganlar), api-client
 │   ├── next.config.ts       # Backend API ga proxy rewrites
 │   ├── Dockerfile           # Frontend standalone konteyneri
 │   ├── vercel.json          # Vercel deployment sozlamalari
@@ -21,9 +36,9 @@ agroz-ai/
 │
 ├── backend/                  # Mustaqil Node.js + Express + TypeScript API server
 │   ├── src/server.ts        # Express API server (port 4000)
-│   ├── src/routes/          # REST API marshrutlari (/api/diagnose, /api/orders, /api/specialists...)
+│   ├── src/routes/          # REST API marshrutlari (/api/diagnose, /api/orders, /api/specialists, /api/admin...)
 │   ├── src/db/              # PostgreSQL + Drizzle ORM sxemalari va ulanish
-│   ├── src/lib/             # AI tahlil, Telegram botlar, SMS va biznes mantiq
+│   ├── src/lib/             # AI tahlil, Telegram botlar, settings, SMS va biznes mantiq
 │   ├── scripts/             # seed-data.mjs, db-clear.mjs, telegram bot skriptlari
 │   ├── Dockerfile           # Backend standalone konteyneri
 │   └── package.json         # Express, Drizzle, Sharp, PG, @google/genai
@@ -47,19 +62,20 @@ npm install
 ```bash
 cp backend/.env.example backend/.env
 ```
-`backend/.env` ichida `DATABASE_URL` (PostgreSQL / Neon) va `GEMINI_API_KEY` ni ko'rsating.
+`backend/.env` faylida `DATABASE_URL` (PostgreSQL / Neon) hamda `GEMINI_API_KEY` ni ko'rsating.
 
 ### 3. Ma'lumotlar bazasini tayyorlash va to'ldirish (Seed)
 ```bash
-# Migratsiyalarni yuritish:
+# Migratsiyalarni yuritish (jadval sxemalarini yaratish):
 npm run db:push
 
-# Realistik MVP ma'lumotlarni kiritish (dorixonalar, mutaxassislar, dorilar, namunaviy buyurtmalar):
+# Realistik ma'lumotlarni kiritish (dorixonalar, mutaxassislar, dorilar, namunaviy buyurtmalar):
 npm run db:seed
 ```
 
-### 4. Ikkala serverni bir vaqtda ishga tushirish
+### 4. Serverlarni ishga tushirish
 ```bash
+# Frontend va Backend'ni bir vaqtda ishga tushirish:
 npm run dev:all
 ```
 - **Frontend**: `http://localhost:3000`
@@ -67,90 +83,67 @@ npm run dev:all
 
 Yoki alohida terminallarda:
 ```bash
-npm run dev:frontend   # Faqat frontend
-npm run dev:backend    # Faqat backend
+npm run dev:frontend   # Faqat frontend (Next.js)
+npm run dev:backend    # Faqat backend (Express API)
 ```
 
 ---
 
 ## 🐳 Docker orqali Ishga Tushirish
 
-Butun tizimni (PostgreSQL + Express Backend + Next.js Frontend) bitta buyruq bilan ko'tarish:
+Butun tizimni (PostgreSQL + Express Backend + Next.js Frontend) bitta buyruq bilan konteynerda yurgizish:
 
 ```bash
 docker-compose up -d --build
 ```
-- Frontend: `http://localhost:3000`
-- Backend API: `http://localhost:4000`
-- PostgreSQL: `localhost:5432`
+- **Frontend**: `http://localhost:3000`
+- **Backend API**: `http://localhost:4000`
+- **PostgreSQL**: `localhost:5432`
 
 ---
 
-## 🚀 Alohida Serverlarga Deploy Qilish
+## 🚀 Serverlarga Deploy Qilish (Production Guide)
 
-### A. Frontendni Deploy Qilish (Vercel)
+Tizim uchta mustaqil qismga bo'lingan va alohida hostlarga deploy qilinishi mumkin:
+
+### A. Frontend Deploy (Vercel / Netlify / VPS)
 1. Vercel dashboardida GitHub repozitoriyangizni ulang (`agroz-ai`).
-2. **Root Directory**: `frontend` qilib tanlang.
+2. **Root Directory**: `frontend` qilib belgilang.
 3. **Environment Variables**:
-   - `NEXT_PUBLIC_API_URL` = `https://api.sizning-domen.uz` (Backend API manzili)
-4. Deploy tugmasini bosing. Frontend bir necha soniyada muammosiz build bo'ladi.
+   - `NEXT_PUBLIC_API_URL` = `https://api.agroz.uz` (Backend API manzili)
+   - `NEXT_PUBLIC_TELEGRAM_AUTH_BOT_USERNAME` = `agroz_auth_bot`
+4. Deploy tugmasini bosing.
 
-### B. Backendni Deploy Qilish (VPS / Render / Railway / Docker)
-1. **Root Directory**: `backend` (agar Render/Railway bo'lsa) yoki repozitoriyaning `backend` papkasini serverga oling.
-2. Serverda kerakli muhit parametrlarini kiriting:
-   - `DATABASE_URL` = `postgresql://user:password@host/db?sslmode=require`
-   - `PORT` = `4000` (yoki provayder porti)
-   - `CORS_ORIGIN` = `https://sizning-frontend-domeningiz.vercel.app`
+### B. Backend Deploy (Ubuntu VPS / Hetzner / Railway / Render)
+1. Serverga `backend` papkasini yoki repozitoriyani ko'chiring.
+2. Muhit parametrlarini kiriting:
+   - `DATABASE_URL` = `postgresql://user:pass@host/db?sslmode=require`
+   - `PORT` = `4000`
+   - `CORS_ORIGIN` = `https://agroz.uz`
    - `GEMINI_API_KEY` = Google Gemini API kaliti
-   - `TELEGRAM_BOT_TOKEN` = Telegram bot tokeni
-   - `TELEGRAM_AUTH_BOT_TOKEN` = Mutaxassislar bot tokeni
-   - `ADMIN_USERNAME` va `ADMIN_PASSWORD` = Admin panel kirish ma'lumotlari
-3. Ishga tushirish buyrug'i:
+   - `TELEGRAM_BOT_TOKEN` = Mijoz boti tokeni
+   - `TELEGRAM_AUTH_BOT_TOKEN` = Mutaxassis va dorixonalar boti tokeni
+   - `ADMIN_USERNAME` va `ADMIN_PASSWORD` = Super admin panel kalitlari
+3. Build va start:
    ```bash
    npm ci
+   npm run build
    npm start
    ```
-   Yoki Docker orqali:
-   ```bash
-   docker build -t agroz-backend ./backend
-   docker run -d -p 4000:4000 --env-file backend/.env agroz-backend
-   ```
 
 ---
 
-## 📦 Ma'lumotlarni boshqarish (Seed & Clear)
+## 🤖 Telegram Botlar va Webhooklar
 
-- **Ma'lumotlarni to'liq to'ldirish**:
-  ```bash
-  npm run db:seed
-  ```
-  *Natija:* 6 ta hududiy dorixona, 6 ta sertifikatlangan mutaxassis, 24 ta yuqori talabdagi dori, 30+ mijoz sharhlari va namunaviy buyurtmalar bazaga kiritiladi.
-- **Bazasini tozalash**:
-  ```bash
-  npm run db:clear -- --yes
-  ```
+1. **Mijoz Boti (`TELEGRAM_BOT_TOKEN`)**:
+   - Telegram Mini App va xabarnomalar yuborish.
+2. **Auth & Boshqaruv Boti (`TELEGRAM_AUTH_BOT_TOKEN` - `@agroz_auth_bot`)**:
+   - Agronom, veterinar va agro-dorixona egalarini ro'yxatdan o'tkazish.
+   - Dorilar katalogini rasm, narx va tavsifi bilan qo'shish hamda boshqarish.
 
----
-
-## 🤖 Telegram Botlar
-
-1. **Asosiy Bot (`TELEGRAM_BOT_TOKEN`)**:
-   - WebApp ochish menyu tugmasi
-   - Ro'yxatdan o'tish / kirishda SMS o'rniga bepul Telegram orqali OTP kod yuborish
-   - Yangi buyurtmalar holati xabarnomalari
-2. **Mutaxassis & Dorixona Boti (`TELEGRAM_AUTH_BOT_TOKEN`)**:
-   - Shifokor, agronom yoki dorixona egasi sifatida ro'yxatdan o'tish
-   - Yangi dorilar va preparatlarni rasm/narx bilan katalogga qo'shish
-   - Kelib tushgan buyurtmalarni qabul qilish va boshqarish
-
-Lokal bot testlash (Polling rejimi):
+Lokal bot testlash (Polling):
 ```bash
 npm run telegram:poll
-```
-
-Webhooklarni sozlash (Production):
-```bash
-npm run telegram:setup
 ```
 
 ---
@@ -159,7 +152,6 @@ npm run telegram:setup
 
 Loyihada TypeScript xatolari yo'qligini tekshirish:
 ```bash
-npm run typecheck:frontend   # Frontend tekshiruvi (0 xato)
-npm run typecheck:backend    # Backend tekshiruvi (0 xato)
-npm run lint                 # ESLint qoidalar tekshiruvi
+npm run typecheck:frontend   # Frontend (0 xato)
+npm run typecheck:backend    # Backend (0 xato)
 ```
