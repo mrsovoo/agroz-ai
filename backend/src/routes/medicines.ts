@@ -1,10 +1,80 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
 import { specialistMedicines, specialists, specialistRatings } from "../db/schema.js";
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, eq, ne, sql, ilike, or } from "drizzle-orm";
 import { resolveAuthBotToken } from "../lib/auth-bot.js";
 
 const router = Router();
+
+// GET /api/medicines  — ro'yxat (home page showcase va /dorilar uchun)
+router.get("/", async (req, res) => {
+  try {
+    const limit = Math.min(Number(req.query.limit) || 48, 96);
+    const type = typeof req.query.type === "string" ? req.query.type : null;
+    const q = typeof req.query.q === "string" ? req.query.q.trim() : null;
+
+    const conditions = [
+      eq(specialistMedicines.status, "bor"),
+      eq(specialists.isActive, true),
+    ];
+    if (type === "crop" || type === "animal") {
+      conditions.push(eq(specialistMedicines.type, type));
+    }
+    if (q) {
+      conditions.push(
+        or(
+          ilike(specialistMedicines.name, `%${q}%`),
+          ilike(specialistMedicines.usage, `%${q}%`)
+        )!
+      );
+    }
+
+    const rows = await db
+      .select({
+        id: specialistMedicines.id,
+        name: specialistMedicines.name,
+        type: specialistMedicines.type,
+        usage: specialistMedicines.usage,
+        price: specialistMedicines.price,
+        hasPhoto: sql<boolean>`(${specialistMedicines.photoFileId} is not null or ${specialistMedicines.photoData} is not null)`,
+        pharmacyId: specialists.id,
+        pharmacyName: sql<string>`coalesce(${specialists.organization}, ${specialists.name})`,
+        pharmacyPhone: specialists.phone,
+        pharmacyAddress: specialists.address,
+        ratingAvg: sql<number | null>`(
+          select avg(r.stars)::float from specialist_ratings r where r.specialist_id = ${specialists.id}
+        )`,
+        ratingCount: sql<number>`(
+          select count(*)::int from specialist_ratings r where r.specialist_id = ${specialists.id}
+        )`,
+      })
+      .from(specialistMedicines)
+      .innerJoin(specialists, eq(specialists.id, specialistMedicines.specialistId))
+      .where(and(...conditions))
+      .orderBy(sql`${specialistMedicines.id} desc`)
+      .limit(limit);
+
+    const medicines = rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      type: r.type,
+      usage: r.usage,
+      price: r.price,
+      hasPhoto: Boolean(r.hasPhoto),
+      pharmacyId: r.pharmacyId,
+      pharmacyName: r.pharmacyName,
+      pharmacyPhone: r.pharmacyPhone,
+      pharmacyAddress: r.pharmacyAddress,
+      ratingAvg: r.ratingAvg === null ? null : Number(r.ratingAvg),
+      ratingCount: Number(r.ratingCount),
+    }));
+
+    res.json(medicines);
+  } catch (err: any) {
+    console.error("[medicines list error]:", err);
+    res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
 
 const fileCache = new Map<string, { path: string; expires: number }>();
 const FILE_TTL_MS = 30 * 60 * 1000;

@@ -2,8 +2,9 @@ import Link from "next/link";
 import WeatherCard from "@/components/WeatherCard";
 import NotificationBell from "@/components/NotificationBell";
 import CartButton from "@/components/CartButton";
-import HomeMedicinesShowcase from "@/components/HomeMedicinesShowcase";
+import HomeMedicinesShowcase, { type ShowcaseMedicine } from "@/components/HomeMedicinesShowcase";
 import { getCurrentUser } from "@/lib/session";
+import { apiUrl } from "@/lib/api-config";
 import {
   MapPin,
   ChevronRight,
@@ -19,6 +20,19 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const user = await getCurrentUser();
+
+  // Real dorilar: API dan server-side olamiz (xato bo'lsa bo'sh array)
+  let medicines: ShowcaseMedicine[] = [];
+  try {
+    const res = await fetch(apiUrl("/api/medicines?limit=16"), {
+      next: { revalidate: 60 },
+    });
+    if (res.ok) {
+      medicines = await res.json();
+    }
+  } catch {
+    // Tarmoq xatosi — bo'sh holat ko'rsatiladi
+  }
 
   return (
     <main className="px-5 pb-6">
@@ -90,8 +104,8 @@ export default async function HomePage() {
         </div>
       </div>
 
-      {/* TO'LIQ DORILAR VITRINASI (Ekin va hayvon tashxisi o'rniga to'g'ridan-to'g'ri dori kartochkalari) */}
-      <HomeMedicinesShowcase />
+      {/* TO'LIQ DORILAR VITRINASI — faqat real API ma'lumotlari */}
+      <HomeMedicinesShowcase initialMedicines={medicines} />
 
       {/* Yaqin atrofdan dori topish va Mutaxassislar */}
       {/* Dehqonlar uchun asosiy 3 ta qulay va sokin bo'lim */}
