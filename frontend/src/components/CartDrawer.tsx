@@ -166,7 +166,7 @@ export default function CartDrawer() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          pharmacySpecialistId: cart.pharmacy.id,
+          pharmacySpecialistId: cart.lines[0]?.pharmacy?.id || cart.pharmacy?.id || 1,
           customerName: name.trim(),
           customerPhone: `+998${cleanPhoneDigits}`,
           deliveryType,
@@ -340,6 +340,12 @@ export default function CartDrawer() {
                     <div className="min-w-0 flex-1">
                       <p className="text-[13.5px] font-bold text-neutral-900 truncate">
                         {line.medicine.name}
+                      </p>
+                      <p className="flex items-center gap-1 text-[11px] font-medium text-neutral-500 truncate">
+                        <MapPin size={10} className="text-[var(--brand-green)] shrink-0" />
+                        <span className="truncate">
+                          {line.pharmacy?.name} ({line.pharmacy?.address ? line.pharmacy.address.split(",")[0] : "O'zbekiston"})
+                        </span>
                       </p>
                       <p className="text-[12.5px] font-extrabold text-[var(--brand-green)]">
                         {line.medicine.price ? `${shortSum(line.medicine.price)} so'm` : "Kelishiladi"}

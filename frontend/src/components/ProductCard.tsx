@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Minus, Heart, Pill, Sprout, Syringe } from "lucide-react";
+import { Plus, Minus, Heart, Pill, Sprout, Syringe, MapPin } from "lucide-react";
 import FadeImage from "@/components/FadeImage";
 import {
   loadCart,
@@ -11,6 +11,7 @@ import {
   CART_EVENT,
   type CartStoreMedicine,
   type CartStorePharmacy,
+  type CartStoreLine,
 } from "@/lib/cart-store";
 import { isFavorite, toggleFavorite, FAV_EVENT } from "@/lib/favorites-store";
 
@@ -19,6 +20,37 @@ export type ProductCardMedicine = CartStoreMedicine & {
   ratingAvg?: number | null;
   ratingCount?: number;
 };
+
+export function getShortCity(address?: string | null, orgName?: string | null): string {
+  const text = `${address || ""} ${orgName || ""}`.toLowerCase();
+  if (text.includes("toshkent vil")) return "Toshkent vil.";
+  if (
+    text.includes("toshkent sh") ||
+    text.includes("toshkent") ||
+    text.includes("chilonzor") ||
+    text.includes("sergeli") ||
+    text.includes("yunusobod")
+  ) {
+    return "Toshkent sh.";
+  }
+  if (text.includes("samarqand")) return "Samarqand";
+  if (text.includes("farg'ona") || text.includes("fargona") || text.includes("vodiy")) return "Farg'ona";
+  if (text.includes("andijon")) return "Andijon";
+  if (text.includes("namangan")) return "Namangan";
+  if (text.includes("buxoro") || text.includes("zarafshon")) return "Buxoro";
+  if (text.includes("navoiy")) return "Navoiy";
+  if (text.includes("qashqadaryo") || text.includes("qarshi")) return "Qashqadaryo";
+  if (text.includes("surxondaryo") || text.includes("termiz")) return "Surxondaryo";
+  if (text.includes("xorazm") || text.includes("urganch")) return "Xorazm";
+  if (text.includes("jizzax")) return "Jizzax";
+  if (text.includes("sirdaryo") || text.includes("guliston")) return "Sirdaryo";
+  if (text.includes("qoraqalpog'iston") || text.includes("nukus")) return "Qoraqalpog'iston";
+  if (address) {
+    const first = address.split(",")[0].trim();
+    return first.length <= 16 ? first : first.slice(0, 14) + "..";
+  }
+  return "O'zbekiston";
+}
 
 export default function ProductCard({
   medicine,
@@ -36,11 +68,8 @@ export default function ProductCard({
     const sync = () => {
       setLiked(isFavorite(pharmacy.id, medicine.id));
       const cart = loadCart();
-      setQty(
-        cart && cart.pharmacy.id === pharmacy.id
-          ? (cart.lines.find((l) => l.medicine.id === medicine.id)?.qty ?? 0)
-          : 0,
-      );
+      const inLine = cart?.lines?.find((l) => l.medicine.id === medicine.id);
+      setQty(inLine ? inLine.qty : 0);
     };
     sync();
     window.addEventListener(FAV_EVENT, sync);
@@ -55,32 +84,33 @@ export default function ProductCard({
 
   function add() {
     const cart = loadCart();
-    if (cart && cart.pharmacy.id !== pharmacy.id) {
-      if (
-        !confirm(
-          `Savatda boshqa dorixona (${cart.pharmacy.name}) dorilari bor. Yangi dorixona dorilari savatni almashtiradi. Davom etamizmi?`,
-        )
-      ) {
-        return;
-      }
-    }
-    if (!cart || cart.pharmacy.id !== pharmacy.id) {
-      saveCart({ pharmacy, lines: [{ medicine, qty: 1 }] });
+    const newPharmacy: CartStorePharmacy = {
+      id: pharmacy.id,
+      name: pharmacy.name,
+      phone: pharmacy.phone,
+      address: pharmacy.address ?? null,
+    };
+
+    if (!cart || !Array.isArray(cart.lines) || cart.lines.length === 0) {
+      saveCart({
+        pharmacy: newPharmacy,
+        lines: [{ medicine, pharmacy: newPharmacy, qty: 1 }],
+      });
     } else {
       const existing = cart.lines.find((l) => l.medicine.id === medicine.id);
-      const lines = existing
+      const lines: CartStoreLine[] = existing
         ? cart.lines.map((l) =>
             l.medicine.id === medicine.id ? { ...l, qty: Math.min(99, l.qty + 1) } : l,
           )
-        : [...cart.lines, { medicine, qty: 1 }];
-      saveCart({ ...cart, lines });
+        : [...cart.lines, { medicine, pharmacy: newPharmacy, qty: 1 }];
+      saveCart({ pharmacy: cart.pharmacy || newPharmacy, lines });
     }
     notifyCartChanged();
   }
 
   function changeQty(delta: number) {
     const cart = loadCart();
-    if (!cart || cart.pharmacy.id !== pharmacy.id) {
+    if (!cart || !Array.isArray(cart.lines) || cart.lines.length === 0) {
       if (delta > 0) add();
       return;
     }
@@ -93,7 +123,11 @@ export default function ProductCard({
     const nextQty = existing.qty + delta;
     if (nextQty <= 0) {
       const lines = cart.lines.filter((l) => l.medicine.id !== medicine.id);
-      saveCart(lines.length > 0 ? { ...cart, lines } : null);
+      saveCart(
+        lines.length > 0
+          ? { pharmacy: lines[0].pharmacy || cart.pharmacy, lines }
+          : null,
+      );
     } else {
       const lines = cart.lines.map((l) =>
         l.medicine.id === medicine.id ? { ...l, qty: Math.min(99, nextQty) } : l,
@@ -104,6 +138,7 @@ export default function ProductCard({
   }
 
   const href = linkHref ?? `/dori/${medicine.id}`;
+  const shortCity = getShortCity(pharmacy.address, pharmacy.name);
 
   return (
     <div className="group flex w-full flex-col justify-between overflow-hidden rounded-[18px] border border-black/8 bg-white shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
@@ -196,6 +231,12 @@ export default function ProductCard({
               {medicine.name}
             </h3>
           </Link>
+
+          {/* Dorixona manzili (qisqa: Toshkent sh., Toshkent vil., Samarqand va h.k.) */}
+          <div className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-neutral-500">
+            <MapPin size={11} className="shrink-0 text-[var(--brand-green)]" />
+            <span className="truncate">{shortCity}</span>
+          </div>
 
           {/* Narxi */}
           <div className="mt-1 flex items-baseline">

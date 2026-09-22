@@ -188,6 +188,128 @@ router.post("/telegram", async (req, res) => {
   }
 });
 
+// POST /api/auth/start-telegram-login
+router.post("/start-telegram-login", async (_req, res) => {
+  try {
+    const token = "auth_" + randomBytes(16).toString("hex");
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    const botUser = (await getBotUsername()) || process.env.TELEGRAM_BOT_USERNAME?.replace(/^@/, "") || "agroz_ai_bot";
+
+    await db.insert(otpCodes).values({
+      phone: "tg_auth",
+      code: "pending",
+      token,
+      expiresAt,
+    });
+
+    res.json({
+      ok: true,
+      token,
+      botUsername: botUser,
+      startLink: `https://t.me/${botUser}?start=${token}`,
+    });
+  } catch (err: any) {
+    console.error("[start-telegram-login error]:", err);
+    res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
+
+// GET /api/auth/poll-telegram-login
+router.get("/poll-telegram-login", async (req, res) => {
+  try {
+    const token = String(req.query.token || "").trim();
+    if (!token) {
+      return res.status(400).json({ error: "Token kiritilmadi" });
+    }
+
+    const rows = await db
+      .select()
+      .from(otpCodes)
+      .where(eq(otpCodes.token, token))
+      .limit(1);
+
+    const row = rows[0];
+    if (!row) {
+      return res.status(404).json({ error: "Token topilmadi" });
+    }
+
+    if (row.expiresAt.getTime() < Date.now()) {
+      return res.status(410).json({ error: "Token muddati tugagan" });
+    }
+
+    if (row.used && row.code && row.code !== "pending") {
+      const sessionId = row.code;
+      const sessionRows = await db
+        .select()
+        .from(sessions)
+        .where(eq(sessions.id, sessionId))
+        .limit(1);
+
+      if (sessionRows[0]) {
+        const userRows = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, sessionRows[0].userId))
+          .limit(1);
+
+        return res.json({
+          ok: true,
+          authenticated: true,
+          sessionId,
+          user: userRows[0] || null,
+        });
+      }
+    }
+
+    res.json({ ok: true, authenticated: false });
+  } catch (err: any) {
+    console.error("[poll-telegram-login error]:", err);
+    res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
+
+// POST /api/auth/quick-login (Foydalanuvchi ism va viloyat bilan tezkor kirishi uchun)
+router.post("/quick-login", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const rawName = String(body.name || "").trim().slice(0, 100);
+    const rawRegion = String(body.region || "Toshkent").trim().slice(0, 100);
+    const rawPhone = normalizePhone(body.phone ?? "");
+
+    const name = rawName || "Foydalanuvchi";
+
+    let user: any = null;
+    if (rawPhone) {
+      user = (await db.select().from(users).where(eq(users.phone, rawPhone)).limit(1))[0];
+    }
+
+    if (!user) {
+      const created = await db
+        .insert(users)
+        .values({
+          name,
+          region: rawRegion,
+          phone: rawPhone || null,
+        })
+        .returning();
+      user = created[0];
+    } else {
+      await db
+        .update(users)
+        .set({ name, region: rawRegion })
+        .where(eq(users.id, user.id));
+    }
+
+    const sessionId = randomBytes(32).toString("hex");
+    await db.insert(sessions).values({ id: sessionId, userId: user.id });
+
+    res.json({ ok: true, sessionId, user });
+  } catch (err: any) {
+    console.error("[quick-login error]:", err);
+    res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
+
 // POST /api/auth/logout
 router.post("/logout", async (req, res) => {
   try {

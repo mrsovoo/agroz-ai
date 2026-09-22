@@ -23,12 +23,22 @@ export default async function ProfilePage() {
             <Sprout size={32} />
           </div>
           <p className="text-[15px] leading-relaxed text-[var(--brand-ink)]">
-            Tashxis tarixini saqlash va yaqin dorixonalarni shaxsiylashtirish uchun Telegram yoki telefon raqam
-            orqali kiring.
+            Tashxis tarixini saqlash, yaqin dorixonalarni ko&apos;rish va savatingizni boshqarish uchun profilingizga kiring.
           </p>
-          <Link href="/kirish" className="w-full max-w-sm">
-            <button className="ios-btn">Kirish (Telegram / Telefon)</button>
-          </Link>
+          <div className="w-full max-w-sm space-y-2.5 pt-2">
+            <Link href="/kirish" className="block w-full">
+              <button
+                className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-[15px] font-extrabold text-white shadow-md hover:brightness-105 active:scale-95 transition"
+                style={{ background: "#2AABEE" }}
+              >
+                <Send size={18} />
+                <span>Telegram orqali 1 bosishda kirish</span>
+              </button>
+            </Link>
+            <Link href="/kirish" className="block text-[13px] font-bold text-[var(--brand-green)] hover:underline">
+              Yoki ismingiz bilan tezkor kirish →
+            </Link>
+          </div>
         </div>
       </main>
     );

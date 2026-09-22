@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Sprout,
@@ -11,23 +11,24 @@ import {
   ChevronRight,
   Loader2,
   Send,
-  Sparkles,
   ShieldCheck,
   Zap,
+  CheckCircle2,
+  ExternalLink,
 } from "lucide-react";
 import { getTelegram, onTelegramReady, type TelegramUser } from "@/lib/telegram";
 import { OTP_LENGTH, OTP_TTL_MINUTES } from "@/lib/constants";
 
-/** Kodni qanday yetkazish rejimi. */
 type DeliveryMode = "telegram" | "bot" | "sms" | "dev";
 
 const REGIONS = [
-  "Toshkent",
+  "Toshkent shahri",
+  "Toshkent viloyati",
   "Samarqand",
-  "Buxoro",
   "Farg'ona",
   "Andijon",
   "Namangan",
+  "Buxoro",
   "Qashqadaryo",
   "Surxondaryo",
   "Xorazm",
@@ -43,8 +44,17 @@ function normalize(v: string) {
 
 export default function LoginPage() {
   const router = useRouter();
-  const [authMethod, setAuthMethod] = useState<"telegram" | "phone">("telegram");
+  const [authMethod, setAuthMethod] = useState<"telegram" | "quick" | "phone">("telegram");
   const [tgUser, setTgUser] = useState<TelegramUser | null>(null);
+
+  // Telegram bot orqali 1 bosishda kirish state'lari
+  const [waitingBot, setWaitingBot] = useState(false);
+  const [botStartUrl, setBotStartUrl] = useState("");
+  const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Tezkor kirish state'lari (Ism + Hudud)
+  const [name, setName] = useState("");
+  const [region, setRegion] = useState(REGIONS[0]);
 
   // Telefon orqali kirish state'lari
   const [step, setStep] = useState<1 | 2>(1);
@@ -58,60 +68,52 @@ export default function LoginPage() {
   const [chatLink, setChatLink] = useState("");
   const [ttlMinutes, setTtlMinutes] = useState(OTP_TTL_MINUTES);
 
-  // Telegram orqali kirish state'lari (vebda)
-  const [tgUsername, setTgUsername] = useState("");
-
-  // Profil maydonlari
-  const [name, setName] = useState("");
-  const [region, setRegion] = useState(REGIONS[0]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Telegram WebApp yuklanganligini aniqlash
+  // Polling tozalash
+  useEffect(() => {
+    return () => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    };
+  }, []);
+
+  // Telegram WebApp yuklanganligini aniqlash va avtomatik login taklif qilish
   useEffect(() => {
     onTelegramReady((tg) => {
       const user = tg.initDataUnsafe?.user ?? null;
       if (user) {
         setTgUser(user);
         setAuthMethod("telegram");
+        if (user.first_name) {
+          setName(`${user.first_name} ${user.last_name || ""}`.trim());
+        }
       }
     });
   }, []);
 
-  async function telegramWebLogin() {
+  // Mini App ichida avtomatik yoki 1 bosishda kirish
+  async function telegramMiniAppLogin() {
     setBusy(true);
     setError(null);
     try {
       const tg = getTelegram();
-      const payload: {
-        initData?: string;
-        username?: string;
-        name?: string;
-        region?: string;
-      } = {
-        name,
-        region,
-      };
-
-      if (tg?.initData) {
-        payload.initData = tg.initData;
-      } else {
-        const u = tgUsername.trim().replace(/^@/, "");
-        if (!u) {
-          throw new Error("Iltimos, Telegram username yoki nomingizni kiriting");
-        }
-        payload.username = u;
+      if (!tg?.initData) {
+        throw new Error("Telegram ma'lumotlari topilmadi");
       }
 
       const res = await fetch("/api/auth/telegram", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          initData: tg.initData,
+          name,
+          region,
+        }),
       });
       const data = (await res.json()) as { ok?: boolean; sessionId?: string; error?: string };
       if (!res.ok) throw new Error(data.error ?? "Kirishda xatolik yuz berdi");
 
-      // Session cookie'ni saqlash
       if (data.sessionId) {
         document.cookie = `agroai_session=${data.sessionId}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
       }
@@ -125,6 +127,86 @@ export default function LoginPage() {
     }
   }
 
+  // Brauzerda: Telegram bot ochish va avtomatik kutish (polling)
+  async function startTelegramOneClickLogin() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/auth/start-telegram-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || "Telegram login havolasi yaratilmadi");
+      }
+
+      const { token: loginToken, startLink: botUrl } = data;
+      setBotStartUrl(botUrl);
+      setWaitingBot(true);
+
+      // Bot linkini yangi oynada ochamiz
+      window.open(botUrl, "_blank");
+
+      // Polling boshlaymiz: foydalanuvchi botda /start bosishini tekshiramiz
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+      pollTimerRef.current = setInterval(async () => {
+        try {
+          const pollRes = await fetch(`/api/auth/poll-telegram-login?token=${encodeURIComponent(loginToken)}`);
+          const pollData = await pollRes.json();
+          if (pollData.ok && pollData.authenticated && pollData.sessionId) {
+            if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+            document.cookie = `agroai_session=${pollData.sessionId}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
+            router.push("/profil");
+            router.refresh();
+          }
+        } catch {
+          // Tarmoq xatosi bo'lsa polling davom etadi
+        }
+      }, 1500);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Xatolik yuz berdi");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Tezkor kirish (Ism + Hudud)
+  async function handleQuickLogin() {
+    if (!name.trim() || name.trim().length < 2) {
+      setError("Iltimos, ismingizni kiriting");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/auth/quick-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          region,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || "Kirishda xatolik yuz berdi");
+      }
+
+      if (data.sessionId) {
+        document.cookie = `agroai_session=${data.sessionId}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
+      }
+
+      router.push("/profil");
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Xatolik yuz berdi");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Telefon orqali kirish
   async function sendCode() {
     setBusy(true);
     setError(null);
@@ -134,14 +216,7 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: phoneInput, initData: getTelegram()?.initData }),
       });
-      const data = (await res.json()) as {
-        method?: DeliveryMode;
-        botUsername?: string;
-        startLink?: string;
-        chatLink?: string;
-        devCode?: string;
-        error?: string;
-      };
+      const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Xatolik");
       setPhone(`+998${normalize(phoneInput)}`);
       setMode(data.method ?? "dev");
@@ -170,10 +245,9 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const data = (await res.json()) as { ok?: boolean; sessionId?: string; error?: string };
+      const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Kod noto'g'ri");
 
-      // Session cookie'ni saqlash
       if (data.sessionId) {
         document.cookie = `agroai_session=${data.sessionId}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
       }
@@ -198,22 +272,26 @@ export default function LoginPage() {
           >
             <Sprout size={34} />
           </div>
-          <h1 className="ios-title mt-3 text-center web:mt-5 web:text-left web:text-[50px]">
+          <h1 className="ios-title mt-3 text-center web:mt-5 web:text-left web:text-[46px]">
             Agroz AI Profil
           </h1>
-          <p className="ios-sub mt-2 text-center web:max-w-[400px] web:text-left web:text-[16px] leading-relaxed">
-            Dehqon va chorvadorlar uchun sun&apos;iy intellekt yordamchisi. Kasalliklarni bir zumda aniqlang,
-            tarixni saqlang va yaqin dorixonalarga murojaat qiling.
+          <p className="ios-sub mt-2 text-center web:max-w-[420px] web:text-left web:text-[15.5px] leading-relaxed">
+            Dehqon va chorvadorlar uchun yagona yordamchi. Hech qanday murakkab parolsiz,
+            Telegram orqali 1 bosishda kiring.
           </p>
 
-          <div className="mt-6 hidden flex-col gap-3 web:flex">
-            <div className="flex items-center gap-2.5 text-sm font-medium text-emerald-800">
-              <ShieldCheck size={18} className="text-emerald-600" />
-              <span>Tezkor va xavfsiz avtorizatsiya</span>
+          <div className="mt-6 hidden flex-col gap-3.5 web:flex">
+            <div className="flex items-center gap-2.5 text-sm font-semibold text-emerald-800">
+              <ShieldCheck size={19} className="text-emerald-600" />
+              <span>Username yoki telefon kiritish shart emas</span>
             </div>
-            <div className="flex items-center gap-2.5 text-sm font-medium text-emerald-800">
-              <Zap size={18} className="text-emerald-600" />
-              <span>Telegram orqali 1 bosishda SMS-kod kutmasdan kirish</span>
+            <div className="flex items-center gap-2.5 text-sm font-semibold text-emerald-800">
+              <Zap size={19} className="text-emerald-600" />
+              <span>Botda «Start» bosilishi bilan avtomatik tasdiqlanadi</span>
+            </div>
+            <div className="flex items-center gap-2.5 text-sm font-semibold text-emerald-800">
+              <CheckCircle2 size={19} className="text-emerald-600" />
+              <span>Savat va ekin tashxislari profilingizda saqlanadi</span>
             </div>
           </div>
         </div>
@@ -227,6 +305,7 @@ export default function LoginPage() {
               onClick={() => {
                 setAuthMethod("telegram");
                 setError(null);
+                setWaitingBot(false);
               }}
               className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-bold transition ${
                 authMethod === "telegram"
@@ -237,38 +316,57 @@ export default function LoginPage() {
               <Send size={15} />
               <span>Telegram orqali</span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMethod("quick");
+                setError(null);
+                setWaitingBot(false);
+              }}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-bold transition ${
+                authMethod === "quick"
+                  ? "bg-white text-emerald-700 shadow-sm"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              <UserRound size={15} />
+              <span>Ism bilan</span>
+            </button>
+
             <button
               type="button"
               onClick={() => {
                 setAuthMethod("phone");
                 setError(null);
+                setWaitingBot(false);
               }}
               className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-bold transition ${
                 authMethod === "phone"
-                  ? "bg-white text-emerald-700 shadow-sm"
+                  ? "bg-white text-neutral-800 shadow-sm"
                   : "text-slate-500 hover:text-slate-800"
               }`}
             >
               <Phone size={15} />
-              <span>Telefon / SMS</span>
+              <span>Telefon</span>
             </button>
           </div>
 
-          {/* TELEGRAM ORQALI KIRISH */}
+          {/* 1. TELEGRAM ORQALI 1 BOSISHDA KIRISH */}
           {authMethod === "telegram" && (
             <div className="space-y-4">
               {tgUser ? (
-                /* Telegram MiniApp ichida to'g'ridan-to'g'ri 1 bosishda */
-                <div className="space-y-3">
+                /* Telegram MiniApp ichida to'g'ridan-to'g'ri */
+                <div className="space-y-4">
                   <div className="flex items-center gap-3 rounded-2xl bg-sky-50 p-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-sky-500 text-lg font-black text-white">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-sky-500 text-lg font-black text-white shadow-xs">
                       {(tgUser.first_name || "T").slice(0, 1).toUpperCase()}
                     </div>
                     <div>
-                      <p className="font-bold text-slate-800">{tgUser.first_name} {tgUser.last_name ?? ""}</p>
-                      <p className="text-xs text-slate-500">
-                        {tgUser.username ? `@${tgUser.username}` : `ID: ${tgUser.id}`}
+                      <p className="font-bold text-slate-800">
+                        {tgUser.first_name} {tgUser.last_name ?? ""}
                       </p>
+                      <p className="text-xs text-sky-600 font-medium">Telegram Mini App foydalanuvchisi</p>
                     </div>
                   </div>
 
@@ -289,95 +387,137 @@ export default function LoginPage() {
 
                   <button
                     type="button"
-                    onClick={telegramWebLogin}
+                    onClick={telegramMiniAppLogin}
                     disabled={busy}
                     className="ios-btn"
                     style={{ background: "#2AABEE" }}
                   >
                     {busy ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-                    {tgUser.first_name || "Telegram"} hisobi bilan kirish
+                    <span>{tgUser.first_name || "Telegram"} hisobi bilan kirish</span>
                   </button>
-                  <p className="text-center text-[11px] text-slate-500">
-                    Siz Telegram Mini App ichidasiz. Kod kiritish talab qilinmaydi.
-                  </p>
+                </div>
+              ) : waitingBot ? (
+                /* Botda Start bosilishini kutish ekrani */
+                <div className="space-y-4 text-center py-3">
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-sky-100 text-sky-600 animate-pulse">
+                    <Loader2 size={32} className="animate-spin" />
+                  </div>
+
+                  <div>
+                    <h3 className="text-[17px] font-black text-neutral-900">
+                      Telegram bot ochildi
+                    </h3>
+                    <p className="mt-1 text-[13px] text-neutral-600 leading-relaxed max-w-xs mx-auto">
+                      Botda <b>«Start»</b> tugmasini bosing. Profilingiz shu yerda <b>avtomatik tasdiqlanadi</b>.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2 pt-2">
+                    {botStartUrl && (
+                      <a
+                        href={botStartUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-sky-500 py-3 text-[14px] font-bold text-white shadow-sm hover:bg-sky-600 active:scale-95 transition"
+                      >
+                        <ExternalLink size={16} />
+                        <span>Botga qayta o&apos;tish</span>
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setWaitingBot(false);
+                        if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+                      }}
+                      className="w-full text-[12.5px] font-semibold text-neutral-500 hover:text-neutral-800 py-1"
+                    >
+                      Bekor qilish
+                    </button>
+                  </div>
                 </div>
               ) : (
-                /* Veb-brauzerda Telegram orqali kirish */
-                <div className="space-y-3">
-                  <p className="rounded-xl bg-sky-50 p-3 text-xs leading-relaxed text-sky-900">
-                    ⚡ <b>Telegram orqali tezkor kirish</b>: Telegram username yoki taxallusingizni kiriting va bir zumda profilingizga kiring.
-                  </p>
-
-                  <div>
-                    <label className="mb-1.5 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-widest text-[var(--brand-muted)]">
-                      <Send size={12} className="text-sky-500" /> Telegram username yoki telefon
-                    </label>
-                    <div className="flex items-center rounded-2xl bg-[var(--brand-bg)] px-3">
-                      <span className="font-bold text-sky-500">@</span>
-                      <input
-                        value={tgUsername}
-                        onChange={(e) => setTgUsername(e.target.value)}
-                        placeholder="masalan: dehqon_akbar"
-                        className="ios-input !bg-transparent !p-3 !pl-1.5"
-                      />
+                /* Brauzerda bir bosishda Telegram login */
+                <div className="space-y-4">
+                  <div className="rounded-2xl bg-sky-50 p-4 border border-sky-100">
+                    <div className="flex items-center gap-2 text-sky-800 font-bold text-[14px]">
+                      <Zap size={16} className="text-sky-500" />
+                      <span>Parol yoki usernamesiz tezkor kirish</span>
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="mb-1.5 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-widest text-[var(--brand-muted)]">
-                      <UserRound size={12} /> Ismingiz (ixtiyoriy)
-                    </label>
-                    <input
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Ism va familiyangiz"
-                      className="ios-input !p-3"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1.5 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-widest text-[var(--brand-muted)]">
-                      <MapPin size={12} /> Hududingiz
-                    </label>
-                    <select
-                      value={region}
-                      onChange={(e) => setRegion(e.target.value)}
-                      className="ios-input appearance-none !p-3"
-                    >
-                      {REGIONS.map((r) => (
-                        <option key={r}>{r}</option>
-                      ))}
-                    </select>
+                    <p className="mt-1.5 text-[12.5px] leading-relaxed text-sky-900/80">
+                      Quyidagi tugmani bosing — botimiz ochiladi va <b>«Start»</b> bosishingiz bilan
+                      profilingiz saytda avtomatik ochiladi.
+                    </p>
                   </div>
 
                   <button
                     type="button"
-                    onClick={telegramWebLogin}
-                    disabled={busy || !tgUsername.trim()}
-                    className="ios-btn"
+                    onClick={startTelegramOneClickLogin}
+                    disabled={busy}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-[15px] font-extrabold text-white shadow-md hover:brightness-105 active:scale-[0.98] transition"
                     style={{ background: "#2AABEE" }}
                   >
-                    {busy ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-                    Telegram orqali tasdiqlash
+                    {busy ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
+                    <span>Telegram orqali 1 bosishda kirish</span>
                   </button>
 
-                  <div className="pt-2">
-                    <a
-                      href="https://t.me/agroz_ai_bot"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex w-full items-center justify-center gap-2 rounded-2xl border border-sky-200 bg-sky-50 py-3 text-[13px] font-bold text-sky-700 hover:bg-sky-100 active:scale-[0.98] transition"
-                    >
-                      <Send size={15} />
-                      <span>Telegram botimizni ochish</span>
-                    </a>
-                  </div>
+                  <p className="text-center text-[11.5px] text-neutral-500 font-medium">
+                    Hech qanday telefon yoki username qidirish talab qilinmaydi.
+                  </p>
                 </div>
               )}
             </div>
           )}
 
-          {/* TELEFON / SMS ORQALI KIRISH */}
+          {/* 2. TEZKOR KIRISH (ISM BILAN) */}
+          {authMethod === "quick" && (
+            <div className="space-y-3.5">
+              <p className="rounded-xl bg-emerald-50 p-3 text-[12.5px] leading-relaxed text-emerald-900 font-medium border border-emerald-100">
+                🌱 Ismingiz va hududingizni kiriting. Kod kutmasdan darhol profilingiz ochiladi.
+              </p>
+
+              <div>
+                <label className="mb-1.5 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-widest text-[var(--brand-muted)]">
+                  <UserRound size={12} /> Ismingiz
+                </label>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Masalan: Dilshod Ergashev"
+                  className="ios-input !p-3.5"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-widest text-[var(--brand-muted)]">
+                  <MapPin size={12} /> Hududingiz
+                </label>
+                <select
+                  value={region}
+                  onChange={(e) => setRegion(e.target.value)}
+                  className="ios-input appearance-none !p-3.5"
+                >
+                  {REGIONS.map((r) => (
+                    <option key={r}>{r}</option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleQuickLogin}
+                disabled={busy || !name.trim()}
+                className="ios-btn"
+                style={{ background: "var(--brand-green)" }}
+              >
+                {busy ? <Loader2 size={18} className="animate-spin" /> : <UserRound size={18} />}
+                <span>Profilni ochish</span>
+              </button>
+            </div>
+          )}
+
+          {/* 3. TELEFON RAQAM ORQALI */}
           {authMethod === "phone" && (
             <div>
               {step === 1 ? (
@@ -407,56 +547,20 @@ export default function LoginPage() {
                     {busy ? <Loader2 size={18} className="animate-spin" /> : null}
                     {busy ? "Yuborilmoqda..." : "Tasdiqlash kodini olish"}
                   </button>
-                  <p className="text-center text-[11px] leading-relaxed text-[var(--brand-muted)]">
-                    Tasdiqlash kodi Telegram bot orqali yoki SMS ko'rinishida yuboriladi.
-                  </p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {mode === "bot" ? (
-                    <>
-                      <p className="rounded-2xl bg-[var(--brand-yellow-soft)] p-3 text-[13px] font-medium leading-relaxed text-[var(--brand-ink)]">
-                        ✅ Kod <b>Telegram botimizga</b> yuborildi. Chatni ochib kodni nusxalab,
-                        pastdagi maydonga yozing.
-                      </p>
-                      {chatLink && (
-                        <a
-                          href={chatLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="ios-btn"
-                          style={{ background: "#2AABEE" }}
-                        >
-                          <Send size={18} /> Telegram chatni ochish
-                        </a>
-                      )}
-                    </>
+                    <p className="rounded-2xl bg-[var(--brand-yellow-soft)] p-3 text-[13px] font-medium leading-relaxed text-[var(--brand-ink)]">
+                      ✅ Kod Telegram botimizga yuborildi.
+                    </p>
                   ) : mode === "telegram" ? (
-                    <>
-                      <p className="rounded-2xl bg-[var(--brand-yellow-soft)] p-3 text-[13px] font-medium leading-relaxed text-[var(--brand-ink)]">
-                        <b>{phone}</b> raqamini tasdiqlash uchun Telegram botga o&apos;ting. Botda{" "}
-                        <b>«Start»</b> tugmasini bosing — kod chatda ko'rinadi.
-                      </p>
-                      {deepLink && (
-                        <a
-                          href={deepLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="ios-btn"
-                          style={{ background: "#2AABEE" }}
-                        >
-                          <Send size={18} /> Telegram&apos;ni ochib, kodni olish
-                        </a>
-                      )}
-                    </>
-                  ) : mode === "sms" ? (
-                    <p className="rounded-2xl bg-[var(--brand-yellow-soft)] p-3 text-[13px] font-medium text-[var(--brand-ink)]">
-                      <b>{phone}</b> raqamiga SMS yuborildi. Kod {ttlMinutes} daqiqa amal qiladi.
+                    <p className="rounded-2xl bg-[var(--brand-yellow-soft)] p-3 text-[13px] font-medium leading-relaxed text-[var(--brand-ink)]">
+                      <b>{phone}</b> raqamini tasdiqlash uchun Telegram botga o&apos;ting.
                     </p>
                   ) : (
                     <p className="rounded-2xl bg-[var(--brand-yellow-soft)] p-3 text-[13px] font-medium text-[var(--brand-ink)]">
-                      Demo rejim: <b>{phone}</b> raqami uchun tasdiqlash kodi:{" "}
-                      <b className="tracking-[0.3em] text-emerald-700">{devCode}</b>
+                      Demo rejim: kod: <b className="tracking-[0.3em] text-emerald-700">{devCode}</b>
                     </p>
                   )}
 
@@ -475,31 +579,7 @@ export default function LoginPage() {
                       className="ios-input text-center text-[28px] font-black tracking-[0.5em]"
                     />
                   </div>
-                  <div>
-                    <label className="mb-1.5 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-widest text-[var(--brand-muted)]">
-                      <UserRound size={12} /> Ismingiz (ixtiyoriy)
-                    </label>
-                    <input
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Ismingiz"
-                      className="ios-input"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1.5 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-widest text-[var(--brand-muted)]">
-                      <MapPin size={12} /> Hudud
-                    </label>
-                    <select
-                      value={region}
-                      onChange={(e) => setRegion(e.target.value)}
-                      className="ios-input appearance-none"
-                    >
-                      {REGIONS.map((r) => (
-                        <option key={r}>{r}</option>
-                      ))}
-                    </select>
-                  </div>
+
                   <button
                     type="button"
                     onClick={verify}
@@ -508,14 +588,6 @@ export default function LoginPage() {
                   >
                     {busy ? <Loader2 size={18} className="animate-spin" /> : null}
                     {busy ? "Tasdiqlanmoqda..." : "Kirish"}
-                    {!busy && <ChevronRight size={18} />}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setStep(1)}
-                    className="ios-btn secondary"
-                  >
-                    Raqamni o&apos;zgartirish
                   </button>
                 </div>
               )}

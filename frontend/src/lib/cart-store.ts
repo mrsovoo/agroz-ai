@@ -23,9 +23,15 @@ export type CartStorePharmacy = {
   ratingCount?: number;
 };
 
+export type CartStoreLine = {
+  medicine: CartStoreMedicine;
+  pharmacy?: CartStorePharmacy;
+  qty: number;
+};
+
 export type CartStoreState = {
   pharmacy: CartStorePharmacy;
-  lines: { medicine: CartStoreMedicine; qty: number }[];
+  lines: CartStoreLine[];
 } | null;
 
 const CART_KEY = "agroz:cart:v1";
@@ -38,32 +44,45 @@ export function loadCart(): CartStoreState {
   try {
     const raw = window.localStorage.getItem(CART_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as CartStoreState;
-    if (!parsed || typeof parsed !== "object" || !parsed.pharmacy) return null;
-    if (!Array.isArray(parsed.lines)) return null;
-    const pharmacy = {
-      id: Number(parsed.pharmacy.id),
-      name: String(parsed.pharmacy.name ?? "").slice(0, 200),
-      phone: String(parsed.pharmacy.phone ?? "").slice(0, 32),
-      address: parsed.pharmacy.address ? String(parsed.pharmacy.address).slice(0, 300) : null,
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.lines)) return null;
+
+    const fallbackPharmacy: CartStorePharmacy = {
+      id: Number(parsed.pharmacy?.id || 1),
+      name: String(parsed.pharmacy?.name ?? "Agro Dorixona").slice(0, 200),
+      phone: String(parsed.pharmacy?.phone ?? "+998 90 123 45 67").slice(0, 32),
+      address: parsed.pharmacy?.address ? String(parsed.pharmacy.address).slice(0, 300) : null,
     };
-    if (!Number.isSafeInteger(pharmacy.id) || pharmacy.id <= 0) return null;
-    const lines = parsed.lines
-      .filter((l) => l && Number.isSafeInteger(Number(l?.medicine?.id)) && Number(l.medicine.id) > 0)
-      .slice(0, 30)
-      .map((l) => ({
-        medicine: {
-          id: Number(l.medicine.id),
-          name: String(l.medicine.name ?? "").slice(0, 160),
-          price: l.medicine.price === null ? null : Number(l.medicine.price) || null,
-          type: String(l.medicine.type ?? "general"),
-          hasPhoto: Boolean(l.medicine.hasPhoto),
-          usage: l.medicine.usage ? String(l.medicine.usage).slice(0, 300) : null,
-          status: "bor",
-        },
-        qty: Math.max(1, Math.min(99, Math.round(Number(l.qty)) || 1)),
-      }));
-    return lines.length > 0 ? { pharmacy, lines } : null;
+
+    const lines: CartStoreLine[] = parsed.lines
+      .filter((l: any) => l && Number.isSafeInteger(Number(l?.medicine?.id)) && Number(l.medicine.id) > 0)
+      .slice(0, 50)
+      .map((l: any) => {
+        const ph: CartStorePharmacy = l.pharmacy
+          ? {
+              id: Number(l.pharmacy.id || fallbackPharmacy.id),
+              name: String(l.pharmacy.name ?? fallbackPharmacy.name).slice(0, 200),
+              phone: String(l.pharmacy.phone ?? fallbackPharmacy.phone).slice(0, 32),
+              address: l.pharmacy.address ? String(l.pharmacy.address).slice(0, 300) : fallbackPharmacy.address,
+            }
+          : fallbackPharmacy;
+
+        return {
+          medicine: {
+            id: Number(l.medicine.id),
+            name: String(l.medicine.name ?? "").slice(0, 160),
+            price: l.medicine.price === null ? null : Number(l.medicine.price) || null,
+            type: String(l.medicine.type ?? "general"),
+            hasPhoto: Boolean(l.medicine.hasPhoto),
+            usage: l.medicine.usage ? String(l.medicine.usage).slice(0, 300) : null,
+            status: "bor",
+          },
+          pharmacy: ph,
+          qty: Math.max(1, Math.min(99, Math.round(Number(l.qty)) || 1)),
+        };
+      });
+
+    return lines.length > 0 ? { pharmacy: lines[0]?.pharmacy || fallbackPharmacy, lines } : null;
   } catch {
     return null;
   }

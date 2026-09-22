@@ -17,8 +17,9 @@ import { telegramAuthWebhookSecret, telegramWebhookSecret } from "../lib/setting
 import { getNewsFeed } from "../lib/news.js";
 import { escapeHtml } from "../lib/tg-escape.js";
 import { db } from "../db/index.js";
-import { otpCodes } from "../db/schema.js";
+import { otpCodes, sessions, users } from "../db/schema.js";
 import { eq } from "drizzle-orm";
+import { randomBytes } from "node:crypto";
 
 const router = Router();
 
@@ -115,6 +116,62 @@ router.post("/webhook", async (req, res) => {
     }
 
     if (isStart(command) && payload) {
+      if (payload.startsWith("auth_")) {
+        const rows = await db
+          .select()
+          .from(otpCodes)
+          .where(eq(otpCodes.token, payload))
+          .limit(1);
+
+        const row = rows[0];
+        if (row && !row.used && row.expiresAt.getTime() > Date.now()) {
+          let user = (
+            await db
+              .select()
+              .from(users)
+              .where(eq(users.telegramId, fromId))
+              .limit(1)
+          )[0];
+
+          if (!user) {
+            const created = await db
+              .insert(users)
+              .values({
+                telegramId: fromId,
+                name: firstName || message?.from?.username || "Foydalanuvchi",
+              })
+              .returning();
+            user = created[0];
+          }
+
+          const sessionId = randomBytes(32).toString("hex");
+          await db.insert(sessions).values({ id: sessionId, userId: user.id });
+
+          await db
+            .update(otpCodes)
+            .set({
+              used: true,
+              code: sessionId,
+              telegramId: fromId,
+              deliveredAt: new Date(),
+            })
+            .where(eq(otpCodes.id, row.id));
+
+          const welcomeName = escapeHtml(firstName || "Do'stim");
+          const verifiedText = [
+            `✅ <b>Salom, ${welcomeName}!</b>`,
+            "",
+            "🎉 <b>Profilingiz muvaffaqiyatli tasdiqlandi!</b>",
+            "",
+            "Siz brauzerdagi sahifada avtomatik ravishda profilingizga kirdingiz.",
+            "Yoki quyidagi tugma orqali ilovani to'g'ridan-to'g'ri ochishingiz mumkin 👇",
+          ].join("\n");
+
+          await sendMessage(chatId, verifiedText, { keyboard: greetingKeyboard() });
+          return res.json({ ok: true });
+        }
+      }
+
       const state = await deliverCode(chatId, payload, fromId);
       if (state === "sent") return res.json({ ok: true });
 

@@ -255,23 +255,18 @@ export default function MarketClient() {
     notifyCartChanged();
   }
 
-  /** Kartochkadan dori qo'shish —savat boshqa dorixonadan bo'lsa so'raymiz. */
+  /** Kartochkadan dori qo'shish — savatga to'g'ridan-to'g'ri qo'shiladi. */
   function addToCart(pharmacy: Pharmacy, medicine: Medicine) {
-    // Boshqa dorixonadan dori qo'shilsa — savatni yangilaymiz (bitta dorixona qoidasi).
-    if (cartState && cartState.pharmacy.id !== pharmacy.id) {
-      if (!confirm(`Savatda boshqa dorixona (${cartState.pharmacy.name}) dorilari bor. Yangi dorixona dorilari savatni almashtiradi. Davom etamizmi?`)) {
-        return;
-      }
-    }
-    if (!cartState || cartState.pharmacy.id !== pharmacy.id) {
+    const newPharmacy = {
+      id: pharmacy.id,
+      name: pharmacy.organization ?? pharmacy.name,
+      phone: pharmacy.phone,
+      address: pharmacy.address,
+    };
+    if (!cartState || !Array.isArray(cartState.lines) || cartState.lines.length === 0) {
       updateCart({
-        pharmacy: {
-          id: pharmacy.id,
-          name: pharmacy.organization ?? pharmacy.name,
-          phone: pharmacy.phone,
-          address: pharmacy.address,
-        },
-        lines: [{ medicine, qty: 1 }],
+        pharmacy: newPharmacy,
+        lines: [{ medicine, pharmacy: newPharmacy, qty: 1 }],
       });
       return;
     }
@@ -280,8 +275,8 @@ export default function MarketClient() {
       ? cartState.lines.map((l) =>
           l.medicine.id === medicine.id ? { ...l, qty: Math.min(99, l.qty + 1) } : l,
         )
-      : [...cartState.lines, { medicine, qty: 1 }];
-    updateCart({ ...cartState, lines });
+      : [...cartState.lines, { medicine, pharmacy: newPharmacy, qty: 1 }];
+    updateCart({ pharmacy: cartState.pharmacy || newPharmacy, lines });
   }
 
   function changeQty(medicineId: number, delta: number) {
