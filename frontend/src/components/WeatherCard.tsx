@@ -87,8 +87,8 @@ export default function WeatherCard({
           setLoadFailed(true);
         });
 
-      // Ogohlantirishlar mavjudligini tekshirish
-      fetch(`/api/weather/alerts?region=Toshkent&sample=1`)
+      // Real ogohlantirishlar mavjudligini tekshirish (sun'iy sample=1 siz)
+      fetch(`/api/weather/alerts${q}`)
         .then((r) => r.json())
         .then((d) => {
           if (d?.ok && Array.isArray(d.alerts) && d.alerts.length > 0) {

@@ -69,7 +69,7 @@ export default function WeatherAlertBanner({
     let isMounted = true;
     setLoading(true);
 
-    fetch(`/api/weather/alerts?region=${encodeURIComponent(region)}&sample=1`)
+    fetch(`/api/weather/alerts?region=${encodeURIComponent(region)}`)
       .then((r) => r.json())
       .then((data) => {
         if (!isMounted) return;

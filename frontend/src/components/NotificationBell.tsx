@@ -10,7 +10,7 @@ export default function NotificationBell({ className = "" }: { className?: strin
 
   useEffect(() => {
     let isMounted = true;
-    fetch("/api/weather/alerts?sample=1")
+    fetch("/api/weather/alerts")
       .then((r) => r.json())
       .then((data) => {
         if (!isMounted) return;

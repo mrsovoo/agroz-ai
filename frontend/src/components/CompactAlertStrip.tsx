@@ -25,7 +25,7 @@ export default function CompactAlertStrip({ initialRegion = "Toshkent" }: { init
 
   useEffect(() => {
     let isMounted = true;
-    fetch(`/api/weather/alerts?region=${encodeURIComponent(initialRegion)}&sample=1`)
+    fetch(`/api/weather/alerts?region=${encodeURIComponent(initialRegion)}`)
       .then((r) => r.json())
       .then((data) => {
         if (!isMounted) return;
