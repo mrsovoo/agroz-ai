@@ -66,11 +66,9 @@ router.get("/alerts", async (req, res) => {
     const forecast = await fetchWeatherForecast(lat, lng);
     let alerts = analyzeForecastAlerts(forecast, effectiveRegion);
 
-    if (alerts.length === 0 || includeSample) {
+    if (alerts.length === 0 && includeSample) {
       const samples = getSampleAgroAlerts(effectiveRegion);
-      if (alerts.length === 0) {
-        alerts = samples.slice(0, 2);
-      }
+      alerts = samples.slice(0, 2);
     }
 
     res.json({
