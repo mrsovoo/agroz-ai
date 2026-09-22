@@ -48,6 +48,15 @@ export type TelegramWebApp = {
     enable: () => void;
     disable: () => void;
   };
+  LocationManager?: {
+    isInited: boolean;
+    isLocationAvailable: boolean;
+    isAccessRequested: boolean;
+    isAccessGranted: boolean;
+    init: (callback?: () => void) => void;
+    getLocation: (callback: (location: { latitude: number; longitude: number } | null) => void) => void;
+    openSettings: () => void;
+  };
 };
 
 /**
@@ -144,3 +153,62 @@ export function onTelegramReady(
 
   return stop;
 }
+
+/**
+ * Qurilma joylashuvini so'raydi.
+ * Telegram Mini App ichida: tg.LocationManager orqali ruxsat va GPS so'raydi.
+ * Web brauzerda: navigator.geolocation orqali brauzer ruxsatini so'raydi.
+ */
+export async function requestDeviceLocation(): Promise<{ lat: number; lng: number }> {
+  return new Promise((resolve, reject) => {
+    const tg = getTelegram();
+
+    function fallbackBrowserGeo() {
+      if (typeof navigator === "undefined" || !navigator.geolocation) {
+        reject(new Error("Geolokatsiya qurilmangizda qo'llab-quvvatlanmaydi"));
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        },
+        (err) => {
+          reject(err);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+      );
+    }
+
+    if (tg && tg.LocationManager) {
+      const lm = tg.LocationManager;
+      const onInit = () => {
+        if (!lm.isLocationAvailable) {
+          fallbackBrowserGeo();
+          return;
+        }
+        lm.getLocation((data) => {
+          if (data && typeof data.latitude === "number" && typeof data.longitude === "number") {
+            resolve({ lat: data.latitude, lng: data.longitude });
+          } else {
+            fallbackBrowserGeo();
+          }
+        });
+      };
+
+      try {
+        if (lm.isInited) {
+          onInit();
+        } else {
+          lm.init(onInit);
+        }
+        return;
+      } catch {
+        fallbackBrowserGeo();
+        return;
+      }
+    }
+
+    fallbackBrowserGeo();
+  });
+}
+

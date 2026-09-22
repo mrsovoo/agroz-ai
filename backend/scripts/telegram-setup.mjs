@@ -16,9 +16,12 @@
 import "dotenv/config";
 import pg from "pg";
 
-const appUrl =
+const webhookBaseUrl =
   process.env.BACKEND_PUBLIC_URL?.trim()?.replace(/\/+$/, "") ||
-  process.env.NEXT_PUBLIC_APP_URL?.trim()?.replace(/\/+$/, "");
+  "https://agroz-ai-backend-production.up.railway.app";
+const miniAppUrl =
+  process.env.NEXT_PUBLIC_APP_URL?.trim()?.replace(/\/+$/, "") ||
+  "https://agroz-ai.vercel.app";
 const mainSecret = process.env.TELEGRAM_WEBHOOK_SECRET?.trim();
 const authSecret = process.env.TELEGRAM_AUTH_WEBHOOK_SECRET?.trim() || mainSecret;
 
@@ -55,12 +58,8 @@ const setting = (key, envValue) => (dbSettings[key] || envValue || "").trim();
 const mainToken = setting("telegram_bot_token", process.env.TELEGRAM_BOT_TOKEN);
 const authToken = setting("telegram_auth_bot_token", process.env.TELEGRAM_AUTH_BOT_TOKEN);
 
-if (!appUrl) {
-  console.error("✗ NEXT_PUBLIC_APP_URL topilmadi, masalan: https://agroz-ai.vercel.app");
-  process.exit(1);
-}
-if (!appUrl.startsWith("https://")) {
-  console.error("✗ Telegram webhook faqat HTTPS manzil bilan ishlaydi. Vercel domenini kiriting.");
+if (!webhookBaseUrl || !webhookBaseUrl.startsWith("https://")) {
+  console.error("✗ BACKEND_PUBLIC_URL noto'g'ri yoki HTTPS emas:", webhookBaseUrl);
   process.exit(1);
 }
 if (!mainToken && !authToken) {
@@ -94,7 +93,7 @@ async function setupMainBot() {
   const me = await call("getMe");
   console.log(`✓ Asosiy bot: @${me.username} — ${me.first_name}`);
 
-  const webhookUrl = `${appUrl}/api/telegram/webhook`;
+  const webhookUrl = `${webhookBaseUrl}/api/telegram/webhook`;
   await call("setWebhook", {
     url: webhookUrl,
     allowed_updates: ["message"],
@@ -112,9 +111,9 @@ async function setupMainBot() {
 
   try {
     await call("setChatMenuButton", {
-      menu_button: { type: "web_app", text: "Agroz AI", web_app: { url: appUrl } },
+      menu_button: { type: "web_app", text: "Agroz AI", web_app: { url: miniAppUrl } },
     });
-    console.log("✓ Menyu tugmasi Mini Appga ulandi");
+    console.log("✓ Menyu tugmasi Mini Appga ulandi:", miniAppUrl);
   } catch (err) {
     console.warn("⚠️  Menyu tugmasini o'rnatib bo'lmadi:", err.message);
   }
@@ -137,7 +136,7 @@ async function setupAuthBot() {
   const me = await call("getMe");
   console.log(`✓ Auth bot: @${me.username} — ${me.first_name}`);
 
-  const webhookUrl = `${appUrl}/api/telegram/auth-webhook`;
+  const webhookUrl = `${webhookBaseUrl}/api/telegram/auth-webhook`;
   await call("setWebhook", {
     url: webhookUrl,
     allowed_updates: ["message", "callback_query"],
@@ -164,7 +163,7 @@ async function setupAuthBot() {
       menu_button: {
         type: "web_app",
         text: "Agro Bozor",
-        web_app: { url: `${appUrl}/dorilar` },
+        web_app: { url: `${miniAppUrl}/dorilar` },
       },
     });
     console.log("✓ Auth bot menyu tugmasi Agro Bozor (/dorilar) sahifasiga ulandi");

@@ -29,11 +29,17 @@ const allowedOrigins = process.env.CORS_ORIGIN
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Server-to-server so'rovlar yoki belgilangan originlar
-      if (!origin || allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
+      if (
+        !origin ||
+        allowedOrigins.includes("*") ||
+        allowedOrigins.includes(origin) ||
+        origin.endsWith(".vercel.app") ||
+        origin.endsWith(".agroz.uz") ||
+        origin === "https://agroz.uz"
+      ) {
         callback(null, true);
       } else {
-        callback(null, true); // Dev rejimda qulaylik uchun ruxsat
+        callback(null, true);
       }
     },
     credentials: true,
