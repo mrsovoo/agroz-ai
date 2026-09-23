@@ -122,12 +122,6 @@ router.post("/call", async (req, res) => {
       return res.status(404).json({ error: "Mutaxassis topilmadi" });
     }
 
-    if (spec.isBusy) {
-      return res.status(400).json({
-        error: "Mutaxassis ayni vaqtda boshqa buyurtma ustida ishlamoqda. Iltimos, boshqa mutaxassisni tanlang.",
-      });
-    }
-
     const [call] = await db
       .insert(specialistCalls)
       .values({
@@ -141,7 +135,7 @@ router.post("/call", async (req, res) => {
       .returning();
 
     const user = await getUserFromReq(req);
-    if (user && !user.phone) {
+    if (user && (!user.phone || user.phone !== customerPhone.trim())) {
       await db.update(users).set({ phone: customerPhone.trim() }).where(eq(users.id, user.id));
       user.phone = customerPhone.trim();
     }
@@ -212,10 +206,22 @@ router.post("/call", async (req, res) => {
         const [userRow] = await db
           .select({ telegramId: users.telegramId })
           .from(users)
-          .where(sql`RIGHT(REPLACE(${users.phone}, ' ', ''), 9) = ${cleanCustomerDigits}`)
+          .where(sql`RIGHT(REGEXP_REPLACE(${users.phone}, '\\D', '', 'g'), 9) = ${cleanCustomerDigits}`)
           .limit(1);
         if (userRow?.telegramId) {
           customerTelegramId = userRow.telegramId;
+        } else {
+          // Fallback: otpCodes dan ham izlaymiz
+          const { otpCodes } = await import("../db/schema.js");
+          const [otpRow] = await db
+            .select({ telegramId: otpCodes.telegramId })
+            .from(otpCodes)
+            .where(sql`RIGHT(REGEXP_REPLACE(${otpCodes.phone}, '\\D', '', 'g'), 9) = ${cleanCustomerDigits} AND ${otpCodes.telegramId} IS NOT NULL`)
+            .orderBy(sql`${otpCodes.createdAt} DESC`)
+            .limit(1);
+          if (otpRow?.telegramId) {
+            customerTelegramId = otpRow.telegramId;
+          }
         }
       }
 
@@ -224,9 +230,8 @@ router.post("/call", async (req, res) => {
         if (await isBotConfigured()) {
           await sendMessage(
             Number(customerTelegramId),
-            `👨‍⚕️ <b>Mutaxassis chaqiruvi yuborildi! (#${call.id})</b>\n\n` +
-              `<b>Mutaxassis:</b> ${escapeHtml(spec.name)} (${escapeHtml(spec.specialty || "Mutaxassis")})\n` +
-              `<b>Holat:</b> ⏳ <i>Mutaxassis javobi kutilmoqda...</i>\n\n` +
+            `👨‍⚕️ <b>Mutaxassis chaqiruvi muvaffaqiyatli yuborildi! (#${call.id})</b>\n\n` +
+              `<b>Mutaxassis:</b> ${escapeHtml(spec.name)} (${escapeHtml(spec.specialty || "Mutaxassis")})\n\n` +
               `Mutaxassis chaqiruvni qabul qilishi bilan sizga darhol xabar yetkaziladi!`,
           );
         }

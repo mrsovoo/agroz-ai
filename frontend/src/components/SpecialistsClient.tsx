@@ -530,22 +530,6 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
                         <Lock size={10} /> {radiusKm ?? 5} km dan uzoq
                       </span>
                     )}
-                    {!isPharmacy && (
-                      s.isBusy ? (
-                        <span
-                          className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10.5px] font-bold text-red-700 bg-red-50 border border-red-200"
-                          title="Mutaxassis hozirda boshqa buyurtma ustida ishlamoqda"
-                        >
-                          🔴 Band
-                        </span>
-                      ) : (
-                        <span
-                          className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10.5px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200"
-                        >
-                          🟢 Bo&apos;sh
-                        </span>
-                      )
-                    )}
                   </div>
                 </div>
 
@@ -576,26 +560,16 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
                   )}
                 </div>
 
-                {/* Mutaxassisni chaqirish yoki chaqiruv holati (Yakunlash faqat mutaxassis botida) */}
+                {/* Mutaxassisni chaqirish */}
                 {!isPharmacy && (
                   <div className="mt-2.5">
-                    {s.isBusy ? (
-                      <div
-                        className="flex w-full items-center justify-center gap-1.5 rounded-2xl bg-neutral-100 py-3 text-[13px] font-bold text-neutral-400 border border-neutral-200 cursor-not-allowed select-none"
-                        title="Mutaxassis hozir boshqa chaqiruvni bajarmoqda"
-                      >
-                        <Clock size={15} />
-                        <span>Mutaxassis hozir band</span>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setCallModalSpecialist(s)}
-                        className="flex w-full items-center justify-center gap-1.5 rounded-2xl bg-[var(--brand-ink)] py-3 text-[13.5px] font-bold text-white shadow-xs hover:bg-neutral-800 active:scale-95 transition"
-                      >
-                        <UserCheck size={16} />
-                        <span>Mutaxassisni chaqirish</span>
-                      </button>
-                    )}
+                    <button
+                      onClick={() => setCallModalSpecialist(s)}
+                      className="flex w-full items-center justify-center gap-1.5 rounded-2xl bg-[var(--brand-ink)] py-3 text-[13.5px] font-bold text-white shadow-xs hover:bg-neutral-800 active:scale-95 transition"
+                    >
+                      <UserCheck size={16} />
+                      <span>Mutaxassisni chaqirish</span>
+                    </button>
                   </div>
                 )}
               </li>

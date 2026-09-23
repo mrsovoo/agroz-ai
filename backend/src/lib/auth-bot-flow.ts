@@ -769,22 +769,44 @@ async function handleIndependentCallback(
       );
 
       try {
-        const { users } = await import("@/db/schema");
-        const { sql } = await import("drizzle-orm");
+        const { users, otpCodes } = await import("@/db/schema");
+        const { sql, desc } = await import("drizzle-orm");
         const cleanDigits = (callItem.customerPhone || "").replace(/\D/g, "").slice(-9);
-        const [customerUser] = await db
-          .select({ telegramId: users.telegramId })
-          .from(users)
-          .where(sql`RIGHT(REPLACE(${users.phone}, ' ', ''), 9) = ${cleanDigits}`)
-          .limit(1);
+        let customerTelegramId: number | null = null;
+        if (cleanDigits) {
+          const [customerUser] = await db
+            .select({ telegramId: users.telegramId })
+            .from(users)
+            .where(sql`RIGHT(REGEXP_REPLACE(${users.phone}, '\\D', '', 'g'), 9) = ${cleanDigits} AND ${users.telegramId} IS NOT NULL`)
+            .limit(1);
+          if (customerUser?.telegramId) {
+            customerTelegramId = Number(customerUser.telegramId);
+          } else {
+            const [otpRow] = await db
+              .select({ telegramId: otpCodes.telegramId })
+              .from(otpCodes)
+              .where(sql`RIGHT(REGEXP_REPLACE(${otpCodes.phone}, '\\D', '', 'g'), 9) = ${cleanDigits} AND ${otpCodes.telegramId} IS NOT NULL`)
+              .orderBy(desc(otpCodes.createdAt))
+              .limit(1);
+            if (otpRow?.telegramId) {
+              customerTelegramId = Number(otpRow.telegramId);
+            }
+          }
+        }
 
-        if (customerUser?.telegramId) {
-          const { sendMessage } = await import("@/lib/telegram-bot");
-          await sendMessage(
-            customerUser.telegramId,
-            `🏁 <b>Mutaxassis xizmati yakunlandi! (#${callId})</b>\n\n` +
-              `Xizmatdan mamnun bo'lsangiz, platforma orqali mutaxassisga baho va sharh qoldirishingiz mumkin.`,
-          );
+        if (customerTelegramId) {
+          const msg = `🏁 <b>Mutaxassis xizmati yakunlandi! (#${callId})</b>\n\n` +
+            `Xizmatdan mamnun bo'lsangiz, platforma orqali mutaxassisga baho va sharh qoldirishingiz mumkin.`;
+          try {
+            const { sendMessage, isBotConfigured } = await import("@/lib/telegram-bot");
+            if (await isBotConfigured()) {
+              await sendMessage(customerTelegramId, msg);
+            } else {
+              await sendAuthMessage(customerTelegramId, msg);
+            }
+          } catch {
+            await sendAuthMessage(customerTelegramId, msg).catch(() => {});
+          }
         }
       } catch (e) {
         console.error("[sc:done] Customer notify error:", e);
@@ -806,23 +828,45 @@ async function handleIndependentCallback(
       await sendAuthMessage(chatId, `❌ <b>Chaqiruv #${callId} bekor qilindi.</b>`);
 
       try {
-        const { users } = await import("@/db/schema");
-        const { sql } = await import("drizzle-orm");
+        const { users, otpCodes } = await import("@/db/schema");
+        const { sql, desc } = await import("drizzle-orm");
         const cleanDigits = (callItem.customerPhone || "").replace(/\D/g, "").slice(-9);
-        const [customerUser] = await db
-          .select({ telegramId: users.telegramId })
-          .from(users)
-          .where(sql`RIGHT(REPLACE(${users.phone}, ' ', ''), 9) = ${cleanDigits}`)
-          .limit(1);
+        let customerTelegramId: number | null = null;
+        if (cleanDigits) {
+          const [customerUser] = await db
+            .select({ telegramId: users.telegramId })
+            .from(users)
+            .where(sql`RIGHT(REGEXP_REPLACE(${users.phone}, '\\D', '', 'g'), 9) = ${cleanDigits} AND ${users.telegramId} IS NOT NULL`)
+            .limit(1);
+          if (customerUser?.telegramId) {
+            customerTelegramId = Number(customerUser.telegramId);
+          } else {
+            const [otpRow] = await db
+              .select({ telegramId: otpCodes.telegramId })
+              .from(otpCodes)
+              .where(sql`RIGHT(REGEXP_REPLACE(${otpCodes.phone}, '\\D', '', 'g'), 9) = ${cleanDigits} AND ${otpCodes.telegramId} IS NOT NULL`)
+              .orderBy(desc(otpCodes.createdAt))
+              .limit(1);
+            if (otpRow?.telegramId) {
+              customerTelegramId = Number(otpRow.telegramId);
+            }
+          }
+        }
 
-        if (customerUser?.telegramId) {
-          const { sendMessage } = await import("@/lib/telegram-bot");
-          await sendMessage(
-            customerUser.telegramId,
-            `⚠️ <b>Mutaxassis chaqiruvni qabul qila olmadi (#${callId})</b>\n\n` +
-              `Mutaxassis ayni paytda band yoki chaqiruvni o'tkazib yubordi.\n` +
-              `Iltimos, platformamiz orqali boshqa mutaxassisni tanlang.`,
-          );
+        if (customerTelegramId) {
+          const msg = `⚠️ <b>Mutaxassis chaqiruvni qabul qila olmadi (#${callId})</b>\n\n` +
+            `Mutaxassis ayni paytda band yoki chaqiruvni o'tkazib yubordi.\n` +
+            `Iltimos, platformamiz orqali boshqa mutaxassisni tanlang.`;
+          try {
+            const { sendMessage, isBotConfigured } = await import("@/lib/telegram-bot");
+            if (await isBotConfigured()) {
+              await sendMessage(customerTelegramId, msg);
+            } else {
+              await sendAuthMessage(customerTelegramId, msg);
+            }
+          } catch {
+            await sendAuthMessage(customerTelegramId, msg).catch(() => {});
+          }
         }
       } catch (e) {
         console.error("[sc:reject] Customer notify error:", e);
@@ -865,24 +909,57 @@ async function handleIndependentCallback(
       );
 
       try {
-        const { users } = await import("@/db/schema");
-        const { sql } = await import("drizzle-orm");
+        const { users, otpCodes } = await import("@/db/schema");
+        const { sql, desc } = await import("drizzle-orm");
         const cleanDigits = (callItem.customerPhone || "").replace(/\D/g, "").slice(-9);
-        const [customerUser] = await db
-          .select({ telegramId: users.telegramId })
-          .from(users)
-          .where(sql`RIGHT(REPLACE(${users.phone}, ' ', ''), 9) = ${cleanDigits}`)
-          .limit(1);
+        let customerTelegramId: number | null = null;
 
-        if (customerUser?.telegramId) {
-          const { sendMessage } = await import("@/lib/telegram-bot");
-          await sendMessage(
-            customerUser.telegramId,
-            `✅ <b>Mutaxassis chaqiruvingizni qabul qildi!</b>\n\n` +
-              `👨‍⚕️ <b>Mutaxassis:</b> ${escapeHtml(currentSpec?.name || "Mutaxassis")}\n` +
-              `📞 <b>Telefon:</b> <code>${escapeHtml(currentSpec?.phone || "")}</code>\n\n` +
-              `Tez orada mutaxassis siz bilan bog'lanadi.`,
-          );
+        if (cleanDigits) {
+          const [customerUser] = await db
+            .select({ telegramId: users.telegramId })
+            .from(users)
+            .where(sql`RIGHT(REGEXP_REPLACE(${users.phone}, '\\D', '', 'g'), 9) = ${cleanDigits} AND ${users.telegramId} IS NOT NULL`)
+            .limit(1);
+
+          if (customerUser?.telegramId) {
+            customerTelegramId = Number(customerUser.telegramId);
+          } else {
+            const [otpRow] = await db
+              .select({ telegramId: otpCodes.telegramId })
+              .from(otpCodes)
+              .where(sql`RIGHT(REGEXP_REPLACE(${otpCodes.phone}, '\\D', '', 'g'), 9) = ${cleanDigits} AND ${otpCodes.telegramId} IS NOT NULL`)
+              .orderBy(desc(otpCodes.createdAt))
+              .limit(1);
+            if (otpRow?.telegramId) {
+              customerTelegramId = Number(otpRow.telegramId);
+            }
+          }
+        }
+
+        if (customerTelegramId) {
+          const msg = `✅ <b>Mutaxassis chaqiruvingizni qabul qildi!</b>\n\n` +
+            `👨‍⚕️ <b>Mutaxassis:</b> ${escapeHtml(currentSpec?.name || "Mutaxassis")}\n` +
+            (currentSpec?.phone ? `📞 <b>Telefon:</b> <code>${escapeHtml(currentSpec.phone)}</code>\n\n` : "\n") +
+            `Tez orada mutaxassis siz bilan bog'lanadi.`;
+
+          let sent = false;
+          try {
+            const { sendMessage, isBotConfigured } = await import("@/lib/telegram-bot");
+            if (await isBotConfigured()) {
+              await sendMessage(customerTelegramId, msg);
+              sent = true;
+            }
+          } catch (err) {
+            console.error("[sc:accept] Telegram bot send error:", err);
+          }
+
+          if (!sent) {
+            try {
+              await sendAuthMessage(customerTelegramId, msg);
+            } catch (err) {
+              console.error("[sc:accept] Auth bot fallback send error:", err);
+            }
+          }
         }
       } catch (e) {
         console.error("[sc:accept] Customer notify error:", e);

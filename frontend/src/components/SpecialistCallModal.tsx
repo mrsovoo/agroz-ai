@@ -27,42 +27,9 @@ export default function SpecialistCallModal({
   const [problem, setProblem] = useState("");
   const [address, setAddress] = useState("");
   const [busy, setBusy] = useState(false);
-  const [callState, setCallState] = useState<"idle" | "waiting" | "accepted" | "rejected">("idle");
+  const [callState, setCallState] = useState<"idle" | "sent" | "accepted" | "rejected">("idle");
   const [createdCallId, setCreatedCallId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  // Mutaxassis javobini kutish uchun polling (har 3 soniyada tekshiradi)
-  useEffect(() => {
-    if (callState !== "waiting" || !createdCallId) return;
-
-    let cancelled = false;
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch(apiUrl(`/api/specialists/call/${createdCallId}/status`));
-        if (!res.ok) return;
-        const data = await res.json();
-        if (cancelled) return;
-
-        if (data?.ok) {
-          if (data.status === "qabul_qilindi") {
-            setCallState("accepted");
-            clearInterval(interval);
-            onSuccess();
-          } else if (data.status === "bekor") {
-            setCallState("rejected");
-            clearInterval(interval);
-          }
-        }
-      } catch (e) {
-        // tarmoq xatosida davom etaveradi
-      }
-    }, 3000);
-
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [callState, createdCallId, onSuccess]);
 
   if (!isOpen || !specialist) return null;
 
@@ -137,8 +104,7 @@ export default function SpecialistCallModal({
         address: address.trim() || undefined,
       });
 
-      // Foydalanuvchi talabi: "mutaxassis javobi kutilyapti diyish kerak bo'ladi"
-      setCallState("waiting");
+      setCallState("sent");
     } catch (err: any) {
       setError(err.message || "Chaqiruv yuborishda xatolik yuz berdi");
     } finally {
@@ -168,28 +134,29 @@ export default function SpecialistCallModal({
           <X size={18} />
         </button>
 
-        {callState === "waiting" ? (
-          <div className="flex flex-col items-center justify-center py-8 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-amber-600 mb-4 animate-spin">
-              <Loader2 size={36} />
+        {callState === "sent" ? (
+          <div className="flex flex-col items-center justify-center py-8 text-center animate-in fade-in">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mb-4">
+              <CheckCircle2 size={38} />
             </div>
-            <span className="inline-block rounded-full bg-amber-50 border border-amber-200 px-3 py-1 text-xs font-bold text-amber-800 mb-2">
-              ⏳ So&apos;rov yetkazildi
+            <span className="inline-block rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-800 mb-2">
+              ✅ So&apos;rov yetkazildi
             </span>
             <h3 className="text-xl font-extrabold text-neutral-900">
-              Mutaxassis javobi kutilmoqda...
+              Chaqiruv muvaffaqiyatli yuborildi!
             </h3>
             <p className="mt-2 text-[14px] text-neutral-600 max-w-xs leading-relaxed">
-              <b>{specialist.organization || specialist.name}</b> ga Telegram orqali xabarnoma yuborildi. Mutaxassis tasdiqlashi bilan darhol xabar olasiz.
+              <b>{specialist.organization || specialist.name}</b> ga Telegram orqali xabarnoma yuborildi. Mutaxassis chaqiruvni qabul qilishi bilan botingizga darhol xabar keladi.
             </p>
-            <div className="mt-6 flex flex-col gap-2 w-full max-w-xs">
-              <button
-                onClick={handleModalClose}
-                className="rounded-xl border border-neutral-200 bg-neutral-50 px-5 py-2.5 text-xs font-bold text-neutral-700 hover:bg-neutral-100 transition"
-              >
-                Kutish rejimida oynani yopish
-              </button>
-            </div>
+            <button
+              onClick={() => {
+                handleModalClose();
+                onSuccess();
+              }}
+              className="mt-6 rounded-2xl bg-[var(--brand-green)] px-8 py-3 text-xs font-bold text-white shadow-sm hover:brightness-105 active:scale-95 transition"
+            >
+              Tushunarli
+            </button>
           </div>
         ) : callState === "accepted" ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
