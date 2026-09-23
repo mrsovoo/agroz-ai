@@ -17,7 +17,7 @@ router.get("/", async (req, res) => {
 
   try {
     const apiRes = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,is_day&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=auto`
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,is_day&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset&wind_speed_unit=ms&timezone=auto`
     );
     if (!apiRes.ok) throw new Error("weather API error");
     const json = (await apiRes.json()) as any;

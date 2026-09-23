@@ -75,7 +75,7 @@ export type ForecastResponse = {
  */
 export async function fetchWeatherForecast(lat: number, lng: number): Promise<ForecastResponse | null> {
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,weather_code&forecast_days=3&timezone=auto`;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,weather_code&forecast_days=3&wind_speed_unit=ms&timezone=auto`;
     const res = await fetch(url, { next: { revalidate: 900 } });
     if (!res.ok) return null;
     return (await res.json()) as ForecastResponse;
@@ -171,17 +171,18 @@ export function analyzeForecastAlerts(
         });
       }
 
-      // 3. Kuchli shamol va bo'ron (wind >= 12 m/s)
-      if (wind >= 12) {
-        const isCritical = wind >= 17;
+      // 3. Kuchli shamol va bo'ron (wind >= 14 m/s ~ 50 km/h)
+      if (wind >= 14) {
+        const roundedWind = Math.round(wind * 10) / 10;
+        const isCritical = wind >= 20;
         alerts.push({
           id: `wind-${regionName}-${dateStr}`,
           type: "storm_wind",
           severity: isCritical ? "critical" : "warning",
           title: isCritical
-            ? `🌪️ Kuchli bo'ron va dovul (${wind} m/s)!`
-            : `💨 Kuchli shamol xavfi (${wind} m/s)`,
-          subtitle: `${dayLabel} ${regionName}da kuchli shamol shiddatlari ${wind} m/s ga yetishi kutilmoqda.`,
+            ? `🌪️ Kuchli bo'ron va dovul (${roundedWind} m/s)!`
+            : `💨 Kuchli shamol xavfi (${roundedWind} m/s)`,
+          subtitle: `${dayLabel} ${regionName}da kuchli shamol shiddatlari ${roundedWind} m/s ga yetishi kutilmoqda.`,
           region: regionName,
           dateText: `${dayLabel} (${dateStr})`,
           description:
@@ -197,7 +198,7 @@ export function analyzeForecastAlerts(
               "Molxona tomining shifer va tunukalarini mustahkamlang.",
             ],
           },
-          metrics: { windSpeed: wind },
+          metrics: { windSpeed: roundedWind },
           source: "live_forecast",
         });
       }

@@ -151,11 +151,18 @@ export default function WeatherCard({
     }
     if (!w) return null;
 
-    if (w.wind >= 5) {
+    if (w.wind >= 8) {
       return {
         isHazard: true,
         tag: `💨 Diqqat (${loc}):`,
-        text: `Kuchli shamol (${w.wind} m/s) — dori purkash samarasiz, preparatlar havoga uchib yerga to'g'ri tushmaydi.`,
+        text: `Kuchli shamol (${w.wind} m/s) — dori purkash tavsiya etilmaydi, preparatlar havoga uchib yerga to'g'ri tushmaydi.`,
+      };
+    }
+    if (w.wind >= 5) {
+      return {
+        isHazard: false,
+        tag: `💨 Eslatma (${loc}):`,
+        text: `O'rtacha shabada (${w.wind} m/s) — dori sepishda tomchilar sachramasligiga e'tibor bering yoki tinchroq vaqtni kuting.`,
       };
     }
     if (w.rain > 0.1) {

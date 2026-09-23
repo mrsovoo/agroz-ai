@@ -12,6 +12,7 @@ import {
   appSettings,
   adminSessions,
   sessions,
+  botStates,
 } from "../db/schema.js";
 import { sql, eq, desc, isNotNull, and, or, inArray } from "drizzle-orm";
 import {
@@ -926,12 +927,41 @@ router.delete("/specialists/:id", requireAdmin, async (req, res) => {
       return res.status(400).json({ error: "Noto'g'ri ID" });
     }
 
-    // Dorilarni o'chirish
+    const [spec] = await db.select().from(specialists).where(eq(specialists.id, id)).limit(1);
+    if (!spec) {
+      return res.status(404).json({ error: "Mutaxassis topilmadi" });
+    }
+
+    // 1. Chaqiruvlar va so'rovlarni o'chirish
+    await db.delete(specialistCalls).where(eq(specialistCalls.specialistId, id));
+
+    // 2. Baholarni o'chirish
+    await db.delete(specialistRatings).where(eq(specialistRatings.specialistId, id));
+
+    // 3. Dorilarni o'chirish
     await db.delete(specialistMedicines).where(eq(specialistMedicines.specialistId, id));
-    // Mutaxassisni o'chirish
+
+    // 4. Dorixona bo'lsa, tushgan buyurtmalar va orderItems ni tozalash
+    const phOrders = await db
+      .select({ id: orders.id })
+      .from(orders)
+      .where(eq(orders.pharmacySpecialistId, id));
+    for (const o of phOrders) {
+      await db.delete(orderItems).where(eq(orderItems.orderId, o.id));
+    }
+    if (phOrders.length > 0) {
+      await db.delete(orders).where(eq(orders.pharmacySpecialistId, id));
+    }
+
+    // 5. Bot holatini tozalash
+    if (spec.telegramId) {
+      await db.delete(botStates).where(eq(botStates.telegramId, spec.telegramId));
+    }
+
+    // 6. Mutaxassisning o'zini o'chirish
     await db.delete(specialists).where(eq(specialists.id, id));
 
-    res.json({ ok: true, message: "O'chirildi" });
+    res.json({ ok: true, message: "Mutaxassis va barcha bog'liq ma'lumotlar to'liq o'chirildi" });
   } catch (err: any) {
     console.error("[admin delete specialist error]:", err);
     res.status(500).json({ error: err.message || "Server xatosi" });
@@ -1698,16 +1728,140 @@ router.delete("/users/:id", requireAdmin, async (req, res) => {
     // 2. Diagnostika natijalarini o'chirish
     await db.delete(diagnoses).where(eq(diagnoses.userId, id));
 
-    // 3. Buyurtmalardagi userId ni null qilish (tarix saqlanib qolishi uchun)
-    await db.update(orders).set({ userId: null }).where(eq(orders.userId, id));
+    // 3. Foydalanuvchi buyurtmalarini tozalash
+    const userOrders = await db.select({ id: orders.id }).from(orders).where(eq(orders.userId, id));
+    for (const o of userOrders) {
+      await db.delete(orderItems).where(eq(orderItems.orderId, o.id));
+    }
+    if (userOrders.length > 0) {
+      await db.delete(orders).where(eq(orders.userId, id));
+    }
 
-    // 4. Foydalanuvchini o'chirish
+    // 4. Foydalanuvchi chaqiruvlarini tozalash (telefon raqami orqali)
+    if (user.phone) {
+      const cleanDigits = user.phone.replace(/\D/g, "").slice(-9);
+      if (cleanDigits) {
+        await db
+          .delete(specialistCalls)
+          .where(sql`RIGHT(REPLACE(${specialistCalls.customerPhone}, ' ', ''), 9) = ${cleanDigits}`);
+      }
+    }
+
+    // 5. Bot holatini tozalash
+    if (user.telegramId) {
+      await db.delete(botStates).where(eq(botStates.telegramId, user.telegramId));
+    }
+
+    // 6. Foydalanuvchini o'chirish
     await db.delete(users).where(eq(users.id, id));
 
-    res.json({ ok: true, message: "Foydalanuvchi profili o'chirildi" });
+    res.json({ ok: true, message: "Foydalanuvchi profili va barcha so'rovlari muvaffaqiyatli o'chirildi" });
   } catch (err: any) {
     console.error("[admin delete user error]:", err);
     res.status(500).json({ error: err.message || "Foydalanuvchini o'chirishda xatolik" });
+  }
+});
+
+// DELETE /api/admin/orders/:id
+router.delete("/orders/:id", requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      return res.status(400).json({ error: "Noto'g'ri buyurtma ID" });
+    }
+
+    // Biriktirilgan chaqiruv bo'lsa, mutaxassisni bo'shatish va chaqiruvni o'chirish
+    const calls = await db
+      .select()
+      .from(specialistCalls)
+      .where(eq(specialistCalls.assignedOrderId, id));
+    for (const c of calls) {
+      await db
+        .update(specialists)
+        .set({ isBusy: false, currentCallId: null })
+        .where(eq(specialists.currentCallId, c.id));
+      await db.delete(specialistCalls).where(eq(specialistCalls.id, c.id));
+    }
+
+    await db.delete(orderItems).where(eq(orderItems.orderId, id));
+    await db.delete(orders).where(eq(orders.id, id));
+
+    res.json({ ok: true, message: "Buyurtma o'chirildi" });
+  } catch (err: any) {
+    console.error("[admin delete order error]:", err);
+    res.status(500).json({ error: err.message || "Buyurtmani o'chirishda xatolik" });
+  }
+});
+
+// DELETE /api/admin/specialist-calls/:id
+router.delete("/specialist-calls/:id", requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      return res.status(400).json({ error: "Noto'g'ri chaqiruv ID" });
+    }
+
+    const [call] = await db.select().from(specialistCalls).where(eq(specialistCalls.id, id)).limit(1);
+    if (call) {
+      await db
+        .update(specialists)
+        .set({ isBusy: false, currentCallId: null })
+        .where(eq(specialists.currentCallId, id));
+      await db.delete(specialistCalls).where(eq(specialistCalls.id, id));
+    }
+
+    res.json({ ok: true, message: "Chaqiruv o'chirildi" });
+  } catch (err: any) {
+    console.error("[admin delete specialist call error]:", err);
+    res.status(500).json({ error: err.message || "Chaqiruvni o'chirishda xatolik" });
+  }
+});
+
+// POST /api/admin/cleanup-orphans
+// Qolib ketgan, yetim yoki bekor bo'lgan chaqiruv/so'rovlarni platformadan to'liq tozalash
+router.post("/cleanup-orphans", requireAdmin, async (_req, res) => {
+  try {
+    let cleanedCalls = 0;
+    let freedSpecs = 0;
+    let cleanedOrderItems = 0;
+
+    // 1. Mutaxassisi yo'q chaqiruvlarni tozalash
+    const orphanCalls = await db.execute(
+      sql`DELETE FROM specialist_calls WHERE specialist_id NOT IN (SELECT id FROM specialists) RETURNING id`
+    );
+    cleanedCalls = (orphanCalls.rows?.length as number) || 0;
+
+    // 2. Buyurtmasi yo'q dori bandlarini tozalash
+    const orphanItems = await db.execute(
+      sql`DELETE FROM order_items WHERE order_id NOT IN (SELECT id FROM orders) RETURNING id`
+    );
+    cleanedOrderItems = (orphanItems.rows?.length as number) || 0;
+
+    // 3. is_busy = true bo'lib band qolib ketgan mutaxassislarni bo'shatish
+    const stuckSpecs = await db.execute(
+      sql`UPDATE specialists
+          SET is_busy = false, current_call_id = null, updated_at = NOW()
+          WHERE is_busy = true
+            AND (
+              current_call_id IS NULL
+              OR current_call_id NOT IN (
+                SELECT id FROM specialist_calls WHERE status IN ('yangi', 'qabul_qilindi')
+              )
+            )
+          RETURNING id`
+    );
+    freedSpecs = (stuckSpecs.rows?.length as number) || 0;
+
+    res.json({
+      ok: true,
+      cleanedCalls,
+      cleanedOrderItems,
+      freedSpecialists: freedSpecs,
+      message: "Yetim va qolib ketgan barcha so'rovlar muvaffaqiyatli tozalandi.",
+    });
+  } catch (err: any) {
+    console.error("[admin cleanup error]:", err);
+    res.status(500).json({ error: err.message || "Tozalashda xatolik" });
   }
 });
 

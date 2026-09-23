@@ -162,7 +162,34 @@ export async function updateSpecialistFields(
 export async function deleteSpecialist(telegramId: number): Promise<boolean> {
   const profile = await getSpecialistByTelegramId(telegramId);
   if (!profile) return false;
+
+  const { orders, orderItems, specialistCalls, botStates } = await import("@/db/schema");
+
+  // 1. Mutaxassis chaqiruvlari va so'rovlarini tozalash
+  await db.delete(specialistCalls).where(eq(specialistCalls.specialistId, profile.id));
+
+  // 2. Reyting va baholarni tozalash
+  await db.delete(specialistRatings).where(eq(specialistRatings.specialistId, profile.id));
+
+  // 3. Dorilarni tozalash
   await db.delete(specialistMedicines).where(eq(specialistMedicines.specialistId, profile.id));
+
+  // 4. Dorixona bo'lsa, tushgan buyurtmalar va dori pozitsiyalarini tozalash
+  const phOrders = await db
+    .select({ id: orders.id })
+    .from(orders)
+    .where(eq(orders.pharmacySpecialistId, profile.id));
+  for (const o of phOrders) {
+    await db.delete(orderItems).where(eq(orderItems.orderId, o.id));
+  }
+  if (phOrders.length > 0) {
+    await db.delete(orders).where(eq(orders.pharmacySpecialistId, profile.id));
+  }
+
+  // 5. Bot holatini tozalash
+  await db.delete(botStates).where(eq(botStates.telegramId, telegramId));
+
+  // 6. Mutaxassisning o'zini o'chirish
   await db.delete(specialists).where(eq(specialists.id, profile.id));
   return true;
 }

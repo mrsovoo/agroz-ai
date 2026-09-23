@@ -39,17 +39,18 @@ export const LEVEL_LABEL: Record<WeatherLevel, string> = {
 
 /** Ob-havoning umumiy xavf darajasi (qisqa tavsiya va rang uchun). */
 export function weatherLevel({ temp, wind, rain, humidity }: WeatherInput): WeatherLevel {
-  if (wind >= 5 || rain > 0.3) return "danger";
-  if (temp >= 33 || temp <= 3) return "warning";
-  if (humidity >= 80) return "caution";
+  if (wind >= 8 || rain > 0.3) return "danger";
+  if (temp >= 35 || temp <= 3) return "warning";
+  if (wind >= 5 || humidity >= 80) return "caution";
   return "ok";
 }
 
 /** Bitta qatorlik qisqa maslahat (ob-havo kartochkasida ko'rinadi). */
 export function shortAdvice({ temp, wind, rain, humidity }: WeatherInput): string {
-  if (wind >= 5) return "Bugun dori sepmang — shamol kuchli, dori nishonga tushmaydi.";
+  if (wind >= 8) return "Bugun dori sepmang — kuchli shamol, preparatlar havoga uchib ketadi.";
   if (rain > 0.3) return "Yomg'ir bor — purkash samarasiz, yomg'irdan keyin 1 kun kuting.";
-  if (temp >= 33)
+  if (wind >= 5) return "O'rtacha shabada — dori sepishda shamol yo'nalishiga va tomchilashiga e'tibor bering.";
+  if (temp >= 35)
     return "Jazirama issiq — hayvonlarga soya va toza suv bering, purkashni kechqurun qiling.";
   if (temp <= 3) return "Sovuq — ekinlarni sovuqdan himoya qiling, molxonani isiting.";
   if (humidity >= 80) return "Namlik yuqori — zamburug' kasalliklari xavfi bor, profilaktika qiling.";
