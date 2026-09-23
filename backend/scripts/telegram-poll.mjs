@@ -17,8 +17,7 @@ import "dotenv/config";
 const appUrl =
   process.env.BACKEND_URL?.trim() ||
   process.env.API_URL?.trim() ||
-  process.env.NEXT_PUBLIC_APP_URL?.trim()?.replace(/\/+$/, "") ||
-  "http://localhost:4000";
+  `http://localhost:${process.env.PORT || 4000}`;
 
 const sharedSecret = process.env.TELEGRAM_WEBHOOK_SECRET?.trim();
 

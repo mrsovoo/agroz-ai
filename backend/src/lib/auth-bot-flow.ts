@@ -7,8 +7,8 @@
  */
 
 import { db } from "@/db";
-import { botStates } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { botStates, specialistCalls } from "@/db/schema";
+import { eq, desc } from "drizzle-orm";
 import { cleanText, normalizePhone } from "@/lib/validate";
 import {
   addMedicine,
@@ -310,6 +310,72 @@ export async function handleAuthBotUpdate(update: AuthBotUpdate): Promise<void> 
   }
 }
 
+async function showSpecialistCalls(chatId: number, profileId: number): Promise<void> {
+  const calls = await db
+    .select()
+    .from(specialistCalls)
+    .where(eq(specialistCalls.specialistId, profileId))
+    .orderBy(desc(specialistCalls.createdAt))
+    .limit(10);
+
+  const activeCall = calls.find((c) => c.status === "qabul_qilindi" || c.status === "yangi");
+  if (activeCall) {
+    const cleanPhone = (activeCall.customerPhone || "").replace(/[^\d+]/g, "");
+    const rows: any[] = [];
+    if (cleanPhone) {
+      rows.push([{ text: `📞 Mijozga qo'ng'iroq`, url: `tel:${cleanPhone}` }]);
+    }
+    if (activeCall.status === "yangi") {
+      rows.push([
+        { text: "✅ Qabul qilish", callback_data: `sc:accept:${activeCall.id}` },
+        { text: "❌ Rad etish", callback_data: `sc:reject:${activeCall.id}` },
+      ]);
+    } else {
+      rows.push([{ text: "🏁 Ishni yakunlash (Bajarildi)", callback_data: `sc:done:${activeCall.id}` }]);
+    }
+
+    await sendAuthMessage(
+      chatId,
+      `📋 <b>Faol chaqiruvingiz: #${activeCall.id}</b>\n\n` +
+        `👤 <b>Mijoz:</b> ${escapeHtml(activeCall.customerName)}\n` +
+        `📞 <b>Telefon:</b> <code>${escapeHtml(activeCall.customerPhone)}</code>\n` +
+        (activeCall.address ? `📍 <b>Manzil:</b> ${escapeHtml(activeCall.address)}\n` : "") +
+        `📝 <b>Muammo:</b> <i>${escapeHtml(activeCall.problem)}</i>\n` +
+        `📊 <b>Holat:</b> ${activeCall.status === "yangi" ? "⏳ Yangi (Tasdiqlash kutilmoqda)" : "🔴 Qabul qilingan (Jarayonda)"}\n\n` +
+        `<i>Xizmatni to'liq ko'rsatib bo'lgach, pastdagi «🏁 Ishni yakunlash» tugmasini bosing:</i>`,
+      {
+        inline: { inline_keyboard: rows },
+        replyKeyboard: approvedSpecialistMenuKeyboard(),
+      },
+    );
+    return;
+  }
+
+  if (calls.length === 0) {
+    await sendAuthMessage(
+      chatId,
+      `📋 <b>Sizda hozircha chaqiruvlar yo'q.</b>\n\n🟢 <b>Holatingiz: BO'SH</b>. Fermer va dehqonlardan yangi chaqiruv tushishi bilan sizga darhol xabarnoma yuboriladi.`,
+      { replyKeyboard: approvedSpecialistMenuKeyboard() },
+    );
+    return;
+  }
+
+  const historyLines = calls.slice(0, 5).map((c) => {
+    const icon = c.status === "bajarildi" ? "✅" : c.status === "bekor" ? "❌" : "⏳";
+    const dateStr = new Date(c.createdAt).toLocaleDateString("uz-UZ");
+    return `${icon} <b>#${c.id}</b> — ${escapeHtml(c.customerName)} (${dateStr}) — <i>${c.status}</i>`;
+  });
+
+  await sendAuthMessage(
+    chatId,
+    `📋 <b>Sizning chaqiruvlaringiz:</b>\n\n` +
+      `🟢 <b>Hozirgi holat: BO'SH (Yangi chaqiruvlarga tayyor)</b>\n\n` +
+      `<b>So'nggi chaqiruvlar tarixi:</b>\n` +
+      historyLines.join("\n"),
+    { replyKeyboard: approvedSpecialistMenuKeyboard() },
+  );
+}
+
 async function handleMenuButton(
   chatId: number,
   telegramId: number,
@@ -357,6 +423,11 @@ async function handleMenuButton(
     await sendAuthMessage(chatId, pendingBlockedMessage(), {
       replyKeyboard: pendingApprovalMenuKeyboard(),
     });
+    return;
+  }
+
+  if (btn === "📋 Chaqiruvlarim" || (profile.role !== "pharmacy" && (btn === "📦 Buyurtmalar" || btn === "📋 Buyurtmalar"))) {
+    await showSpecialistCalls(chatId, profile.id);
     return;
   }
 
@@ -454,8 +525,8 @@ async function handleCommand(
     return;
   }
 
-  // /buyurtmalar — dorixona egasiga kelgan buyurtmalar ro'yxati.
-  if (command === "/buyurtmalar") {
+  // /buyurtmalar yoki /chaqiruvlar — dorixona va mutaxassis buyurtmalari/chaqiruvlari
+  if (command === "/buyurtmalar" || command === "/chaqiruvlar") {
     const profile = await getSpecialistByTelegramId(telegramId);
     if (!profile) {
       await sendAuthMessage(chatId, needRegistrationMessage(), { inline: NEXT_STEP_KEYBOARD });
@@ -468,7 +539,7 @@ async function handleCommand(
       return;
     }
     if (profile.role !== "pharmacy") {
-      await sendAuthMessage(chatId, onlyPharmacyMessage(profile.role));
+      await showSpecialistCalls(chatId, profile.id);
       return;
     }
     const { listOrders } = await import("@/lib/orders");

@@ -225,7 +225,8 @@ export function approvedPharmacyMenuKeyboard(): ReplyKeyboard {
 export function approvedSpecialistMenuKeyboard(): ReplyKeyboard {
   return {
     keyboard: [
-      [{ text: "👤 Ma'lumotlarim" }, { text: "✏️ Profilni tahrirlash" }],
+      [{ text: "📋 Chaqiruvlarim" }, { text: "👤 Ma'lumotlarim" }],
+      [{ text: "✏️ Profilni tahrirlash" }],
     ],
     resize_keyboard: true,
   };

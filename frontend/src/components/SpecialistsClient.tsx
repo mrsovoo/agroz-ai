@@ -23,7 +23,8 @@ import {
 import { RADIUS_OPTIONS, AUTH_BOT_URL } from "@/lib/constants";
 import SpecialistCallModal from "@/components/SpecialistCallModal";
 import SpecialistRatingModal from "@/components/SpecialistRatingModal";
-import { getSpecialistCalls, CALLS_EVENT, type SpecialistCall } from "@/lib/specialist-calls";
+import { getSpecialistCalls, saveSpecialistCalls, CALLS_EVENT, type SpecialistCall } from "@/lib/specialist-calls";
+import { apiUrl } from "@/lib/api-config";
 
 type Medicine = { id: number; name: string; status: string; hasPhoto: boolean; price?: number | null };
 
@@ -163,6 +164,49 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
     return () => clearInterval(timer);
   }, [loadSpecialists]);
 
+  // Pending chaqiruvlar statusini serverdan sinxronlash (mutaxassis botda qabul qilganda yoki yakunlaganda)
+  useEffect(() => {
+    const pendingList = calls.filter((c) => c.status === "pending" && /^\d+$/.test(c.id));
+    if (pendingList.length === 0) return;
+
+    let cancelled = false;
+    const checkStatuses = async () => {
+      let changed = false;
+      const updated = [...calls];
+      for (const call of pendingList) {
+        try {
+          const res = await fetch(apiUrl(`/api/specialists/call/${call.id}/status`));
+          if (!res.ok) continue;
+          const data = await res.json();
+          if (data.ok && data.status) {
+            const idx = updated.findIndex((x) => x.id === call.id);
+            if (idx !== -1) {
+              if (data.status === "bajarildi" && updated[idx].status !== "completed") {
+                updated[idx] = { ...updated[idx], status: "completed", completedAt: Date.now() };
+                changed = true;
+              } else if (data.status === "bekor" && updated[idx].status !== "cancelled") {
+                updated[idx] = { ...updated[idx], status: "cancelled" };
+                changed = true;
+              }
+            }
+          }
+        } catch {}
+      }
+      if (changed && !cancelled) {
+        saveSpecialistCalls(updated);
+        setCalls(updated);
+        loadSpecialists();
+      }
+    };
+
+    checkStatuses();
+    const interval = setInterval(checkStatuses, 6000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [calls, loadSpecialists]);
+
   const visible = useMemo(
     () => (role === "all" ? items : items.filter((s) => s.role === role)),
     [items, role],
@@ -248,7 +292,7 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
         </p>
       )}
 
-      {/* Faol chaqiruvlar bannerni ko'rsatish */}
+      {/* Faol chaqiruvlar bannerni ko'rsatish (Yakunlash faqat mutaxassis botida) */}
       {calls.filter((c) => c.status === "pending").length > 0 && (
         <div className="mt-3 space-y-2">
           {calls
@@ -259,23 +303,54 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
                 className="flex items-center justify-between rounded-2xl bg-amber-50 p-3.5 border border-amber-200"
               >
                 <div className="flex items-center gap-2.5">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500 text-white">
-                    <Clock size={16} />
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500 text-white shrink-0">
+                    <Clock size={16} className="animate-pulse" />
                   </span>
                   <div>
                     <p className="text-[13px] font-bold text-amber-950">
-                      Chaqiruv faol: {c.specialistName}
+                      Chaqiruv yuborildi: {c.specialistName}
                     </p>
                     <p className="text-[11.5px] text-amber-800 font-medium">
-                      Ish yakunlandimi? Baholang va fikringizni qoldiring
+                      Mutaxassis javobi kutilmoqda. Xizmat mutaxassis botida yakunlanadi.
+                    </p>
+                  </div>
+                </div>
+                <span className="rounded-xl bg-amber-200/80 px-2.5 py-1 text-[11px] font-bold text-amber-900 shrink-0">
+                  Kutilmoqda
+                </span>
+              </div>
+            ))}
+        </div>
+      )}
+
+      {/* Mutaxassis xizmati yakunlangan va hali baholanmagan chaqiruvlar */}
+      {calls.filter((c) => c.status === "completed" && !c.stars).length > 0 && (
+        <div className="mt-3 space-y-2">
+          {calls
+            .filter((c) => c.status === "completed" && !c.stars)
+            .map((c) => (
+              <div
+                key={c.id}
+                className="flex items-center justify-between rounded-2xl bg-emerald-50 p-3.5 border border-emerald-200"
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-600 text-white shrink-0">
+                    <CheckCircle2 size={16} />
+                  </span>
+                  <div>
+                    <p className="text-[13px] font-bold text-emerald-950">
+                      Xizmat yakunlandi: {c.specialistName}
+                    </p>
+                    <p className="text-[11.5px] text-emerald-800 font-medium">
+                      Mutaxassis ishni yakunladi. Xizmat sifatini baholang!
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setRatingModalCall(c)}
-                  className="rounded-xl bg-amber-500 px-3 py-2 text-[12px] font-bold text-white shadow-xs hover:bg-amber-600 active:scale-95 transition"
+                  className="rounded-xl bg-emerald-600 px-3 py-2 text-[12px] font-bold text-white shadow-xs hover:bg-emerald-700 active:scale-95 transition shrink-0"
                 >
-                  Yakunlash
+                  Baholash
                 </button>
               </div>
             ))}
@@ -533,22 +608,18 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
                   )}
                 </div>
 
-                {/* Mutaxassisni chaqirish yoki chaqiruv yakunlanganda baholash */}
+                {/* Mutaxassisni chaqirish yoki chaqiruv holati (Yakunlash faqat mutaxassis botida) */}
                 {!isPharmacy && (
                   <div className="mt-2.5">
                     {activeCall ? (
-                      <div className="flex flex-col gap-2 rounded-2xl bg-amber-50 p-3 border border-amber-200">
-                        <div className="flex items-center gap-1.5 text-[12px] font-bold text-amber-800">
-                          <Clock size={13} className="shrink-0" />
-                          <span>Chaqiruv yuborilgan (Jarayonda)</span>
+                      <div className="flex items-center justify-between rounded-2xl bg-amber-50 p-3 border border-amber-200">
+                        <div className="flex items-center gap-2 text-[12.5px] font-bold text-amber-900">
+                          <Clock size={15} className="shrink-0 animate-pulse text-amber-600" />
+                          <span>Mutaxassis javobi kutilmoqda...</span>
                         </div>
-                        <button
-                          onClick={() => setRatingModalCall(activeCall)}
-                          className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-amber-500 py-2.5 text-[13px] font-extrabold text-white shadow-xs hover:bg-amber-600 active:scale-95 transition"
-                        >
-                          <CheckCircle2 size={15} />
-                          <span>Ishni yakunlash va baholash</span>
-                        </button>
+                        <span className="rounded-lg bg-amber-200/80 px-2 py-0.5 text-[11px] font-bold text-amber-900">
+                          Jarayonda
+                        </span>
                       </div>
                     ) : s.isBusy ? (
                       <div

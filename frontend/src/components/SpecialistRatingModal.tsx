@@ -93,7 +93,7 @@ export default function SpecialistRatingModal({
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="text-center">
               <span className="rounded-full bg-amber-50 px-3 py-1 text-[11.5px] font-bold text-amber-700 border border-amber-200">
-                Xizmatni yakunlash va baholash
+                Mutaxassis xizmatini baholash
               </span>
               <h2 className="mt-2 text-[19px] font-black text-neutral-900 leading-snug">
                 {call.specialistName}
