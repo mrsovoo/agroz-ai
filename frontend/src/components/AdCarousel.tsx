@@ -31,7 +31,7 @@ export default function AdCarousel() {
           // Filter out inactive just in case, sort by priority
           const activeAds = data
             .filter((ad: Ad) => ad.isActive)
-            .sort((a: Ad, b: Ad) => a.priority - b.priority);
+            .sort((a: Ad, b: Ad) => b.priority - a.priority);
           setAds(activeAds);
         }
       } catch (error) {

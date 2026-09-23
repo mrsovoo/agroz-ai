@@ -84,6 +84,11 @@ export default async function HomePage() {
                 <Newspaper size={18} /> Maslahatlar
               </Link>
             </div>
+
+            {/* Web moslashuvida tugmalar tagida joylashgan reklama karuseli */}
+            <div className="hidden web:block web:mt-6">
+              <AdCarousel />
+            </div>
           </div>
 
           {/* Mobil uchun faqat bildirishnomalar qo'ng'irog'i (savat va profil pastki menyuda bor) */}
@@ -94,12 +99,11 @@ export default async function HomePage() {
 
         <div className="mt-5 web:mt-0">
           <WeatherCard />
+          {/* Mobil moslashuvda ob-havoning tagidagi reklama karuseli */}
+          <div className="mt-4 web:hidden">
+            <AdCarousel />
+          </div>
         </div>
-      </div>
-
-      {/* Reklama karuseli */}
-      <div className="mt-5">
-        <AdCarousel />
       </div>
 
       {/* TO'LIQ DORILAR VITRINASI — faqat real API ma'lumotlari */}
