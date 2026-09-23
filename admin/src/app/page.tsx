@@ -174,6 +174,53 @@ type AdminSpecialistCallItem = {
   updatedAt: string;
 };
 
+type AdminUserItem = {
+  id: number;
+  name: string;
+  phone: string | null;
+  telegramId: number | null;
+  region: string | null;
+  district: string | null;
+  address: string;
+  createdAt: string;
+  isRegistered: boolean;
+  ordersCount: number;
+  totalSpent: number;
+  callsCount: number;
+  orders: {
+    id: number;
+    pharmacyName: string;
+    pharmacyPhone: string | null;
+    customerName: string;
+    customerPhone: string;
+    customerAddress: string | null;
+    deliveryType: string;
+    status: string;
+    totalSum: number;
+    note: string | null;
+    createdAt: string;
+    items: {
+      id: number;
+      name: string;
+      price: number;
+      qty: number;
+    }[];
+  }[];
+  specialistCalls: {
+    id: number;
+    specialistName: string;
+    specialistPhone: string | null;
+    specialistRole: string;
+    specialistSpecialty: string | null;
+    customerName: string;
+    customerPhone: string;
+    problem: string;
+    address: string | null;
+    status: string;
+    createdAt: string;
+  }[];
+};
+
 type AnalyticsData = {
   counts: {
     totalUsers: number;
@@ -246,9 +293,9 @@ export default function SuperAdminPage() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Tablar: dashboard | analytics | orders | specialist_calls | pharmacies | specialists | regions | reviews | settings | broadcast
+  // Tablar: dashboard | analytics | orders | specialist_calls | pharmacies | specialists | users | regions | reviews | settings | broadcast
   const [activeTab, setActiveTab] = useState<
-    "dashboard" | "analytics" | "orders" | "specialist_calls" | "pharmacies" | "specialists" | "regions" | "reviews" | "settings" | "broadcast"
+    "dashboard" | "analytics" | "orders" | "specialist_calls" | "pharmacies" | "specialists" | "users" | "regions" | "reviews" | "settings" | "broadcast"
   >("dashboard");
 
   const [stats, setStats] = useState<Stats | null>(null);
@@ -264,6 +311,27 @@ export default function SuperAdminPage() {
     pending: number;
     approved: number;
   }>({ total: 0, pending: 0, approved: 0 });
+
+  // Foydalanuvchilar (Dehqonlar / Mijozlar)
+  const [usersList, setUsersList] = useState<AdminUserItem[]>([]);
+  const [usersStats, setUsersStats] = useState<{
+    totalUsers: number;
+    registeredCount: number;
+    telegramCount: number;
+    activeBuyersCount: number;
+    activeCallersCount: number;
+    totalOrdersSum: number;
+  }>({
+    totalUsers: 0,
+    registeredCount: 0,
+    telegramCount: 0,
+    activeBuyersCount: 0,
+    activeCallersCount: 0,
+    totalOrdersSum: 0,
+  });
+  const [userSearch, setUserSearch] = useState("");
+  const [userFilter, setUserFilter] = useState<"all" | "with_orders" | "with_calls" | "telegram">("all");
+  const [selectedUserDetail, setSelectedUserDetail] = useState<AdminUserItem | null>(null);
 
   // Dorixona arizalari filtrlari
   const [pharmacyStatusFilter, setPharmacyStatusFilter] = useState<"all" | "pending" | "approved">("all");
@@ -308,7 +376,7 @@ export default function SuperAdminPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [statsRes, analyticsRes, regionsRes, reviewsRes, settingsRes, specsRes, ordersRes, callsRes] = await Promise.all([
+      const [statsRes, analyticsRes, regionsRes, reviewsRes, settingsRes, specsRes, ordersRes, callsRes, usersRes] = await Promise.all([
         adminFetch("/api/admin/stats").then((r) => (r.ok ? r.json() : null)).catch(() => null),
         adminFetch("/api/admin/analytics").then((r) => (r.ok ? r.json() : null)).catch(() => null),
         adminFetch("/api/admin/regions").then((r) => (r.ok ? r.json() : null)).catch(() => null),
@@ -317,6 +385,7 @@ export default function SuperAdminPage() {
         adminFetch("/api/admin/specialists").then((r) => (r.ok ? r.json() : null)).catch(() => null),
         adminFetch("/api/admin/orders").then((r) => (r.ok ? r.json() : null)).catch(() => null),
         adminFetch("/api/admin/specialist-calls").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        adminFetch("/api/admin/users").then((r) => (r.ok ? r.json() : null)).catch(() => null),
       ]);
 
       if (statsRes?.ok) {
@@ -331,6 +400,12 @@ export default function SuperAdminPage() {
       }
       if (callsRes?.ok) {
         setAdminCalls(callsRes.calls || []);
+      }
+      if (usersRes?.ok) {
+        setUsersList(usersRes.users || []);
+        if (usersRes.stats) {
+          setUsersStats(usersRes.stats);
+        }
       }
       if (specsRes?.ok) {
         setSpecialistsList(specsRes.specialists || []);
@@ -692,6 +767,22 @@ export default function SuperAdminPage() {
     );
   });
 
+  const filteredUsers = usersList.filter((u) => {
+    if (userFilter === "with_orders" && u.ordersCount === 0) return false;
+    if (userFilter === "with_calls" && u.callsCount === 0) return false;
+    if (userFilter === "telegram" && !u.telegramId) return false;
+    if (!userSearch.trim()) return true;
+    const q = userSearch.toLowerCase();
+    return (
+      (u.name && u.name.toLowerCase().includes(q)) ||
+      (u.phone && u.phone.toLowerCase().includes(q)) ||
+      (u.address && u.address.toLowerCase().includes(q)) ||
+      (u.region && u.region.toLowerCase().includes(q)) ||
+      (u.district && u.district.toLowerCase().includes(q)) ||
+      (u.telegramId && String(u.telegramId).includes(q))
+    );
+  });
+
   return (
     <div className="min-h-screen bg-[#fafafa] text-zinc-900 pb-12 font-sans">
       {/* Top Header */}
@@ -754,6 +845,12 @@ export default function SuperAdminPage() {
                 label: "Mutaxassislar (Agronom & Vet)",
                 icon: Users,
                 badge: pendingSpecialists.length > 0 ? pendingSpecialists.length : undefined,
+              },
+              {
+                id: "users",
+                label: "Foydalanuvchilar (Dehqonlar)",
+                icon: Users,
+                badge: usersList.length > 0 ? usersList.length : undefined,
               },
               { id: "regions", label: "Viloyatlar Tahlili", icon: Globe },
               { id: "reviews", label: "Fikrlar & Sharhlar", icon: MessageSquare },
@@ -1914,6 +2011,232 @@ export default function SuperAdminPage() {
           </div>
         )}
 
+        {/* FOYDALANUVCHILAR (DEHQONLAR & MIJOZLAR) TAB */}
+        {activeTab === "users" && (
+          <div className="space-y-6">
+            {/* Statistika kartalari */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-2xl bg-white p-5 border border-zinc-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-zinc-500">Jami Foydalanuvchilar</span>
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-zinc-100 text-zinc-800">
+                    <Users size={16} />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <span className="text-2xl font-bold font-mono tracking-tight text-zinc-900">
+                    {usersStats.totalUsers}
+                  </span>
+                  <p className="text-[11px] text-zinc-500 mt-1">
+                    {usersStats.registeredCount} ro&apos;yxatdan o&apos;tgan, {usersStats.telegramCount} Telegramda
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-white p-5 border border-zinc-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-zinc-500">Faol Xaridorlar</span>
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                    <ShoppingCart size={16} />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <span className="text-2xl font-bold font-mono tracking-tight text-zinc-900">
+                    {usersStats.activeBuyersCount}
+                  </span>
+                  <p className="text-[11px] text-zinc-500 mt-1">
+                    Dori vositalariga buyurtma bergan dehqonlar
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-white p-5 border border-zinc-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-zinc-500">Mutaxassis Chaqirganlar</span>
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-blue-700 border border-blue-200/60">
+                    <Phone size={16} />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <span className="text-2xl font-bold font-mono tracking-tight text-zinc-900">
+                    {usersStats.activeCallersCount}
+                  </span>
+                  <p className="text-[11px] text-zinc-500 mt-1">
+                    Agronom yoki veterinarga chaqiruv yo&apos;llaganlar
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-white p-5 border border-zinc-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-zinc-500">Jami Xaridlar Summasi</span>
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 text-amber-700 border border-amber-200/60">
+                    <TrendingUp size={16} />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <span className="text-2xl font-bold font-mono tracking-tight text-zinc-900">
+                    {usersStats.totalOrdersSum.toLocaleString()} <span className="text-xs font-normal text-zinc-500">so&apos;m</span>
+                  </span>
+                  <p className="text-[11px] text-zinc-500 mt-1">
+                    Platforma orqali amalga oshirilgan xaridlar
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Qidiruv va Filterlar */}
+            <div className="rounded-2xl bg-white p-5 border border-zinc-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="relative flex-1 max-w-md">
+                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+                <input
+                  type="text"
+                  placeholder="Ism, telefon, manzil, viloyat yoki Telegram ID..."
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  className="w-full rounded-xl bg-zinc-50 pl-10 pr-4 py-2.5 text-xs text-zinc-900 placeholder-zinc-400 border border-zinc-200 focus:border-zinc-400 focus:bg-white focus:outline-none transition"
+                />
+              </div>
+
+              <div className="flex flex-wrap rounded-xl bg-zinc-100 p-1 border border-zinc-200 text-xs font-semibold gap-1">
+                <button
+                  onClick={() => setUserFilter("all")}
+                  className={`px-3 py-1.5 rounded-lg transition ${
+                    userFilter === "all"
+                      ? "bg-white text-zinc-900 font-bold shadow-xs"
+                      : "text-zinc-600 hover:text-zinc-900"
+                  }`}
+                >
+                  Barchasi ({usersList.length})
+                </button>
+                <button
+                  onClick={() => setUserFilter("with_orders")}
+                  className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+                    userFilter === "with_orders"
+                      ? "bg-white text-zinc-900 font-bold shadow-xs"
+                      : "text-zinc-600 hover:text-zinc-900"
+                  }`}
+                >
+                  🛒 Buyurtma qilganlar ({usersList.filter((u) => u.ordersCount > 0).length})
+                </button>
+                <button
+                  onClick={() => setUserFilter("with_calls")}
+                  className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+                    userFilter === "with_calls"
+                      ? "bg-white text-zinc-900 font-bold shadow-xs"
+                      : "text-zinc-600 hover:text-zinc-900"
+                  }`}
+                >
+                  📞 Mutaxassis chaqirganlar ({usersList.filter((u) => u.callsCount > 0).length})
+                </button>
+                <button
+                  onClick={() => setUserFilter("telegram")}
+                  className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+                    userFilter === "telegram"
+                      ? "bg-white text-zinc-900 font-bold shadow-xs"
+                      : "text-zinc-600 hover:text-zinc-900"
+                  }`}
+                >
+                  ✈️ Telegram ({usersList.filter((u) => u.telegramId).length})
+                </button>
+              </div>
+            </div>
+
+            {/* Foydalanuvchilar jadvali */}
+            <div className="rounded-2xl bg-white border border-zinc-200/80 overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase text-[10px] tracking-wider font-mono">
+                      <th className="py-3 px-4">ID</th>
+                      <th className="py-3 px-4">Foydalanuvchi</th>
+                      <th className="py-3 px-4">Aloqa</th>
+                      <th className="py-3 px-4">Hudud / Manzil (Qayerdan)</th>
+                      <th className="py-3 px-4">Buyurtmalar</th>
+                      <th className="py-3 px-4">Chaqiruvlar</th>
+                      <th className="py-3 px-4">Qo&apos;shilgan sana</th>
+                      <th className="py-3 px-4 text-right">Amallar</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100 text-zinc-700">
+                    {filteredUsers.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="py-10 text-center text-zinc-500 font-medium">
+                          Foydalanuvchilar topilmadi.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredUsers.map((u) => (
+                        <tr key={u.id} className="hover:bg-zinc-50/70 transition">
+                          <td className="py-3 px-4 font-mono text-zinc-400">#{u.id}</td>
+                          <td className="py-3 px-4">
+                            <p className="font-bold text-zinc-900">{u.name}</p>
+                            <span className="inline-block mt-0.5 text-[10px] font-mono text-zinc-500">
+                              {u.isRegistered ? "Ro'yxatdan o'tgan" : "To'g'ridan-to'g'ri mijoz"}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            {u.phone ? (
+                              <a href={`tel:${u.phone}`} className="font-semibold text-zinc-900 hover:underline block font-mono">
+                                📞 {u.phone}
+                              </a>
+                            ) : (
+                              <span className="text-zinc-400 font-mono">—</span>
+                            )}
+                            {u.telegramId && (
+                              <p className="text-[10px] text-zinc-500 font-mono mt-0.5">TG: {u.telegramId}</p>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 max-w-xs">
+                            <div className="flex items-center gap-1.5">
+                              <MapPin size={13} className="text-zinc-400 shrink-0" />
+                              <span className="truncate font-medium text-zinc-800" title={u.address || u.region || "Ko'rsatilmagan"}>
+                                {u.address || u.region || <span className="text-zinc-400 font-normal">Ko&apos;rsatilmagan</span>}
+                              </span>
+                            </div>
+                            {u.district && (
+                              <p className="text-[10px] text-zinc-500 mt-0.5 pl-4">{u.district}</p>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            {u.ordersCount > 0 ? (
+                              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-mono font-bold text-emerald-800 border border-emerald-200/80">
+                                🛒 {u.ordersCount} ta ({u.totalSpent.toLocaleString()} so&apos;m)
+                              </span>
+                            ) : (
+                              <span className="text-zinc-400 font-mono">—</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            {u.callsCount > 0 ? (
+                              <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-mono font-bold text-blue-800 border border-blue-200/80">
+                                📞 {u.callsCount} ta chaqiruv
+                              </span>
+                            ) : (
+                              <span className="text-zinc-400 font-mono">—</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-zinc-500 font-mono text-[11px]">
+                            {u.createdAt ? new Date(u.createdAt).toLocaleDateString("uz-UZ") : "—"}
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <button
+                              onClick={() => setSelectedUserDetail(u)}
+                              className="rounded-xl bg-zinc-900 hover:bg-zinc-800 px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition"
+                            >
+                              Batafsil
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 2. VILOYATLAR TAHLILI TAB */}
         {activeTab === "regions" && (
           <div className="space-y-6">
@@ -2435,6 +2758,259 @@ export default function SuperAdminPage() {
                 <button
                   onClick={() => setSelectedOrderDetail(null)}
                   className="rounded-xl bg-white hover:bg-zinc-100 px-4 py-2 text-xs font-bold text-zinc-700 border border-zinc-200 shadow-2xs transition"
+                >
+                  Yopish
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Foydalanuvchi Batafsil Modali (Orders + Calls + Location) */}
+        {selectedUserDetail && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 overflow-y-auto">
+            <div className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl bg-white border border-zinc-200 shadow-[0_8px_30px_rgba(0,0,0,0.12)] overflow-hidden">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4 bg-zinc-50/80">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-900 text-white shadow-xs">
+                    <Users size={18} />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-zinc-900 flex items-center gap-2">
+                      <span>{selectedUserDetail.name}</span>
+                      <span className="rounded-md bg-zinc-200/80 px-2 py-0.5 text-[10.5px] font-mono text-zinc-700">
+                        #{selectedUserDetail.id}
+                      </span>
+                    </h3>
+                    <p className="text-xs text-zinc-500 font-mono">
+                      {selectedUserDetail.isRegistered ? "Ro'yxatdan o'tgan foydalanuvchi" : "To'g'ridan-to'g'ri xaridor / mijoz"}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedUserDetail(null)}
+                  className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-200/60 hover:text-zinc-700 transition"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6 overflow-y-auto space-y-6 text-sm">
+                {/* 1. Manzil va Profil ma'lumotlari */}
+                <div className="rounded-xl bg-zinc-50/80 p-4 border border-zinc-200/80 space-y-3">
+                  <span className="text-[10.5px] uppercase font-mono tracking-wider text-zinc-500 font-bold block">
+                    📍 Foydalanuvchi Qayerdan & Aloqa
+                  </span>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <p className="text-xs text-zinc-500">Asosiy Manzil / Hudud:</p>
+                      <p className="text-xs font-semibold text-zinc-900 flex items-center gap-1.5">
+                        <MapPin size={14} className="text-zinc-500 shrink-0" />
+                        <span>{selectedUserDetail.address || selectedUserDetail.region || "Ko'rsatilmagan"}</span>
+                      </p>
+                      {selectedUserDetail.address && (
+                        <a
+                          href={`https://maps.google.com/?q=${encodeURIComponent(selectedUserDetail.address)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] text-zinc-600 hover:text-zinc-900 underline font-mono pt-1"
+                        >
+                          🗺 Xaritada ochish
+                        </a>
+                      )}
+                    </div>
+
+                    <div className="space-y-1">
+                      <p className="text-xs text-zinc-500">Aloqa ma&apos;lumotlari:</p>
+                      {selectedUserDetail.phone ? (
+                        <a href={`tel:${selectedUserDetail.phone}`} className="text-xs font-bold text-zinc-900 hover:underline block font-mono">
+                          📞 {selectedUserDetail.phone}
+                        </a>
+                      ) : (
+                        <p className="text-xs text-zinc-400 font-mono">Telefon ko&apos;rsatilmagan</p>
+                      )}
+                      {selectedUserDetail.telegramId && (
+                        <p className="text-[11px] text-zinc-600 font-mono">
+                          Telegram ID: {selectedUserDetail.telegramId}
+                        </p>
+                      )}
+                      <p className="text-[10.5px] text-zinc-400 font-mono">
+                        Qo&apos;shilgan: {selectedUserDetail.createdAt ? new Date(selectedUserDetail.createdAt).toLocaleString("uz-UZ") : "—"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Qilingan Buyurtmalar Ro'yxati */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-zinc-900 flex items-center gap-2">
+                      <ShoppingCart size={15} /> Qilingan Buyurtmalar ({selectedUserDetail.orders.length} ta)
+                    </span>
+                    <span className="text-xs font-mono font-bold text-emerald-700">
+                      Jami xarid: {selectedUserDetail.totalSpent.toLocaleString()} so&apos;m
+                    </span>
+                  </div>
+
+                  {selectedUserDetail.orders.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-zinc-200 p-4 text-center text-xs text-zinc-400">
+                      Ushbu foydalanuvchi hali dori buyurtma qilmagan.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {selectedUserDetail.orders.map((ord) => (
+                        <div key={ord.id} className="rounded-xl bg-zinc-50/80 p-4 border border-zinc-200/80 space-y-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 pb-2.5">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs font-bold text-zinc-900">Buyurtma #{ord.id}</span>
+                              <span
+                                className={`rounded px-2 py-0.5 text-[10px] font-mono font-bold uppercase ${
+                                  ord.status === "yangi"
+                                    ? "bg-amber-100 text-amber-900"
+                                    : ord.status === "yetkazildi"
+                                    ? "bg-emerald-100 text-emerald-900"
+                                    : ord.status === "tasdiqlandi"
+                                    ? "bg-blue-100 text-blue-900"
+                                    : "bg-zinc-200 text-zinc-700"
+                                }`}
+                              >
+                                {ord.status}
+                              </span>
+                            </div>
+                            <span className="text-[11px] font-mono text-zinc-500">
+                              {new Date(ord.createdAt).toLocaleString("uz-UZ")}
+                            </span>
+                          </div>
+
+                          <div className="grid gap-2 text-xs sm:grid-cols-2">
+                            <div>
+                              <p className="text-zinc-500 text-[11px]">Dorixona:</p>
+                              <p className="font-semibold text-zinc-900">🏪 {ord.pharmacyName}</p>
+                              {ord.pharmacyPhone && (
+                                <p className="text-[11px] font-mono text-zinc-500">📞 {ord.pharmacyPhone}</p>
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-zinc-500 text-[11px]">Yetkazish manzili:</p>
+                              <p className="font-semibold text-zinc-900">
+                                {ord.deliveryType === "delivery" ? "🚚 Kuryer" : "🏪 Olib ketish"}
+                                {ord.customerAddress ? ` — ${ord.customerAddress}` : ""}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Mahsulotlar */}
+                          <div className="rounded-lg bg-white p-3 border border-zinc-200/60">
+                            <p className="text-[10px] uppercase font-mono font-bold text-zinc-400 mb-2">
+                              Buyurtma qilingan dorilar:
+                            </p>
+                            <div className="divide-y divide-zinc-100">
+                              {ord.items.map((item, itIdx) => (
+                                <div key={itIdx} className="flex items-center justify-between py-1.5 text-xs">
+                                  <span className="font-medium text-zinc-800">💊 {item.name}</span>
+                                  <div className="text-right font-mono text-zinc-600">
+                                    <span>{item.qty} dona</span> × <span>{item.price.toLocaleString()} so&apos;m</span> = <span className="font-bold text-zinc-900">{(item.qty * item.price).toLocaleString()} so&apos;m</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="border-t border-zinc-200 mt-2 pt-2 text-right">
+                              <span className="text-xs font-mono font-bold text-zinc-900">
+                                Jami: {ord.totalSum.toLocaleString()} so&apos;m
+                              </span>
+                            </div>
+                          </div>
+
+                          {ord.note && (
+                            <p className="text-[11px] text-zinc-600 italic bg-white p-2 rounded-lg border border-zinc-200/60">
+                              Mijoz izohi: {ord.note}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. Mutaxassis Chaqiruvlari Ro'yxati */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-zinc-900 flex items-center gap-2">
+                      <Phone size={15} /> Mutaxassis Chaqiruvlari ({selectedUserDetail.specialistCalls.length} ta)
+                    </span>
+                  </div>
+
+                  {selectedUserDetail.specialistCalls.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-zinc-200 p-4 text-center text-xs text-zinc-400">
+                      Ushbu foydalanuvchi hali agronom yoki veterinarga chaqiruv yo&apos;llamagan.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {selectedUserDetail.specialistCalls.map((call) => (
+                        <div key={call.id} className="rounded-xl bg-zinc-50/80 p-4 border border-zinc-200/80 space-y-2.5">
+                          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 pb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs font-bold text-zinc-900">Chaqiruv #{call.id}</span>
+                              <span
+                                className={`rounded px-2 py-0.5 text-[10px] font-mono font-bold uppercase ${
+                                  call.status === "yangi"
+                                    ? "bg-blue-100 text-blue-900"
+                                    : call.status === "bajarildi"
+                                    ? "bg-emerald-100 text-emerald-900"
+                                    : "bg-zinc-200 text-zinc-700"
+                                }`}
+                              >
+                                {call.status}
+                              </span>
+                            </div>
+                            <span className="text-[11px] font-mono text-zinc-500">
+                              {new Date(call.createdAt).toLocaleString("uz-UZ")}
+                            </span>
+                          </div>
+
+                          <div className="grid gap-2 text-xs sm:grid-cols-2">
+                            <div>
+                              <p className="text-zinc-500 text-[11px]">Chaqirilgan Mutaxassis:</p>
+                              <p className="font-bold text-zinc-900">
+                                👨‍⚕️ {call.specialistName}
+                                <span className="ml-1.5 font-normal text-zinc-500">({call.specialistRole === "pharmacy" ? "Dorixona" : (call.specialistSpecialty || "Mutaxassis")})</span>
+                              </p>
+                              {call.specialistPhone && (
+                                <a href={`tel:${call.specialistPhone}`} className="text-[11px] font-mono text-zinc-700 hover:underline">
+                                  📞 {call.specialistPhone}
+                                </a>
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-zinc-500 text-[11px]">Chaqiruv manzili:</p>
+                              <p className="font-medium text-zinc-800">
+                                📍 {call.address || "Manzil ko'rsatilmagan"}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="rounded-lg bg-white p-3 border border-zinc-200/60">
+                            <p className="text-[10px] uppercase font-mono font-bold text-zinc-400 mb-1">
+                              Mijoz shikoyati / Ekin yoki chorvadagi muammo:
+                            </p>
+                            <p className="text-xs text-zinc-800 whitespace-pre-line font-sans">
+                              {call.problem}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="border-t border-zinc-200 p-4 bg-zinc-50/80 flex items-center justify-end">
+                <button
+                  onClick={() => setSelectedUserDetail(null)}
+                  className="rounded-xl bg-zinc-900 hover:bg-zinc-800 px-5 py-2 text-xs font-bold text-white shadow-xs transition"
                 >
                   Yopish
                 </button>

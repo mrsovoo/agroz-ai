@@ -7,6 +7,7 @@ import TelegramInit from "@/components/TelegramInit";
 import WebFooter from "@/components/WebFooter";
 import WebTopNav from "@/components/WebTopNav";
 import CartDrawer from "@/components/CartDrawer";
+import MobileSwipeNavigation from "@/components/MobileSwipeNavigation";
 
 /** Next'ning absolute URL'lar uchun asosiy manzili (OG rasm va h.k.). */
 function metadataBase(): URL | undefined {
@@ -96,6 +97,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body className="bg-[#e5e6ea] text-[var(--brand-ink)] antialiased">
         <TelegramInit />
+        <MobileSwipeNavigation />
         <WebTopNav />
         <div className="app-shell">{children}</div>
         <WebFooter />

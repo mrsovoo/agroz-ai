@@ -1312,4 +1312,278 @@ router.post("/weather-alerts/broadcast", requireAdmin, async (req, res) => {
   }
 });
 
+// -------------------------------------------------------------
+// 10. USERS (FOYDALANUVCHILAR VA ULARNING BUYURTMALARI / CHAQIRUVLARI)
+// -------------------------------------------------------------
+
+router.get("/users", requireAdmin, async (req, res) => {
+  try {
+    const { search, filter } = req.query as { search?: string; filter?: string };
+
+    // 1. Foydalanuvchilarni olish
+    const allUsers = await db.select().from(users).orderBy(desc(users.createdAt));
+
+    // 2. Buyurtmalarni va ularning tovarlarini olish
+    const allOrders = await db.select().from(orders).orderBy(desc(orders.createdAt));
+    const allItems = await db.select().from(orderItems);
+    const allSpecialists = await db.select().from(specialists);
+
+    // Dorixonalar xaritasi
+    const specMap = new Map<number, (typeof allSpecialists)[0]>();
+    for (const s of allSpecialists) {
+      specMap.set(s.id, s);
+    }
+
+    // Buyurtma itemlari xaritasi
+    const itemsMap = new Map<number, (typeof allItems)>();
+    for (const item of allItems) {
+      const arr = itemsMap.get(item.orderId) || [];
+      arr.push(item);
+      itemsMap.set(item.orderId, arr);
+    }
+
+    // 3. Mutaxassis chaqiruvlarini olish
+    const allCalls = await db.select().from(specialistCalls).orderBy(desc(specialistCalls.createdAt));
+
+    // Telefon raqamlarni tozalash (solishtirish uchun: faqat raqamlar)
+    const cleanPhone = (p?: string | null) => (p || "").replace(/\D/g, "");
+
+    // Mavjud foydalanuvchilar telefonlari
+    const existingPhones = new Set<string>();
+    for (const u of allUsers) {
+      if (u.phone) existingPhones.add(cleanPhone(u.phone));
+    }
+
+    // Har bir user uchun to'liq ma'lumotlarni yig'amiz
+    const enrichedUsers: any[] = allUsers.map((u) => {
+      const uPhone = cleanPhone(u.phone);
+
+      // Userga tegishli buyurtmalar
+      const userOrders = allOrders
+        .filter((o) => {
+          if (o.userId && o.userId === u.id) return true;
+          if (uPhone && cleanPhone(o.customerPhone) === uPhone) return true;
+          return false;
+        })
+        .map((o) => {
+          const pharmacy = specMap.get(o.pharmacySpecialistId);
+          return {
+            id: o.id,
+            pharmacyName: pharmacy?.organization || pharmacy?.name || "Dorixona",
+            pharmacyPhone: pharmacy?.phone || null,
+            customerName: o.customerName,
+            customerPhone: o.customerPhone,
+            customerAddress: o.customerAddress || null,
+            deliveryType: o.deliveryType,
+            status: o.status,
+            totalSum: o.totalSum || 0,
+            note: o.note || null,
+            createdAt: o.createdAt,
+            items: (itemsMap.get(o.id) || []).map((it) => ({
+              id: it.id,
+              name: it.name,
+              price: it.price || 0,
+              qty: it.qty,
+            })),
+          };
+        });
+
+      // Userga tegishli mutaxassis chaqiruvlari
+      const userCalls = allCalls
+        .filter((c) => uPhone && cleanPhone(c.customerPhone) === uPhone)
+        .map((c) => {
+          const spec = specMap.get(c.specialistId);
+          return {
+            id: c.id,
+            specialistName: spec?.name || "Mutaxassis",
+            specialistPhone: spec?.phone || null,
+            specialistRole: spec?.role || "specialist",
+            specialistSpecialty: spec?.specialty || null,
+            customerName: c.customerName,
+            customerPhone: c.customerPhone,
+            problem: c.problem,
+            address: c.address || null,
+            status: c.status,
+            createdAt: c.createdAt,
+          };
+        });
+
+      const totalSpent = userOrders.reduce((sum, o) => sum + (o.totalSum || 0), 0);
+      const ordersCount = userOrders.length;
+      const callsCount = userCalls.length;
+
+      // Aniq manzil: agar user.region/district bo'lmasa yoki qisqa bo'lsa, oxirgi buyurtma yoki chaqiruvdagi to'liq manzil
+      let lastAddress = u.region ? (u.district ? `${u.region}, ${u.district}` : u.region) : "";
+      if (userOrders.length > 0 && userOrders[0].customerAddress) {
+        lastAddress = userOrders[0].customerAddress;
+      } else if (userCalls.length > 0 && userCalls[0].address) {
+        lastAddress = userCalls[0].address;
+      }
+
+      return {
+        id: u.id,
+        name: u.name || "Noma'lum foydalanuvchi",
+        phone: u.phone,
+        telegramId: u.telegramId ? Number(u.telegramId) : null,
+        region: u.region,
+        district: u.district,
+        address: lastAddress,
+        createdAt: u.createdAt,
+        isRegistered: true,
+        ordersCount,
+        totalSpent,
+        callsCount,
+        orders: userOrders,
+        specialistCalls: userCalls,
+      };
+    });
+
+    // Saytda ro'yxatdan o'tmasdan buyurtma yoki mutaxassis chaqirgan mijozlarni ham aniqlab qo'shamiz
+    const anonClientsMap = new Map<string, {
+      name: string;
+      phone: string;
+      address: string;
+      orders: any[];
+      calls: any[];
+      createdAt: any;
+    }>();
+
+    for (const o of allOrders) {
+      const cPhone = cleanPhone(o.customerPhone);
+      if (cPhone && !existingPhones.has(cPhone)) {
+        let entry = anonClientsMap.get(cPhone);
+        if (!entry) {
+          entry = {
+            name: o.customerName,
+            phone: o.customerPhone,
+            address: o.customerAddress || "",
+            orders: [],
+            calls: [],
+            createdAt: o.createdAt,
+          };
+          anonClientsMap.set(cPhone, entry);
+        }
+        const pharmacy = specMap.get(o.pharmacySpecialistId);
+        entry.orders.push({
+          id: o.id,
+          pharmacyName: pharmacy?.organization || pharmacy?.name || "Dorixona",
+          pharmacyPhone: pharmacy?.phone || null,
+          customerName: o.customerName,
+          customerPhone: o.customerPhone,
+          customerAddress: o.customerAddress || null,
+          deliveryType: o.deliveryType,
+          status: o.status,
+          totalSum: o.totalSum || 0,
+          note: o.note || null,
+          createdAt: o.createdAt,
+          items: (itemsMap.get(o.id) || []).map((it) => ({
+            id: it.id,
+            name: it.name,
+            price: it.price || 0,
+            qty: it.qty,
+          })),
+        });
+      }
+    }
+
+    for (const c of allCalls) {
+      const cPhone = cleanPhone(c.customerPhone);
+      if (cPhone && !existingPhones.has(cPhone)) {
+        let entry = anonClientsMap.get(cPhone);
+        if (!entry) {
+          entry = {
+            name: c.customerName,
+            phone: c.customerPhone,
+            address: c.address || "",
+            orders: [],
+            calls: [],
+            createdAt: c.createdAt,
+          };
+          anonClientsMap.set(cPhone, entry);
+        }
+        const spec = specMap.get(c.specialistId);
+        entry.calls.push({
+          id: c.id,
+          specialistName: spec?.name || "Mutaxassis",
+          specialistPhone: spec?.phone || null,
+          specialistRole: spec?.role || "specialist",
+          specialistSpecialty: spec?.specialty || null,
+          customerName: c.customerName,
+          customerPhone: c.customerPhone,
+          problem: c.problem,
+          address: c.address || null,
+          status: c.status,
+          createdAt: c.createdAt,
+        });
+      }
+    }
+
+    // Anonim mijozlarni asosiy ro'yxatga qo'shish
+    let anonIndex = 900000;
+    for (const [phone, data] of anonClientsMap.entries()) {
+      anonIndex++;
+      const totalSpent = data.orders.reduce((sum, o) => sum + (o.totalSum || 0), 0);
+      enrichedUsers.push({
+        id: anonIndex,
+        name: data.name,
+        phone: data.phone,
+        telegramId: null,
+        region: null,
+        district: null,
+        address: data.address,
+        createdAt: data.createdAt,
+        isRegistered: false,
+        ordersCount: data.orders.length,
+        totalSpent,
+        callsCount: data.calls.length,
+        orders: data.orders,
+        specialistCalls: data.calls,
+      });
+    }
+
+    // Qidiruv va filtrlash
+    let results = enrichedUsers;
+
+    if (search && search.trim()) {
+      const s = search.toLowerCase().trim();
+      results = results.filter(
+        (u) =>
+          u.name?.toLowerCase().includes(s) ||
+          u.phone?.toLowerCase().includes(s) ||
+          u.address?.toLowerCase().includes(s) ||
+          u.region?.toLowerCase().includes(s) ||
+          u.district?.toLowerCase().includes(s) ||
+          (u.telegramId && String(u.telegramId).includes(s)),
+      );
+    }
+
+    if (filter === "with_orders") {
+      results = results.filter((u) => u.ordersCount > 0);
+    } else if (filter === "with_calls") {
+      results = results.filter((u) => u.callsCount > 0);
+    } else if (filter === "telegram") {
+      results = results.filter((u) => Boolean(u.telegramId));
+    }
+
+    // Statistika
+    const stats = {
+      totalUsers: enrichedUsers.length,
+      registeredCount: enrichedUsers.filter((u) => u.isRegistered).length,
+      telegramCount: enrichedUsers.filter((u) => Boolean(u.telegramId)).length,
+      activeBuyersCount: enrichedUsers.filter((u) => u.ordersCount > 0).length,
+      activeCallersCount: enrichedUsers.filter((u) => u.callsCount > 0).length,
+      totalOrdersSum: enrichedUsers.reduce((sum, u) => sum + u.totalSpent, 0),
+    };
+
+    res.json({
+      ok: true,
+      stats,
+      users: results,
+    });
+  } catch (err: any) {
+    console.error("[admin/users error]:", err);
+    res.status(500).json({ error: err.message || "Foydalanuvchilarni yuklashda xatolik" });
+  }
+});
+
 export default router;
