@@ -93,13 +93,11 @@ app.listen(PORT, async () => {
   console.log(`📡 CORS ruxsat berilgan manbalar: ${allowedOrigins.join(", ")}`);
   console.log(`🩺 Healthcheck: http://localhost:${PORT}/api/health\n`);
 
-  // Demo ma'lumotlar faqat SEED_DEMO_DATA=true bo'lganda kiritiladi
-  if (process.env.SEED_DEMO_DATA === "true") {
-    try {
-      await ensureSeed();
-    } catch (seedErr) {
-      console.warn("[seed warning]:", seedErr);
-    }
+  // Baza bo'sh bo'lsa boshlang'ich ma'lumotlarni xavfsiz to'ldirish
+  try {
+    await ensureSeed();
+  } catch (seedErr) {
+    console.warn("[seed warning]:", seedErr);
   }
 });
 

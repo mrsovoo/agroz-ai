@@ -1,4 +1,4 @@
-import { db } from "@/db";
+import { db } from "../db/index.js";
 import {
   news,
   specialists,
@@ -6,7 +6,8 @@ import {
   specialistRatings,
   orders,
   orderItems,
-} from "@/db/schema";
+  advertisements,
+} from "../db/schema.js";
 import { sql } from "drizzle-orm";
 
 let seeded = false;
@@ -474,6 +475,7 @@ async function seedInTransaction() {
           .values({
             ...ph,
             isActive: true,
+            isApproved: true,
           })
           .returning({ id: specialists.id });
         pharmacyIds.push(inserted[0].id);
@@ -487,6 +489,7 @@ async function seedInTransaction() {
           .values({
             ...sp,
             isActive: true,
+            isApproved: true,
           })
           .returning({ id: specialists.id });
         specialistIds.push(inserted[0].id);
@@ -554,6 +557,32 @@ async function seedInTransaction() {
           price: 65000,
           qty: 2,
         });
+      }
+
+      // Reklamalar tekshiruvi va kiritish
+      const adRows = await tx.execute<{ count: string }>(
+        sql`select count(*)::text as count from advertisements`
+      );
+      if (Number(adRows.rows[0]?.count ?? "0") === 0) {
+        await tx.insert(advertisements).values([
+          {
+            title: "AgroVet AI: Zamonaviy qishloq xo'jaligi va chorvachilik tizimi",
+            description: "Ekin va hayvonlar salomatligini AI orqali tekshiring va sifatli dori vositalariga buyurtma bering!",
+            imageUrl: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=1200&q=80",
+            linkUrl: "/dorilar",
+            priority: 10,
+            isActive: true,
+          },
+          {
+            title: "Eng yaqin agro & veterinariya dorixonalari xaritada!",
+            description: "5 km dan 100 km gacha radiusingizdagi barcha dorixonalar va ulardagi dorilar qoldig'i",
+            imageUrl: "https://images.unsplash.com/photo-1586771107445-d3ca888129ff?auto=format&fit=crop&w=1200&q=80",
+            linkUrl: "/xarita",
+            priority: 5,
+            isActive: true,
+          },
+        ]);
+        console.log("  [seed] 2 ta reklama banneri kiritildi.");
       }
 
       console.log(
