@@ -1324,7 +1324,7 @@ async function handleIndependentCallback(
     await answerCallbackQuery(query.id);
     await sendAuthMessage(
       chatId,
-      `💰 <b>${escapeHtml(med.name)}</b> uchun yangi narxni yozing (so'mda).\n\nMasalan: <i>45000</i>\nNarxni olib tashlash uchun <i>/skip</i> yozing.`,
+      `💰 <b>${escapeHtml(med.name)}</b> uchun yangi narxni yozing (so'mda).\n\nMasalan: <i>45000</i>`,
       { inline: MEDICINE_PRICE_CANCEL_KEYBOARD },
     );
     return true;
@@ -1923,7 +1923,7 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
       await answerCallbackQuery(query.id);
       await sendAuthMessage(
         chatId,
-        `💰 <b>${escapeHtml(med.name)}</b> uchun yangi narxni yozing (so'mda).\n\nMasalan: <i>45000</i>\nNarxni olib tashlash uchun <i>/skip</i> yozing.`,
+        `💰 <b>${escapeHtml(med.name)}</b> uchun yangi narxni yozing (so'mda).\n\nMasalan: <i>45000</i>`,
         { inline: MEDICINE_PRICE_CANCEL_KEYBOARD },
       );
       return;

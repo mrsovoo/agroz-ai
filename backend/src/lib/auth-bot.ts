@@ -497,8 +497,6 @@ export function askWorkHours(prefill?: string): string {
     "",
     "Pastdagi tugmalardan birini tanlang yoki o'zingiz yozing:",
     "Masalan: <i>08:00 - 19:00</i>, <i>09:00 - 20:00</i> yoki <i>24/7 (favqulodda)</i>",
-    "",
-    "<i>O'tkazib yuborish uchun pastdagi /skip ni bosing (standart: 09:00 - 18:00).</i>",
   ];
   if (prefill) base.push("", `Hozirgi qiymat: <b>${escapeHtml(prefill)}</b>`);
   return base.join("\n");
@@ -847,8 +845,6 @@ export function askEducation(): string {
     "• <i>Toshkent Davlat Agrar Universiteti (TDAU), Agronomiya</i>",
     "• <i>Samarqand Davlat Veterinariya Meditsinasi Universiteti</i>",
     "• <i>Qishloq xo'jaligi kolleji, Zootexniya</i>",
-    "",
-    "<i>(Agar ma'lumot kiritishni istamasangiz, /skip yozing)</i>",
   ].join("\n");
 }
 
@@ -862,8 +858,6 @@ export function askBio(): string {
     "• <i>Ekin kasalliklarini aniqlash, dorilash sxemasini tuzish, hosildorlikni oshirish</i>",
     "• <i>Qoramol va mayda mollarni emlash, tug'ruqqa yordam, profilaktika</i>",
     "• <i>Issiqxona ekinlari (pomidor, bodring) parvarishi va oziqlantirish</i>",
-    "",
-    "<i>(O'tkazib yuborish uchun /skip yozing)</i>",
   ].join("\n");
 }
 
@@ -964,7 +958,6 @@ export function askMedicineUsage(): string {
     "Qisqacha yozing — mijoz tashxisdan keyin shu ma'lumotni ko'radi.",
     "",
     "Masalan: <i>kech piyozdog' va fitoftorozga qarshi</i>",
-    "Yoki <i>/skip</i> yozib o'tkazib yuborishingiz mumkin.",
   ].join("\n");
 }
 
