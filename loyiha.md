@@ -102,3 +102,4 @@ Agroz AI tizimi 4 ta asosiy foydalanuvchilar qatlami (ishtirokchisi) o'rtasida u
 - Fermerlar sifatli dori va professional mutaxassislarni vositachilarsiz topadi.
 - Agro-bizneslar va dorixonalar sotuvlarini avtomatlashtirib, yangi bozorlarga chiqadi.
 - Agrar xizmatlar ko'rsatish sifati yangi zamonaviy bosqichga ko'tariladi.
+
