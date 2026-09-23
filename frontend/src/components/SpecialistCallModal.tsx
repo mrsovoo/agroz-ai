@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, UserRound, Phone, MapPin, Loader2, CheckCircle2, ShieldCheck, AlertCircle } from "lucide-react";
+import { X, UserRound, Phone, MapPin, Loader2, CheckCircle2, ShieldCheck, ArrowLeft } from "lucide-react";
 import { createSpecialistCall } from "@/lib/specialist-calls";
 import { apiUrl } from "@/lib/api-config";
 
@@ -26,17 +26,16 @@ export default function SpecialistCallModal({
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [callType, setCallType] = useState<"crop" | "animal">("crop");
-  const [problemNote, setProblemNote] = useState("");
   const [address, setAddress] = useState("");
   const [busy, setBusy] = useState(false);
-  const [step, setStep] = useState<"form" | "confirm" | "sent">("form");
+  const [step, setStep] = useState<"select" | "confirm" | "sent">("select");
   const [error, setError] = useState<string | null>(null);
 
-  // Avtomatik ravishda saqlangan mijoz ma'lumotlarini yuklash
+  // Avtomatik ravishda foydalanuvchi ism va raqamini yuklash
   useEffect(() => {
     if (!isOpen) return;
 
-    // 1. localStorage dan yuklash
+    // 1. localStorage dan olish
     try {
       const savedName = localStorage.getItem("agroz_customer_name");
       const savedPhone = localStorage.getItem("agroz_customer_phone");
@@ -46,8 +45,16 @@ export default function SpecialistCallModal({
       if (savedAddress) setAddress(savedAddress);
     } catch {}
 
-    // 2. /api/profile dan yuklash (tizimga kirgan bo'lsa)
-    fetch(apiUrl("/api/profile"), { cache: "no-store" })
+    // 2. /api/profile dan olish (tizimga kirgan bo'lsa)
+    const cookieSession = typeof document !== "undefined"
+      ? document.cookie.split(";").find((c) => c.trim().startsWith("agroz_session="))?.split("=")[1]
+      : undefined;
+
+    fetch(apiUrl("/api/profile"), {
+      credentials: "include",
+      headers: cookieSession ? { Authorization: `Bearer ${cookieSession}` } : {},
+      cache: "no-store",
+    })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.user) {
@@ -64,26 +71,25 @@ export default function SpecialistCallModal({
       })
       .catch(() => {});
 
-    // Mutaxassis sohasiga mos chaqiruv turini avtomatik tanlash
-    if (specialist) {
-      const specText = `${specialist.specialty || ""} ${specialist.role || ""}`.toLowerCase();
-      if (specText.includes("vet") || specText.includes("chorva") || specText.includes("mol")) {
-        setCallType("animal");
-      } else {
-        setCallType("crop");
-      }
-    }
-
-    setStep("form");
+    setStep("select");
     setError(null);
-  }, [isOpen, specialist]);
+  }, [isOpen]);
 
   if (!isOpen || !specialist) return null;
 
   const cleanDigits = phone.replace(/\D/g, "").replace(/^998/, "");
 
-  function handleProceedToConfirm(e: React.FormEvent) {
-    e.preventDefault();
+  // 1. Ekin yoki Chorvani bosganda
+  function handleSelectType(type: "crop" | "animal") {
+    setCallType(type);
+    setError(null);
+    setStep("confirm");
+  }
+
+  // 2. Tasdiqlash bosilganda mutaxassisni chaqirish
+  async function handleConfirmSubmit() {
+    if (!specialist) return;
+
     if (!name.trim() || name.trim().length < 2) {
       setError("Iltimos, ismingizni kiriting");
       return;
@@ -93,26 +99,20 @@ export default function SpecialistCallModal({
       return;
     }
 
-    // Keyingi safar qayta yozmaslik uchun saqlab qo'yamiz
+    setBusy(true);
+    setError(null);
+
+    // Ma'lumotlarni keyingi safar avto to'ldirish uchun eslab qolamiz
     try {
       localStorage.setItem("agroz_customer_name", name.trim());
       localStorage.setItem("agroz_customer_phone", cleanDigits);
       if (address.trim()) localStorage.setItem("agroz_customer_address", address.trim());
     } catch {}
 
-    setError(null);
-    setStep("confirm");
-  }
-
-  async function handleConfirmSubmit() {
-    if (!specialist) return;
-    setBusy(true);
-    setError(null);
-
     const problemDescription =
       callType === "crop"
-        ? `🌾 Ekin (O'simliklar)` + (problemNote.trim() ? `: ${problemNote.trim()}` : " parvarishi va ko'rik xizmati")
-        : `🐄 Chorva (Hayvonlar)` + (problemNote.trim() ? `: ${problemNote.trim()}` : " parvarishi va veterinariya ko'rigi");
+        ? "🌾 Ekin (O'simliklar) bo'yicha ko'rik va xizmat"
+        : "🐄 Chorva (Hayvonlar) bo'yicha veterinariya ko'rigi";
 
     try {
       let userLat: number | undefined;
@@ -163,14 +163,13 @@ export default function SpecialistCallModal({
       setStep("sent");
     } catch (err: any) {
       setError(err.message || "Chaqiruv yuborishda xatolik yuz berdi");
-      setStep("form");
     } finally {
       setBusy(false);
     }
   }
 
   const handleModalClose = () => {
-    setStep("form");
+    setStep("select");
     setError(null);
     onClose();
   };
@@ -182,7 +181,7 @@ export default function SpecialistCallModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-[480px] rounded-[24px] bg-white p-6 shadow-2xl animate-in zoom-in-95"
+        className="relative w-full max-w-[460px] rounded-[24px] bg-white p-6 shadow-2xl animate-in zoom-in-95"
       >
         <button
           onClick={handleModalClose}
@@ -191,13 +190,14 @@ export default function SpecialistCallModal({
           <X size={18} />
         </button>
 
+        {/* 3-BOSQICH: Chaqiruv muvaffaqiyatli yuborildi */}
         {step === "sent" ? (
           <div className="flex flex-col items-center justify-center py-6 text-center animate-in fade-in">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mb-4 animate-in zoom-in">
               <CheckCircle2 size={38} />
             </div>
             <span className="inline-block rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-800 mb-2">
-              ✅ Chaqiruv muvaffaqiyatli yuborildi
+              ✅ Chaqiruv yuborildi
             </span>
             <h3 className="text-xl font-extrabold text-neutral-900">
               Mutaxassisga xabar yetkazildi!
@@ -216,49 +216,91 @@ export default function SpecialistCallModal({
             </button>
           </div>
         ) : step === "confirm" ? (
-          <div className="py-2 animate-in fade-in">
-            <div className="text-center">
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-[11.5px] font-bold text-emerald-800">
-                <ShieldCheck size={14} /> Chaqiruvni tasdiqlash
-              </span>
-              <h2 className="mt-2.5 text-[20px] font-black text-neutral-900">
-                Chaqiruvni tasdiqlaysizmi?
-              </h2>
-              <p className="mt-1 text-[13px] text-neutral-500">
-                Quyidagi ma&apos;lumotlar mutaxassisga yuboriladi:
-              </p>
+          /* 2-BOSQICH: Ekin/Chorva tanlangandan keyin TASDIQLASH */
+          <div className="py-1 animate-in fade-in">
+            <div className="flex items-center gap-2 mb-3">
+              <button
+                type="button"
+                onClick={() => setStep("select")}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200 transition"
+                title="Orqaga qaytish"
+              >
+                <ArrowLeft size={16} />
+              </button>
+              <div>
+                <span className="inline-flex items-center gap-1 text-[11.5px] font-bold text-[var(--brand-green)]">
+                  <ShieldCheck size={13} /> Chaqiruvni tasdiqlash
+                </span>
+                <h2 className="text-[18px] font-black text-neutral-900 leading-tight">
+                  Chaqiruvni tasdiqlaysizmi?
+                </h2>
+              </div>
             </div>
 
-            <div className="mt-5 rounded-2xl bg-neutral-50 p-4 border border-neutral-200/80 space-y-3">
-              <div className="flex items-center justify-between pb-2.5 border-b border-neutral-200/60">
+            {/* Mutaxassis va Chaqiruv kartochkasi */}
+            <div className="rounded-2xl bg-neutral-50 p-4 border border-neutral-200/80 space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-neutral-200/60">
                 <span className="text-[12.5px] font-medium text-neutral-500">Mutaxassis</span>
                 <span className="text-[13.5px] font-bold text-neutral-900 text-right">
                   {specialist.organization || specialist.name}
                 </span>
               </div>
 
-              <div className="flex items-center justify-between pb-2.5 border-b border-neutral-200/60">
+              <div className="flex items-center justify-between pb-2 border-b border-neutral-200/60">
                 <span className="text-[12.5px] font-medium text-neutral-500">Chaqiruv turi</span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[12px] font-bold text-emerald-800">
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-[12.5px] font-bold text-emerald-800">
                   {callType === "crop" ? "🌾 Ekin (O'simliklar)" : "🐄 Chorva (Hayvonlar)"}
                 </span>
               </div>
 
-              <div className="flex items-center justify-between pb-2.5 border-b border-neutral-200/60">
-                <span className="text-[12.5px] font-medium text-neutral-500">Mijoz</span>
-                <span className="text-[13px] font-semibold text-neutral-800">
-                  {name} (+998 {cleanDigits})
-                </span>
+              {/* Ismni avto-to'ldirish / tahrirlash */}
+              <div>
+                <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-neutral-500 mb-1">
+                  <UserRound size={12} /> Ismingiz
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ismingizni kiriting"
+                  className="ios-input !p-2.5 text-[13.5px] font-semibold bg-white"
+                  required
+                />
               </div>
 
-              {address.trim() && (
-                <div className="flex items-center justify-between">
-                  <span className="text-[12.5px] font-medium text-neutral-500">Manzil</span>
-                  <span className="text-[12.5px] text-neutral-700 text-right max-w-[200px] truncate">
-                    {address}
-                  </span>
+              {/* Telefonni avto-to'ldirish / tahrirlash */}
+              <div>
+                <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-neutral-500 mb-1">
+                  <Phone size={12} /> Telefon raqamingiz
+                </label>
+                <div className="flex items-center rounded-2xl bg-white border border-neutral-200/80 pl-3">
+                  <span className="pr-1 text-[13.5px] font-bold text-neutral-500">+998</span>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) =>
+                      setPhone(e.target.value.replace(/\D/g, "").replace(/^998/, "").slice(0, 9))
+                    }
+                    placeholder="90 123 45 67"
+                    className="ios-input !border-0 !bg-transparent !p-2.5 !pl-0 text-[13.5px] font-semibold"
+                    required
+                  />
                 </div>
-              )}
+              </div>
+
+              {/* Manzil (ixtiyoriy) */}
+              <div>
+                <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-neutral-500 mb-1">
+                  <MapPin size={12} /> Manzil (ixtiyoriy)
+                </label>
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Tuman, qishloq yoki xonadon"
+                  className="ios-input !p-2 text-[12.5px] bg-white"
+                />
+              </div>
             </div>
 
             {error && (
@@ -267,10 +309,11 @@ export default function SpecialistCallModal({
               </p>
             )}
 
-            <div className="mt-6 flex gap-2.5">
+            {/* Tasdiqlash yoki Bekor qilish tugmalari */}
+            <div className="mt-5 flex gap-2.5">
               <button
                 type="button"
-                onClick={() => setStep("form")}
+                onClick={handleModalClose}
                 disabled={busy}
                 className="flex-1 rounded-2xl bg-neutral-100 py-3 text-[13.5px] font-bold text-neutral-700 hover:bg-neutral-200 transition"
               >
@@ -283,12 +326,13 @@ export default function SpecialistCallModal({
                 className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-[var(--brand-green)] py-3 text-[13.5px] font-bold text-white shadow-sm hover:brightness-105 active:scale-95 transition"
               >
                 {busy ? <Loader2 size={16} className="animate-spin" /> : null}
-                <span>Ha, tasdiqlash</span>
+                <span>Tasdiqlash</span>
               </button>
             </div>
           </div>
         ) : (
-          <form onSubmit={handleProceedToConfirm} className="space-y-4">
+          /* 1-BOSQICH: EKIN YOKI CHORVANI TANLASH */
+          <div className="space-y-4 pt-1">
             <div>
               <span className="rounded-full bg-[var(--brand-green-soft)] px-3 py-1 text-[11.5px] font-bold text-[var(--brand-green)]">
                 Mutaxassisni chaqirish
@@ -303,127 +347,48 @@ export default function SpecialistCallModal({
               )}
             </div>
 
-            <div className="space-y-3.5 pt-1">
-              {/* Qanday chaqiruv: Ekin yoki Chorva */}
-              <div>
-                <label className="block text-[12px] font-bold uppercase tracking-wider text-neutral-600 mb-1.5">
-                  Qanday chaqiruv?
-                </label>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setCallType("crop")}
-                    className={`flex items-center justify-center gap-2 rounded-2xl p-3.5 border-2 transition ${
-                      callType === "crop"
-                        ? "border-[var(--brand-green)] bg-emerald-50 text-[var(--brand-green)] font-extrabold shadow-xs"
-                        : "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300 font-semibold"
-                    }`}
-                  >
-                    <span className="text-xl">🌾</span>
-                    <span className="text-[13.5px]">Ekin</span>
-                  </button>
+            <div className="pt-2">
+              <label className="block text-[13px] font-extrabold uppercase tracking-wider text-neutral-700 mb-3 text-center">
+                Qanday chaqiruv? Tanlang:
+              </label>
 
-                  <button
-                    type="button"
-                    onClick={() => setCallType("animal")}
-                    className={`flex items-center justify-center gap-2 rounded-2xl p-3.5 border-2 transition ${
-                      callType === "animal"
-                        ? "border-[var(--brand-green)] bg-emerald-50 text-[var(--brand-green)] font-extrabold shadow-xs"
-                        : "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300 font-semibold"
-                    }`}
-                  >
-                    <span className="text-xl">🐄</span>
-                    <span className="text-[13.5px]">Chorva</span>
-                  </button>
-                </div>
-              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleSelectType("crop")}
+                  className="group flex flex-col items-center justify-center gap-2 rounded-2xl p-5 border-2 border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100/70 hover:border-emerald-500 active:scale-95 transition shadow-xs cursor-pointer text-center"
+                >
+                  <span className="text-4xl transition-transform group-hover:scale-110">🌾</span>
+                  <span className="text-[16px] font-black text-emerald-900">Ekin</span>
+                  <span className="text-[11.5px] font-semibold text-emerald-700">
+                    O&apos;simliklar / Bog&apos;
+                  </span>
+                </button>
 
-              {/* Ism */}
-              <div>
-                <label className="flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wider text-neutral-600">
-                  <UserRound size={13} /> Ismingiz
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Ism va familiyangiz"
-                  className="ios-input mt-1 !p-3 text-[13.5px]"
-                  required
-                />
-              </div>
-
-              {/* Telefon */}
-              <div>
-                <label className="flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wider text-neutral-600">
-                  <Phone size={13} /> Telefon raqamingiz
-                </label>
-                <div className="flex items-center rounded-2xl bg-[var(--brand-bg)] pl-3 mt-1">
-                  <span className="pr-1 text-[14px] font-bold text-neutral-500">+998</span>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) =>
-                      setPhone(e.target.value.replace(/\D/g, "").replace(/^998/, "").slice(0, 9))
-                    }
-                    placeholder="90 123 45 67"
-                    className="ios-input !bg-transparent !p-3 !pl-0 text-[13.5px]"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Izoh (ixtiyoriy) */}
-              <div>
-                <label className="flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wider text-neutral-600">
-                  <AlertCircle size={13} /> Qisqa izoh (ixtiyoriy)
-                </label>
-                <input
-                  type="text"
-                  value={problemNote}
-                  onChange={(e) => setProblemNote(e.target.value)}
-                  placeholder="Masalan: barg sarg'ayishi yoki ko'rik..."
-                  className="ios-input mt-1 !p-3 text-[13px]"
-                />
-              </div>
-
-              {/* Manzil (ixtiyoriy) */}
-              <div>
-                <label className="flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wider text-neutral-600">
-                  <MapPin size={13} /> Manzilingiz / Mo&apos;ljal (ixtiyoriy)
-                </label>
-                <input
-                  type="text"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Tuman, qishloq yoki xonadon"
-                  className="ios-input mt-1 !p-3 text-[13px]"
-                />
+                <button
+                  type="button"
+                  onClick={() => handleSelectType("animal")}
+                  className="group flex flex-col items-center justify-center gap-2 rounded-2xl p-5 border-2 border-amber-200 bg-amber-50/60 hover:bg-amber-100/70 hover:border-amber-500 active:scale-95 transition shadow-xs cursor-pointer text-center"
+                >
+                  <span className="text-4xl transition-transform group-hover:scale-110">🐄</span>
+                  <span className="text-[16px] font-black text-amber-900">Chorva</span>
+                  <span className="text-[11.5px] font-semibold text-amber-700">
+                    Hayvonlar / Veterinariya
+                  </span>
+                </button>
               </div>
             </div>
 
-            {error && (
-              <p className="rounded-xl bg-red-50 p-2.5 text-[12.5px] font-semibold text-red-600 border border-red-200">
-                {error}
-              </p>
-            )}
-
-            <div className="pt-2 flex gap-2">
+            <div className="pt-3">
               <button
                 type="button"
-                onClick={onClose}
-                className="flex-1 rounded-2xl bg-neutral-100 py-3 text-[14px] font-bold text-neutral-700 hover:bg-neutral-200 transition"
+                onClick={handleModalClose}
+                className="w-full rounded-2xl bg-neutral-100 py-3 text-[13.5px] font-bold text-neutral-600 hover:bg-neutral-200 transition"
               >
                 Bekor qilish
               </button>
-              <button
-                type="submit"
-                className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-[var(--brand-green)] py-3 text-[14px] font-bold text-white shadow-sm hover:brightness-105 active:scale-95 transition"
-              >
-                <span>Davom etish</span>
-              </button>
             </div>
-          </form>
+          </div>
         )}
       </div>
     </div>
