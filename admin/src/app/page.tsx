@@ -564,8 +564,8 @@ export default function SuperAdminPage() {
 
   if (me === null) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-black text-white">
-        <RefreshCw className="animate-spin text-white" size={32} />
+      <div className="flex h-screen w-full items-center justify-center bg-[#fafafa] text-zinc-900">
+        <RefreshCw className="animate-spin text-zinc-600" size={28} />
       </div>
     );
   }
@@ -573,12 +573,12 @@ export default function SuperAdminPage() {
   // Admin interfeysi o'chirilgan bo'lsa
   if (!me.enabled) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-4 bg-black">
-        <div className="max-w-md text-center rounded-2xl bg-zinc-950 p-8 border border-zinc-800 shadow-xl">
-          <AlertCircle className="mx-auto text-zinc-400 mb-3" size={40} />
-          <h1 className="text-xl font-bold text-white">Admin Panel O&apos;chirilgan</h1>
-          <p className="mt-2 text-xs text-zinc-400">
-            Tizimda `ADMIN_PASSWORD` o&apos;rnatilmagan yoki admin panel xavfsizlik yuzasidan faolsizlantirilgan.
+      <div className="flex min-h-screen items-center justify-center p-4 bg-[#fafafa]">
+        <div className="max-w-md text-center rounded-2xl bg-white p-8 border border-zinc-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+          <AlertCircle className="mx-auto text-zinc-400 mb-3" size={36} />
+          <h1 className="text-lg font-bold text-zinc-900">Boshqaruv Paneli Faol Emas</h1>
+          <p className="mt-2 text-xs text-zinc-500">
+            Tizimda `ADMIN_PASSWORD` o&apos;rnatilmagan yoki xavfsizlik yuzasidan vaqtincha faolsizlantirilgan.
           </p>
         </div>
       </div>
@@ -588,18 +588,20 @@ export default function SuperAdminPage() {
   // Tizimga kirilmagan (Login form)
   if (!me.authenticated) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-4 bg-black">
-        <div className="w-full max-w-md rounded-3xl bg-zinc-950 p-8 border border-zinc-800 shadow-2xl">
-          <div className="flex justify-center mb-4">
-            <img src="/logo.svg" alt="Agroz AI" className="h-12 w-auto object-contain invert" />
+      <div className="flex min-h-screen items-center justify-center p-4 bg-[#fafafa]">
+        <div className="w-full max-w-sm rounded-2xl bg-white p-8 border border-zinc-200/80 shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
+          <div className="flex justify-center mb-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-900 text-white shadow-xs">
+              <Lock size={18} />
+            </div>
           </div>
-          <h1 className="text-center text-2xl font-black text-white tracking-tight">Super Admin Panel</h1>
-          <p className="mt-1 text-center text-xs text-zinc-400 font-mono">admin.agroz.uz — Boshqaruv Markazi</p>
+          <h1 className="text-center text-xl font-bold text-zinc-900 tracking-tight">Tizimga kirish</h1>
+          <p className="mt-1 text-center text-xs text-zinc-500 font-mono">Boshqaruv tizimi</p>
 
           <form onSubmit={handleLogin} className="mt-6 space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
-                Admin Username
+              <label className="block text-xs font-semibold text-zinc-700 uppercase tracking-wider mb-1.5">
+                Login
               </label>
               <input
                 type="text"
@@ -607,12 +609,12 @@ export default function SuperAdminPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="admin"
-                className="w-full rounded-xl bg-black px-4 py-3 text-sm text-white placeholder-zinc-500 border border-zinc-800 focus:outline-none focus:border-white"
+                className="w-full rounded-xl bg-white px-3.5 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 border border-zinc-200 focus:outline-none focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
-                Admin Parol
+              <label className="block text-xs font-semibold text-zinc-700 uppercase tracking-wider mb-1.5">
+                Parol
               </label>
               <input
                 type="password"
@@ -620,12 +622,12 @@ export default function SuperAdminPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full rounded-xl bg-black px-4 py-3 text-sm text-white placeholder-zinc-500 border border-zinc-800 focus:outline-none focus:border-white"
+                className="w-full rounded-xl bg-white px-3.5 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 border border-zinc-200 focus:outline-none focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400"
               />
             </div>
 
             {loginError && (
-              <div className="rounded-xl bg-zinc-900 p-3 text-center text-xs font-semibold text-zinc-200 border border-zinc-700">
+              <div className="rounded-xl bg-red-50 p-2.5 text-center text-xs font-semibold text-red-600 border border-red-200">
                 {loginError}
               </div>
             )}
@@ -633,9 +635,9 @@ export default function SuperAdminPage() {
             <button
               type="submit"
               disabled={busy}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-white py-3 text-sm font-bold text-black shadow hover:bg-zinc-200 disabled:opacity-50 transition active:scale-95"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-900 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-zinc-800 disabled:opacity-50 transition active:scale-95"
             >
-              {busy ? <RefreshCw className="animate-spin" size={18} /> : "Kirish"}
+              {busy ? <RefreshCw className="animate-spin" size={16} /> : "Kirish"}
             </button>
           </form>
         </div>
@@ -691,31 +693,33 @@ export default function SuperAdminPage() {
   });
 
   return (
-    <div className="min-h-screen bg-black text-white pb-12 font-sans">
+    <div className="min-h-screen bg-[#fafafa] text-zinc-900 pb-12 font-sans">
       {/* Top Header */}
-      <header className="sticky top-0 z-40 bg-black/95 backdrop-blur-md border-b border-zinc-800">
+      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-zinc-200/80">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img src="/logo.svg" alt="Agroz AI" className="h-8 w-auto object-contain invert" />
-              <div>
-                <h1 className="text-sm font-bold text-white tracking-wide uppercase">Super Admin</h1>
-                <p className="text-[11px] font-mono text-zinc-400">admin.agroz.uz</p>
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-zinc-900 text-white shadow-xs">
+                <span className="font-mono text-xs font-bold">A</span>
+              </div>
+              <div className="flex items-center">
+                <span className="text-sm font-bold tracking-tight text-zinc-900">Boshqaruv</span>
+                <span className="ml-2 rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-mono text-zinc-500 border border-zinc-200">markazi</span>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               <button
                 onClick={loadData}
                 title="Ma'lumotlarni yangilash"
-                className="flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-900 text-zinc-300 hover:bg-zinc-800 hover:text-white border border-zinc-800 transition"
+                className="flex h-8.5 w-8.5 items-center justify-center rounded-xl bg-white text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 border border-zinc-200/80 shadow-2xs transition"
               >
-                <RefreshCw size={15} />
+                <RefreshCw size={14} />
               </button>
 
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-1.5 rounded-xl bg-zinc-900 px-3.5 py-2 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 hover:text-white border border-zinc-800 transition"
+                className="flex items-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 border border-zinc-200/80 shadow-2xs transition"
               >
                 <LogOut size={13} /> Chiquv ({me.username})
               </button>
@@ -762,16 +766,16 @@ export default function SuperAdminPage() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
+                  className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-3 py-1.5 text-xs font-medium transition ${
                     active
-                      ? "bg-white text-black font-bold shadow-sm"
-                      : "text-zinc-400 hover:text-white hover:bg-zinc-900 border border-transparent"
+                      ? "bg-zinc-900 text-white font-bold shadow-xs"
+                      : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 border border-transparent"
                   }`}
                 >
                   <Icon size={14} />
                   <span>{tab.label}</span>
                   {tab.badge !== undefined && (
-                    <span className="rounded-full bg-zinc-800 px-1.5 py-0.2 text-[10px] font-mono font-bold text-white border border-zinc-600">
+                    <span className="rounded-full bg-zinc-100 px-1.5 py-0.2 text-[10px] font-mono font-bold text-zinc-900 border border-zinc-200">
                       {tab.badge}
                     </span>
                   )}
@@ -788,8 +792,8 @@ export default function SuperAdminPage() {
           <div
             className={`mb-6 rounded-2xl p-4 text-xs font-bold border ${
               notice.kind === "ok"
-                ? "bg-zinc-950 text-white border-zinc-700"
-                : "bg-zinc-950 text-zinc-300 border-zinc-700"
+                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                : "bg-red-50 text-red-800 border-red-200"
             }`}
           >
             {notice.text}
@@ -811,31 +815,31 @@ export default function SuperAdminPage() {
               ].map((s, idx) => {
                 const Icon = s.icon;
                 return (
-                  <div key={idx} className="rounded-2xl bg-zinc-950 p-4 border border-zinc-800 shadow-sm">
+                  <div key={idx} className="rounded-2xl bg-white p-4 border border-zinc-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-zinc-400">{s.label}</span>
-                      <Icon className="text-zinc-400" size={17} />
+                      <span className="text-[11px] font-semibold text-zinc-500">{s.label}</span>
+                      <Icon className="text-zinc-400" size={16} />
                     </div>
-                    <p className="mt-2 text-xl font-mono font-black text-white">{s.val}</p>
-                    <p className="mt-1 text-[10.5px] font-mono text-zinc-500">{s.sub}</p>
+                    <p className="mt-2 text-xl font-mono font-black text-zinc-900">{s.val}</p>
+                    <p className="mt-1 text-[10.5px] font-mono text-zinc-400">{s.sub}</p>
                   </div>
                 );
               })}
             </div>
 
             {/* Oxirgi Buyurtmalar */}
-            <div className="rounded-2xl bg-zinc-950 p-6 border border-zinc-800">
+            <div className="rounded-2xl bg-white p-6 border border-zinc-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-wider">
-                  <ShoppingCart size={16} className="text-white" /> Oxirgi Buyurtmalar
+                <h2 className="text-sm font-bold text-zinc-900 flex items-center gap-2 uppercase tracking-wider">
+                  <ShoppingCart size={16} className="text-zinc-900" /> Oxirgi Buyurtmalar
                 </h2>
-                <span className="text-xs font-mono text-zinc-500">Jami: {stats?.orders ?? 0} ta</span>
+                <span className="text-xs font-mono text-zinc-400">Jami: {stats?.orders ?? 0} ta</span>
               </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="border-b border-zinc-800 text-zinc-400 uppercase text-[10px] tracking-wider font-mono">
+                    <tr className="border-b border-zinc-200 text-zinc-500 uppercase text-[10px] tracking-wider font-mono">
                       <th className="pb-3 px-3">ID</th>
                       <th className="pb-3 px-3">Mijoz</th>
                       <th className="pb-3 px-3">Mahsulotlar (Dorilar)</th>
@@ -845,47 +849,47 @@ export default function SuperAdminPage() {
                       <th className="pb-3 px-3 text-right">Amal</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-800/60 text-zinc-300">
+                  <tbody className="divide-y divide-zinc-100 text-zinc-700">
                     {recentOrders.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-6 text-center text-zinc-500 font-medium">
+                        <td colSpan={7} className="py-6 text-center text-zinc-400 font-medium">
                           Hali buyurtmalar kelib tushmagan
                         </td>
                       </tr>
                     ) : (
                       recentOrders.map((o) => (
-                        <tr key={o.id} className="hover:bg-zinc-900/40 transition">
-                          <td className="py-3 px-3 font-mono font-bold text-zinc-400">#{o.id}</td>
+                        <tr key={o.id} className="hover:bg-zinc-50/70 transition">
+                          <td className="py-3 px-3 font-mono font-bold text-zinc-500">#{o.id}</td>
                           <td className="py-3 px-3">
-                            <p className="font-semibold text-white">{o.customerName}</p>
-                            <p className="text-[11px] text-zinc-400 font-mono">{o.customerPhone}</p>
+                            <p className="font-semibold text-zinc-900">{o.customerName}</p>
+                            <p className="text-[11px] text-zinc-500 font-mono">{o.customerPhone}</p>
                           </td>
                           <td className="py-3 px-3 max-w-xs">
                             {o.items && o.items.length > 0 ? (
                               <div className="space-y-0.5">
                                 {o.items.map((it, idx) => (
-                                  <p key={idx} className="text-[11px] text-zinc-200">
+                                  <p key={idx} className="text-[11px] text-zinc-800">
                                     💊 <span className="font-semibold">{it.name}</span> × {it.qty} ta
                                   </p>
                                 ))}
                               </div>
                             ) : (
-                              <span className="text-zinc-500 italic text-[11px]">Mahsulot ko&apos;rsatilmagan</span>
+                              <span className="text-zinc-400 italic text-[11px]">Mahsulot ko&apos;rsatilmagan</span>
                             )}
                           </td>
                           <td className="py-3 px-3 max-w-xs">
                             {o.deliveryType === "delivery" ? (
                               <div>
-                                <span className="inline-flex items-center gap-1 rounded bg-zinc-900 border border-zinc-700 px-1.5 py-0.5 text-[10px] font-mono font-bold text-white">
+                                <span className="inline-flex items-center gap-1 rounded bg-zinc-100 border border-zinc-200 px-1.5 py-0.5 text-[10px] font-mono font-bold text-zinc-800">
                                   🚚 Yetkazish
                                 </span>
-                                <p className="text-[11px] text-zinc-200 font-medium mt-0.5 break-words">
+                                <p className="text-[11px] text-zinc-800 font-medium mt-0.5 break-words">
                                   📍 {o.customerAddress || "Manzil ko'rsatilmagan"}
                                 </p>
                               </div>
                             ) : (
                               <div>
-                                <span className="inline-flex items-center gap-1 rounded bg-zinc-900 border border-zinc-700 px-1.5 py-0.5 text-[10px] font-mono text-zinc-400">
+                                <span className="inline-flex items-center gap-1 rounded bg-zinc-100 border border-zinc-200 px-1.5 py-0.5 text-[10px] font-mono text-zinc-600">
                                   🏪 Olib ketish
                                 </span>
                                 <p className="text-[10px] text-zinc-500 mt-0.5 truncate">
@@ -894,19 +898,19 @@ export default function SuperAdminPage() {
                               </div>
                             )}
                           </td>
-                          <td className="py-3 px-3 font-mono font-bold text-white whitespace-nowrap">
+                          <td className="py-3 px-3 font-mono font-bold text-zinc-900 whitespace-nowrap">
                             {o.totalSum ? `${o.totalSum.toLocaleString()} so'm` : "—"}
                           </td>
                           <td className="py-3 px-3">
                             <span
-                              className={`rounded-full px-2 py-0.5 text-[10px] font-mono font-bold ${
+                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-mono font-bold ${
                                 o.status === "yetkazildi"
-                                  ? "bg-zinc-900 text-white border border-zinc-700"
+                                  ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
                                   : o.status === "tasdiqlandi"
-                                  ? "bg-zinc-900 text-zinc-200 border border-zinc-700"
+                                  ? "bg-blue-50 text-blue-800 border border-blue-200"
                                   : o.status === "bekor"
-                                  ? "bg-zinc-900 text-zinc-500 border border-zinc-800 line-through"
-                                  : "bg-white text-black font-bold"
+                                  ? "bg-zinc-100 text-zinc-400 border border-zinc-200 line-through"
+                                  : "bg-zinc-900 text-white font-bold"
                               }`}
                             >
                               {o.status}
@@ -915,7 +919,7 @@ export default function SuperAdminPage() {
                           <td className="py-3 px-3 text-right">
                             <button
                               onClick={() => setSelectedOrderDetail(o)}
-                              className="rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white border border-zinc-700 px-2.5 py-1 text-[11px] font-semibold transition"
+                              className="rounded-lg bg-white hover:bg-zinc-50 text-zinc-800 border border-zinc-200/80 shadow-2xs px-2.5 py-1 text-[11px] font-semibold transition"
                             >
                               👁 Ko&apos;rish
                             </button>
@@ -935,51 +939,51 @@ export default function SuperAdminPage() {
           <div className="space-y-6">
             {/* 1. Foydalanuvchilar va mutaxassislar soni */}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-              <div className="rounded-2xl bg-zinc-950 p-4 border border-zinc-800 shadow-sm">
+              <div className="rounded-2xl bg-white p-4 border border-zinc-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-zinc-400">Dehqon & Fermerlar</span>
-                  <Users className="text-zinc-400" size={17} />
+                  <span className="text-[11px] font-semibold text-zinc-500">Dehqon & Fermerlar</span>
+                  <Users className="text-zinc-400" size={16} />
                 </div>
-                <p className="mt-2 text-2xl font-mono font-black text-white">{analytics?.counts.totalUsers ?? 0}</p>
-                <p className="mt-1 text-[10.5px] font-mono text-zinc-500">
+                <p className="mt-2 text-2xl font-mono font-black text-zinc-900">{analytics?.counts.totalUsers ?? 0}</p>
+                <p className="mt-1 text-[10.5px] font-mono text-zinc-400">
                   {analytics?.counts.telegramUsers ?? 0} TG · {analytics?.counts.phoneUsers ?? 0} Tel
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-zinc-950 p-4 border border-zinc-800 shadow-sm">
+              <div className="rounded-2xl bg-white p-4 border border-zinc-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-zinc-400">Agronomlar</span>
-                  <Activity className="text-zinc-400" size={17} />
+                  <span className="text-[11px] font-semibold text-zinc-500">Agronomlar</span>
+                  <Activity className="text-zinc-400" size={16} />
                 </div>
-                <p className="mt-2 text-2xl font-mono font-black text-white">{analytics?.counts.agronomists ?? 0}</p>
-                <p className="mt-1 text-[10.5px] font-mono text-zinc-500">O&apos;simlikshunoslar</p>
+                <p className="mt-2 text-2xl font-mono font-black text-zinc-900">{analytics?.counts.agronomists ?? 0}</p>
+                <p className="mt-1 text-[10.5px] font-mono text-zinc-400">O&apos;simlikshunoslar</p>
               </div>
 
-              <div className="rounded-2xl bg-zinc-950 p-4 border border-zinc-800 shadow-sm">
+              <div className="rounded-2xl bg-white p-4 border border-zinc-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-zinc-400">Veterinarlar</span>
-                  <Building className="text-zinc-400" size={17} />
+                  <span className="text-[11px] font-semibold text-zinc-500">Veterinarlar</span>
+                  <Building className="text-zinc-400" size={16} />
                 </div>
-                <p className="mt-2 text-2xl font-mono font-black text-white">{analytics?.counts.veterinarians ?? 0}</p>
-                <p className="mt-1 text-[10.5px] font-mono text-zinc-500">Chorvachilik bo&apos;yicha</p>
+                <p className="mt-2 text-2xl font-mono font-black text-zinc-900">{analytics?.counts.veterinarians ?? 0}</p>
+                <p className="mt-1 text-[10.5px] font-mono text-zinc-400">Chorvachilik bo&apos;yicha</p>
               </div>
 
-              <div className="rounded-2xl bg-zinc-950 p-4 border border-zinc-800 shadow-sm">
+              <div className="rounded-2xl bg-white p-4 border border-zinc-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-zinc-400">Agro-Dorixonalar</span>
-                  <Store className="text-zinc-400" size={17} />
+                  <span className="text-[11px] font-semibold text-zinc-500">Agro-Dorixonalar</span>
+                  <Store className="text-zinc-400" size={16} />
                 </div>
-                <p className="mt-2 text-2xl font-mono font-black text-white">{analytics?.counts.pharmacies ?? 0}</p>
-                <p className="mt-1 text-[10.5px] font-mono text-zinc-500">Dorixona filiallari</p>
+                <p className="mt-2 text-2xl font-mono font-black text-zinc-900">{analytics?.counts.pharmacies ?? 0}</p>
+                <p className="mt-1 text-[10.5px] font-mono text-zinc-400">Dorixona filiallari</p>
               </div>
 
-              <div className="rounded-2xl bg-zinc-950 p-4 border border-zinc-800 shadow-sm">
+              <div className="rounded-2xl bg-white p-4 border border-zinc-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-zinc-400">Band Mutaxassislar</span>
-                  <Clock className="text-zinc-400" size={17} />
+                  <span className="text-[11px] font-semibold text-zinc-500">Band Mutaxassislar</span>
+                  <Clock className="text-zinc-400" size={16} />
                 </div>
-                <p className="mt-2 text-2xl font-mono font-black text-white">{analytics?.counts.busySpecialists ?? 0}</p>
-                <p className="mt-1 text-[10.5px] font-mono text-zinc-500">
+                <p className="mt-2 text-2xl font-mono font-black text-zinc-900">{analytics?.counts.busySpecialists ?? 0}</p>
+                <p className="mt-1 text-[10.5px] font-mono text-zinc-400">
                   Jami: {analytics?.counts.totalSpecialists ?? 0} ta
                 </p>
               </div>
@@ -988,16 +992,16 @@ export default function SuperAdminPage() {
             {/* 2. Kasalliklar tahlili: Hayvonlar va Ekinlar (2 ustun) */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               {/* Hayvonlar kasalliklari */}
-              <div className="rounded-2xl bg-zinc-950 p-5 border border-zinc-800 shadow-sm">
+              <div className="rounded-2xl bg-white p-5 border border-zinc-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                  <h3 className="text-xs font-bold text-zinc-900 uppercase tracking-wider flex items-center gap-2">
                     <span>🐄</span> Chorva / Hayvonlarda eng ko&apos;p kasalliklar
                   </h3>
-                  <span className="text-xs font-mono text-zinc-500">Chaqiruvlar tahlili</span>
+                  <span className="text-xs font-mono text-zinc-400">Chaqiruvlar tahlili</span>
                 </div>
 
                 {!analytics?.topAnimalDiseases || analytics.topAnimalDiseases.length === 0 ? (
-                  <p className="py-6 text-center text-xs text-zinc-500 font-medium">
+                  <p className="py-6 text-center text-xs text-zinc-400 font-medium">
                     Hozircha chorvachilik bo&apos;yicha chaqiruv ma&apos;lumotlari yo&apos;q
                   </p>
                 ) : (
@@ -1007,18 +1011,18 @@ export default function SuperAdminPage() {
                         analytics.topAnimalDiseases.reduce((acc, curr) => acc + curr.count, 0) || 1;
                       const pct = Math.round((d.count / totalAnimalCalls) * 100);
                       return (
-                        <div key={idx} className="rounded-xl bg-black p-3 border border-zinc-800">
+                        <div key={idx} className="rounded-xl bg-zinc-50/80 p-3 border border-zinc-200/70">
                           <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-xs font-semibold text-zinc-200 flex items-center gap-2">
+                            <span className="text-xs font-semibold text-zinc-800 flex items-center gap-2">
                               <span>{d.icon}</span> {d.label}
                             </span>
-                            <span className="text-xs font-mono font-bold text-white">
+                            <span className="text-xs font-mono font-bold text-zinc-900">
                               {d.count} ta ({pct}%)
                             </span>
                           </div>
-                          <div className="h-1.5 w-full rounded-full bg-zinc-900 overflow-hidden">
+                          <div className="h-1.5 w-full rounded-full bg-zinc-200 overflow-hidden">
                             <div
-                              className="h-full bg-white rounded-full transition-all"
+                              className="h-full bg-zinc-900 rounded-full transition-all"
                               style={{ width: `${Math.max(5, pct)}%` }}
                             />
                           </div>
@@ -1030,16 +1034,16 @@ export default function SuperAdminPage() {
               </div>
 
               {/* Ekinlar kasalliklari va zararkunandalar */}
-              <div className="rounded-2xl bg-zinc-950 p-5 border border-zinc-800 shadow-sm">
+              <div className="rounded-2xl bg-white p-5 border border-zinc-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                  <h3 className="text-xs font-bold text-zinc-900 uppercase tracking-wider flex items-center gap-2">
                     <span>🌱</span> Ekinlar bo&apos;yicha eng ko&apos;p kasalliklar
                   </h3>
-                  <span className="text-xs font-mono text-zinc-500">Agronom chaqiruvlari</span>
+                  <span className="text-xs font-mono text-zinc-400">Agronom chaqiruvlari</span>
                 </div>
 
                 {!analytics?.topCropDiseases || analytics.topCropDiseases.length === 0 ? (
-                  <p className="py-6 text-center text-xs text-zinc-500 font-medium">
+                  <p className="py-6 text-center text-xs text-zinc-400 font-medium">
                     Hozircha ekinlar bo&apos;yicha chaqiruv ma&apos;lumotlari yo&apos;q
                   </p>
                 ) : (
@@ -1049,18 +1053,18 @@ export default function SuperAdminPage() {
                         analytics.topCropDiseases.reduce((acc, curr) => acc + curr.count, 0) || 1;
                       const pct = Math.round((d.count / totalCropCalls) * 100);
                       return (
-                        <div key={idx} className="rounded-xl bg-black p-3 border border-zinc-800">
+                        <div key={idx} className="rounded-xl bg-zinc-50/80 p-3 border border-zinc-200/70">
                           <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-xs font-semibold text-zinc-200 flex items-center gap-2">
+                            <span className="text-xs font-semibold text-zinc-800 flex items-center gap-2">
                               <span>{d.icon}</span> {d.label}
                             </span>
-                            <span className="text-xs font-mono font-bold text-white">
+                            <span className="text-xs font-mono font-bold text-zinc-900">
                               {d.count} ta ({pct}%)
                             </span>
                           </div>
-                          <div className="h-1.5 w-full rounded-full bg-zinc-900 overflow-hidden">
+                          <div className="h-1.5 w-full rounded-full bg-zinc-200 overflow-hidden">
                             <div
-                              className="h-full bg-white rounded-full transition-all"
+                              className="h-full bg-zinc-900 rounded-full transition-all"
                               style={{ width: `${Math.max(5, pct)}%` }}
                             />
                           </div>
@@ -1073,23 +1077,23 @@ export default function SuperAdminPage() {
             </div>
 
             {/* 3. Eng ko'p sotilayotgan va talab yuqori bo'lgan dorilar */}
-            <div className="rounded-2xl bg-zinc-950 p-6 border border-zinc-800 shadow-sm">
+            <div className="rounded-2xl bg-white p-6 border border-zinc-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-wider">
-                  <Package className="text-white" size={17} /> Eng Ko&apos;p Sotilgan & Talab Yuqori Bo&apos;lgan Dorilar
+                <h3 className="text-sm font-bold text-zinc-900 flex items-center gap-2 uppercase tracking-wider">
+                  <Package className="text-zinc-900" size={16} /> Eng Ko&apos;p Sotilgan & Talab Yuqori Bo&apos;lgan Dorilar
                 </h3>
-                <span className="text-xs font-mono text-zinc-500">Marketplace Tahlili</span>
+                <span className="text-xs font-mono text-zinc-400">Marketplace Tahlili</span>
               </div>
 
               {!analytics?.topMedicines || analytics.topMedicines.length === 0 ? (
-                <p className="py-8 text-center text-xs text-zinc-500 font-medium">
+                <p className="py-8 text-center text-xs text-zinc-400 font-medium">
                   Hozircha buyurtma qilingan dori vositalari mavjud emas.
                 </p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
                     <thead>
-                      <tr className="border-b border-zinc-800 text-zinc-400 uppercase text-[10px] tracking-wider font-mono">
+                      <tr className="border-b border-zinc-200 text-zinc-500 uppercase text-[10px] tracking-wider font-mono">
                         <th className="pb-3">Dori Nomi</th>
                         <th className="pb-3">Dorixona</th>
                         <th className="pb-3 text-center">Sotilgan Miqdor</th>
@@ -1098,29 +1102,29 @@ export default function SuperAdminPage() {
                         <th className="pb-3">Qoldiq Holati</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-zinc-800/60 text-zinc-300">
+                    <tbody className="divide-y divide-zinc-100 text-zinc-700">
                       {analytics.topMedicines.map((m, idx) => (
-                        <tr key={idx} className="hover:bg-zinc-900/40 transition">
-                          <td className="py-3 font-bold text-white flex items-center gap-2">
+                        <tr key={idx} className="hover:bg-zinc-50/70 transition">
+                          <td className="py-3 font-bold text-zinc-900 flex items-center gap-2">
                             <span>💊</span> {m.name}
                           </td>
-                          <td className="py-3 text-zinc-400">{m.pharmacyName}</td>
-                          <td className="py-3 text-center font-mono font-bold text-white">{m.totalSoldQty} dona</td>
-                          <td className="py-3 text-center font-mono text-zinc-300">{m.ordersCount} ta</td>
-                          <td className="py-3 font-mono font-bold text-white">
+                          <td className="py-3 text-zinc-500">{m.pharmacyName}</td>
+                          <td className="py-3 text-center font-mono font-bold text-zinc-900">{m.totalSoldQty} dona</td>
+                          <td className="py-3 text-center font-mono text-zinc-600">{m.ordersCount} ta</td>
+                          <td className="py-3 font-mono font-bold text-zinc-900">
                             {m.totalRevenue ? `${m.totalRevenue.toLocaleString()} so'm` : "—"}
                           </td>
                           <td className="py-3">
                             {m.stock !== null && m.stock !== undefined && m.stock <= 0 ? (
-                              <span className="rounded-md bg-zinc-900 px-2 py-0.5 text-[10px] font-mono font-bold text-zinc-400 border border-zinc-700">
+                              <span className="rounded-md bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 text-[10px] font-mono font-bold">
                                 Tugagan
                               </span>
                             ) : m.stock !== null && m.stock !== undefined && m.stock <= 3 ? (
-                              <span className="rounded-md bg-zinc-900 px-2 py-0.5 text-[10px] font-mono font-bold text-white border border-zinc-600">
+                              <span className="rounded-md bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 text-[10px] font-mono font-bold">
                                 {m.stock} dona qoldi
                               </span>
                             ) : (
-                              <span className="rounded-md bg-zinc-900 px-2 py-0.5 text-[10px] font-mono font-bold text-zinc-200 border border-zinc-700">
+                              <span className="rounded-md bg-zinc-100 text-zinc-800 border border-zinc-200 px-2 py-0.5 text-[10px] font-mono font-bold">
                                 {m.stock !== null && m.stock !== undefined ? `${m.stock} dona` : "Bor"}
                               </span>
                             )}
@@ -1138,7 +1142,7 @@ export default function SuperAdminPage() {
         {/* 1.2. BUYURTMALAR TAB */}
         {activeTab === "orders" && (
           <div className="space-y-6">
-            <div className="rounded-2xl bg-zinc-950 p-5 border border-zinc-800 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="rounded-2xl bg-white p-5 border border-zinc-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.03)] flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="relative flex-1 max-w-md">
                 <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
                 <input
@@ -1146,19 +1150,19 @@ export default function SuperAdminPage() {
                   placeholder="Mijoz ismi, telefon yoki manzil..."
                   value={orderSearch}
                   onChange={(e) => setOrderSearch(e.target.value)}
-                  className="w-full rounded-xl bg-black pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 border border-zinc-800 focus:border-white focus:outline-none"
+                  className="w-full rounded-xl bg-white pl-10 pr-4 py-2.5 text-xs text-zinc-900 placeholder-zinc-400 border border-zinc-200 focus:border-zinc-400 focus:outline-none"
                 />
               </div>
 
-              <div className="flex rounded-xl bg-black p-1 border border-zinc-800 text-xs font-semibold">
+              <div className="flex rounded-xl bg-zinc-100 p-1 border border-zinc-200/80 text-xs font-semibold">
                 {["all", "yangi", "tasdiqlandi", "yetkazildi", "bekor"].map((st) => (
                   <button
                     key={st}
                     onClick={() => setOrderStatusFilter(st)}
                     className={`px-3 py-1.5 rounded-lg capitalize transition ${
                       orderStatusFilter === st
-                        ? "bg-white text-black font-bold"
-                        : "text-zinc-400 hover:text-white"
+                        ? "bg-white text-zinc-900 font-bold shadow-2xs"
+                        : "text-zinc-600 hover:text-zinc-900"
                     }`}
                   >
                     {st === "all" ? "Barchasi" : st}
@@ -1167,11 +1171,11 @@ export default function SuperAdminPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl bg-zinc-950 border border-zinc-800 overflow-hidden shadow-sm">
+            <div className="rounded-2xl bg-white border border-zinc-200/80 overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="bg-zinc-900/60 border-b border-zinc-800 text-zinc-400 uppercase text-[10px] tracking-wider font-mono">
+                    <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase text-[10px] tracking-wider font-mono">
                       <th className="py-3 px-4">ID</th>
                       <th className="py-3 px-4">Mijoz</th>
                       <th className="py-3 px-4">Dorixona</th>
@@ -1182,7 +1186,7 @@ export default function SuperAdminPage() {
                       <th className="py-3 px-4 text-right">Amal</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-800/60 text-zinc-300">
+                  <tbody className="divide-y divide-zinc-100 text-zinc-700">
                     {adminOrders
                       .filter((o) => {
                         if (orderStatusFilter !== "all" && o.status !== orderStatusFilter) return false;
@@ -1195,46 +1199,46 @@ export default function SuperAdminPage() {
                         );
                       })
                       .map((o) => (
-                        <tr key={o.id} className="hover:bg-zinc-900/40 transition">
-                          <td className="py-3 px-4 font-mono font-bold text-zinc-500">#{o.id}</td>
+                        <tr key={o.id} className="hover:bg-zinc-50/70 transition">
+                          <td className="py-3 px-4 font-mono font-bold text-zinc-400">#{o.id}</td>
                           <td className="py-3 px-4">
-                            <p className="font-bold text-white">{o.customerName}</p>
-                            <p className="text-[11px] text-zinc-400 font-mono">{o.customerPhone}</p>
+                            <p className="font-bold text-zinc-900">{o.customerName}</p>
+                            <p className="text-[11px] text-zinc-500 font-mono">{o.customerPhone}</p>
                           </td>
                           <td className="py-3 px-4">
-                            <p className="font-semibold text-zinc-200">
+                            <p className="font-semibold text-zinc-900">
                               {o.pharmacyOrg || o.pharmacyName || "Dorixona"}
                             </p>
-                            {o.pharmacyPhone && <p className="text-[10px] text-zinc-500 font-mono">{o.pharmacyPhone}</p>}
+                            {o.pharmacyPhone && <p className="text-[10px] text-zinc-400 font-mono">{o.pharmacyPhone}</p>}
                           </td>
                           <td className="py-3 px-4 min-w-[200px]">
                             {o.items && o.items.length > 0 ? (
                               <div className="space-y-1">
                                 {o.items.map((it, i) => (
-                                  <div key={i} className="flex items-center justify-between gap-3 text-xs bg-black px-2 py-1 rounded border border-zinc-800/80">
-                                    <span className="font-semibold text-white">💊 {it.name}</span>
-                                    <span className="font-mono text-zinc-400 text-[11px] whitespace-nowrap">
+                                  <div key={i} className="flex items-center justify-between gap-3 text-xs bg-zinc-50 px-2 py-1 rounded border border-zinc-200/70">
+                                    <span className="font-semibold text-zinc-900">💊 {it.name}</span>
+                                    <span className="font-mono text-zinc-500 text-[11px] whitespace-nowrap">
                                       × {it.qty} ta {it.price ? `(${it.price.toLocaleString()} so'm)` : ""}
                                     </span>
                                   </div>
                                 ))}
                               </div>
                             ) : (
-                              <span className="text-zinc-500 italic text-[11px]">Dorilar ko&apos;rsatilmagan</span>
+                              <span className="text-zinc-400 italic text-[11px]">Dorilar ko&apos;rsatilmagan</span>
                             )}
                           </td>
-                          <td className="py-3 px-4 font-mono font-bold text-white whitespace-nowrap">
+                          <td className="py-3 px-4 font-mono font-bold text-zinc-900 whitespace-nowrap">
                             {o.totalSum ? `${o.totalSum.toLocaleString()} so'm` : "—"}
                           </td>
                           <td className="py-3 px-4 min-w-[220px]">
                             {o.deliveryType === "delivery" ? (
                               <div className="space-y-1">
                                 <div>
-                                  <span className="rounded bg-zinc-900 border border-zinc-700 px-1.5 py-0.5 text-[10px] font-mono font-bold text-white">
+                                  <span className="rounded bg-zinc-100 border border-zinc-200 px-1.5 py-0.5 text-[10px] font-mono font-bold text-zinc-800">
                                     🚚 Yetkazib berish
                                   </span>
                                 </div>
-                                <p className="text-xs font-semibold text-zinc-200 leading-snug break-words">
+                                <p className="text-xs font-semibold text-zinc-800 leading-snug break-words">
                                   📍 {o.customerAddress || "Manzil kiritilmagan"}
                                 </p>
                                 {o.customerAddress && (
@@ -1242,7 +1246,7 @@ export default function SuperAdminPage() {
                                     href={`https://maps.google.com/?q=${encodeURIComponent(o.customerAddress)}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-[10px] text-zinc-400 hover:text-white underline inline-block"
+                                    className="text-[10px] text-zinc-500 hover:text-zinc-900 underline inline-block"
                                   >
                                     🗺 Xaritada ochish
                                   </a>
@@ -1250,14 +1254,14 @@ export default function SuperAdminPage() {
                               </div>
                             ) : (
                               <div className="space-y-1">
-                                <span className="rounded bg-zinc-900 border border-zinc-700 px-1.5 py-0.5 text-[10px] font-mono text-zinc-400">
+                                <span className="rounded bg-zinc-100 border border-zinc-200 px-1.5 py-0.5 text-[10px] font-mono text-zinc-600">
                                   🏪 Olib ketish (Dorixonadan)
                                 </span>
-                                <p className="text-[11px] text-zinc-300">
+                                <p className="text-[11px] text-zinc-700">
                                   {o.pharmacyOrg || o.pharmacyName || "Dorixona"}
                                 </p>
                                 {o.pharmacyAddress && (
-                                  <p className="text-[10px] text-zinc-500 break-words">
+                                  <p className="text-[10px] text-zinc-400 break-words">
                                     📍 {o.pharmacyAddress}
                                   </p>
                                 )}
@@ -1268,12 +1272,12 @@ export default function SuperAdminPage() {
                             <span
                               className={`rounded-full px-2.5 py-0.5 text-[10px] font-mono font-bold ${
                                 o.status === "yetkazildi"
-                                  ? "bg-zinc-900 text-white border border-zinc-700"
+                                  ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
                                   : o.status === "tasdiqlandi"
-                                  ? "bg-zinc-900 text-zinc-200 border border-zinc-700"
+                                  ? "bg-blue-50 text-blue-800 border border-blue-200"
                                   : o.status === "bekor"
-                                  ? "bg-zinc-900 text-zinc-500 border border-zinc-800 line-through"
-                                  : "bg-white text-black font-bold border border-white"
+                                  ? "bg-zinc-100 text-zinc-400 border border-zinc-200 line-through"
+                                  : "bg-zinc-900 text-white font-bold"
                               }`}
                             >
                               {o.status}
@@ -1283,14 +1287,14 @@ export default function SuperAdminPage() {
                             <div className="flex items-center justify-end gap-1.5">
                               <button
                                 onClick={() => setSelectedOrderDetail(o)}
-                                className="rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white border border-zinc-700 px-2 py-1 text-[11px] font-semibold transition"
+                                className="rounded-lg bg-white hover:bg-zinc-50 text-zinc-800 border border-zinc-200/80 shadow-2xs px-2 py-1 text-[11px] font-semibold transition"
                               >
                                 👁 Batafsil
                               </button>
                               <select
                                 value={o.status}
                                 onChange={(e) => handleUpdateOrderStatus(o.id, e.target.value)}
-                                className="rounded-lg bg-black px-2 py-1 text-[11px] font-semibold text-white border border-zinc-700 focus:outline-none focus:border-white"
+                                className="rounded-lg bg-white px-2 py-1 text-[11px] font-semibold text-zinc-900 border border-zinc-200 focus:outline-none focus:border-zinc-400"
                               >
                                 <option value="yangi">Yangi</option>
                                 <option value="tasdiqlandi">Tasdiqlash</option>
@@ -1311,7 +1315,7 @@ export default function SuperAdminPage() {
         {/* 1.3. MUTAXASSIS CHAQIRUVLARI TAB */}
         {activeTab === "specialist_calls" && (
           <div className="space-y-6">
-            <div className="rounded-2xl bg-zinc-950 p-5 border border-zinc-800 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="rounded-2xl bg-white p-5 border border-zinc-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.03)] flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="relative flex-1 max-w-md">
                 <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
                 <input
@@ -1319,19 +1323,19 @@ export default function SuperAdminPage() {
                   placeholder="Mijoz ismi, muammo yoki telefon..."
                   value={callSearch}
                   onChange={(e) => setCallSearch(e.target.value)}
-                  className="w-full rounded-xl bg-black pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 border border-zinc-800 focus:border-white focus:outline-none"
+                  className="w-full rounded-xl bg-white pl-10 pr-4 py-2.5 text-xs text-zinc-900 placeholder-zinc-400 border border-zinc-200 focus:border-zinc-400 focus:outline-none"
                 />
               </div>
 
-              <div className="flex rounded-xl bg-black p-1 border border-zinc-800 text-xs font-semibold">
+              <div className="flex rounded-xl bg-zinc-100 p-1 border border-zinc-200/80 text-xs font-semibold">
                 {["all", "yangi", "qabul_qilindi", "bajarildi", "bekor"].map((st) => (
                   <button
                     key={st}
                     onClick={() => setCallStatusFilter(st)}
                     className={`px-3 py-1.5 rounded-lg capitalize transition ${
                       callStatusFilter === st
-                        ? "bg-white text-black font-bold"
-                        : "text-zinc-400 hover:text-white"
+                        ? "bg-white text-zinc-900 font-bold shadow-2xs"
+                        : "text-zinc-600 hover:text-zinc-900"
                     }`}
                   >
                     {st === "all" ? "Barchasi" : st}
@@ -1340,11 +1344,11 @@ export default function SuperAdminPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl bg-zinc-950 border border-zinc-800 overflow-hidden shadow-sm">
+            <div className="rounded-2xl bg-white border border-zinc-200/80 overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="bg-zinc-900/60 border-b border-zinc-800 text-zinc-400 uppercase text-[10px] tracking-wider font-mono">
+                    <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase text-[10px] tracking-wider font-mono">
                       <th className="py-3 px-4">ID</th>
                       <th className="py-3 px-4">Mijoz (Dehqon)</th>
                       <th className="py-3 px-4">Mutaxassis</th>
@@ -1354,7 +1358,7 @@ export default function SuperAdminPage() {
                       <th className="py-3 px-4 text-right">Amal</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-800/60 text-zinc-300">
+                  <tbody className="divide-y divide-zinc-100 text-zinc-700">
                     {adminCalls
                       .filter((c) => {
                         if (callStatusFilter !== "all" && c.status !== callStatusFilter) return false;
@@ -1367,43 +1371,43 @@ export default function SuperAdminPage() {
                         );
                       })
                       .map((c) => (
-                        <tr key={c.id} className="hover:bg-zinc-900/40 transition">
-                          <td className="py-3 px-4 font-mono font-bold text-zinc-500">#{c.id}</td>
+                        <tr key={c.id} className="hover:bg-zinc-50/70 transition">
+                          <td className="py-3 px-4 font-mono font-bold text-zinc-400">#{c.id}</td>
                           <td className="py-3 px-4">
-                            <p className="font-bold text-white">{c.customerName}</p>
+                            <p className="font-bold text-zinc-900">{c.customerName}</p>
                             <a
                               href={`tel:${c.customerPhone}`}
-                              className="text-[11px] text-zinc-300 font-mono hover:underline hover:text-white"
+                              className="text-[11px] text-zinc-500 font-mono hover:underline hover:text-zinc-900"
                             >
                               📞 {c.customerPhone}
                             </a>
                           </td>
                           <td className="py-3 px-4">
-                            <p className="font-semibold text-zinc-200">
+                            <p className="font-semibold text-zinc-900">
                               {c.specialistName || "Mutaxassis"}
                             </p>
                             {c.specialistPhone && (
-                              <p className="text-[10px] text-zinc-500 font-mono">{c.specialistPhone}</p>
+                              <p className="text-[10px] text-zinc-400 font-mono">{c.specialistPhone}</p>
                             )}
                           </td>
                           <td className="py-3 px-4 max-w-sm">
-                            <p className="text-xs text-zinc-200 font-medium leading-relaxed">
+                            <p className="text-xs text-zinc-800 font-medium leading-relaxed">
                               {c.problem}
                             </p>
                           </td>
-                          <td className="py-3 px-4 text-zinc-400 text-[11px] max-w-xs truncate">
+                          <td className="py-3 px-4 text-zinc-500 text-[11px] max-w-xs truncate">
                             {c.address || "—"}
                           </td>
                           <td className="py-3 px-4">
                             <span
                               className={`rounded-full px-2.5 py-0.5 text-[10px] font-mono font-bold ${
                                 c.status === "bajarildi"
-                                  ? "bg-zinc-900 text-white border border-zinc-700"
+                                  ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
                                   : c.status === "qabul_qilindi"
-                                  ? "bg-zinc-900 text-zinc-200 border border-zinc-700"
+                                  ? "bg-blue-50 text-blue-800 border border-blue-200"
                                   : c.status === "bekor"
-                                  ? "bg-zinc-900 text-zinc-500 border border-zinc-800 line-through"
-                                  : "bg-white text-black font-bold border border-white"
+                                  ? "bg-zinc-100 text-zinc-400 border border-zinc-200 line-through"
+                                  : "bg-zinc-900 text-white font-bold"
                               }`}
                             >
                               {c.status}
@@ -1413,7 +1417,7 @@ export default function SuperAdminPage() {
                             <select
                               value={c.status}
                               onChange={(e) => handleUpdateCallStatus(c.id, e.target.value)}
-                              className="rounded-lg bg-black px-2 py-1 text-[11px] font-semibold text-white border border-zinc-700 focus:outline-none focus:border-white"
+                              className="rounded-lg bg-white px-2 py-1 text-[11px] font-semibold text-zinc-900 border border-zinc-200 focus:outline-none focus:border-zinc-400"
                             >
                               <option value="yangi">Yangi</option>
                               <option value="qabul_qilindi">Qabul qilindi</option>
@@ -1433,14 +1437,14 @@ export default function SuperAdminPage() {
         {/* 1.5. DORIXONA ARIZALARI VA PANEL O'RNATISH TAB */}
         {activeTab === "pharmacies" && (
           <div className="space-y-6">
-            <div className="rounded-2xl bg-zinc-950 p-5 border border-zinc-800">
+            <div className="rounded-2xl bg-white p-5 border border-zinc-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
-                  <h2 className="text-base font-bold text-white flex items-center gap-2">
-                    <Store className="text-white" size={20} />
+                  <h2 className="text-base font-bold text-zinc-900 flex items-center gap-2">
+                    <Store className="text-zinc-900" size={20} />
                     🏪 Dorixona Arizalari va Boshqaruv Panelini O&apos;rnatish
                   </h2>
-                  <p className="mt-1 text-xs text-zinc-400">
+                  <p className="mt-1 text-xs text-zinc-500">
                     Telegram @agroz_auth_bot orqali ariza yuborgan dorixona egalari. Tasdiqlangandan so&apos;ng, ularga bot ichida avtomatik ravishda dori boshqaruvi va buyurtmalar qabul qilish paneli o&apos;rnatiladi.
                   </p>
                 </div>
@@ -1451,33 +1455,33 @@ export default function SuperAdminPage() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div
                 onClick={() => setPharmacyStatusFilter("all")}
-                className={`cursor-pointer rounded-2xl p-5 border transition bg-zinc-950 ${
+                className={`cursor-pointer rounded-2xl p-5 border transition bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${
                   pharmacyStatusFilter === "all"
-                    ? "border-white ring-1 ring-white"
-                    : "border-zinc-800 hover:border-zinc-700"
+                    ? "border-zinc-900 ring-1 ring-zinc-900"
+                    : "border-zinc-200/80 hover:border-zinc-300"
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-zinc-400">Jami Dorixonalar</span>
-                  <Store className="text-white" size={20} />
+                  <span className="text-xs font-semibold text-zinc-500">Jami Dorixonalar</span>
+                  <Store className="text-zinc-700" size={20} />
                 </div>
-                <p className="mt-2 text-2xl font-black text-white">{pharmacyList.length} ta</p>
+                <p className="mt-2 text-2xl font-black text-zinc-900">{pharmacyList.length} ta</p>
                 <p className="mt-1 text-[11px] text-zinc-500 font-medium">Barcha ro&apos;yxatdan o&apos;tgan dorixonalar</p>
               </div>
 
               <div
                 onClick={() => setPharmacyStatusFilter("pending")}
-                className={`cursor-pointer rounded-2xl p-5 border transition bg-zinc-950 ${
+                className={`cursor-pointer rounded-2xl p-5 border transition bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${
                   pharmacyStatusFilter === "pending"
-                    ? "border-white ring-1 ring-white"
-                    : "border-zinc-800 hover:border-zinc-700"
+                    ? "border-zinc-900 ring-1 ring-zinc-900"
+                    : "border-zinc-200/80 hover:border-zinc-300"
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-zinc-300">⏳ Kutilayotgan Arizalar</span>
-                  <AlertCircle className="text-white" size={20} />
+                  <span className="text-xs font-semibold text-amber-700">⏳ Kutilayotgan Arizalar</span>
+                  <AlertCircle className="text-amber-600" size={20} />
                 </div>
-                <p className="mt-2 text-2xl font-black text-white">{pendingPharmacies.length} ta</p>
+                <p className="mt-2 text-2xl font-black text-zinc-900">{pendingPharmacies.length} ta</p>
                 <p className="mt-1 text-[11px] text-zinc-500 font-medium">
                   Panel o&apos;rnatish uchun arizalar
                 </p>
@@ -1485,17 +1489,17 @@ export default function SuperAdminPage() {
 
               <div
                 onClick={() => setPharmacyStatusFilter("approved")}
-                className={`cursor-pointer rounded-2xl p-5 border transition bg-zinc-950 ${
+                className={`cursor-pointer rounded-2xl p-5 border transition bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${
                   pharmacyStatusFilter === "approved"
-                    ? "border-white ring-1 ring-white"
-                    : "border-zinc-800 hover:border-zinc-700"
+                    ? "border-zinc-900 ring-1 ring-zinc-900"
+                    : "border-zinc-200/80 hover:border-zinc-300"
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-zinc-300">✅ Panel O&apos;rnatilgan (Faol)</span>
-                  <CheckCircle2 className="text-white" size={20} />
+                  <span className="text-xs font-semibold text-emerald-700">✅ Panel O&apos;rnatilgan (Faol)</span>
+                  <CheckCircle2 className="text-emerald-600" size={20} />
                 </div>
-                <p className="mt-2 text-2xl font-black text-white">{approvedPharmacies.length} ta</p>
+                <p className="mt-2 text-2xl font-black text-zinc-900">{approvedPharmacies.length} ta</p>
                 <p className="mt-1 text-[11px] text-zinc-500 font-medium">
                   Botda panel ochilgan dorixonalar
                 </p>
@@ -1503,7 +1507,7 @@ export default function SuperAdminPage() {
             </div>
 
             {/* Qidiruv va Filterlar */}
-            <div className="rounded-2xl bg-zinc-950 p-5 border border-zinc-800 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="rounded-2xl bg-white p-5 border border-zinc-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="relative flex-1 max-w-md">
                 <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
                 <input
@@ -1511,17 +1515,17 @@ export default function SuperAdminPage() {
                   placeholder="Dorixona nomi, egasi, telefon yoki manzil..."
                   value={pharmacySearch}
                   onChange={(e) => setPharmacySearch(e.target.value)}
-                  className="w-full rounded-xl bg-black pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 border border-zinc-800 focus:border-white focus:outline-none"
+                  className="w-full rounded-xl bg-zinc-50 pl-10 pr-4 py-2.5 text-xs text-zinc-900 placeholder-zinc-400 border border-zinc-200 focus:border-zinc-400 focus:bg-white focus:outline-none transition"
                 />
               </div>
 
-              <div className="flex rounded-xl bg-black p-1 border border-zinc-800 text-xs font-semibold">
+              <div className="flex rounded-xl bg-zinc-100 p-1 border border-zinc-200 text-xs font-semibold">
                 <button
                   onClick={() => setPharmacyStatusFilter("all")}
                   className={`px-3 py-1.5 rounded-lg transition ${
                     pharmacyStatusFilter === "all"
-                      ? "bg-white text-black font-bold"
-                      : "text-zinc-400 hover:text-white"
+                      ? "bg-white text-zinc-900 font-bold shadow-xs"
+                      : "text-zinc-600 hover:text-zinc-900"
                   }`}
                 >
                   Barchasi ({pharmacyList.length})
@@ -1530,8 +1534,8 @@ export default function SuperAdminPage() {
                   onClick={() => setPharmacyStatusFilter("pending")}
                   className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
                     pharmacyStatusFilter === "pending"
-                      ? "bg-white text-black font-bold"
-                      : "text-zinc-400 hover:text-white"
+                      ? "bg-white text-zinc-900 font-bold shadow-xs"
+                      : "text-zinc-600 hover:text-zinc-900"
                   }`}
                 >
                   ⏳ Panel o&apos;rnatilmagan ({pendingPharmacies.length})
@@ -1540,8 +1544,8 @@ export default function SuperAdminPage() {
                   onClick={() => setPharmacyStatusFilter("approved")}
                   className={`px-3 py-1.5 rounded-lg transition ${
                     pharmacyStatusFilter === "approved"
-                      ? "bg-white text-black font-bold"
-                      : "text-zinc-400 hover:text-white"
+                      ? "bg-white text-zinc-900 font-bold shadow-xs"
+                      : "text-zinc-600 hover:text-zinc-900"
                   }`}
                 >
                   ✅ Panel o&apos;rnatilgan ({approvedPharmacies.length})
@@ -1550,11 +1554,11 @@ export default function SuperAdminPage() {
             </div>
 
             {/* Dorixonalar jadvali */}
-            <div className="rounded-2xl bg-zinc-950 border border-zinc-800 overflow-hidden shadow-sm">
+            <div className="rounded-2xl bg-white border border-zinc-200/80 overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="bg-zinc-900/60 border-b border-zinc-800 text-zinc-400 uppercase text-[10px] tracking-wider font-mono">
+                    <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase text-[10px] tracking-wider font-mono">
                       <th className="py-3 px-4">ID</th>
                       <th className="py-3 px-4">Dorixona Nomi & Egasi</th>
                       <th className="py-3 px-4">Aloqa</th>
@@ -1564,7 +1568,7 @@ export default function SuperAdminPage() {
                       <th className="py-3 px-4 text-right">Amallar</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-800/60 text-zinc-300">
+                  <tbody className="divide-y divide-zinc-100 text-zinc-700">
                     {filteredPharmacies.length === 0 ? (
                       <tr>
                         <td colSpan={7} className="py-8 text-center text-zinc-500 font-medium">
@@ -1573,19 +1577,19 @@ export default function SuperAdminPage() {
                       </tr>
                     ) : (
                       filteredPharmacies.map((s) => (
-                        <tr key={s.id} className="hover:bg-zinc-900/40 transition">
-                          <td className="py-3 px-4 font-mono text-zinc-500">#{s.id}</td>
+                        <tr key={s.id} className="hover:bg-zinc-50/70 transition">
+                          <td className="py-3 px-4 font-mono text-zinc-400">#{s.id}</td>
                           <td className="py-3 px-4">
-                            <p className="font-bold text-white flex items-center gap-1.5">
-                              <Store size={14} className="text-zinc-400" />
+                            <p className="font-bold text-zinc-900 flex items-center gap-1.5">
+                              <Store size={14} className="text-zinc-600" />
                               {s.organization || s.name}
                             </p>
-                            <p className="text-[11px] text-zinc-400 mt-0.5">Egasi: {s.name}</p>
+                            <p className="text-[11px] text-zinc-500 mt-0.5">Egasi: {s.name}</p>
                           </td>
                           <td className="py-3 px-4">
                             <a
                               href={`tel:${s.phone}`}
-                              className="font-semibold text-zinc-200 hover:text-white hover:underline block font-mono"
+                              className="font-semibold text-zinc-900 hover:underline block font-mono"
                             >
                               📞 {s.phone}
                             </a>
@@ -1593,20 +1597,20 @@ export default function SuperAdminPage() {
                               <p className="text-[10px] text-zinc-500 font-mono mt-0.5">TG: {s.telegramId}</p>
                             )}
                           </td>
-                          <td className="py-3 px-4 max-w-xs truncate text-zinc-400" title={s.address || ""}>
+                          <td className="py-3 px-4 max-w-xs truncate text-zinc-600" title={s.address || ""}>
                             {s.address || "—"}
                           </td>
                           <td className="py-3 px-4 text-center">
                             <div className="flex items-center justify-center gap-2">
                               <span
                                 title="Katalogdagi dorilari soni"
-                                className="inline-flex items-center gap-1 rounded-md bg-black px-2 py-0.5 text-[10.5px] font-mono font-semibold text-zinc-200 border border-zinc-800"
+                                className="inline-flex items-center gap-1 rounded-md bg-zinc-100 px-2 py-0.5 text-[10.5px] font-mono font-semibold text-zinc-700 border border-zinc-200"
                               >
                                 <Package size={11} /> {s.medicinesCount}
                               </span>
                               <span
                                 title="Qabul qilingan buyurtmalar soni"
-                                className="inline-flex items-center gap-1 rounded-md bg-black px-2 py-0.5 text-[10.5px] font-mono font-semibold text-zinc-200 border border-zinc-800"
+                                className="inline-flex items-center gap-1 rounded-md bg-zinc-100 px-2 py-0.5 text-[10.5px] font-mono font-semibold text-zinc-700 border border-zinc-200"
                               >
                                 <ShoppingCart size={11} /> {s.ordersCount}
                               </span>
@@ -1614,11 +1618,11 @@ export default function SuperAdminPage() {
                           </td>
                           <td className="py-3 px-4">
                             {s.isApproved ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-zinc-900 px-2.5 py-0.5 text-[10px] font-mono font-bold text-white border border-zinc-700">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-mono font-bold text-emerald-700 border border-emerald-200">
                                 <CheckCircle2 size={11} /> Panel O&apos;rnatilgan
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-0.5 text-[10px] font-mono font-bold text-black border border-white">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-mono font-bold text-amber-700 border border-amber-200">
                                 <AlertCircle size={11} /> Panel O&apos;rnatilmagan
                               </span>
                             )}
@@ -1631,14 +1635,14 @@ export default function SuperAdminPage() {
                                     onClick={() => handleApproveSpecialist(s.id)}
                                     disabled={busy}
                                     title="Arizani ma'qullash va dorixona egasining Telegramiga boshqaruv panelini o'rnatish"
-                                    className="flex items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-black shadow hover:bg-zinc-200 active:scale-95 transition"
+                                    className="flex items-center gap-1 rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-zinc-800 active:scale-95 transition"
                                   >
                                     <CheckCircle2 size={13} /> 🚀 Panelni O&apos;rnatish
                                   </button>
                                   <button
                                     onClick={() => handleRejectSpecialist(s.id)}
                                     disabled={busy}
-                                    className="flex items-center gap-1 rounded-lg bg-zinc-900 px-2.5 py-1.5 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 hover:text-white border border-zinc-700 transition"
+                                    className="flex items-center gap-1 rounded-lg bg-zinc-100 px-2.5 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-200 border border-zinc-200 transition"
                                   >
                                     Rad etish
                                   </button>
@@ -1647,7 +1651,7 @@ export default function SuperAdminPage() {
                                 <button
                                   onClick={() => handleRejectSpecialist(s.id)}
                                   disabled={busy}
-                                  className="rounded-lg bg-zinc-900 px-2.5 py-1.5 text-[11px] font-semibold text-zinc-400 hover:text-white hover:bg-zinc-800 border border-zinc-700 transition"
+                                  className="rounded-lg bg-zinc-100 px-2.5 py-1.5 text-[11px] font-semibold text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200 border border-zinc-200 transition"
                                 >
                                   ⏸ To&apos;xtatish
                                 </button>
@@ -1656,7 +1660,7 @@ export default function SuperAdminPage() {
                                 onClick={() => handleDeleteSpecialist(s.id, s.organization || s.name)}
                                 disabled={busy}
                                 title="Dorixonani o'chirish"
-                                className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-white border border-zinc-800 transition"
+                                className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500 hover:bg-red-50 hover:text-red-600 border border-zinc-200 hover:border-red-200 transition"
                               >
                                 <Trash2 size={13} />
                               </button>
@@ -1675,14 +1679,14 @@ export default function SuperAdminPage() {
         {/* 1.6. MUTAXASSISLAR (AGRONOM & VET) TAB */}
         {activeTab === "specialists" && (
           <div className="space-y-6">
-            <div className="rounded-2xl bg-zinc-950 p-5 border border-zinc-800">
+            <div className="rounded-2xl bg-white p-5 border border-zinc-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
-                  <h2 className="text-base font-bold text-white flex items-center gap-2">
-                    <Users className="text-white" size={20} />
+                  <h2 className="text-base font-bold text-zinc-900 flex items-center gap-2">
+                    <Users className="text-zinc-900" size={20} />
                     👨‍🌾 Mutaxassislar (Agronomlar va Veterinarlar)
                   </h2>
-                  <p className="mt-1 text-xs text-zinc-400">
+                  <p className="mt-1 text-xs text-zinc-500">
                     O&apos;simlik va hayvon kasalliklarini davolash, chaqiruvlarni qabul qilish va dehqonlarga joyida maslahat berish mutaxassislari.
                   </p>
                 </div>
@@ -1693,33 +1697,33 @@ export default function SuperAdminPage() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div
                 onClick={() => setSpecialistStatusFilter("all")}
-                className={`cursor-pointer rounded-2xl p-5 border transition bg-zinc-950 ${
+                className={`cursor-pointer rounded-2xl p-5 border transition bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${
                   specialistStatusFilter === "all"
-                    ? "border-white ring-1 ring-white"
-                    : "border-zinc-800 hover:border-zinc-700"
+                    ? "border-zinc-900 ring-1 ring-zinc-900"
+                    : "border-zinc-200/80 hover:border-zinc-300"
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-zinc-400">Jami Mutaxassislar</span>
-                  <Users className="text-white" size={20} />
+                  <span className="text-xs font-semibold text-zinc-500">Jami Mutaxassislar</span>
+                  <Users className="text-zinc-700" size={20} />
                 </div>
-                <p className="mt-2 text-2xl font-black text-white">{specialistOnlyList.length} ta</p>
+                <p className="mt-2 text-2xl font-black text-zinc-900">{specialistOnlyList.length} ta</p>
                 <p className="mt-1 text-[11px] text-zinc-500 font-medium">Barcha agronom va veterinarlar</p>
               </div>
 
               <div
                 onClick={() => setSpecialistStatusFilter("pending")}
-                className={`cursor-pointer rounded-2xl p-5 border transition bg-zinc-950 ${
+                className={`cursor-pointer rounded-2xl p-5 border transition bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${
                   specialistStatusFilter === "pending"
-                    ? "border-white ring-1 ring-white"
-                    : "border-zinc-800 hover:border-zinc-700"
+                    ? "border-zinc-900 ring-1 ring-zinc-900"
+                    : "border-zinc-200/80 hover:border-zinc-300"
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-zinc-300">⏳ Yangi Mutaxassis Arizalari</span>
-                  <AlertCircle className="text-white" size={20} />
+                  <span className="text-xs font-semibold text-amber-700">⏳ Yangi Mutaxassis Arizalari</span>
+                  <AlertCircle className="text-amber-600" size={20} />
                 </div>
-                <p className="mt-2 text-2xl font-black text-white">{pendingSpecialists.length} ta</p>
+                <p className="mt-2 text-2xl font-black text-zinc-900">{pendingSpecialists.length} ta</p>
                 <p className="mt-1 text-[11px] text-zinc-500 font-medium">
                   Tasdiqlash kutilayotgan mutaxassislar
                 </p>
@@ -1727,17 +1731,17 @@ export default function SuperAdminPage() {
 
               <div
                 onClick={() => setSpecialistStatusFilter("approved")}
-                className={`cursor-pointer rounded-2xl p-5 border transition bg-zinc-950 ${
+                className={`cursor-pointer rounded-2xl p-5 border transition bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${
                   specialistStatusFilter === "approved"
-                    ? "border-white ring-1 ring-white"
-                    : "border-zinc-800 hover:border-zinc-700"
+                    ? "border-zinc-900 ring-1 ring-zinc-900"
+                    : "border-zinc-200/80 hover:border-zinc-300"
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-zinc-300">✅ Faol Mutaxassislar</span>
-                  <CheckCircle2 className="text-white" size={20} />
+                  <span className="text-xs font-semibold text-emerald-700">✅ Faol Mutaxassislar</span>
+                  <CheckCircle2 className="text-emerald-600" size={20} />
                 </div>
-                <p className="mt-2 text-2xl font-black text-white">{approvedSpecialists.length} ta</p>
+                <p className="mt-2 text-2xl font-black text-zinc-900">{approvedSpecialists.length} ta</p>
                 <p className="mt-1 text-[11px] text-zinc-500 font-medium">
                   Platformada faol mutaxassislar
                 </p>
@@ -1745,7 +1749,7 @@ export default function SuperAdminPage() {
             </div>
 
             {/* Qidiruv va Filterlar */}
-            <div className="rounded-2xl bg-zinc-950 p-5 border border-zinc-800 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="rounded-2xl bg-white p-5 border border-zinc-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="relative flex-1 max-w-md">
                 <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
                 <input
@@ -1753,17 +1757,17 @@ export default function SuperAdminPage() {
                   placeholder="Mutaxassis ismi, mutaxassisligi, telefon yoki manzil..."
                   value={specialistSearch}
                   onChange={(e) => setSpecialistSearch(e.target.value)}
-                  className="w-full rounded-xl bg-black pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 border border-zinc-800 focus:border-white focus:outline-none"
+                  className="w-full rounded-xl bg-zinc-50 pl-10 pr-4 py-2.5 text-xs text-zinc-900 placeholder-zinc-400 border border-zinc-200 focus:border-zinc-400 focus:bg-white focus:outline-none transition"
                 />
               </div>
 
-              <div className="flex rounded-xl bg-black p-1 border border-zinc-800 text-xs font-semibold">
+              <div className="flex rounded-xl bg-zinc-100 p-1 border border-zinc-200 text-xs font-semibold">
                 <button
                   onClick={() => setSpecialistStatusFilter("all")}
                   className={`px-3 py-1.5 rounded-lg transition ${
                     specialistStatusFilter === "all"
-                      ? "bg-white text-black font-bold"
-                      : "text-zinc-400 hover:text-white"
+                      ? "bg-white text-zinc-900 font-bold shadow-xs"
+                      : "text-zinc-600 hover:text-zinc-900"
                   }`}
                 >
                   Barchasi ({specialistOnlyList.length})
@@ -1772,8 +1776,8 @@ export default function SuperAdminPage() {
                   onClick={() => setSpecialistStatusFilter("pending")}
                   className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
                     specialistStatusFilter === "pending"
-                      ? "bg-white text-black font-bold"
-                      : "text-zinc-400 hover:text-white"
+                      ? "bg-white text-zinc-900 font-bold shadow-xs"
+                      : "text-zinc-600 hover:text-zinc-900"
                   }`}
                 >
                   ⏳ Kutilmoqda ({pendingSpecialists.length})
@@ -1782,8 +1786,8 @@ export default function SuperAdminPage() {
                   onClick={() => setSpecialistStatusFilter("approved")}
                   className={`px-3 py-1.5 rounded-lg transition ${
                     specialistStatusFilter === "approved"
-                      ? "bg-white text-black font-bold"
-                      : "text-zinc-400 hover:text-white"
+                      ? "bg-white text-zinc-900 font-bold shadow-xs"
+                      : "text-zinc-600 hover:text-zinc-900"
                   }`}
                 >
                   ✅ Tasdiqlangan ({approvedSpecialists.length})
@@ -1792,11 +1796,11 @@ export default function SuperAdminPage() {
             </div>
 
             {/* Mutaxassislar jadvali */}
-            <div className="rounded-2xl bg-zinc-950 border border-zinc-800 overflow-hidden shadow-sm">
+            <div className="rounded-2xl bg-white border border-zinc-200/80 overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="bg-zinc-900/60 border-b border-zinc-800 text-zinc-400 uppercase text-[10px] tracking-wider font-mono">
+                    <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase text-[10px] tracking-wider font-mono">
                       <th className="py-3 px-4">ID</th>
                       <th className="py-3 px-4">Mutaxassis</th>
                       <th className="py-3 px-4">Mutaxassislik</th>
@@ -1807,7 +1811,7 @@ export default function SuperAdminPage() {
                       <th className="py-3 px-4 text-right">Amallar</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-800/60 text-zinc-300">
+                  <tbody className="divide-y divide-zinc-100 text-zinc-700">
                     {filteredSpecialists.length === 0 ? (
                       <tr>
                         <td colSpan={8} className="py-8 text-center text-zinc-500 font-medium">
@@ -1816,48 +1820,48 @@ export default function SuperAdminPage() {
                       </tr>
                     ) : (
                       filteredSpecialists.map((s) => (
-                        <tr key={s.id} className="hover:bg-zinc-900/40 transition">
-                          <td className="py-3 px-4 font-mono text-zinc-500">#{s.id}</td>
+                        <tr key={s.id} className="hover:bg-zinc-50/70 transition">
+                          <td className="py-3 px-4 font-mono text-zinc-400">#{s.id}</td>
                           <td className="py-3 px-4">
-                            <p className="font-bold text-white">{s.name}</p>
+                            <p className="font-bold text-zinc-900">{s.name}</p>
                             {s.experienceYears && (
-                              <p className="text-[11px] text-zinc-400 mt-0.5">Tajriba: {s.experienceYears} yil</p>
+                              <p className="text-[11px] text-zinc-500 mt-0.5">Tajriba: {s.experienceYears} yil</p>
                             )}
                           </td>
                           <td className="py-3 px-4">
-                            <span className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-mono font-bold bg-zinc-900 text-zinc-200 border border-zinc-700">
+                            <span className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-mono font-bold bg-zinc-100 text-zinc-700 border border-zinc-200">
                               {s.specialty || "Agronom / Veterinariya"}
                             </span>
                           </td>
                           <td className="py-3 px-4">
-                            <a href={`tel:${s.phone}`} className="font-semibold text-zinc-200 hover:text-white hover:underline block font-mono">
+                            <a href={`tel:${s.phone}`} className="font-semibold text-zinc-900 hover:underline block font-mono">
                               📞 {s.phone}
                             </a>
                             {s.telegramId && (
                               <p className="text-[10px] text-zinc-500 font-mono mt-0.5">TG: {s.telegramId}</p>
                             )}
                           </td>
-                          <td className="py-3 px-4 max-w-xs truncate text-zinc-400" title={s.address || ""}>
+                          <td className="py-3 px-4 max-w-xs truncate text-zinc-600" title={s.address || ""}>
                             {s.address || "—"}
                           </td>
                           <td className="py-3 px-4">
                             {s.assignedOrderId ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-zinc-900 px-2 py-0.5 text-[10px] font-mono font-bold text-zinc-400 border border-zinc-700">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-mono font-bold text-amber-700 border border-amber-200">
                                 🔴 Band (#{s.assignedOrderId})
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-zinc-900 px-2 py-0.5 text-[10px] font-mono font-bold text-white border border-zinc-700">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-mono font-bold text-emerald-700 border border-emerald-200">
                                 🟢 Bo&apos;sh
                               </span>
                             )}
                           </td>
                           <td className="py-3 px-4">
                             {s.isApproved ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-zinc-900 px-2.5 py-0.5 text-[10px] font-mono font-bold text-white border border-zinc-700">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-mono font-bold text-emerald-700 border border-emerald-200">
                                 <CheckCircle2 size={11} /> Tasdiqlangan
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-0.5 text-[10px] font-mono font-bold text-black border border-white">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-mono font-bold text-amber-700 border border-amber-200">
                                 <AlertCircle size={11} /> Kutilmoqda
                               </span>
                             )}
@@ -1869,14 +1873,14 @@ export default function SuperAdminPage() {
                                   <button
                                     onClick={() => handleApproveSpecialist(s.id)}
                                     disabled={busy}
-                                    className="flex items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-black shadow hover:bg-zinc-200 active:scale-95 transition"
+                                    className="flex items-center gap-1 rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-zinc-800 active:scale-95 transition"
                                   >
                                     <CheckCircle2 size={13} /> Tasdiqlash
                                   </button>
                                   <button
                                     onClick={() => handleRejectSpecialist(s.id)}
                                     disabled={busy}
-                                    className="flex items-center gap-1 rounded-lg bg-zinc-900 px-2.5 py-1.5 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 hover:text-white border border-zinc-700 transition"
+                                    className="flex items-center gap-1 rounded-lg bg-zinc-100 px-2.5 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-200 border border-zinc-200 transition"
                                   >
                                     Rad etish
                                   </button>
@@ -1885,7 +1889,7 @@ export default function SuperAdminPage() {
                                 <button
                                   onClick={() => handleRejectSpecialist(s.id)}
                                   disabled={busy}
-                                  className="rounded-lg bg-zinc-900 px-2.5 py-1.5 text-[11px] font-semibold text-zinc-400 hover:bg-zinc-800 hover:text-white border border-zinc-700 transition"
+                                  className="rounded-lg bg-zinc-100 px-2.5 py-1.5 text-[11px] font-semibold text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200 border border-zinc-200 transition"
                                 >
                                   To&apos;xtatish
                                 </button>
@@ -1894,7 +1898,7 @@ export default function SuperAdminPage() {
                                 onClick={() => handleDeleteSpecialist(s.id, s.name)}
                                 disabled={busy}
                                 title="Mutaxassisni o'chirish"
-                                className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-white border border-zinc-800 transition"
+                                className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500 hover:bg-red-50 hover:text-red-600 border border-zinc-200 hover:border-red-200 transition"
                               >
                                 <Trash2 size={13} />
                               </button>
@@ -1913,37 +1917,37 @@ export default function SuperAdminPage() {
         {/* 2. VILOYATLAR TAHLILI TAB */}
         {activeTab === "regions" && (
           <div className="space-y-6">
-            <div className="rounded-2xl bg-zinc-950 p-6 border border-zinc-800">
-              <h2 className="text-base font-bold text-white flex items-center gap-2 mb-4">
-                <Globe size={18} className="text-white" /> 14 ta Hudud Bo&apos;yicha Faollik va Tahlil
+            <div className="rounded-2xl bg-white p-6 border border-zinc-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+              <h2 className="text-base font-bold text-zinc-900 flex items-center gap-2 mb-4">
+                <Globe size={18} className="text-zinc-900" /> 14 ta Hudud Bo&apos;yicha Faollik va Tahlil
               </h2>
 
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {regions.map((r, i) => (
-                  <div key={i} className="rounded-xl bg-black p-4 border border-zinc-800">
+                  <div key={i} className="rounded-xl bg-zinc-50/80 p-4 border border-zinc-200/80">
                     <div className="flex items-center justify-between">
-                      <h3 className="font-bold text-white text-sm">{r.region}</h3>
-                      <span className="rounded-full bg-zinc-900 border border-zinc-700 px-2.5 py-0.5 text-[10px] font-mono font-bold text-zinc-300">
+                      <h3 className="font-bold text-zinc-900 text-sm">{r.region}</h3>
+                      <span className="rounded-full bg-white border border-zinc-200 px-2.5 py-0.5 text-[10px] font-mono font-bold text-zinc-700 shadow-2xs">
                         {r.sharePercent}% ulush
                       </span>
                     </div>
 
                     <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                      <div className="rounded-lg bg-zinc-950 p-2 border border-zinc-800/80">
+                      <div className="rounded-lg bg-white p-2 border border-zinc-200/60 shadow-2xs">
                         <span className="text-zinc-500 text-[10px]">Foydalanuvchilar</span>
-                        <p className="font-bold text-white font-mono">{r.users} ta</p>
+                        <p className="font-bold text-zinc-900 font-mono">{r.users} ta</p>
                       </div>
-                      <div className="rounded-lg bg-zinc-950 p-2 border border-zinc-800/80">
+                      <div className="rounded-lg bg-white p-2 border border-zinc-200/60 shadow-2xs">
                         <span className="text-zinc-500 text-[10px]">Dorixonalar</span>
-                        <p className="font-bold text-white font-mono">{r.pharmacies} ta</p>
+                        <p className="font-bold text-zinc-900 font-mono">{r.pharmacies} ta</p>
                       </div>
-                      <div className="rounded-lg bg-zinc-950 p-2 border border-zinc-800/80">
+                      <div className="rounded-lg bg-white p-2 border border-zinc-200/60 shadow-2xs">
                         <span className="text-zinc-500 text-[10px]">Mutaxassislar</span>
-                        <p className="font-bold text-white font-mono">{r.specialists} ta</p>
+                        <p className="font-bold text-zinc-900 font-mono">{r.specialists} ta</p>
                       </div>
-                      <div className="rounded-lg bg-zinc-950 p-2 border border-zinc-800/80">
+                      <div className="rounded-lg bg-white p-2 border border-zinc-200/60 shadow-2xs">
                         <span className="text-zinc-500 text-[10px]">Buyurtmalar</span>
-                        <p className="font-bold text-white font-mono">{r.orders} ta</p>
+                        <p className="font-bold text-zinc-900 font-mono">{r.orders} ta</p>
                       </div>
                     </div>
                   </div>
@@ -1956,33 +1960,33 @@ export default function SuperAdminPage() {
         {/* 3. FIKRLAR & SHARHLAR MODERATSIYASI TAB */}
         {activeTab === "reviews" && (
           <div className="space-y-6">
-            <div className="rounded-2xl bg-zinc-950 p-6 border border-zinc-800">
+            <div className="rounded-2xl bg-white p-6 border border-zinc-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
-                  <h2 className="text-base font-bold text-white flex items-center gap-2">
-                    <MessageSquare size={18} className="text-white" /> Sharhlar va Fikrlar Moderatsiyasi
+                  <h2 className="text-base font-bold text-zinc-900 flex items-center gap-2">
+                    <MessageSquare size={18} className="text-zinc-900" /> Sharhlar va Fikrlar Moderatsiyasi
                   </h2>
-                  <p className="text-xs text-zinc-400 mt-1">
+                  <p className="text-xs text-zinc-500 mt-1">
                     Foydalanuvchilar tomonidan dorixona va mutaxassislarga berilgan baholarni ko&apos;rish va keraksizlarini o&apos;chirish.
                   </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="relative">
-                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
                     <input
                       type="text"
                       value={reviewSearch}
                       onChange={(e) => setReviewSearch(e.target.value)}
                       placeholder="Qidiruv..."
-                      className="rounded-xl bg-black pl-8 pr-3 py-2 text-xs text-white border border-zinc-700 focus:outline-none focus:border-white"
+                      className="rounded-xl bg-zinc-50 pl-8 pr-3 py-2 text-xs text-zinc-900 placeholder-zinc-400 border border-zinc-200 focus:outline-none focus:border-zinc-400 focus:bg-white transition"
                     />
                   </div>
 
                   <select
                     value={reviewFilterStars}
                     onChange={(e) => setReviewFilterStars(e.target.value === "all" ? "all" : Number(e.target.value))}
-                    className="rounded-xl bg-black px-3 py-2 text-xs text-white border border-zinc-700 focus:outline-none focus:border-white"
+                    className="rounded-xl bg-zinc-50 px-3 py-2 text-xs text-zinc-900 border border-zinc-200 focus:outline-none focus:border-zinc-400 focus:bg-white transition"
                   >
                     <option value="all">Barcha yulduzlar</option>
                     <option value={5}>5 yulduz ★★★★★</option>
@@ -2003,33 +2007,33 @@ export default function SuperAdminPage() {
                   filteredReviews.map((r) => (
                     <div
                       key={`${r.type}-${r.id}`}
-                      className="flex items-start justify-between gap-4 rounded-xl bg-black p-4 border border-zinc-800"
+                      className="flex items-start justify-between gap-4 rounded-xl bg-zinc-50/80 p-4 border border-zinc-200/80"
                     >
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <span
-                            className="rounded-md px-2 py-0.5 text-[10px] font-mono font-bold bg-zinc-900 text-zinc-200 border border-zinc-700"
+                            className="rounded-md px-2 py-0.5 text-[10px] font-mono font-bold bg-white text-zinc-700 border border-zinc-200 shadow-2xs"
                           >
                             {r.type === "order" ? "Buyurtma Sharhi" : "Mutaxassis Xizmati"}
                           </span>
-                          <span className="font-bold text-white text-xs">{r.targetName}</span>
-                          <span className="text-[11px] text-zinc-500 font-mono">({r.date})</span>
+                          <span className="font-bold text-zinc-900 text-xs">{r.targetName}</span>
+                          <span className="text-[11px] text-zinc-400 font-mono">({r.date})</span>
                         </div>
 
-                        <div className="flex items-center gap-1 text-white text-xs font-bold pt-1">
+                        <div className="flex items-center gap-1 text-amber-500 text-xs font-bold pt-1">
                           {Array.from({ length: 5 }).map((_, i) => (
                             <Star
                               key={i}
                               size={13}
                               fill={i < r.stars ? "currentColor" : "none"}
-                              className={i < r.stars ? "text-white" : "text-zinc-700"}
+                              className={i < r.stars ? "text-amber-400" : "text-zinc-300"}
                             />
                           ))}
-                          <span className="ml-1 text-zinc-300 font-mono font-semibold">{r.stars}.0</span>
+                          <span className="ml-1 text-zinc-700 font-mono font-semibold">{r.stars}.0</span>
                         </div>
 
                         {r.comment && (
-                          <p className="text-xs text-zinc-300 italic pt-1">«{r.comment}»</p>
+                          <p className="text-xs text-zinc-700 italic pt-1">«{r.comment}»</p>
                         )}
 
                         <p className="text-[11px] text-zinc-500 font-mono">
@@ -2040,7 +2044,7 @@ export default function SuperAdminPage() {
                       <button
                         onClick={() => deleteReview(r.type, r.id)}
                         title="O'chirish"
-                        className="rounded-lg bg-zinc-900 p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 border border-zinc-800 transition"
+                        className="rounded-lg bg-white p-2 text-zinc-400 hover:text-red-600 hover:bg-red-50 border border-zinc-200 hover:border-red-200 transition"
                       >
                         <Trash2 size={15} />
                       </button>
@@ -2056,13 +2060,13 @@ export default function SuperAdminPage() {
         {activeTab === "settings" && (
           <form onSubmit={saveSettings} className="space-y-6">
             {/* 4.1. Yetkazib Berish (Delivery) Sozlamalari */}
-            <div className="rounded-2xl bg-zinc-950 p-6 border border-zinc-800 space-y-4">
-              <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+            <div className="rounded-2xl bg-white p-6 border border-zinc-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] space-y-4">
+              <div className="flex items-center justify-between border-b border-zinc-200 pb-3">
                 <div>
-                  <h2 className="text-base font-bold text-white flex items-center gap-2">
-                    <Truck size={18} className="text-white" /> 🚚 Yetkazib Berish (Delivery) Tizimi Sozlamalari
+                  <h2 className="text-base font-bold text-zinc-900 flex items-center gap-2">
+                    <Truck size={18} className="text-zinc-900" /> 🚚 Yetkazib Berish (Delivery) Tizimi Sozlamalari
                   </h2>
-                  <p className="text-xs text-zinc-400 mt-1">
+                  <p className="text-xs text-zinc-500 mt-1">
                     Dorilar yetkazib berish shartlari: bepul minimal buyurtma soni (masalan 5 tadan ko&apos;p bo&apos;lsa BEPUL) va km bo&apos;yicha to&apos;lov narxlari.
                   </p>
                 </div>
@@ -2070,15 +2074,15 @@ export default function SuperAdminPage() {
 
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {/* delivery_enabled */}
-                <div className="rounded-xl bg-black p-4 border border-zinc-800 space-y-2">
-                  <label className="block text-xs font-bold text-white">
+                <div className="rounded-xl bg-zinc-50/80 p-4 border border-zinc-200/80 space-y-2">
+                  <label className="block text-xs font-bold text-zinc-800">
                     Yetkazib Berish Xizmati Holati
                   </label>
-                  <p className="text-[11px] font-mono text-zinc-500">delivery_enabled</p>
+                  <p className="text-[11px] font-mono text-zinc-400">delivery_enabled</p>
                   <select
                     value={settingsValues["delivery_enabled"] ?? "true"}
                     onChange={(e) => setSettingsValues({ ...settingsValues, delivery_enabled: e.target.value })}
-                    className="w-full rounded-xl bg-zinc-900 px-3 py-2.5 text-xs text-white font-bold border border-zinc-700 focus:outline-none focus:border-white"
+                    className="w-full rounded-xl bg-white px-3 py-2.5 text-xs text-zinc-900 font-bold border border-zinc-200 focus:outline-none focus:border-zinc-400 transition"
                   >
                     <option value="true">✅ Faol (Yoqilgan)</option>
                     <option value="false">❌ O&apos;chirilgan</option>
@@ -2086,11 +2090,11 @@ export default function SuperAdminPage() {
                 </div>
 
                 {/* delivery_min_order_qty */}
-                <div className="rounded-xl bg-black p-4 border border-zinc-800 space-y-2">
-                  <label className="block text-xs font-bold text-white">
+                <div className="rounded-xl bg-zinc-50/80 p-4 border border-zinc-200/80 space-y-2">
+                  <label className="block text-xs font-bold text-zinc-800">
                     Bepul Yetkazib Berish Miqdori
                   </label>
-                  <p className="text-[11px] font-mono text-zinc-500">delivery_min_order_qty</p>
+                  <p className="text-[11px] font-mono text-zinc-400">delivery_min_order_qty</p>
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
@@ -2098,21 +2102,21 @@ export default function SuperAdminPage() {
                       max={100}
                       value={settingsValues["delivery_min_order_qty"] ?? "5"}
                       onChange={(e) => setSettingsValues({ ...settingsValues, delivery_min_order_qty: e.target.value })}
-                      className="w-full rounded-xl bg-zinc-900 px-3.5 py-2.5 text-sm text-white font-mono font-bold border border-zinc-700 focus:outline-none focus:border-white"
+                      className="w-full rounded-xl bg-white px-3.5 py-2.5 text-sm text-zinc-900 font-mono font-bold border border-zinc-200 focus:outline-none focus:border-zinc-400 transition"
                     />
-                    <span className="text-xs font-bold text-zinc-400 whitespace-nowrap">ta dori</span>
+                    <span className="text-xs font-bold text-zinc-500 whitespace-nowrap">ta dori</span>
                   </div>
-                  <p className="text-[10px] text-zinc-400">
+                  <p className="text-[10px] text-zinc-500">
                     Buyurtmada {settingsValues["delivery_min_order_qty"] || 5} ta yoki undan ortiq dori bo&apos;lsa, yetkazish <b>BEPUL</b> bo&apos;ladi.
                   </p>
                 </div>
 
                 {/* delivery_price_per_km */}
-                <div className="rounded-xl bg-black p-4 border border-zinc-800 space-y-2">
-                  <label className="block text-xs font-bold text-white">
+                <div className="rounded-xl bg-zinc-50/80 p-4 border border-zinc-200/80 space-y-2">
+                  <label className="block text-xs font-bold text-zinc-800">
                     Har 1 Kilometr Uchun To&apos;lov
                   </label>
-                  <p className="text-[11px] font-mono text-zinc-500">delivery_price_per_km</p>
+                  <p className="text-[11px] font-mono text-zinc-400">delivery_price_per_km</p>
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
@@ -2120,21 +2124,21 @@ export default function SuperAdminPage() {
                       step={500}
                       value={settingsValues["delivery_price_per_km"] ?? "3000"}
                       onChange={(e) => setSettingsValues({ ...settingsValues, delivery_price_per_km: e.target.value })}
-                      className="w-full rounded-xl bg-zinc-900 px-3.5 py-2.5 text-sm text-white font-mono font-bold border border-zinc-700 focus:outline-none focus:border-white"
+                      className="w-full rounded-xl bg-white px-3.5 py-2.5 text-sm text-zinc-900 font-mono font-bold border border-zinc-200 focus:outline-none focus:border-zinc-400 transition"
                     />
-                    <span className="text-xs font-bold text-zinc-400 whitespace-nowrap">so&apos;m/km</span>
+                    <span className="text-xs font-bold text-zinc-500 whitespace-nowrap">so&apos;m/km</span>
                   </div>
-                  <p className="text-[10px] text-zinc-400">
+                  <p className="text-[10px] text-zinc-500">
                     Minimal sondan kam bo&apos;lsa, har 1 km masofa uchun hisoblanadi.
                   </p>
                 </div>
 
                 {/* delivery_base_price */}
-                <div className="rounded-xl bg-black p-4 border border-zinc-800 space-y-2">
-                  <label className="block text-xs font-bold text-white">
+                <div className="rounded-xl bg-zinc-50/80 p-4 border border-zinc-200/80 space-y-2">
+                  <label className="block text-xs font-bold text-zinc-800">
                     Boshlang&apos;ich Bazaviy Xizmat Narxi
                   </label>
-                  <p className="text-[11px] font-mono text-zinc-500">delivery_base_price</p>
+                  <p className="text-[11px] font-mono text-zinc-400">delivery_base_price</p>
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
@@ -2142,18 +2146,18 @@ export default function SuperAdminPage() {
                       step={1000}
                       value={settingsValues["delivery_base_price"] ?? "10000"}
                       onChange={(e) => setSettingsValues({ ...settingsValues, delivery_base_price: e.target.value })}
-                      className="w-full rounded-xl bg-zinc-900 px-3.5 py-2.5 text-sm text-white font-mono font-bold border border-zinc-700 focus:outline-none focus:border-white"
+                      className="w-full rounded-xl bg-white px-3.5 py-2.5 text-sm text-zinc-900 font-mono font-bold border border-zinc-200 focus:outline-none focus:border-zinc-400 transition"
                     />
-                    <span className="text-xs font-bold text-zinc-400 whitespace-nowrap">so&apos;m</span>
+                    <span className="text-xs font-bold text-zinc-500 whitespace-nowrap">so&apos;m</span>
                   </div>
                 </div>
 
                 {/* delivery_max_distance_km */}
-                <div className="rounded-xl bg-black p-4 border border-zinc-800 space-y-2">
-                  <label className="block text-xs font-bold text-white">
+                <div className="rounded-xl bg-zinc-50/80 p-4 border border-zinc-200/80 space-y-2">
+                  <label className="block text-xs font-bold text-zinc-800">
                     Maksimal Yetkazish Masofasi
                   </label>
-                  <p className="text-[11px] font-mono text-zinc-500">delivery_max_distance_km</p>
+                  <p className="text-[11px] font-mono text-zinc-400">delivery_max_distance_km</p>
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
@@ -2161,20 +2165,20 @@ export default function SuperAdminPage() {
                       max={200}
                       value={settingsValues["delivery_max_distance_km"] ?? "50"}
                       onChange={(e) => setSettingsValues({ ...settingsValues, delivery_max_distance_km: e.target.value })}
-                      className="w-full rounded-xl bg-zinc-900 px-3.5 py-2.5 text-sm text-white font-mono font-bold border border-zinc-700 focus:outline-none focus:border-white"
+                      className="w-full rounded-xl bg-white px-3.5 py-2.5 text-sm text-zinc-900 font-mono font-bold border border-zinc-200 focus:outline-none focus:border-zinc-400 transition"
                     />
-                    <span className="text-xs font-bold text-zinc-400 whitespace-nowrap">km</span>
+                    <span className="text-xs font-bold text-zinc-500 whitespace-nowrap">km</span>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* 4.2. Tizim Parametrlari va Botlar */}
-            <div className="rounded-2xl bg-zinc-950 p-6 border border-zinc-800">
-              <h2 className="text-base font-bold text-white flex items-center gap-2 mb-2">
-                <Settings size={18} className="text-white" /> Tizim Parametrlari va Telegram Botlar Sozlamalari
+            <div className="rounded-2xl bg-white p-6 border border-zinc-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+              <h2 className="text-base font-bold text-zinc-900 flex items-center gap-2 mb-2">
+                <Settings size={18} className="text-zinc-900" /> Tizim Parametrlari va Telegram Botlar Sozlamalari
               </h2>
-              <p className="text-xs text-zinc-400 mb-6">
+              <p className="text-xs text-zinc-500 mb-6">
                 Bu yerdagi o&apos;zgarishlar ma&apos;lumotlar bazasida saqlanadi va darhol real-vaqt rejimida kuchga kiradi.
               </p>
 
@@ -2182,11 +2186,11 @@ export default function SuperAdminPage() {
                 {settingsList
                   .filter((item) => !item.key.startsWith("delivery_"))
                   .map((item) => (
-                    <div key={item.key} className="rounded-xl bg-black p-4 border border-zinc-800 space-y-2">
-                      <label className="block text-xs font-bold text-zinc-200">
+                    <div key={item.key} className="rounded-xl bg-zinc-50/80 p-4 border border-zinc-200/80 space-y-2">
+                      <label className="block text-xs font-bold text-zinc-800">
                         {item.label}
                       </label>
-                      <p className="text-[11px] font-mono text-zinc-500">{item.key}</p>
+                      <p className="text-[11px] font-mono text-zinc-400">{item.key}</p>
 
                       {item.key === "default_radius_km" ? (
                         <div className="flex items-center gap-2">
@@ -2198,9 +2202,9 @@ export default function SuperAdminPage() {
                             onChange={(e) =>
                               setSettingsValues({ ...settingsValues, [item.key]: e.target.value })
                             }
-                            className="w-full rounded-xl bg-zinc-900 px-3.5 py-2.5 text-sm text-white font-mono font-bold border border-zinc-700 focus:outline-none focus:border-white"
+                            className="w-full rounded-xl bg-white px-3.5 py-2.5 text-sm text-zinc-900 font-mono font-bold border border-zinc-200 focus:outline-none focus:border-zinc-400 transition"
                           />
-                          <span className="text-xs font-mono font-bold text-zinc-400 whitespace-nowrap">km</span>
+                          <span className="text-xs font-mono font-bold text-zinc-500 whitespace-nowrap">km</span>
                         </div>
                       ) : (
                         <input
@@ -2210,7 +2214,7 @@ export default function SuperAdminPage() {
                             setSettingsValues({ ...settingsValues, [item.key]: e.target.value })
                           }
                           placeholder={item.preview || "Qiymatni kiriting..."}
-                          className="w-full rounded-xl bg-zinc-900 px-3.5 py-2.5 text-xs text-white font-mono border border-zinc-700 focus:outline-none focus:border-white"
+                          className="w-full rounded-xl bg-white px-3.5 py-2.5 text-xs text-zinc-900 font-mono border border-zinc-200 focus:outline-none focus:border-zinc-400 transition"
                         />
                       )}
                     </div>
@@ -2221,7 +2225,7 @@ export default function SuperAdminPage() {
                 <button
                   type="submit"
                   disabled={busy}
-                  className="flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-xs font-bold text-black shadow hover:bg-zinc-200 disabled:opacity-50 transition active:scale-95"
+                  className="flex items-center gap-2 rounded-xl bg-zinc-900 px-6 py-3 text-xs font-bold text-white shadow-xs hover:bg-zinc-800 disabled:opacity-50 transition active:scale-95"
                 >
                   {busy ? <RefreshCw className="animate-spin" size={16} /> : "Barcha Sozlamalarni Saqlash"}
                 </button>
@@ -2235,24 +2239,24 @@ export default function SuperAdminPage() {
 
         {/* BUYURTMA BATAFSIL MODAL */}
         {selectedOrderDetail && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 animate-in fade-in">
-            <div className="w-full max-w-2xl rounded-2xl bg-zinc-950 border border-zinc-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in">
+            <div className="w-full max-w-2xl rounded-2xl bg-white border border-zinc-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
               {/* Modal Header */}
-              <div className="flex items-center justify-between border-b border-zinc-800 p-5 bg-black">
+              <div className="flex items-center justify-between border-b border-zinc-200 p-5 bg-zinc-50/80">
                 <div className="flex items-center gap-2.5">
-                  <Package className="text-white" size={20} />
+                  <Package className="text-zinc-800" size={20} />
                   <div>
-                    <h3 className="font-bold text-white text-base flex items-center gap-2">
+                    <h3 className="font-bold text-zinc-900 text-base flex items-center gap-2">
                       Buyurtma #{selectedOrderDetail.id}
                       <span
                         className={`rounded-full px-2.5 py-0.5 text-[10px] font-mono font-bold ${
                           selectedOrderDetail.status === "yetkazildi"
-                            ? "bg-zinc-900 text-white border border-zinc-700"
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                             : selectedOrderDetail.status === "tasdiqlandi"
-                            ? "bg-zinc-900 text-zinc-200 border border-zinc-700"
+                            ? "bg-blue-50 text-blue-700 border border-blue-200"
                             : selectedOrderDetail.status === "bekor"
-                            ? "bg-zinc-900 text-zinc-500 border border-zinc-800 line-through"
-                            : "bg-white text-black font-bold"
+                            ? "bg-zinc-100 text-zinc-500 border border-zinc-200 line-through"
+                            : "bg-zinc-900 text-white font-bold"
                         }`}
                       >
                         {selectedOrderDetail.status}
@@ -2265,46 +2269,46 @@ export default function SuperAdminPage() {
                 </div>
                 <button
                   onClick={() => setSelectedOrderDetail(null)}
-                  className="rounded-lg p-2 text-zinc-400 hover:text-white hover:bg-zinc-900 transition text-sm font-bold"
+                  className="rounded-lg p-2 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition text-sm font-bold"
                 >
                   ✕
                 </button>
               </div>
 
               {/* Modal Body */}
-              <div className="p-6 overflow-y-auto space-y-5">
+              <div className="p-6 overflow-y-auto space-y-5 bg-white">
                 {/* 1. Mijoz va Dorixona */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="rounded-xl bg-black p-4 border border-zinc-800 space-y-2">
-                    <span className="text-[10.5px] uppercase font-mono tracking-wider text-zinc-400 font-bold block">
+                  <div className="rounded-xl bg-zinc-50/80 p-4 border border-zinc-200/80 space-y-2">
+                    <span className="text-[10.5px] uppercase font-mono tracking-wider text-zinc-500 font-bold block">
                       👤 Mijoz Ma&apos;lumotlari
                     </span>
-                    <p className="font-bold text-white text-sm">{selectedOrderDetail.customerName}</p>
+                    <p className="font-bold text-zinc-900 text-sm">{selectedOrderDetail.customerName}</p>
                     <a
                       href={`tel:${selectedOrderDetail.customerPhone}`}
-                      className="inline-flex items-center gap-1.5 font-mono text-xs font-semibold text-zinc-300 hover:text-white underline"
+                      className="inline-flex items-center gap-1.5 font-mono text-xs font-semibold text-zinc-800 hover:underline"
                     >
                       📞 {selectedOrderDetail.customerPhone}
                     </a>
                   </div>
 
-                  <div className="rounded-xl bg-black p-4 border border-zinc-800 space-y-2">
-                    <span className="text-[10.5px] uppercase font-mono tracking-wider text-zinc-400 font-bold block">
+                  <div className="rounded-xl bg-zinc-50/80 p-4 border border-zinc-200/80 space-y-2">
+                    <span className="text-[10.5px] uppercase font-mono tracking-wider text-zinc-500 font-bold block">
                       🏪 Dorixona Ma&apos;lumotlari
                     </span>
-                    <p className="font-bold text-white text-sm">
+                    <p className="font-bold text-zinc-900 text-sm">
                       {selectedOrderDetail.pharmacyOrg || selectedOrderDetail.pharmacyName || "Dorixona"}
                     </p>
                     {selectedOrderDetail.pharmacyPhone && (
                       <a
                         href={`tel:${selectedOrderDetail.pharmacyPhone}`}
-                        className="inline-flex items-center gap-1.5 font-mono text-xs text-zinc-400 hover:text-white block font-mono"
+                        className="inline-flex items-center gap-1.5 font-mono text-xs text-zinc-700 hover:underline block"
                       >
                         📞 {selectedOrderDetail.pharmacyPhone}
                       </a>
                     )}
                     {selectedOrderDetail.pharmacyAddress && (
-                      <p className="text-[11px] text-zinc-400">
+                      <p className="text-[11px] text-zinc-500">
                         📍 {selectedOrderDetail.pharmacyAddress}
                       </p>
                     )}
@@ -2312,16 +2316,16 @@ export default function SuperAdminPage() {
                 </div>
 
                 {/* 2. Yetkazish va Aniq Manzil */}
-                <div className="rounded-xl bg-black p-4 border border-zinc-800 space-y-2">
-                  <span className="text-[10.5px] uppercase font-mono tracking-wider text-zinc-400 font-bold block">
+                <div className="rounded-xl bg-zinc-50/80 p-4 border border-zinc-200/80 space-y-2">
+                  <span className="text-[10.5px] uppercase font-mono tracking-wider text-zinc-500 font-bold block">
                     🚚 Yetkazib Berish & Manzil
                   </span>
                   <div className="flex items-center gap-2">
                     <span
                       className={`rounded px-2 py-0.5 text-xs font-mono font-bold ${
                         selectedOrderDetail.deliveryType === "delivery"
-                          ? "bg-white text-black"
-                          : "bg-zinc-900 text-zinc-300 border border-zinc-700"
+                          ? "bg-zinc-900 text-white"
+                          : "bg-white text-zinc-700 border border-zinc-200 shadow-2xs"
                       }`}
                     >
                       {selectedOrderDetail.deliveryType === "delivery" ? "🚚 Kuryer orqali yetkazish" : "🏪 Dorixonadan olib ketish"}
@@ -2330,8 +2334,8 @@ export default function SuperAdminPage() {
 
                   {selectedOrderDetail.deliveryType === "delivery" ? (
                     <div className="mt-2 space-y-1">
-                      <p className="text-xs font-bold text-white">Yetkazish manzili:</p>
-                      <p className="text-sm font-semibold text-zinc-200 bg-zinc-950 p-2.5 rounded-lg border border-zinc-800 break-words">
+                      <p className="text-xs font-bold text-zinc-900">Yetkazish manzili:</p>
+                      <p className="text-sm font-semibold text-zinc-800 bg-white p-2.5 rounded-lg border border-zinc-200/80 break-words shadow-2xs">
                         📍 {selectedOrderDetail.customerAddress || "Aniq manzil kiritilmagan"}
                       </p>
                       {selectedOrderDetail.customerAddress && (
@@ -2339,50 +2343,50 @@ export default function SuperAdminPage() {
                           href={`https://maps.google.com/?q=${encodeURIComponent(selectedOrderDetail.customerAddress)}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-white underline pt-1 font-mono"
+                          className="inline-flex items-center gap-1 text-xs text-zinc-600 hover:text-zinc-900 underline pt-1 font-mono"
                         >
                           🗺 Google Xaritasida ochish
                         </a>
                       )}
                     </div>
                   ) : (
-                    <p className="text-xs text-zinc-400 mt-1">
+                    <p className="text-xs text-zinc-500 mt-1">
                       Mijoz dorixonaga kelib, dori vositalarini o&apos;zi olib ketadi.
                     </p>
                   )}
                 </div>
 
                 {/* 3. Buyurtma Qilingan Mahsulotlar Ro'yxati */}
-                <div className="rounded-xl bg-black p-4 border border-zinc-800 space-y-3">
-                  <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
-                    <span className="text-[10.5px] uppercase font-mono tracking-wider text-zinc-400 font-bold">
+                <div className="rounded-xl bg-zinc-50/80 p-4 border border-zinc-200/80 space-y-3">
+                  <div className="flex items-center justify-between border-b border-zinc-200 pb-2">
+                    <span className="text-[10.5px] uppercase font-mono tracking-wider text-zinc-500 font-bold">
                       📦 Buyurtma Qilingan Dorilar ({selectedOrderDetail.items?.length ?? 0} xil)
                     </span>
-                    <span className="text-xs font-mono font-bold text-white">
+                    <span className="text-xs font-mono font-bold text-zinc-900">
                       Jami: {selectedOrderDetail.totalSum ? `${selectedOrderDetail.totalSum.toLocaleString()} so'm` : "—"}
                     </span>
                   </div>
 
                   {!selectedOrderDetail.items || selectedOrderDetail.items.length === 0 ? (
-                    <p className="text-xs text-zinc-500 py-3 text-center font-mono">Dori vositalari ko&apos;rsatilmagan</p>
+                    <p className="text-xs text-zinc-400 py-3 text-center font-mono">Dori vositalari ko&apos;rsatilmagan</p>
                   ) : (
-                    <div className="divide-y divide-zinc-800/80">
+                    <div className="divide-y divide-zinc-200/80">
                       {selectedOrderDetail.items.map((it, idx) => (
                         <div key={idx} className="flex items-center justify-between py-2.5 text-xs">
                           <div>
-                            <p className="font-bold text-white flex items-center gap-1.5">
+                            <p className="font-bold text-zinc-900 flex items-center gap-1.5">
                               <span>💊</span> {it.name}
                             </p>
-                            <p className="text-[11px] font-mono text-zinc-400 mt-0.5">
+                            <p className="text-[11px] font-mono text-zinc-500 mt-0.5">
                               Dona narxi: {it.price ? `${it.price.toLocaleString()} so'm` : "—"}
                             </p>
                           </div>
                           <div className="text-right">
-                            <span className="rounded bg-zinc-900 px-2 py-0.5 font-mono font-bold text-white border border-zinc-700 text-xs">
+                            <span className="rounded bg-white px-2 py-0.5 font-mono font-bold text-zinc-800 border border-zinc-200 shadow-2xs text-xs">
                               {it.qty} dona
                             </span>
                             {it.price && (
-                              <p className="text-xs font-mono font-bold text-white mt-1">
+                              <p className="text-xs font-mono font-bold text-zinc-900 mt-1">
                                 {(it.price * it.qty).toLocaleString()} so&apos;m
                               </p>
                             )}
@@ -2395,11 +2399,11 @@ export default function SuperAdminPage() {
 
                 {/* 4. Mijoz Izohi */}
                 {selectedOrderDetail.note && (
-                  <div className="rounded-xl bg-black p-3.5 border border-zinc-800">
-                    <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold block mb-1">
+                  <div className="rounded-xl bg-zinc-50/80 p-3.5 border border-zinc-200/80">
+                    <span className="text-[10px] uppercase font-mono text-zinc-500 font-bold block mb-1">
                       📝 Mijoz Izohi:
                     </span>
-                    <p className="text-xs text-zinc-300 italic whitespace-pre-line">
+                    <p className="text-xs text-zinc-700 italic whitespace-pre-line">
                       {selectedOrderDetail.note}
                     </p>
                   </div>
@@ -2407,9 +2411,9 @@ export default function SuperAdminPage() {
               </div>
 
               {/* Modal Footer / Holatni o'zgartirish */}
-              <div className="border-t border-zinc-800 p-4 bg-black flex flex-wrap items-center justify-between gap-3">
+              <div className="border-t border-zinc-200 p-4 bg-zinc-50/80 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-zinc-400 font-semibold">Holatni o&apos;zgartirish:</span>
+                  <span className="text-xs text-zinc-600 font-semibold">Holatni o&apos;zgartirish:</span>
                   {["tasdiqlandi", "yetkazildi", "bekor"].map((st) => (
                     <button
                       key={st}
@@ -2419,8 +2423,8 @@ export default function SuperAdminPage() {
                       }}
                       className={`px-3 py-1.5 rounded-lg text-xs capitalize transition font-bold ${
                         selectedOrderDetail.status === st
-                          ? "bg-white text-black"
-                          : "bg-zinc-900 text-zinc-300 border border-zinc-700 hover:text-white"
+                          ? "bg-zinc-900 text-white shadow-xs"
+                          : "bg-white text-zinc-700 border border-zinc-200 hover:bg-zinc-100"
                       }`}
                     >
                       {st}
@@ -2430,7 +2434,7 @@ export default function SuperAdminPage() {
 
                 <button
                   onClick={() => setSelectedOrderDetail(null)}
-                  className="rounded-xl bg-zinc-900 hover:bg-zinc-800 px-4 py-2 text-xs font-bold text-white border border-zinc-700 transition"
+                  className="rounded-xl bg-white hover:bg-zinc-100 px-4 py-2 text-xs font-bold text-zinc-700 border border-zinc-200 shadow-2xs transition"
                 >
                   Yopish
                 </button>

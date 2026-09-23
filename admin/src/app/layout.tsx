@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Agroz AI — Super Admin Boshqaruv Markazi (admin.agroz.uz)",
-  description: "Agroz AI platformasi uchun yagona Super Admin va Telemetriya Boshqaruv Markazi",
+  title: "Agroz AI — Boshqaruv Markazi",
+  description: "Agroz AI platformasi uchun yagona boshqaruv va telemetriya markazi",
 };
 
 export default function RootLayout({
@@ -12,8 +12,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="uz" className="dark">
-      <body className="min-h-screen bg-slate-950 text-slate-100 antialiased selection:bg-emerald-500 selection:text-white">
+    <html lang="uz">
+      <body className="min-h-screen bg-[#fafafa] text-zinc-900 antialiased selection:bg-zinc-900 selection:text-white">
         {children}
       </body>
     </html>

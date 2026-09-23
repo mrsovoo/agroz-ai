@@ -84,27 +84,27 @@ export default function AdminWeatherAlertsBroadcast() {
   }
 
   return (
-    <section className="mt-8 rounded-2xl bg-zinc-950 p-6 border border-zinc-800 text-white">
+    <section className="mt-8 rounded-2xl bg-white p-6 border border-zinc-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] text-zinc-900">
       <div className="flex items-center gap-2.5">
-        <ShieldAlert className="text-white" size={22} />
-        <h2 className="font-bold text-white text-lg">
+        <ShieldAlert className="text-zinc-900" size={22} />
+        <h2 className="font-bold text-zinc-900 text-lg">
           Shoshilinch ob-havo va agro-ogohlantirishlarni tarqatish
         </h2>
       </div>
-      <p className="mt-1.5 text-xs text-zinc-400 leading-relaxed">
+      <p className="mt-1.5 text-xs text-zinc-500 leading-relaxed">
         Foydalanuvchilarga sovuq urishi, kuchli yomg&apos;ir yoki sel xavfi bo&apos;yicha agronomik va veterinariya tavsiyalari bilan shoshilinch Telegram xabari yuboring. Xabar tagida bosiladigan inline tugma biriktiriladi.
       </p>
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         {/* Hududni tanlash */}
         <div>
-          <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
+          <label className="text-xs font-semibold text-zinc-700 uppercase tracking-wider">
             Xavf hududi
           </label>
           <select
             value={region}
             onChange={(e) => setRegion(e.target.value)}
-            className="mt-1.5 w-full rounded-xl bg-black px-3.5 py-2.5 text-xs text-white border border-zinc-800 focus:outline-none focus:border-white"
+            className="mt-1.5 w-full rounded-xl bg-white px-3.5 py-2.5 text-xs text-zinc-900 border border-zinc-200 focus:outline-none focus:border-zinc-400"
           >
             {REGIONS.map((r) => (
               <option key={r} value={r}>
@@ -116,7 +116,7 @@ export default function AdminWeatherAlertsBroadcast() {
 
         {/* Xavf turi */}
         <div>
-          <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
+          <label className="text-xs font-semibold text-zinc-700 uppercase tracking-wider">
             Ogohlantirish turi
           </label>
           <div className="mt-1.5 grid grid-cols-2 gap-2">
@@ -125,8 +125,8 @@ export default function AdminWeatherAlertsBroadcast() {
               onClick={() => setAlertType("frost")}
               className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 px-3 text-xs font-bold transition ${
                 alertType === "frost"
-                  ? "bg-white text-black shadow-sm"
-                  : "bg-black text-zinc-400 border border-zinc-800 hover:text-white"
+                  ? "bg-zinc-900 text-white shadow-xs"
+                  : "bg-white text-zinc-600 border border-zinc-200 hover:text-zinc-900 hover:bg-zinc-50"
               }`}
             >
               <Snowflake size={14} /> Sovuq urishi
@@ -136,8 +136,8 @@ export default function AdminWeatherAlertsBroadcast() {
               onClick={() => setAlertType("heavy_rain")}
               className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 px-3 text-xs font-bold transition ${
                 alertType === "heavy_rain"
-                  ? "bg-white text-black shadow-sm"
-                  : "bg-black text-zinc-400 border border-zinc-800 hover:text-white"
+                  ? "bg-zinc-900 text-white shadow-xs"
+                  : "bg-white text-zinc-600 border border-zinc-200 hover:text-zinc-900 hover:bg-zinc-50"
               }`}
             >
               <CloudRain size={14} /> Kuchli yomg&apos;ir
@@ -149,7 +149,7 @@ export default function AdminWeatherAlertsBroadcast() {
       {/* Sarlavha va matn */}
       <div className="mt-4 space-y-3">
         <div>
-          <label className="text-xs text-zinc-400">
+          <label className="text-xs text-zinc-600">
             Maxsus sarlavha (bo&apos;sh qoldirilsa standart tayyor shablon ishlatiladi):
           </label>
           <input
@@ -161,12 +161,12 @@ export default function AdminWeatherAlertsBroadcast() {
                 ? "Masalan: Diqqat: Tunda harorat -1°C gacha tushishi kutilmoqda!"
                 : "Masalan: Diqqat: Viloyatda kuchli jala va sel xavfi!"
             }
-            className="mt-1 w-full rounded-xl bg-black px-3.5 py-2.5 text-xs text-white border border-zinc-800 focus:outline-none focus:border-white"
+            className="mt-1 w-full rounded-xl bg-white px-3.5 py-2.5 text-xs text-zinc-900 placeholder:text-zinc-400 border border-zinc-200 focus:outline-none focus:border-zinc-400"
           />
         </div>
 
         <div>
-          <label className="text-xs text-zinc-400">
+          <label className="text-xs text-zinc-600">
             Maxsus agronomik tavsiya / matn (ixtiyoriy):
           </label>
           <textarea
@@ -174,36 +174,36 @@ export default function AdminWeatherAlertsBroadcast() {
             value={customMessage}
             onChange={(e) => setCustomMessage(e.target.value)}
             placeholder="Qo'shimcha tavsiya yoki harakatlar ketma-ketligini yozishingiz mumkin..."
-            className="mt-1 w-full rounded-xl bg-black px-3.5 py-2.5 text-xs text-white border border-zinc-800 focus:outline-none focus:border-white"
+            className="mt-1 w-full rounded-xl bg-white px-3.5 py-2.5 text-xs text-zinc-900 placeholder:text-zinc-400 border border-zinc-200 focus:outline-none focus:border-zinc-400"
           />
         </div>
 
         {/* Telegram xabar tagidagi Tugma (Inline button) sozlamasi */}
-        <div className="rounded-xl border border-zinc-800 bg-black p-3.5">
-          <p className="text-xs font-bold text-white flex items-center gap-1.5 mb-2.5">
+        <div className="rounded-xl border border-zinc-200 bg-zinc-50/70 p-3.5">
+          <p className="text-xs font-bold text-zinc-900 flex items-center gap-1.5 mb-2.5">
             <MousePointerClick size={15} /> Xabar tagidagi Telegram tugmasi (Button):
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="text-[11px] font-semibold text-zinc-400">Tugma matni:</label>
+              <label className="text-[11px] font-semibold text-zinc-600">Tugma matni:</label>
               <input
                 type="text"
                 value={buttonText}
                 onChange={(e) => setButtonText(e.target.value)}
                 placeholder="🌐 Agroz AI platformasi"
-                className="mt-1 w-full rounded-lg bg-zinc-950 px-3 py-2 text-xs text-white border border-zinc-800 focus:border-white focus:outline-none"
+                className="mt-1 w-full rounded-lg bg-white px-3 py-2 text-xs text-zinc-900 border border-zinc-200 focus:border-zinc-400 focus:outline-none"
               />
             </div>
             <div>
-              <label className="text-[11px] font-semibold text-zinc-400">Tugma havolasi (URL):</label>
+              <label className="text-[11px] font-semibold text-zinc-600">Tugma havolasi (URL):</label>
               <div className="relative mt-1">
-                <LinkIcon size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+                <LinkIcon size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400" />
                 <input
                   type="url"
                   value={buttonUrl}
                   onChange={(e) => setButtonUrl(e.target.value)}
                   placeholder="https://agroz.uz"
-                  className="w-full rounded-lg bg-zinc-950 pl-8 pr-3 py-2 text-xs text-white border border-zinc-800 focus:border-white focus:outline-none"
+                  className="w-full rounded-lg bg-white pl-8 pr-3 py-2 text-xs text-zinc-900 border border-zinc-200 focus:border-zinc-400 focus:outline-none"
                 />
               </div>
             </div>
@@ -212,7 +212,7 @@ export default function AdminWeatherAlertsBroadcast() {
       </div>
 
       {/* Yuborish tugmasi */}
-      <div className="mt-5 flex items-center justify-between border-t border-zinc-800 pt-4">
+      <div className="mt-5 flex items-center justify-between border-t border-zinc-200 pt-4">
         <p className="text-xs text-zinc-500">
           * Xabar faqat belgilangan viloyatdagi faol Telegram foydalanuvchilariga yuboriladi.
         </p>
@@ -221,7 +221,7 @@ export default function AdminWeatherAlertsBroadcast() {
           type="button"
           onClick={handleBroadcast}
           disabled={sending}
-          className="flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-xs font-bold text-black shadow hover:bg-zinc-200 disabled:opacity-50 transition active:scale-95"
+          className="flex items-center gap-2 rounded-xl bg-zinc-900 px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-zinc-800 disabled:opacity-50 transition active:scale-95"
         >
           {sending ? (
             <>
@@ -240,29 +240,29 @@ export default function AdminWeatherAlertsBroadcast() {
         <div
           className={`mt-4 rounded-xl p-4 text-xs font-medium border ${
             result.ok
-              ? "bg-zinc-900 text-white border-zinc-700"
-              : "bg-zinc-900 text-zinc-300 border-zinc-700"
+              ? "bg-zinc-50 text-zinc-900 border-zinc-200"
+              : "bg-red-50 text-red-700 border-red-200"
           }`}
         >
           <div className="flex items-center gap-2 font-bold text-sm">
             {result.ok ? (
-              <CheckCircle2 className="text-white" size={18} />
+              <CheckCircle2 className="text-emerald-600" size={18} />
             ) : (
-              <AlertTriangle className="text-zinc-400" size={18} />
+              <AlertTriangle className="text-red-500" size={18} />
             )}
             <span>{result.note || (result.ok ? "Xabarnoma muvaffaqiyatli tarqatildi!" : "Xatolik yuz berdi")}</span>
           </div>
 
           {result.ok && typeof result.sentCount === "number" && (
-            <div className="mt-2 space-y-1 text-zinc-300">
+            <div className="mt-2 space-y-1 text-zinc-600">
               <p>
                 Jami mo&apos;ljallangan foydalanuvchilar: <b>{result.totalTargetUsers} ta</b>
               </p>
               <p>
-                Muvaffaqiyatli yetkazildi: <b className="text-white">{result.sentCount} ta</b>
+                Muvaffaqiyatli yetkazildi: <b className="text-zinc-900">{result.sentCount} ta</b>
               </p>
               {result.previewMessage && (
-                <div className="mt-3 rounded-lg bg-black p-3 text-[11.5px] font-mono text-zinc-400 border border-zinc-800 whitespace-pre-wrap">
+                <div className="mt-3 rounded-lg bg-white p-3 text-[11.5px] font-mono text-zinc-600 border border-zinc-200 whitespace-pre-wrap">
                   {result.previewMessage}
                 </div>
               )}
