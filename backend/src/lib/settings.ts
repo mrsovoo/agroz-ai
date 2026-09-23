@@ -26,6 +26,11 @@ export const SETTING_KEYS = {
   adminUsername: "admin_username",
   adminPassword: "admin_password",
   defaultRadiusKm: "default_radius_km",
+  deliveryEnabled: "delivery_enabled",
+  deliveryMinOrderQty: "delivery_min_order_qty",
+  deliveryPricePerKm: "delivery_price_per_km",
+  deliveryBasePrice: "delivery_base_price",
+  deliveryMaxDistanceKm: "delivery_max_distance_km",
 } as const;
 
 export type SettingKey = (typeof SETTING_KEYS)[keyof typeof SETTING_KEYS];
@@ -95,9 +100,30 @@ export function envFallback(key: SettingKey): string | null {
     [SETTING_KEYS.adminUsername]: process.env.ADMIN_USERNAME,
     [SETTING_KEYS.adminPassword]: process.env.ADMIN_PASSWORD,
     [SETTING_KEYS.defaultRadiusKm]: process.env.DEFAULT_RADIUS_KM || "5",
+    [SETTING_KEYS.deliveryEnabled]: process.env.DELIVERY_ENABLED || "true",
+    [SETTING_KEYS.deliveryMinOrderQty]: process.env.DELIVERY_MIN_ORDER_QTY || "5",
+    [SETTING_KEYS.deliveryPricePerKm]: process.env.DELIVERY_PRICE_PER_KM || "3000",
+    [SETTING_KEYS.deliveryBasePrice]: process.env.DELIVERY_BASE_PRICE || "10000",
+    [SETTING_KEYS.deliveryMaxDistanceKm]: process.env.DELIVERY_MAX_DISTANCE_KM || "50",
   };
   const raw = envMap[key]?.trim();
   return raw ? raw : null;
+}
+
+export async function getDeliverySettings() {
+  const enabledStr = await getSetting(SETTING_KEYS.deliveryEnabled);
+  const minQtyStr = await getSetting(SETTING_KEYS.deliveryMinOrderQty);
+  const pricePerKmStr = await getSetting(SETTING_KEYS.deliveryPricePerKm);
+  const basePriceStr = await getSetting(SETTING_KEYS.deliveryBasePrice);
+  const maxDistanceStr = await getSetting(SETTING_KEYS.deliveryMaxDistanceKm);
+
+  return {
+    enabled: enabledStr !== "false",
+    minOrderQty: Math.max(1, Number(minQtyStr) || 5),
+    pricePerKm: Math.max(0, Number(pricePerKmStr) || 3000),
+    basePrice: Math.max(0, Number(basePriceStr) || 10000),
+    maxDistanceKm: Math.max(1, Number(maxDistanceStr) || 50),
+  };
 }
 
 /**
@@ -155,6 +181,11 @@ const LABELS: Record<SettingKey, string> = {
   [SETTING_KEYS.adminUsername]: "Admin login",
   [SETTING_KEYS.adminPassword]: "Admin parol",
   [SETTING_KEYS.defaultRadiusKm]: "Qidiruv radiusi (km) — Standart: 5 km",
+  [SETTING_KEYS.deliveryEnabled]: "Yetkazib berish xizmati (true / false)",
+  [SETTING_KEYS.deliveryMinOrderQty]: "Bepul yetkazib berish chegarasi (dori soni)",
+  [SETTING_KEYS.deliveryPricePerKm]: "1 km uchun yetkazib berish narxi (so'm)",
+  [SETTING_KEYS.deliveryBasePrice]: "Bazaviy boshlang'ich yetkazib berish narxi (so'm)",
+  [SETTING_KEYS.deliveryMaxDistanceKm]: "Maksimal yetkazib berish masofasi (km)",
 };
 
 function mask(value: string): string {

@@ -33,6 +33,7 @@ import {
   Building,
   Phone,
   Clock,
+  Truck,
 } from "lucide-react";
 
 type Me = { enabled: boolean; authenticated: boolean; username: string | null };
@@ -547,8 +548,8 @@ export default function SuperAdminPage() {
 
   if (me === null) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-slate-950 text-slate-200">
-        <RefreshCw className="animate-spin text-emerald-500" size={32} />
+      <div className="flex h-screen w-full items-center justify-center bg-black text-white">
+        <RefreshCw className="animate-spin text-white" size={32} />
       </div>
     );
   }
@@ -556,12 +557,12 @@ export default function SuperAdminPage() {
   // Admin interfeysi o'chirilgan bo'lsa
   if (!me.enabled) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="max-w-md text-center rounded-2xl bg-slate-900 p-8 border border-slate-800 shadow-xl">
-          <AlertCircle className="mx-auto text-amber-400 mb-3" size={40} />
-          <h1 className="text-xl font-bold text-white">Admin Panel O'chirilgan</h1>
-          <p className="mt-2 text-sm text-slate-400">
-            Tizimda `ADMIN_PASSWORD` o'rnatilmagan yoki admin panel xavfsizlik yuzasidan faolsizlantirilgan.
+      <div className="flex min-h-screen items-center justify-center p-4 bg-black">
+        <div className="max-w-md text-center rounded-2xl bg-zinc-950 p-8 border border-zinc-800 shadow-xl">
+          <AlertCircle className="mx-auto text-zinc-400 mb-3" size={40} />
+          <h1 className="text-xl font-bold text-white">Admin Panel O&apos;chirilgan</h1>
+          <p className="mt-2 text-xs text-zinc-400">
+            Tizimda `ADMIN_PASSWORD` o&apos;rnatilmagan yoki admin panel xavfsizlik yuzasidan faolsizlantirilgan.
           </p>
         </div>
       </div>
@@ -571,17 +572,17 @@ export default function SuperAdminPage() {
   // Tizimga kirilmagan (Login form)
   if (!me.authenticated) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-4 bg-slate-950">
-        <div className="w-full max-w-md rounded-3xl bg-slate-900 p-8 border border-slate-800 shadow-2xl">
+      <div className="flex min-h-screen items-center justify-center p-4 bg-black">
+        <div className="w-full max-w-md rounded-3xl bg-zinc-950 p-8 border border-zinc-800 shadow-2xl">
           <div className="flex justify-center mb-4">
-            <img src="/logo.svg" alt="Agroz AI" className="h-12 w-auto object-contain" />
+            <img src="/logo.svg" alt="Agroz AI" className="h-12 w-auto object-contain invert" />
           </div>
           <h1 className="text-center text-2xl font-black text-white tracking-tight">Super Admin Panel</h1>
-          <p className="mt-1 text-center text-xs text-slate-400">admin.agroz.uz — Boshqaruv Markazi</p>
+          <p className="mt-1 text-center text-xs text-zinc-400 font-mono">admin.agroz.uz — Boshqaruv Markazi</p>
 
           <form onSubmit={handleLogin} className="mt-6 space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
                 Admin Username
               </label>
               <input
@@ -590,11 +591,11 @@ export default function SuperAdminPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="admin"
-                className="w-full rounded-xl bg-slate-800 px-4 py-3 text-sm text-white placeholder-slate-500 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full rounded-xl bg-black px-4 py-3 text-sm text-white placeholder-zinc-500 border border-zinc-800 focus:outline-none focus:border-white"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
                 Admin Parol
               </label>
               <input
@@ -603,12 +604,12 @@ export default function SuperAdminPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full rounded-xl bg-slate-800 px-4 py-3 text-sm text-white placeholder-slate-500 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full rounded-xl bg-black px-4 py-3 text-sm text-white placeholder-zinc-500 border border-zinc-800 focus:outline-none focus:border-white"
               />
             </div>
 
             {loginError && (
-              <div className="rounded-xl bg-red-950/80 p-3 text-center text-xs font-semibold text-red-300 border border-red-800">
+              <div className="rounded-xl bg-zinc-900 p-3 text-center text-xs font-semibold text-zinc-200 border border-zinc-700">
                 {loginError}
               </div>
             )}
@@ -616,7 +617,7 @@ export default function SuperAdminPage() {
             <button
               type="submit"
               disabled={busy}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-bold text-white shadow-lg hover:bg-emerald-500 disabled:opacity-50 transition active:scale-95"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-white py-3 text-sm font-bold text-black shadow hover:bg-zinc-200 disabled:opacity-50 transition active:scale-95"
             >
               {busy ? <RefreshCw className="animate-spin" size={18} /> : "Kirish"}
             </button>
@@ -674,16 +675,16 @@ export default function SuperAdminPage() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-950 pb-12">
+    <div className="min-h-screen bg-black text-white pb-12 font-sans">
       {/* Top Header */}
-      <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
+      <header className="sticky top-0 z-40 bg-black/95 backdrop-blur-md border-b border-zinc-800">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src="/logo.svg" alt="Agroz AI" className="h-9 w-auto object-contain" />
+              <img src="/logo.svg" alt="Agroz AI" className="h-8 w-auto object-contain invert" />
               <div>
-                <h1 className="text-base font-bold text-white leading-tight">Super Admin</h1>
-                <p className="text-[11px] font-medium text-emerald-400">admin.agroz.uz</p>
+                <h1 className="text-sm font-bold text-white tracking-wide uppercase">Super Admin</h1>
+                <p className="text-[11px] font-mono text-zinc-400">admin.agroz.uz</p>
               </div>
             </div>
 
@@ -691,25 +692,25 @@ export default function SuperAdminPage() {
               <button
                 onClick={loadData}
                 title="Ma'lumotlarni yangilash"
-                className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition"
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-900 text-zinc-300 hover:bg-zinc-800 hover:text-white border border-zinc-800 transition"
               >
-                <RefreshCw size={16} />
+                <RefreshCw size={15} />
               </button>
 
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-1.5 rounded-xl bg-slate-800 px-3.5 py-2 text-xs font-bold text-slate-300 hover:bg-red-900/50 hover:text-red-200 transition"
+                className="flex items-center gap-1.5 rounded-xl bg-zinc-900 px-3.5 py-2 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 hover:text-white border border-zinc-800 transition"
               >
-                <LogOut size={14} /> Chiquv ({me.username})
+                <LogOut size={13} /> Chiquv ({me.username})
               </button>
             </div>
           </div>
 
           {/* Navigatsiya Tablari */}
-          <div className="flex space-x-1 overflow-x-auto pb-2 scrollbar-none">
+          <div className="flex space-x-1.5 overflow-x-auto pb-2 scrollbar-none">
             {[
               { id: "dashboard", label: "Dashboard", icon: BarChart3 },
-              { id: "analytics", label: "📊 Analitika & Tahlil", icon: TrendingUp },
+              { id: "analytics", label: "Analitika & Tahlil", icon: TrendingUp },
               {
                 id: "orders",
                 label: "Buyurtmalar",
@@ -724,19 +725,19 @@ export default function SuperAdminPage() {
               },
               {
                 id: "pharmacies",
-                label: "🏪 Dorixona Arizalari (Panel o'rnatish)",
+                label: "Dorixona Arizalari (Panel)",
                 icon: Store,
                 badge: pendingPharmacies.length > 0 ? pendingPharmacies.length : undefined,
               },
               {
                 id: "specialists",
-                label: "👨‍🌾 Mutaxassislar (Agronom & Vet)",
+                label: "Mutaxassislar (Agronom & Vet)",
                 icon: Users,
                 badge: pendingSpecialists.length > 0 ? pendingSpecialists.length : undefined,
               },
               { id: "regions", label: "Viloyatlar Tahlili", icon: Globe },
               { id: "reviews", label: "Fikrlar & Sharhlar", icon: MessageSquare },
-              { id: "settings", label: "Radius & Bot Sozlamalari", icon: Settings },
+              { id: "settings", label: "Radius & Yetkazib Berish Sozlamalari", icon: Settings },
               { id: "broadcast", label: "Ob-havo Ogohlantirishlari", icon: AlertCircle },
             ].map((tab) => {
               const Icon = tab.icon;
@@ -745,16 +746,16 @@ export default function SuperAdminPage() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2 text-xs font-bold transition ${
+                  className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
                     active
-                      ? "bg-emerald-600 text-white shadow-md"
-                      : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                      ? "bg-white text-black font-bold shadow-sm"
+                      : "text-zinc-400 hover:text-white hover:bg-zinc-900 border border-transparent"
                   }`}
                 >
-                  <Icon size={15} />
+                  <Icon size={14} />
                   <span>{tab.label}</span>
                   {tab.badge !== undefined && (
-                    <span className="rounded-full bg-amber-500/20 px-1.5 py-0.2 text-[10px] font-extrabold text-amber-300 border border-amber-500/30">
+                    <span className="rounded-full bg-zinc-800 px-1.5 py-0.2 text-[10px] font-mono font-bold text-white border border-zinc-600">
                       {tab.badge}
                     </span>
                   )}
@@ -771,8 +772,8 @@ export default function SuperAdminPage() {
           <div
             className={`mb-6 rounded-2xl p-4 text-xs font-bold border ${
               notice.kind === "ok"
-                ? "bg-emerald-950/80 text-emerald-200 border-emerald-800"
-                : "bg-red-950/80 text-red-200 border-red-800"
+                ? "bg-zinc-950 text-white border-zinc-700"
+                : "bg-zinc-950 text-zinc-300 border-zinc-700"
             }`}
           >
             {notice.text}
@@ -785,40 +786,40 @@ export default function SuperAdminPage() {
             {/* Statistika Kartochkalari */}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
               {[
-                { label: "Jami Foydalanuvchilar", val: stats?.users ?? 0, sub: `${stats?.telegramUsers ?? 0} Telegram`, icon: Users, color: "text-blue-400" },
-                { label: "Agronom & Vets", val: stats?.specialists ?? 0, sub: "Sertifikatlangan", icon: Activity, color: "text-emerald-400" },
-                { label: "Agro-Dorixonalar", val: stats?.pharmacies ?? 0, sub: "Ro'yxatdan o'tgan", icon: Store, color: "text-amber-400" },
-                { label: "Dori Vositalari", val: stats?.medicines ?? 0, sub: "Katalogda", icon: Package, color: "text-purple-400" },
-                { label: "Jami Buyurtmalar", val: stats?.orders ?? 0, sub: "Barcha xaridlar", icon: ShoppingCart, color: "text-pink-400" },
-                { label: "Buyurtmalar Summasi", val: `${(stats?.totalSalesSum ?? 0).toLocaleString()} so'm`, sub: `${stats?.ordersDelivered ?? 0} yetkazildi`, icon: TrendingUp, color: "text-cyan-400" },
+                { label: "Jami Foydalanuvchilar", val: stats?.users ?? 0, sub: `${stats?.telegramUsers ?? 0} Telegram`, icon: Users },
+                { label: "Agronom & Vets", val: stats?.specialists ?? 0, sub: "Sertifikatlangan", icon: Activity },
+                { label: "Agro-Dorixonalar", val: stats?.pharmacies ?? 0, sub: "Ro'yxatdan o'tgan", icon: Store },
+                { label: "Dori Vositalari", val: stats?.medicines ?? 0, sub: "Katalogda", icon: Package },
+                { label: "Jami Buyurtmalar", val: stats?.orders ?? 0, sub: "Barcha xaridlar", icon: ShoppingCart },
+                { label: "Buyurtmalar Summasi", val: `${(stats?.totalSalesSum ?? 0).toLocaleString()} so'm`, sub: `${stats?.ordersDelivered ?? 0} yetkazildi`, icon: TrendingUp },
               ].map((s, idx) => {
                 const Icon = s.icon;
                 return (
-                  <div key={idx} className="rounded-2xl bg-slate-900 p-4 border border-slate-800 shadow-sm">
+                  <div key={idx} className="rounded-2xl bg-zinc-950 p-4 border border-zinc-800 shadow-sm">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-slate-400">{s.label}</span>
-                      <Icon className={s.color} size={18} />
+                      <span className="text-[11px] font-semibold text-zinc-400">{s.label}</span>
+                      <Icon className="text-zinc-400" size={17} />
                     </div>
-                    <p className="mt-2 text-xl font-black text-white">{s.val}</p>
-                    <p className="mt-1 text-[10.5px] text-slate-500 font-medium">{s.sub}</p>
+                    <p className="mt-2 text-xl font-mono font-black text-white">{s.val}</p>
+                    <p className="mt-1 text-[10.5px] font-mono text-zinc-500">{s.sub}</p>
                   </div>
                 );
               })}
             </div>
 
             {/* Oxirgi Buyurtmalar */}
-            <div className="rounded-2xl bg-slate-900 p-6 border border-slate-800">
+            <div className="rounded-2xl bg-zinc-950 p-6 border border-zinc-800">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-base font-bold text-white flex items-center gap-2">
-                  <ShoppingCart size={18} className="text-emerald-400" /> Oxirgi Buyurtmalar
+                <h2 className="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-wider">
+                  <ShoppingCart size={16} className="text-white" /> Oxirgi Buyurtmalar
                 </h2>
-                <span className="text-xs text-slate-400">Jami: {stats?.orders ?? 0} ta</span>
+                <span className="text-xs font-mono text-zinc-500">Jami: {stats?.orders ?? 0} ta</span>
               </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider">
+                    <tr className="border-b border-zinc-800 text-zinc-400 uppercase text-[10px] tracking-wider font-mono">
                       <th className="pb-3">ID</th>
                       <th className="pb-3">Mijoz</th>
                       <th className="pb-3">Telefon</th>
@@ -827,37 +828,31 @@ export default function SuperAdminPage() {
                       <th className="pb-3">Baho</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800 text-slate-300">
+                  <tbody className="divide-y divide-zinc-800/60 text-zinc-300">
                     {recentOrders.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-4 text-center text-slate-500">
+                        <td colSpan={6} className="py-6 text-center text-zinc-500 font-medium">
                           Hali buyurtmalar kelib tushmagan
                         </td>
                       </tr>
                     ) : (
                       recentOrders.map((o) => (
-                        <tr key={o.id} className="hover:bg-slate-800/50">
-                          <td className="py-3 font-mono font-bold text-slate-400">#{o.id}</td>
+                        <tr key={o.id} className="hover:bg-zinc-900/40 transition">
+                          <td className="py-3 font-mono font-bold text-zinc-400">#{o.id}</td>
                           <td className="py-3 font-semibold text-white">{o.customerName}</td>
-                          <td className="py-3 text-slate-400">{o.customerPhone}</td>
-                          <td className="py-3 font-bold text-emerald-400">
+                          <td className="py-3 text-zinc-400 font-mono">{o.customerPhone}</td>
+                          <td className="py-3 font-mono font-bold text-white">
                             {o.totalSum ? `${o.totalSum.toLocaleString()} so'm` : "—"}
                           </td>
                           <td className="py-3">
-                            <span
-                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
-                                o.status === "yetkazildi"
-                                  ? "bg-emerald-950 text-emerald-400 border border-emerald-800"
-                                  : "bg-amber-950 text-amber-400 border border-amber-800"
-                              }`}
-                            >
+                            <span className="rounded-md bg-zinc-900 px-2 py-0.5 text-[10px] font-mono font-bold text-zinc-200 border border-zinc-700">
                               {o.status}
                             </span>
                           </td>
                           <td className="py-3">
                             {o.ratingStars ? (
-                              <span className="flex items-center gap-1 font-bold text-amber-400">
-                                <Star size={12} fill="currentColor" /> {o.ratingStars}
+                              <span className="flex items-center gap-1 font-mono text-zinc-200">
+                                <Star size={12} fill="currentColor" className="text-white" /> {o.ratingStars}
                               </span>
                             ) : (
                               "—"
@@ -878,51 +873,51 @@ export default function SuperAdminPage() {
           <div className="space-y-6">
             {/* 1. Foydalanuvchilar va mutaxassislar soni */}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-              <div className="rounded-2xl bg-slate-900 p-4 border border-slate-800 shadow-sm">
+              <div className="rounded-2xl bg-zinc-950 p-4 border border-zinc-800 shadow-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-slate-400">Dehqon & Fermerlar</span>
-                  <Users className="text-blue-400" size={18} />
+                  <span className="text-[11px] font-semibold text-zinc-400">Dehqon & Fermerlar</span>
+                  <Users className="text-zinc-400" size={17} />
                 </div>
-                <p className="mt-2 text-2xl font-black text-white">{analytics?.counts.totalUsers ?? 0}</p>
-                <p className="mt-1 text-[10.5px] text-slate-500 font-medium">
+                <p className="mt-2 text-2xl font-mono font-black text-white">{analytics?.counts.totalUsers ?? 0}</p>
+                <p className="mt-1 text-[10.5px] font-mono text-zinc-500">
                   {analytics?.counts.telegramUsers ?? 0} TG · {analytics?.counts.phoneUsers ?? 0} Tel
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-slate-900 p-4 border border-slate-800 shadow-sm">
+              <div className="rounded-2xl bg-zinc-950 p-4 border border-zinc-800 shadow-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-slate-400">Agronomlar</span>
-                  <Activity className="text-emerald-400" size={18} />
+                  <span className="text-[11px] font-semibold text-zinc-400">Agronomlar</span>
+                  <Activity className="text-zinc-400" size={17} />
                 </div>
-                <p className="mt-2 text-2xl font-black text-emerald-400">{analytics?.counts.agronomists ?? 0}</p>
-                <p className="mt-1 text-[10.5px] text-slate-500 font-medium">O&apos;simlikshunoslar</p>
+                <p className="mt-2 text-2xl font-mono font-black text-white">{analytics?.counts.agronomists ?? 0}</p>
+                <p className="mt-1 text-[10.5px] font-mono text-zinc-500">O&apos;simlikshunoslar</p>
               </div>
 
-              <div className="rounded-2xl bg-slate-900 p-4 border border-slate-800 shadow-sm">
+              <div className="rounded-2xl bg-zinc-950 p-4 border border-zinc-800 shadow-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-slate-400">Veterinarlar</span>
-                  <Building className="text-amber-400" size={18} />
+                  <span className="text-[11px] font-semibold text-zinc-400">Veterinarlar</span>
+                  <Building className="text-zinc-400" size={17} />
                 </div>
-                <p className="mt-2 text-2xl font-black text-amber-400">{analytics?.counts.veterinarians ?? 0}</p>
-                <p className="mt-1 text-[10.5px] text-slate-500 font-medium">Chorvachilik bo&apos;yicha</p>
+                <p className="mt-2 text-2xl font-mono font-black text-white">{analytics?.counts.veterinarians ?? 0}</p>
+                <p className="mt-1 text-[10.5px] font-mono text-zinc-500">Chorvachilik bo&apos;yicha</p>
               </div>
 
-              <div className="rounded-2xl bg-slate-900 p-4 border border-slate-800 shadow-sm">
+              <div className="rounded-2xl bg-zinc-950 p-4 border border-zinc-800 shadow-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-slate-400">Agro-Dorixonalar</span>
-                  <Store className="text-purple-400" size={18} />
+                  <span className="text-[11px] font-semibold text-zinc-400">Agro-Dorixonalar</span>
+                  <Store className="text-zinc-400" size={17} />
                 </div>
-                <p className="mt-2 text-2xl font-black text-purple-400">{analytics?.counts.pharmacies ?? 0}</p>
-                <p className="mt-1 text-[10.5px] text-slate-500 font-medium">Dorixona filiallari</p>
+                <p className="mt-2 text-2xl font-mono font-black text-white">{analytics?.counts.pharmacies ?? 0}</p>
+                <p className="mt-1 text-[10.5px] font-mono text-zinc-500">Dorixona filiallari</p>
               </div>
 
-              <div className="rounded-2xl bg-slate-900 p-4 border border-slate-800 shadow-sm">
+              <div className="rounded-2xl bg-zinc-950 p-4 border border-zinc-800 shadow-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-slate-400">Band Mutaxassislar</span>
-                  <Clock className="text-rose-400" size={18} />
+                  <span className="text-[11px] font-semibold text-zinc-400">Band Mutaxassislar</span>
+                  <Clock className="text-zinc-400" size={17} />
                 </div>
-                <p className="mt-2 text-2xl font-black text-rose-400">{analytics?.counts.busySpecialists ?? 0}</p>
-                <p className="mt-1 text-[10.5px] text-slate-500 font-medium">
+                <p className="mt-2 text-2xl font-mono font-black text-white">{analytics?.counts.busySpecialists ?? 0}</p>
+                <p className="mt-1 text-[10.5px] font-mono text-zinc-500">
                   Jami: {analytics?.counts.totalSpecialists ?? 0} ta
                 </p>
               </div>
@@ -931,16 +926,16 @@ export default function SuperAdminPage() {
             {/* 2. Kasalliklar tahlili: Hayvonlar va Ekinlar (2 ustun) */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               {/* Hayvonlar kasalliklari */}
-              <div className="rounded-2xl bg-slate-900 p-5 border border-slate-800 shadow-sm">
+              <div className="rounded-2xl bg-zinc-950 p-5 border border-zinc-800 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
                     <span>🐄</span> Chorva / Hayvonlarda eng ko&apos;p kasalliklar
                   </h3>
-                  <span className="text-xs text-slate-400 font-medium">Chaqiruvlar tahlili</span>
+                  <span className="text-xs font-mono text-zinc-500">Chaqiruvlar tahlili</span>
                 </div>
 
                 {!analytics?.topAnimalDiseases || analytics.topAnimalDiseases.length === 0 ? (
-                  <p className="py-6 text-center text-xs text-slate-500 font-medium">
+                  <p className="py-6 text-center text-xs text-zinc-500 font-medium">
                     Hozircha chorvachilik bo&apos;yicha chaqiruv ma&apos;lumotlari yo&apos;q
                   </p>
                 ) : (
@@ -950,18 +945,18 @@ export default function SuperAdminPage() {
                         analytics.topAnimalDiseases.reduce((acc, curr) => acc + curr.count, 0) || 1;
                       const pct = Math.round((d.count / totalAnimalCalls) * 100);
                       return (
-                        <div key={idx} className="rounded-xl bg-slate-950 p-3 border border-slate-800/80">
+                        <div key={idx} className="rounded-xl bg-black p-3 border border-zinc-800">
                           <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-xs font-semibold text-slate-200 flex items-center gap-2">
+                            <span className="text-xs font-semibold text-zinc-200 flex items-center gap-2">
                               <span>{d.icon}</span> {d.label}
                             </span>
-                            <span className="text-xs font-bold text-amber-400">
+                            <span className="text-xs font-mono font-bold text-white">
                               {d.count} ta ({pct}%)
                             </span>
                           </div>
-                          <div className="h-2 w-full rounded-full bg-slate-800 overflow-hidden">
+                          <div className="h-1.5 w-full rounded-full bg-zinc-900 overflow-hidden">
                             <div
-                              className="h-full bg-amber-500 rounded-full transition-all"
+                              className="h-full bg-white rounded-full transition-all"
                               style={{ width: `${Math.max(5, pct)}%` }}
                             />
                           </div>
@@ -973,16 +968,16 @@ export default function SuperAdminPage() {
               </div>
 
               {/* Ekinlar kasalliklari va zararkunandalar */}
-              <div className="rounded-2xl bg-slate-900 p-5 border border-slate-800 shadow-sm">
+              <div className="rounded-2xl bg-zinc-950 p-5 border border-zinc-800 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <span>🌱</span> Ekinlar bo&apos;yicha eng ko&apos;p kasallik & zararkunandalar
+                  <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                    <span>🌱</span> Ekinlar bo&apos;yicha eng ko&apos;p kasalliklar
                   </h3>
-                  <span className="text-xs text-slate-400 font-medium">Agronom chaqiruvlari</span>
+                  <span className="text-xs font-mono text-zinc-500">Agronom chaqiruvlari</span>
                 </div>
 
                 {!analytics?.topCropDiseases || analytics.topCropDiseases.length === 0 ? (
-                  <p className="py-6 text-center text-xs text-slate-500 font-medium">
+                  <p className="py-6 text-center text-xs text-zinc-500 font-medium">
                     Hozircha ekinlar bo&apos;yicha chaqiruv ma&apos;lumotlari yo&apos;q
                   </p>
                 ) : (
@@ -992,18 +987,18 @@ export default function SuperAdminPage() {
                         analytics.topCropDiseases.reduce((acc, curr) => acc + curr.count, 0) || 1;
                       const pct = Math.round((d.count / totalCropCalls) * 100);
                       return (
-                        <div key={idx} className="rounded-xl bg-slate-950 p-3 border border-slate-800/80">
+                        <div key={idx} className="rounded-xl bg-black p-3 border border-zinc-800">
                           <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-xs font-semibold text-slate-200 flex items-center gap-2">
+                            <span className="text-xs font-semibold text-zinc-200 flex items-center gap-2">
                               <span>{d.icon}</span> {d.label}
                             </span>
-                            <span className="text-xs font-bold text-emerald-400">
+                            <span className="text-xs font-mono font-bold text-white">
                               {d.count} ta ({pct}%)
                             </span>
                           </div>
-                          <div className="h-2 w-full rounded-full bg-slate-800 overflow-hidden">
+                          <div className="h-1.5 w-full rounded-full bg-zinc-900 overflow-hidden">
                             <div
-                              className="h-full bg-emerald-500 rounded-full transition-all"
+                              className="h-full bg-white rounded-full transition-all"
                               style={{ width: `${Math.max(5, pct)}%` }}
                             />
                           </div>
@@ -1016,23 +1011,23 @@ export default function SuperAdminPage() {
             </div>
 
             {/* 3. Eng ko'p sotilayotgan va talab yuqori bo'lgan dorilar */}
-            <div className="rounded-2xl bg-slate-900 p-6 border border-slate-800 shadow-sm">
+            <div className="rounded-2xl bg-zinc-950 p-6 border border-zinc-800 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <Package className="text-purple-400" size={18} /> Eng Ko&apos;p Sotilgan & Talab Yuqori Bo&apos;lgan Dorilar
+                <h3 className="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-wider">
+                  <Package className="text-white" size={17} /> Eng Ko&apos;p Sotilgan & Talab Yuqori Bo&apos;lgan Dorilar
                 </h3>
-                <span className="text-xs text-slate-400">Marketplace Tahlili</span>
+                <span className="text-xs font-mono text-zinc-500">Marketplace Tahlili</span>
               </div>
 
               {!analytics?.topMedicines || analytics.topMedicines.length === 0 ? (
-                <p className="py-8 text-center text-xs text-slate-500 font-medium">
+                <p className="py-8 text-center text-xs text-zinc-500 font-medium">
                   Hozircha buyurtma qilingan dori vositalari mavjud emas.
                 </p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
                     <thead>
-                      <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider">
+                      <tr className="border-b border-zinc-800 text-zinc-400 uppercase text-[10px] tracking-wider font-mono">
                         <th className="pb-3">Dori Nomi</th>
                         <th className="pb-3">Dorixona</th>
                         <th className="pb-3 text-center">Sotilgan Miqdor</th>
@@ -1041,30 +1036,30 @@ export default function SuperAdminPage() {
                         <th className="pb-3">Qoldiq Holati</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-800/80 text-slate-300">
+                    <tbody className="divide-y divide-zinc-800/60 text-zinc-300">
                       {analytics.topMedicines.map((m, idx) => (
-                        <tr key={idx} className="hover:bg-slate-800/40 transition">
+                        <tr key={idx} className="hover:bg-zinc-900/40 transition">
                           <td className="py-3 font-bold text-white flex items-center gap-2">
                             <span>💊</span> {m.name}
                           </td>
-                          <td className="py-3 text-slate-400">{m.pharmacyName}</td>
-                          <td className="py-3 text-center font-bold text-emerald-400">{m.totalSoldQty} dona</td>
-                          <td className="py-3 text-center font-semibold text-slate-300">{m.ordersCount} ta</td>
-                          <td className="py-3 font-mono font-bold text-cyan-400">
+                          <td className="py-3 text-zinc-400">{m.pharmacyName}</td>
+                          <td className="py-3 text-center font-mono font-bold text-white">{m.totalSoldQty} dona</td>
+                          <td className="py-3 text-center font-mono text-zinc-300">{m.ordersCount} ta</td>
+                          <td className="py-3 font-mono font-bold text-white">
                             {m.totalRevenue ? `${m.totalRevenue.toLocaleString()} so'm` : "—"}
                           </td>
                           <td className="py-3">
                             {m.stock !== null && m.stock !== undefined && m.stock <= 0 ? (
-                              <span className="rounded-full bg-rose-950 px-2.5 py-0.5 text-[10px] font-bold text-rose-300 border border-rose-800">
-                                🔴 Tugagan
+                              <span className="rounded-md bg-zinc-900 px-2 py-0.5 text-[10px] font-mono font-bold text-zinc-400 border border-zinc-700">
+                                Tugagan
                               </span>
                             ) : m.stock !== null && m.stock !== undefined && m.stock <= 3 ? (
-                              <span className="rounded-full bg-amber-950 px-2.5 py-0.5 text-[10px] font-bold text-amber-300 border border-amber-800">
-                                ⚠️ {m.stock} dona qoldi
+                              <span className="rounded-md bg-zinc-900 px-2 py-0.5 text-[10px] font-mono font-bold text-white border border-zinc-600">
+                                {m.stock} dona qoldi
                               </span>
                             ) : (
-                              <span className="rounded-full bg-emerald-950 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300 border border-emerald-800">
-                                🟢 {m.stock !== null && m.stock !== undefined ? `${m.stock} dona bor` : "Bor"}
+                              <span className="rounded-md bg-zinc-900 px-2 py-0.5 text-[10px] font-mono font-bold text-zinc-200 border border-zinc-700">
+                                {m.stock !== null && m.stock !== undefined ? `${m.stock} dona` : "Bor"}
                               </span>
                             )}
                           </td>
@@ -1081,27 +1076,27 @@ export default function SuperAdminPage() {
         {/* 1.2. BUYURTMALAR TAB */}
         {activeTab === "orders" && (
           <div className="space-y-6">
-            <div className="rounded-2xl bg-slate-900 p-5 border border-slate-800 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="rounded-2xl bg-zinc-950 p-5 border border-zinc-800 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="relative flex-1 max-w-md">
-                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
                 <input
                   type="text"
                   placeholder="Mijoz ismi, telefon yoki manzil..."
                   value={orderSearch}
                   onChange={(e) => setOrderSearch(e.target.value)}
-                  className="w-full rounded-xl bg-slate-950 pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 border border-slate-800 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-xl bg-black pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 border border-zinc-800 focus:border-white focus:outline-none"
                 />
               </div>
 
-              <div className="flex rounded-xl bg-slate-950 p-1 border border-slate-800 text-xs font-semibold">
+              <div className="flex rounded-xl bg-black p-1 border border-zinc-800 text-xs font-semibold">
                 {["all", "yangi", "tasdiqlandi", "yetkazildi", "bekor"].map((st) => (
                   <button
                     key={st}
                     onClick={() => setOrderStatusFilter(st)}
-                    className={`px-3 py-1 rounded-lg capitalize transition ${
+                    className={`px-3 py-1.5 rounded-lg capitalize transition ${
                       orderStatusFilter === st
-                        ? "bg-slate-800 text-white"
-                        : "text-slate-400 hover:text-white"
+                        ? "bg-white text-black font-bold"
+                        : "text-zinc-400 hover:text-white"
                     }`}
                   >
                     {st === "all" ? "Barchasi" : st}
@@ -1110,11 +1105,11 @@ export default function SuperAdminPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden shadow-sm">
+            <div className="rounded-2xl bg-zinc-950 border border-zinc-800 overflow-hidden shadow-sm">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="bg-slate-950/60 border-b border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider">
+                    <tr className="bg-zinc-900/60 border-b border-zinc-800 text-zinc-400 uppercase text-[10px] tracking-wider font-mono">
                       <th className="py-3 px-4">ID</th>
                       <th className="py-3 px-4">Mijoz</th>
                       <th className="py-3 px-4">Dorixona</th>
@@ -1125,7 +1120,7 @@ export default function SuperAdminPage() {
                       <th className="py-3 px-4 text-right">Amal</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                  <tbody className="divide-y divide-zinc-800/60 text-zinc-300">
                     {adminOrders
                       .filter((o) => {
                         if (orderStatusFilter !== "all" && o.status !== orderStatusFilter) return false;
@@ -1138,50 +1133,50 @@ export default function SuperAdminPage() {
                         );
                       })
                       .map((o) => (
-                        <tr key={o.id} className="hover:bg-slate-800/40 transition">
-                          <td className="py-3 px-4 font-mono font-bold text-slate-400">#{o.id}</td>
+                        <tr key={o.id} className="hover:bg-zinc-900/40 transition">
+                          <td className="py-3 px-4 font-mono font-bold text-zinc-500">#{o.id}</td>
                           <td className="py-3 px-4">
                             <p className="font-bold text-white">{o.customerName}</p>
-                            <p className="text-[11px] text-slate-400 font-mono">{o.customerPhone}</p>
+                            <p className="text-[11px] text-zinc-400 font-mono">{o.customerPhone}</p>
                           </td>
                           <td className="py-3 px-4">
-                            <p className="font-semibold text-slate-200">
+                            <p className="font-semibold text-zinc-200">
                               {o.pharmacyOrg || o.pharmacyName || "Dorixona"}
                             </p>
-                            {o.pharmacyPhone && <p className="text-[10px] text-slate-500">{o.pharmacyPhone}</p>}
+                            {o.pharmacyPhone && <p className="text-[10px] text-zinc-500 font-mono">{o.pharmacyPhone}</p>}
                           </td>
                           <td className="py-3 px-4 max-w-xs">
                             {o.items?.map((it, i) => (
-                              <p key={i} className="text-[11px] truncate">
+                              <p key={i} className="text-[11px] truncate text-zinc-300">
                                 • {it.name} × {it.qty}
                               </p>
                             ))}
                           </td>
-                          <td className="py-3 px-4 font-bold text-emerald-400">
+                          <td className="py-3 px-4 font-bold font-mono text-white">
                             {o.totalSum ? `${o.totalSum.toLocaleString()} so'm` : "—"}
                           </td>
                           <td className="py-3 px-4 text-[11px]">
                             {o.deliveryType === "delivery" ? (
-                              <span className="text-cyan-400">🚚 Yetkazish</span>
+                              <span className="font-bold text-white">🚚 Yetkazish</span>
                             ) : (
-                              <span className="text-amber-400">🏪 Olib ketish</span>
+                              <span className="text-zinc-400">🏪 Olib ketish</span>
                             )}
                             {o.customerAddress && (
-                              <p className="text-[10px] text-slate-500 truncate max-w-[150px]">
+                              <p className="text-[10px] text-zinc-500 truncate max-w-[150px]">
                                 {o.customerAddress}
                               </p>
                             )}
                           </td>
                           <td className="py-3 px-4">
                             <span
-                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-mono font-bold ${
                                 o.status === "yetkazildi"
-                                  ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
+                                  ? "bg-zinc-900 text-white border border-zinc-700"
                                   : o.status === "tasdiqlandi"
-                                  ? "bg-blue-950 text-blue-300 border border-blue-800"
+                                  ? "bg-zinc-900 text-zinc-200 border border-zinc-700"
                                   : o.status === "bekor"
-                                  ? "bg-rose-950 text-rose-300 border border-rose-800"
-                                  : "bg-amber-950 text-amber-300 border border-amber-800 animate-pulse"
+                                  ? "bg-zinc-900 text-zinc-500 border border-zinc-800 line-through"
+                                  : "bg-white text-black font-bold border border-white"
                               }`}
                             >
                               {o.status}
@@ -1191,7 +1186,7 @@ export default function SuperAdminPage() {
                             <select
                               value={o.status}
                               onChange={(e) => handleUpdateOrderStatus(o.id, e.target.value)}
-                              className="rounded-lg bg-slate-950 px-2 py-1 text-[11px] font-semibold text-slate-300 border border-slate-700"
+                              className="rounded-lg bg-black px-2 py-1 text-[11px] font-semibold text-white border border-zinc-700 focus:outline-none focus:border-white"
                             >
                               <option value="yangi">Yangi</option>
                               <option value="tasdiqlandi">Tasdiqlash</option>
@@ -1211,27 +1206,27 @@ export default function SuperAdminPage() {
         {/* 1.3. MUTAXASSIS CHAQIRUVLARI TAB */}
         {activeTab === "specialist_calls" && (
           <div className="space-y-6">
-            <div className="rounded-2xl bg-slate-900 p-5 border border-slate-800 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="rounded-2xl bg-zinc-950 p-5 border border-zinc-800 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="relative flex-1 max-w-md">
-                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
                 <input
                   type="text"
                   placeholder="Mijoz ismi, muammo yoki telefon..."
                   value={callSearch}
                   onChange={(e) => setCallSearch(e.target.value)}
-                  className="w-full rounded-xl bg-slate-950 pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 border border-slate-800 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-xl bg-black pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 border border-zinc-800 focus:border-white focus:outline-none"
                 />
               </div>
 
-              <div className="flex rounded-xl bg-slate-950 p-1 border border-slate-800 text-xs font-semibold">
+              <div className="flex rounded-xl bg-black p-1 border border-zinc-800 text-xs font-semibold">
                 {["all", "yangi", "qabul_qilindi", "bajarildi", "bekor"].map((st) => (
                   <button
                     key={st}
                     onClick={() => setCallStatusFilter(st)}
-                    className={`px-3 py-1 rounded-lg capitalize transition ${
+                    className={`px-3 py-1.5 rounded-lg capitalize transition ${
                       callStatusFilter === st
-                        ? "bg-slate-800 text-white"
-                        : "text-slate-400 hover:text-white"
+                        ? "bg-white text-black font-bold"
+                        : "text-zinc-400 hover:text-white"
                     }`}
                   >
                     {st === "all" ? "Barchasi" : st}
@@ -1240,11 +1235,11 @@ export default function SuperAdminPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden shadow-sm">
+            <div className="rounded-2xl bg-zinc-950 border border-zinc-800 overflow-hidden shadow-sm">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="bg-slate-950/60 border-b border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider">
+                    <tr className="bg-zinc-900/60 border-b border-zinc-800 text-zinc-400 uppercase text-[10px] tracking-wider font-mono">
                       <th className="py-3 px-4">ID</th>
                       <th className="py-3 px-4">Mijoz (Dehqon)</th>
                       <th className="py-3 px-4">Mutaxassis</th>
@@ -1254,7 +1249,7 @@ export default function SuperAdminPage() {
                       <th className="py-3 px-4 text-right">Amal</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                  <tbody className="divide-y divide-zinc-800/60 text-zinc-300">
                     {adminCalls
                       .filter((c) => {
                         if (callStatusFilter !== "all" && c.status !== callStatusFilter) return false;
@@ -1267,43 +1262,43 @@ export default function SuperAdminPage() {
                         );
                       })
                       .map((c) => (
-                        <tr key={c.id} className="hover:bg-slate-800/40 transition">
-                          <td className="py-3 px-4 font-mono font-bold text-slate-400">#{c.id}</td>
+                        <tr key={c.id} className="hover:bg-zinc-900/40 transition">
+                          <td className="py-3 px-4 font-mono font-bold text-zinc-500">#{c.id}</td>
                           <td className="py-3 px-4">
                             <p className="font-bold text-white">{c.customerName}</p>
                             <a
                               href={`tel:${c.customerPhone}`}
-                              className="text-[11px] text-emerald-400 font-mono hover:underline"
+                              className="text-[11px] text-zinc-300 font-mono hover:underline hover:text-white"
                             >
                               📞 {c.customerPhone}
                             </a>
                           </td>
                           <td className="py-3 px-4">
-                            <p className="font-semibold text-slate-200">
+                            <p className="font-semibold text-zinc-200">
                               {c.specialistName || "Mutaxassis"}
                             </p>
                             {c.specialistPhone && (
-                              <p className="text-[10px] text-slate-500 font-mono">{c.specialistPhone}</p>
+                              <p className="text-[10px] text-zinc-500 font-mono">{c.specialistPhone}</p>
                             )}
                           </td>
                           <td className="py-3 px-4 max-w-sm">
-                            <p className="text-xs text-slate-200 font-medium leading-relaxed">
+                            <p className="text-xs text-zinc-200 font-medium leading-relaxed">
                               {c.problem}
                             </p>
                           </td>
-                          <td className="py-3 px-4 text-slate-400 text-[11px] max-w-xs truncate">
+                          <td className="py-3 px-4 text-zinc-400 text-[11px] max-w-xs truncate">
                             {c.address || "—"}
                           </td>
                           <td className="py-3 px-4">
                             <span
-                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-mono font-bold ${
                                 c.status === "bajarildi"
-                                  ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
+                                  ? "bg-zinc-900 text-white border border-zinc-700"
                                   : c.status === "qabul_qilindi"
-                                  ? "bg-blue-950 text-blue-300 border border-blue-800"
+                                  ? "bg-zinc-900 text-zinc-200 border border-zinc-700"
                                   : c.status === "bekor"
-                                  ? "bg-rose-950 text-rose-300 border border-rose-800"
-                                  : "bg-amber-950 text-amber-300 border border-amber-800 animate-pulse"
+                                  ? "bg-zinc-900 text-zinc-500 border border-zinc-800 line-through"
+                                  : "bg-white text-black font-bold border border-white"
                               }`}
                             >
                               {c.status}
@@ -1313,7 +1308,7 @@ export default function SuperAdminPage() {
                             <select
                               value={c.status}
                               onChange={(e) => handleUpdateCallStatus(c.id, e.target.value)}
-                              className="rounded-lg bg-slate-950 px-2 py-1 text-[11px] font-semibold text-slate-300 border border-slate-700"
+                              className="rounded-lg bg-black px-2 py-1 text-[11px] font-semibold text-white border border-zinc-700 focus:outline-none focus:border-white"
                             >
                               <option value="yangi">Yangi</option>
                               <option value="qabul_qilindi">Qabul qilindi</option>
@@ -1333,14 +1328,14 @@ export default function SuperAdminPage() {
         {/* 1.5. DORIXONA ARIZALARI VA PANEL O'RNATISH TAB */}
         {activeTab === "pharmacies" && (
           <div className="space-y-6">
-            <div className="rounded-2xl bg-gradient-to-r from-emerald-950/60 to-slate-900 p-5 border border-emerald-800/40">
+            <div className="rounded-2xl bg-zinc-950 p-5 border border-zinc-800">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                   <h2 className="text-base font-bold text-white flex items-center gap-2">
-                    <Store className="text-emerald-400" size={20} />
+                    <Store className="text-white" size={20} />
                     🏪 Dorixona Arizalari va Boshqaruv Panelini O&apos;rnatish
                   </h2>
-                  <p className="mt-1 text-xs text-slate-300">
+                  <p className="mt-1 text-xs text-zinc-400">
                     Telegram @agroz_auth_bot orqali ariza yuborgan dorixona egalari. Tasdiqlangandan so&apos;ng, ularga bot ichida avtomatik ravishda dori boshqaruvi va buyurtmalar qabul qilish paneli o&apos;rnatiladi.
                   </p>
                 </div>
@@ -1351,77 +1346,77 @@ export default function SuperAdminPage() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div
                 onClick={() => setPharmacyStatusFilter("all")}
-                className={`cursor-pointer rounded-2xl p-5 border transition ${
+                className={`cursor-pointer rounded-2xl p-5 border transition bg-zinc-950 ${
                   pharmacyStatusFilter === "all"
-                    ? "bg-slate-900 border-slate-700 ring-1 ring-slate-700"
-                    : "bg-slate-900/80 border-slate-800 hover:border-slate-700"
+                    ? "border-white ring-1 ring-white"
+                    : "border-zinc-800 hover:border-zinc-700"
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-400">Jami Dorixonalar</span>
-                  <Store className="text-blue-400" size={20} />
+                  <span className="text-xs font-semibold text-zinc-400">Jami Dorixonalar</span>
+                  <Store className="text-white" size={20} />
                 </div>
                 <p className="mt-2 text-2xl font-black text-white">{pharmacyList.length} ta</p>
-                <p className="mt-1 text-[11px] text-slate-500 font-medium">Barcha ro&apos;yxatdan o&apos;tgan dorixonalar</p>
+                <p className="mt-1 text-[11px] text-zinc-500 font-medium">Barcha ro&apos;yxatdan o&apos;tgan dorixonalar</p>
               </div>
 
               <div
                 onClick={() => setPharmacyStatusFilter("pending")}
-                className={`cursor-pointer rounded-2xl p-5 border transition ${
+                className={`cursor-pointer rounded-2xl p-5 border transition bg-zinc-950 ${
                   pharmacyStatusFilter === "pending"
-                    ? "bg-amber-950/60 border-amber-500 ring-1 ring-amber-500"
-                    : "bg-slate-900 border-slate-800 hover:border-slate-700"
+                    ? "border-white ring-1 ring-white"
+                    : "border-zinc-800 hover:border-zinc-700"
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-amber-300">⏳ Kutilayotgan Arizalar</span>
-                  <AlertCircle className="text-amber-400" size={20} />
+                  <span className="text-xs font-semibold text-zinc-300">⏳ Kutilayotgan Arizalar</span>
+                  <AlertCircle className="text-white" size={20} />
                 </div>
-                <p className="mt-2 text-2xl font-black text-amber-400">{pendingPharmacies.length} ta</p>
-                <p className="mt-1 text-[11px] text-amber-500/80 font-medium">
+                <p className="mt-2 text-2xl font-black text-white">{pendingPharmacies.length} ta</p>
+                <p className="mt-1 text-[11px] text-zinc-500 font-medium">
                   Panel o&apos;rnatish uchun arizalar
                 </p>
               </div>
 
               <div
                 onClick={() => setPharmacyStatusFilter("approved")}
-                className={`cursor-pointer rounded-2xl p-5 border transition ${
+                className={`cursor-pointer rounded-2xl p-5 border transition bg-zinc-950 ${
                   pharmacyStatusFilter === "approved"
-                    ? "bg-emerald-950/60 border-emerald-500 ring-1 ring-emerald-500"
-                    : "bg-slate-900 border-slate-800 hover:border-slate-700"
+                    ? "border-white ring-1 ring-white"
+                    : "border-zinc-800 hover:border-zinc-700"
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-emerald-300">✅ Panel O&apos;rnatilgan (Faol)</span>
-                  <CheckCircle2 className="text-emerald-400" size={20} />
+                  <span className="text-xs font-semibold text-zinc-300">✅ Panel O&apos;rnatilgan (Faol)</span>
+                  <CheckCircle2 className="text-white" size={20} />
                 </div>
-                <p className="mt-2 text-2xl font-black text-emerald-400">{approvedPharmacies.length} ta</p>
-                <p className="mt-1 text-[11px] text-emerald-500/80 font-medium">
+                <p className="mt-2 text-2xl font-black text-white">{approvedPharmacies.length} ta</p>
+                <p className="mt-1 text-[11px] text-zinc-500 font-medium">
                   Botda panel ochilgan dorixonalar
                 </p>
               </div>
             </div>
 
             {/* Qidiruv va Filterlar */}
-            <div className="rounded-2xl bg-slate-900 p-5 border border-slate-800 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="rounded-2xl bg-zinc-950 p-5 border border-zinc-800 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="relative flex-1 max-w-md">
-                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
                 <input
                   type="text"
                   placeholder="Dorixona nomi, egasi, telefon yoki manzil..."
                   value={pharmacySearch}
                   onChange={(e) => setPharmacySearch(e.target.value)}
-                  className="w-full rounded-xl bg-slate-950 pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 border border-slate-800 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-xl bg-black pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 border border-zinc-800 focus:border-white focus:outline-none"
                 />
               </div>
 
-              <div className="flex rounded-xl bg-slate-950 p-1 border border-slate-800 text-xs font-semibold">
+              <div className="flex rounded-xl bg-black p-1 border border-zinc-800 text-xs font-semibold">
                 <button
                   onClick={() => setPharmacyStatusFilter("all")}
                   className={`px-3 py-1.5 rounded-lg transition ${
                     pharmacyStatusFilter === "all"
-                      ? "bg-slate-800 text-white"
-                      : "text-slate-400 hover:text-white"
+                      ? "bg-white text-black font-bold"
+                      : "text-zinc-400 hover:text-white"
                   }`}
                 >
                   Barchasi ({pharmacyList.length})
@@ -1430,8 +1425,8 @@ export default function SuperAdminPage() {
                   onClick={() => setPharmacyStatusFilter("pending")}
                   className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
                     pharmacyStatusFilter === "pending"
-                      ? "bg-amber-600 text-white"
-                      : "text-slate-400 hover:text-white"
+                      ? "bg-white text-black font-bold"
+                      : "text-zinc-400 hover:text-white"
                   }`}
                 >
                   ⏳ Panel o&apos;rnatilmagan ({pendingPharmacies.length})
@@ -1440,8 +1435,8 @@ export default function SuperAdminPage() {
                   onClick={() => setPharmacyStatusFilter("approved")}
                   className={`px-3 py-1.5 rounded-lg transition ${
                     pharmacyStatusFilter === "approved"
-                      ? "bg-emerald-600 text-white"
-                      : "text-slate-400 hover:text-white"
+                      ? "bg-white text-black font-bold"
+                      : "text-zinc-400 hover:text-white"
                   }`}
                 >
                   ✅ Panel o&apos;rnatilgan ({approvedPharmacies.length})
@@ -1450,11 +1445,11 @@ export default function SuperAdminPage() {
             </div>
 
             {/* Dorixonalar jadvali */}
-            <div className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden shadow-sm">
+            <div className="rounded-2xl bg-zinc-950 border border-zinc-800 overflow-hidden shadow-sm">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="bg-slate-950/60 border-b border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider">
+                    <tr className="bg-zinc-900/60 border-b border-zinc-800 text-zinc-400 uppercase text-[10px] tracking-wider font-mono">
                       <th className="py-3 px-4">ID</th>
                       <th className="py-3 px-4">Dorixona Nomi & Egasi</th>
                       <th className="py-3 px-4">Aloqa</th>
@@ -1464,49 +1459,49 @@ export default function SuperAdminPage() {
                       <th className="py-3 px-4 text-right">Amallar</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60">
+                  <tbody className="divide-y divide-zinc-800/60 text-zinc-300">
                     {filteredPharmacies.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-8 text-center text-slate-500 font-medium">
+                        <td colSpan={7} className="py-8 text-center text-zinc-500 font-medium">
                           Dorixona arizalari topilmadi.
                         </td>
                       </tr>
                     ) : (
                       filteredPharmacies.map((s) => (
-                        <tr key={s.id} className="hover:bg-slate-800/40 transition">
-                          <td className="py-3 px-4 font-mono text-slate-500">#{s.id}</td>
+                        <tr key={s.id} className="hover:bg-zinc-900/40 transition">
+                          <td className="py-3 px-4 font-mono text-zinc-500">#{s.id}</td>
                           <td className="py-3 px-4">
                             <p className="font-bold text-white flex items-center gap-1.5">
-                              <Store size={14} className="text-emerald-400" />
+                              <Store size={14} className="text-zinc-400" />
                               {s.organization || s.name}
                             </p>
-                            <p className="text-[11px] text-slate-400 mt-0.5">Egasi: {s.name}</p>
+                            <p className="text-[11px] text-zinc-400 mt-0.5">Egasi: {s.name}</p>
                           </td>
                           <td className="py-3 px-4">
                             <a
                               href={`tel:${s.phone}`}
-                              className="font-semibold text-emerald-400 hover:underline block"
+                              className="font-semibold text-zinc-200 hover:text-white hover:underline block font-mono"
                             >
                               📞 {s.phone}
                             </a>
                             {s.telegramId && (
-                              <p className="text-[10px] text-slate-500 font-mono mt-0.5">TG: {s.telegramId}</p>
+                              <p className="text-[10px] text-zinc-500 font-mono mt-0.5">TG: {s.telegramId}</p>
                             )}
                           </td>
-                          <td className="py-3 px-4 max-w-xs truncate text-slate-300" title={s.address || ""}>
+                          <td className="py-3 px-4 max-w-xs truncate text-zinc-400" title={s.address || ""}>
                             {s.address || "—"}
                           </td>
                           <td className="py-3 px-4 text-center">
                             <div className="flex items-center justify-center gap-2">
                               <span
                                 title="Katalogdagi dorilari soni"
-                                className="inline-flex items-center gap-1 rounded-md bg-slate-950 px-2 py-0.5 text-[10.5px] font-semibold text-purple-300 border border-slate-800"
+                                className="inline-flex items-center gap-1 rounded-md bg-black px-2 py-0.5 text-[10.5px] font-mono font-semibold text-zinc-200 border border-zinc-800"
                               >
                                 <Package size={11} /> {s.medicinesCount}
                               </span>
                               <span
                                 title="Qabul qilingan buyurtmalar soni"
-                                className="inline-flex items-center gap-1 rounded-md bg-slate-950 px-2 py-0.5 text-[10.5px] font-semibold text-cyan-300 border border-slate-800"
+                                className="inline-flex items-center gap-1 rounded-md bg-black px-2 py-0.5 text-[10.5px] font-mono font-semibold text-zinc-200 border border-zinc-800"
                               >
                                 <ShoppingCart size={11} /> {s.ordersCount}
                               </span>
@@ -1514,11 +1509,11 @@ export default function SuperAdminPage() {
                           </td>
                           <td className="py-3 px-4">
                             {s.isApproved ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-950 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300 border border-emerald-800">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-zinc-900 px-2.5 py-0.5 text-[10px] font-mono font-bold text-white border border-zinc-700">
                                 <CheckCircle2 size={11} /> Panel O&apos;rnatilgan
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-950 px-2.5 py-0.5 text-[10px] font-bold text-amber-300 border border-amber-800 animate-pulse">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-0.5 text-[10px] font-mono font-bold text-black border border-white">
                                 <AlertCircle size={11} /> Panel O&apos;rnatilmagan
                               </span>
                             )}
@@ -1531,14 +1526,14 @@ export default function SuperAdminPage() {
                                     onClick={() => handleApproveSpecialist(s.id)}
                                     disabled={busy}
                                     title="Arizani ma'qullash va dorixona egasining Telegramiga boshqaruv panelini o'rnatish"
-                                    className="flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow hover:bg-emerald-500 active:scale-95 transition"
+                                    className="flex items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-black shadow hover:bg-zinc-200 active:scale-95 transition"
                                   >
                                     <CheckCircle2 size={13} /> 🚀 Panelni O&apos;rnatish
                                   </button>
                                   <button
                                     onClick={() => handleRejectSpecialist(s.id)}
                                     disabled={busy}
-                                    className="flex items-center gap-1 rounded-lg bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-950 hover:border-red-800 border border-slate-700 transition"
+                                    className="flex items-center gap-1 rounded-lg bg-zinc-900 px-2.5 py-1.5 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 hover:text-white border border-zinc-700 transition"
                                   >
                                     Rad etish
                                   </button>
@@ -1547,7 +1542,7 @@ export default function SuperAdminPage() {
                                 <button
                                   onClick={() => handleRejectSpecialist(s.id)}
                                   disabled={busy}
-                                  className="rounded-lg bg-slate-800 px-2.5 py-1.5 text-[11px] font-semibold text-amber-400 hover:bg-amber-950/60 border border-slate-700 transition"
+                                  className="rounded-lg bg-zinc-900 px-2.5 py-1.5 text-[11px] font-semibold text-zinc-400 hover:text-white hover:bg-zinc-800 border border-zinc-700 transition"
                                 >
                                   ⏸ To&apos;xtatish
                                 </button>
@@ -1556,7 +1551,7 @@ export default function SuperAdminPage() {
                                 onClick={() => handleDeleteSpecialist(s.id, s.organization || s.name)}
                                 disabled={busy}
                                 title="Dorixonani o'chirish"
-                                className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-800 text-slate-400 hover:bg-red-900/50 hover:text-red-200 transition"
+                                className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-white border border-zinc-800 transition"
                               >
                                 <Trash2 size={13} />
                               </button>
@@ -1575,14 +1570,14 @@ export default function SuperAdminPage() {
         {/* 1.6. MUTAXASSISLAR (AGRONOM & VET) TAB */}
         {activeTab === "specialists" && (
           <div className="space-y-6">
-            <div className="rounded-2xl bg-gradient-to-r from-blue-950/60 to-slate-900 p-5 border border-blue-800/40">
+            <div className="rounded-2xl bg-zinc-950 p-5 border border-zinc-800">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                   <h2 className="text-base font-bold text-white flex items-center gap-2">
-                    <Users className="text-blue-400" size={20} />
+                    <Users className="text-white" size={20} />
                     👨‍🌾 Mutaxassislar (Agronomlar va Veterinarlar)
                   </h2>
-                  <p className="mt-1 text-xs text-slate-300">
+                  <p className="mt-1 text-xs text-zinc-400">
                     O&apos;simlik va hayvon kasalliklarini davolash, chaqiruvlarni qabul qilish va dehqonlarga joyida maslahat berish mutaxassislari.
                   </p>
                 </div>
@@ -1593,77 +1588,77 @@ export default function SuperAdminPage() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div
                 onClick={() => setSpecialistStatusFilter("all")}
-                className={`cursor-pointer rounded-2xl p-5 border transition ${
+                className={`cursor-pointer rounded-2xl p-5 border transition bg-zinc-950 ${
                   specialistStatusFilter === "all"
-                    ? "bg-slate-900 border-slate-700 ring-1 ring-slate-700"
-                    : "bg-slate-900/80 border-slate-800 hover:border-slate-700"
+                    ? "border-white ring-1 ring-white"
+                    : "border-zinc-800 hover:border-zinc-700"
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-400">Jami Mutaxassislar</span>
-                  <Users className="text-blue-400" size={20} />
+                  <span className="text-xs font-semibold text-zinc-400">Jami Mutaxassislar</span>
+                  <Users className="text-white" size={20} />
                 </div>
                 <p className="mt-2 text-2xl font-black text-white">{specialistOnlyList.length} ta</p>
-                <p className="mt-1 text-[11px] text-slate-500 font-medium">Barcha agronom va veterinarlar</p>
+                <p className="mt-1 text-[11px] text-zinc-500 font-medium">Barcha agronom va veterinarlar</p>
               </div>
 
               <div
                 onClick={() => setSpecialistStatusFilter("pending")}
-                className={`cursor-pointer rounded-2xl p-5 border transition ${
+                className={`cursor-pointer rounded-2xl p-5 border transition bg-zinc-950 ${
                   specialistStatusFilter === "pending"
-                    ? "bg-amber-950/60 border-amber-500 ring-1 ring-amber-500"
-                    : "bg-slate-900 border-slate-800 hover:border-slate-700"
+                    ? "border-white ring-1 ring-white"
+                    : "border-zinc-800 hover:border-zinc-700"
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-amber-300">⏳ Yangi Mutaxassis Arizalari</span>
-                  <AlertCircle className="text-amber-400" size={20} />
+                  <span className="text-xs font-semibold text-zinc-300">⏳ Yangi Mutaxassis Arizalari</span>
+                  <AlertCircle className="text-white" size={20} />
                 </div>
-                <p className="mt-2 text-2xl font-black text-amber-400">{pendingSpecialists.length} ta</p>
-                <p className="mt-1 text-[11px] text-amber-500/80 font-medium">
+                <p className="mt-2 text-2xl font-black text-white">{pendingSpecialists.length} ta</p>
+                <p className="mt-1 text-[11px] text-zinc-500 font-medium">
                   Tasdiqlash kutilayotgan mutaxassislar
                 </p>
               </div>
 
               <div
                 onClick={() => setSpecialistStatusFilter("approved")}
-                className={`cursor-pointer rounded-2xl p-5 border transition ${
+                className={`cursor-pointer rounded-2xl p-5 border transition bg-zinc-950 ${
                   specialistStatusFilter === "approved"
-                    ? "bg-emerald-950/60 border-emerald-500 ring-1 ring-emerald-500"
-                    : "bg-slate-900 border-slate-800 hover:border-slate-700"
+                    ? "border-white ring-1 ring-white"
+                    : "border-zinc-800 hover:border-zinc-700"
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-emerald-300">✅ Faol Mutaxassislar</span>
-                  <CheckCircle2 className="text-emerald-400" size={20} />
+                  <span className="text-xs font-semibold text-zinc-300">✅ Faol Mutaxassislar</span>
+                  <CheckCircle2 className="text-white" size={20} />
                 </div>
-                <p className="mt-2 text-2xl font-black text-emerald-400">{approvedSpecialists.length} ta</p>
-                <p className="mt-1 text-[11px] text-emerald-500/80 font-medium">
+                <p className="mt-2 text-2xl font-black text-white">{approvedSpecialists.length} ta</p>
+                <p className="mt-1 text-[11px] text-zinc-500 font-medium">
                   Platformada faol mutaxassislar
                 </p>
               </div>
             </div>
 
             {/* Qidiruv va Filterlar */}
-            <div className="rounded-2xl bg-slate-900 p-5 border border-slate-800 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="rounded-2xl bg-zinc-950 p-5 border border-zinc-800 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="relative flex-1 max-w-md">
-                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
                 <input
                   type="text"
                   placeholder="Mutaxassis ismi, mutaxassisligi, telefon yoki manzil..."
                   value={specialistSearch}
                   onChange={(e) => setSpecialistSearch(e.target.value)}
-                  className="w-full rounded-xl bg-slate-950 pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 border border-slate-800 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-xl bg-black pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 border border-zinc-800 focus:border-white focus:outline-none"
                 />
               </div>
 
-              <div className="flex rounded-xl bg-slate-950 p-1 border border-slate-800 text-xs font-semibold">
+              <div className="flex rounded-xl bg-black p-1 border border-zinc-800 text-xs font-semibold">
                 <button
                   onClick={() => setSpecialistStatusFilter("all")}
                   className={`px-3 py-1.5 rounded-lg transition ${
                     specialistStatusFilter === "all"
-                      ? "bg-slate-800 text-white"
-                      : "text-slate-400 hover:text-white"
+                      ? "bg-white text-black font-bold"
+                      : "text-zinc-400 hover:text-white"
                   }`}
                 >
                   Barchasi ({specialistOnlyList.length})
@@ -1672,8 +1667,8 @@ export default function SuperAdminPage() {
                   onClick={() => setSpecialistStatusFilter("pending")}
                   className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
                     specialistStatusFilter === "pending"
-                      ? "bg-amber-600 text-white"
-                      : "text-slate-400 hover:text-white"
+                      ? "bg-white text-black font-bold"
+                      : "text-zinc-400 hover:text-white"
                   }`}
                 >
                   ⏳ Kutilmoqda ({pendingSpecialists.length})
@@ -1682,8 +1677,8 @@ export default function SuperAdminPage() {
                   onClick={() => setSpecialistStatusFilter("approved")}
                   className={`px-3 py-1.5 rounded-lg transition ${
                     specialistStatusFilter === "approved"
-                      ? "bg-emerald-600 text-white"
-                      : "text-slate-400 hover:text-white"
+                      ? "bg-white text-black font-bold"
+                      : "text-zinc-400 hover:text-white"
                   }`}
                 >
                   ✅ Tasdiqlangan ({approvedSpecialists.length})
@@ -1692,11 +1687,11 @@ export default function SuperAdminPage() {
             </div>
 
             {/* Mutaxassislar jadvali */}
-            <div className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden shadow-sm">
+            <div className="rounded-2xl bg-zinc-950 border border-zinc-800 overflow-hidden shadow-sm">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="bg-slate-950/60 border-b border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider">
+                    <tr className="bg-zinc-900/60 border-b border-zinc-800 text-zinc-400 uppercase text-[10px] tracking-wider font-mono">
                       <th className="py-3 px-4">ID</th>
                       <th className="py-3 px-4">Mutaxassis</th>
                       <th className="py-3 px-4">Mutaxassislik</th>
@@ -1707,57 +1702,57 @@ export default function SuperAdminPage() {
                       <th className="py-3 px-4 text-right">Amallar</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60">
+                  <tbody className="divide-y divide-zinc-800/60 text-zinc-300">
                     {filteredSpecialists.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="py-8 text-center text-slate-500 font-medium">
+                        <td colSpan={8} className="py-8 text-center text-zinc-500 font-medium">
                           Mutaxassislar topilmadi.
                         </td>
                       </tr>
                     ) : (
                       filteredSpecialists.map((s) => (
-                        <tr key={s.id} className="hover:bg-slate-800/40 transition">
-                          <td className="py-3 px-4 font-mono text-slate-500">#{s.id}</td>
+                        <tr key={s.id} className="hover:bg-zinc-900/40 transition">
+                          <td className="py-3 px-4 font-mono text-zinc-500">#{s.id}</td>
                           <td className="py-3 px-4">
                             <p className="font-bold text-white">{s.name}</p>
                             {s.experienceYears && (
-                              <p className="text-[11px] text-slate-400 mt-0.5">Tajriba: {s.experienceYears} yil</p>
+                              <p className="text-[11px] text-zinc-400 mt-0.5">Tajriba: {s.experienceYears} yil</p>
                             )}
                           </td>
                           <td className="py-3 px-4">
-                            <span className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-bold bg-blue-950/80 text-blue-300 border border-blue-800/60">
+                            <span className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-mono font-bold bg-zinc-900 text-zinc-200 border border-zinc-700">
                               {s.specialty || "Agronom / Veterinariya"}
                             </span>
                           </td>
                           <td className="py-3 px-4">
-                            <a href={`tel:${s.phone}`} className="font-semibold text-emerald-400 hover:underline block">
+                            <a href={`tel:${s.phone}`} className="font-semibold text-zinc-200 hover:text-white hover:underline block font-mono">
                               📞 {s.phone}
                             </a>
                             {s.telegramId && (
-                              <p className="text-[10px] text-slate-500 font-mono mt-0.5">TG: {s.telegramId}</p>
+                              <p className="text-[10px] text-zinc-500 font-mono mt-0.5">TG: {s.telegramId}</p>
                             )}
                           </td>
-                          <td className="py-3 px-4 max-w-xs truncate text-slate-300" title={s.address || ""}>
+                          <td className="py-3 px-4 max-w-xs truncate text-zinc-400" title={s.address || ""}>
                             {s.address || "—"}
                           </td>
                           <td className="py-3 px-4">
                             {s.assignedOrderId ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-red-950 px-2 py-0.5 text-[10px] font-bold text-red-300 border border-red-800">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-zinc-900 px-2 py-0.5 text-[10px] font-mono font-bold text-zinc-400 border border-zinc-700">
                                 🔴 Band (#{s.assignedOrderId})
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-950 px-2 py-0.5 text-[10px] font-bold text-emerald-300 border border-emerald-800">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-zinc-900 px-2 py-0.5 text-[10px] font-mono font-bold text-white border border-zinc-700">
                                 🟢 Bo&apos;sh
                               </span>
                             )}
                           </td>
                           <td className="py-3 px-4">
                             {s.isApproved ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-950 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300 border border-emerald-800">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-zinc-900 px-2.5 py-0.5 text-[10px] font-mono font-bold text-white border border-zinc-700">
                                 <CheckCircle2 size={11} /> Tasdiqlangan
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-950 px-2.5 py-0.5 text-[10px] font-bold text-amber-300 border border-amber-800 animate-pulse">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-0.5 text-[10px] font-mono font-bold text-black border border-white">
                                 <AlertCircle size={11} /> Kutilmoqda
                               </span>
                             )}
@@ -1769,14 +1764,14 @@ export default function SuperAdminPage() {
                                   <button
                                     onClick={() => handleApproveSpecialist(s.id)}
                                     disabled={busy}
-                                    className="flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow hover:bg-emerald-500 active:scale-95 transition"
+                                    className="flex items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-black shadow hover:bg-zinc-200 active:scale-95 transition"
                                   >
                                     <CheckCircle2 size={13} /> Tasdiqlash
                                   </button>
                                   <button
                                     onClick={() => handleRejectSpecialist(s.id)}
                                     disabled={busy}
-                                    className="flex items-center gap-1 rounded-lg bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-950 hover:border-red-800 border border-slate-700 transition"
+                                    className="flex items-center gap-1 rounded-lg bg-zinc-900 px-2.5 py-1.5 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 hover:text-white border border-zinc-700 transition"
                                   >
                                     Rad etish
                                   </button>
@@ -1785,7 +1780,7 @@ export default function SuperAdminPage() {
                                 <button
                                   onClick={() => handleRejectSpecialist(s.id)}
                                   disabled={busy}
-                                  className="rounded-lg bg-slate-800 px-2.5 py-1.5 text-[11px] font-semibold text-slate-400 hover:bg-amber-950/60 hover:text-amber-300 transition"
+                                  className="rounded-lg bg-zinc-900 px-2.5 py-1.5 text-[11px] font-semibold text-zinc-400 hover:bg-zinc-800 hover:text-white border border-zinc-700 transition"
                                 >
                                   To&apos;xtatish
                                 </button>
@@ -1794,7 +1789,7 @@ export default function SuperAdminPage() {
                                 onClick={() => handleDeleteSpecialist(s.id, s.name)}
                                 disabled={busy}
                                 title="Mutaxassisni o'chirish"
-                                className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-800 text-slate-400 hover:bg-red-900/50 hover:text-red-200 transition"
+                                className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-white border border-zinc-800 transition"
                               >
                                 <Trash2 size={13} />
                               </button>
@@ -1813,37 +1808,37 @@ export default function SuperAdminPage() {
         {/* 2. VILOYATLAR TAHLILI TAB */}
         {activeTab === "regions" && (
           <div className="space-y-6">
-            <div className="rounded-2xl bg-slate-900 p-6 border border-slate-800">
+            <div className="rounded-2xl bg-zinc-950 p-6 border border-zinc-800">
               <h2 className="text-base font-bold text-white flex items-center gap-2 mb-4">
-                <Globe size={18} className="text-blue-400" /> 14 ta Hudud Bo&apos;yicha Faollik va Tahlil
+                <Globe size={18} className="text-white" /> 14 ta Hudud Bo&apos;yicha Faollik va Tahlil
               </h2>
 
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {regions.map((r, i) => (
-                  <div key={i} className="rounded-xl bg-slate-950 p-4 border border-slate-800">
+                  <div key={i} className="rounded-xl bg-black p-4 border border-zinc-800">
                     <div className="flex items-center justify-between">
                       <h3 className="font-bold text-white text-sm">{r.region}</h3>
-                      <span className="rounded-full bg-slate-800 px-2.5 py-0.5 text-[10px] font-bold text-slate-300">
+                      <span className="rounded-full bg-zinc-900 border border-zinc-700 px-2.5 py-0.5 text-[10px] font-mono font-bold text-zinc-300">
                         {r.sharePercent}% ulush
                       </span>
                     </div>
 
                     <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                      <div className="rounded-lg bg-slate-900 p-2">
-                        <span className="text-slate-500 text-[10px]">Foydalanuvchilar</span>
-                        <p className="font-bold text-slate-200">{r.users} ta</p>
+                      <div className="rounded-lg bg-zinc-950 p-2 border border-zinc-800/80">
+                        <span className="text-zinc-500 text-[10px]">Foydalanuvchilar</span>
+                        <p className="font-bold text-white font-mono">{r.users} ta</p>
                       </div>
-                      <div className="rounded-lg bg-slate-900 p-2">
-                        <span className="text-slate-500 text-[10px]">Dorixonalar</span>
-                        <p className="font-bold text-amber-400">{r.pharmacies} ta</p>
+                      <div className="rounded-lg bg-zinc-950 p-2 border border-zinc-800/80">
+                        <span className="text-zinc-500 text-[10px]">Dorixonalar</span>
+                        <p className="font-bold text-white font-mono">{r.pharmacies} ta</p>
                       </div>
-                      <div className="rounded-lg bg-slate-900 p-2">
-                        <span className="text-slate-500 text-[10px]">Mutaxassislar</span>
-                        <p className="font-bold text-emerald-400">{r.specialists} ta</p>
+                      <div className="rounded-lg bg-zinc-950 p-2 border border-zinc-800/80">
+                        <span className="text-zinc-500 text-[10px]">Mutaxassislar</span>
+                        <p className="font-bold text-white font-mono">{r.specialists} ta</p>
                       </div>
-                      <div className="rounded-lg bg-slate-900 p-2">
-                        <span className="text-slate-500 text-[10px]">Buyurtmalar</span>
-                        <p className="font-bold text-cyan-400">{r.orders} ta</p>
+                      <div className="rounded-lg bg-zinc-950 p-2 border border-zinc-800/80">
+                        <span className="text-zinc-500 text-[10px]">Buyurtmalar</span>
+                        <p className="font-bold text-white font-mono">{r.orders} ta</p>
                       </div>
                     </div>
                   </div>
@@ -1856,33 +1851,33 @@ export default function SuperAdminPage() {
         {/* 3. FIKRLAR & SHARHLAR MODERATSIYASI TAB */}
         {activeTab === "reviews" && (
           <div className="space-y-6">
-            <div className="rounded-2xl bg-slate-900 p-6 border border-slate-800">
+            <div className="rounded-2xl bg-zinc-950 p-6 border border-zinc-800">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
                   <h2 className="text-base font-bold text-white flex items-center gap-2">
-                    <MessageSquare size={18} className="text-amber-400" /> Sharhlar va Fikrlar Moderatsiyasi
+                    <MessageSquare size={18} className="text-white" /> Sharhlar va Fikrlar Moderatsiyasi
                   </h2>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <p className="text-xs text-zinc-400 mt-1">
                     Foydalanuvchilar tomonidan dorixona va mutaxassislarga berilgan baholarni ko&apos;rish va keraksizlarini o&apos;chirish.
                   </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="relative">
-                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
                     <input
                       type="text"
                       value={reviewSearch}
                       onChange={(e) => setReviewSearch(e.target.value)}
                       placeholder="Qidiruv..."
-                      className="rounded-xl bg-slate-800 pl-8 pr-3 py-2 text-xs text-white border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="rounded-xl bg-black pl-8 pr-3 py-2 text-xs text-white border border-zinc-700 focus:outline-none focus:border-white"
                     />
                   </div>
 
                   <select
                     value={reviewFilterStars}
                     onChange={(e) => setReviewFilterStars(e.target.value === "all" ? "all" : Number(e.target.value))}
-                    className="rounded-xl bg-slate-800 px-3 py-2 text-xs text-white border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="rounded-xl bg-black px-3 py-2 text-xs text-white border border-zinc-700 focus:outline-none focus:border-white"
                   >
                     <option value="all">Barcha yulduzlar</option>
                     <option value={5}>5 yulduz ★★★★★</option>
@@ -1896,47 +1891,43 @@ export default function SuperAdminPage() {
 
               <div className="space-y-3">
                 {filteredReviews.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-slate-500">
+                  <div className="p-8 text-center text-xs text-zinc-500">
                     Fikrlar topilmadi
                   </div>
                 ) : (
                   filteredReviews.map((r) => (
                     <div
                       key={`${r.type}-${r.id}`}
-                      className="flex items-start justify-between gap-4 rounded-xl bg-slate-950 p-4 border border-slate-800"
+                      className="flex items-start justify-between gap-4 rounded-xl bg-black p-4 border border-zinc-800"
                     >
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <span
-                            className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${
-                              r.type === "order"
-                                ? "bg-cyan-950 text-cyan-400 border border-cyan-800"
-                                : "bg-purple-950 text-purple-400 border border-purple-800"
-                            }`}
+                            className="rounded-md px-2 py-0.5 text-[10px] font-mono font-bold bg-zinc-900 text-zinc-200 border border-zinc-700"
                           >
                             {r.type === "order" ? "Buyurtma Sharhi" : "Mutaxassis Xizmati"}
                           </span>
                           <span className="font-bold text-white text-xs">{r.targetName}</span>
-                          <span className="text-[11px] text-slate-500">({r.date})</span>
+                          <span className="text-[11px] text-zinc-500 font-mono">({r.date})</span>
                         </div>
 
-                        <div className="flex items-center gap-1 text-amber-400 text-xs font-bold pt-1">
+                        <div className="flex items-center gap-1 text-white text-xs font-bold pt-1">
                           {Array.from({ length: 5 }).map((_, i) => (
                             <Star
                               key={i}
                               size={13}
                               fill={i < r.stars ? "currentColor" : "none"}
-                              className={i < r.stars ? "text-amber-400" : "text-slate-700"}
+                              className={i < r.stars ? "text-white" : "text-zinc-700"}
                             />
                           ))}
-                          <span className="ml-1 text-slate-300 font-semibold">{r.stars}.0</span>
+                          <span className="ml-1 text-zinc-300 font-mono font-semibold">{r.stars}.0</span>
                         </div>
 
                         {r.comment && (
-                          <p className="text-xs text-slate-300 italic pt-1">«{r.comment}»</p>
+                          <p className="text-xs text-zinc-300 italic pt-1">«{r.comment}»</p>
                         )}
 
-                        <p className="text-[11px] text-slate-500">
+                        <p className="text-[11px] text-zinc-500 font-mono">
                           Qoldiruvchi: {r.customerName || "Noma'lum dehqon"} ({r.customerPhone || "—"})
                         </p>
                       </div>
@@ -1944,7 +1935,7 @@ export default function SuperAdminPage() {
                       <button
                         onClick={() => deleteReview(r.type, r.id)}
                         title="O'chirish"
-                        className="rounded-lg bg-red-950/60 p-2 text-red-400 hover:bg-red-900 hover:text-white transition"
+                        className="rounded-lg bg-zinc-900 p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 border border-zinc-800 transition"
                       >
                         <Trash2 size={15} />
                       </button>
@@ -1956,59 +1947,176 @@ export default function SuperAdminPage() {
           </div>
         )}
 
-        {/* 4. RADIUS & BOT SOZLAMALARI TAB */}
+        {/* 4. SOZLAMALAR & YETKAZIB BERISH TAB */}
         {activeTab === "settings" && (
           <form onSubmit={saveSettings} className="space-y-6">
-            <div className="rounded-2xl bg-slate-900 p-6 border border-slate-800">
+            {/* 4.1. Yetkazib Berish (Delivery) Sozlamalari */}
+            <div className="rounded-2xl bg-zinc-950 p-6 border border-zinc-800 space-y-4">
+              <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                <div>
+                  <h2 className="text-base font-bold text-white flex items-center gap-2">
+                    <Truck size={18} className="text-white" /> 🚚 Yetkazib Berish (Delivery) Tizimi Sozlamalari
+                  </h2>
+                  <p className="text-xs text-zinc-400 mt-1">
+                    Dorilar yetkazib berish shartlari: bepul minimal buyurtma soni (masalan 5 tadan ko&apos;p bo&apos;lsa BEPUL) va km bo&apos;yicha to&apos;lov narxlari.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {/* delivery_enabled */}
+                <div className="rounded-xl bg-black p-4 border border-zinc-800 space-y-2">
+                  <label className="block text-xs font-bold text-white">
+                    Yetkazib Berish Xizmati Holati
+                  </label>
+                  <p className="text-[11px] font-mono text-zinc-500">delivery_enabled</p>
+                  <select
+                    value={settingsValues["delivery_enabled"] ?? "true"}
+                    onChange={(e) => setSettingsValues({ ...settingsValues, delivery_enabled: e.target.value })}
+                    className="w-full rounded-xl bg-zinc-900 px-3 py-2.5 text-xs text-white font-bold border border-zinc-700 focus:outline-none focus:border-white"
+                  >
+                    <option value="true">✅ Faol (Yoqilgan)</option>
+                    <option value="false">❌ O&apos;chirilgan</option>
+                  </select>
+                </div>
+
+                {/* delivery_min_order_qty */}
+                <div className="rounded-xl bg-black p-4 border border-zinc-800 space-y-2">
+                  <label className="block text-xs font-bold text-white">
+                    Bepul Yetkazib Berish Miqdori
+                  </label>
+                  <p className="text-[11px] font-mono text-zinc-500">delivery_min_order_qty</p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={settingsValues["delivery_min_order_qty"] ?? "5"}
+                      onChange={(e) => setSettingsValues({ ...settingsValues, delivery_min_order_qty: e.target.value })}
+                      className="w-full rounded-xl bg-zinc-900 px-3.5 py-2.5 text-sm text-white font-mono font-bold border border-zinc-700 focus:outline-none focus:border-white"
+                    />
+                    <span className="text-xs font-bold text-zinc-400 whitespace-nowrap">ta dori</span>
+                  </div>
+                  <p className="text-[10px] text-zinc-400">
+                    Buyurtmada {settingsValues["delivery_min_order_qty"] || 5} ta yoki undan ortiq dori bo&apos;lsa, yetkazish <b>BEPUL</b> bo&apos;ladi.
+                  </p>
+                </div>
+
+                {/* delivery_price_per_km */}
+                <div className="rounded-xl bg-black p-4 border border-zinc-800 space-y-2">
+                  <label className="block text-xs font-bold text-white">
+                    Har 1 Kilometr Uchun To&apos;lov
+                  </label>
+                  <p className="text-[11px] font-mono text-zinc-500">delivery_price_per_km</p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      step={500}
+                      value={settingsValues["delivery_price_per_km"] ?? "3000"}
+                      onChange={(e) => setSettingsValues({ ...settingsValues, delivery_price_per_km: e.target.value })}
+                      className="w-full rounded-xl bg-zinc-900 px-3.5 py-2.5 text-sm text-white font-mono font-bold border border-zinc-700 focus:outline-none focus:border-white"
+                    />
+                    <span className="text-xs font-bold text-zinc-400 whitespace-nowrap">so&apos;m/km</span>
+                  </div>
+                  <p className="text-[10px] text-zinc-400">
+                    Minimal sondan kam bo&apos;lsa, har 1 km masofa uchun hisoblanadi.
+                  </p>
+                </div>
+
+                {/* delivery_base_price */}
+                <div className="rounded-xl bg-black p-4 border border-zinc-800 space-y-2">
+                  <label className="block text-xs font-bold text-white">
+                    Boshlang&apos;ich Bazaviy Xizmat Narxi
+                  </label>
+                  <p className="text-[11px] font-mono text-zinc-500">delivery_base_price</p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      step={1000}
+                      value={settingsValues["delivery_base_price"] ?? "10000"}
+                      onChange={(e) => setSettingsValues({ ...settingsValues, delivery_base_price: e.target.value })}
+                      className="w-full rounded-xl bg-zinc-900 px-3.5 py-2.5 text-sm text-white font-mono font-bold border border-zinc-700 focus:outline-none focus:border-white"
+                    />
+                    <span className="text-xs font-bold text-zinc-400 whitespace-nowrap">so&apos;m</span>
+                  </div>
+                </div>
+
+                {/* delivery_max_distance_km */}
+                <div className="rounded-xl bg-black p-4 border border-zinc-800 space-y-2">
+                  <label className="block text-xs font-bold text-white">
+                    Maksimal Yetkazish Masofasi
+                  </label>
+                  <p className="text-[11px] font-mono text-zinc-500">delivery_max_distance_km</p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={5}
+                      max={200}
+                      value={settingsValues["delivery_max_distance_km"] ?? "50"}
+                      onChange={(e) => setSettingsValues({ ...settingsValues, delivery_max_distance_km: e.target.value })}
+                      className="w-full rounded-xl bg-zinc-900 px-3.5 py-2.5 text-sm text-white font-mono font-bold border border-zinc-700 focus:outline-none focus:border-white"
+                    />
+                    <span className="text-xs font-bold text-zinc-400 whitespace-nowrap">km</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 4.2. Tizim Parametrlari va Botlar */}
+            <div className="rounded-2xl bg-zinc-950 p-6 border border-zinc-800">
               <h2 className="text-base font-bold text-white flex items-center gap-2 mb-2">
-                <Settings size={18} className="text-emerald-400" /> Tizim Parametrlari va Telegram Botlar Sozlamalari
+                <Settings size={18} className="text-white" /> Tizim Parametrlari va Telegram Botlar Sozlamalari
               </h2>
-              <p className="text-xs text-slate-400 mb-6">
+              <p className="text-xs text-zinc-400 mb-6">
                 Bu yerdagi o&apos;zgarishlar ma&apos;lumotlar bazasida saqlanadi va darhol real-vaqt rejimida kuchga kiradi.
               </p>
 
               <div className="grid gap-6 sm:grid-cols-2">
-                {settingsList.map((item) => (
-                  <div key={item.key} className="rounded-xl bg-slate-950 p-4 border border-slate-800 space-y-2">
-                    <label className="block text-xs font-bold text-slate-200">
-                      {item.label}
-                    </label>
-                    <p className="text-[11px] font-mono text-slate-500">{item.key}</p>
+                {settingsList
+                  .filter((item) => !item.key.startsWith("delivery_"))
+                  .map((item) => (
+                    <div key={item.key} className="rounded-xl bg-black p-4 border border-zinc-800 space-y-2">
+                      <label className="block text-xs font-bold text-zinc-200">
+                        {item.label}
+                      </label>
+                      <p className="text-[11px] font-mono text-zinc-500">{item.key}</p>
 
-                    {item.key === "default_radius_km" ? (
-                      <div className="flex items-center gap-2">
+                      {item.key === "default_radius_km" ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min={1}
+                            max={100}
+                            value={settingsValues[item.key] ?? "5"}
+                            onChange={(e) =>
+                              setSettingsValues({ ...settingsValues, [item.key]: e.target.value })
+                            }
+                            className="w-full rounded-xl bg-zinc-900 px-3.5 py-2.5 text-sm text-white font-mono font-bold border border-zinc-700 focus:outline-none focus:border-white"
+                          />
+                          <span className="text-xs font-mono font-bold text-zinc-400 whitespace-nowrap">km</span>
+                        </div>
+                      ) : (
                         <input
-                          type="number"
-                          min={1}
-                          max={100}
-                          value={settingsValues[item.key] ?? "5"}
+                          type={item.secret ? "password" : "text"}
+                          value={settingsValues[item.key] ?? ""}
                           onChange={(e) =>
                             setSettingsValues({ ...settingsValues, [item.key]: e.target.value })
                           }
-                          className="w-full rounded-xl bg-slate-900 px-3.5 py-2.5 text-sm text-white font-bold border border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          placeholder={item.preview || "Qiymatni kiriting..."}
+                          className="w-full rounded-xl bg-zinc-900 px-3.5 py-2.5 text-xs text-white font-mono border border-zinc-700 focus:outline-none focus:border-white"
                         />
-                        <span className="text-xs font-bold text-emerald-400 whitespace-nowrap">km</span>
-                      </div>
-                    ) : (
-                      <input
-                        type={item.secret ? "password" : "text"}
-                        value={settingsValues[item.key] ?? ""}
-                        onChange={(e) =>
-                          setSettingsValues({ ...settingsValues, [item.key]: e.target.value })
-                        }
-                        placeholder={item.preview || "Qiymatni kiriting..."}
-                        className="w-full rounded-xl bg-slate-900 px-3.5 py-2.5 text-xs text-white font-mono border border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      />
-                    )}
-                  </div>
-                ))}
+                      )}
+                    </div>
+                  ))}
               </div>
 
               <div className="mt-6 flex justify-end">
                 <button
                   type="submit"
                   disabled={busy}
-                  className="flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-xs font-bold text-white shadow-lg hover:bg-emerald-500 disabled:opacity-50 transition active:scale-95"
+                  className="flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-xs font-bold text-black shadow hover:bg-zinc-200 disabled:opacity-50 transition active:scale-95"
                 >
                   {busy ? <RefreshCw className="animate-spin" size={16} /> : "Barcha Sozlamalarni Saqlash"}
                 </button>

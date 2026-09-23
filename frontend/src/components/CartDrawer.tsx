@@ -54,6 +54,19 @@ export default function CartDrawer() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [deliveryType, setDeliveryType] = useState<"pickup" | "delivery">("pickup");
+  const [deliveryConfig, setDeliveryConfig] = useState<{
+    enabled: boolean;
+    minOrderQty: number;
+    pricePerKm: number;
+    basePrice: number;
+    maxDistanceKm: number;
+  }>({
+    enabled: true,
+    minOrderQty: 5,
+    pricePerKm: 3000,
+    basePrice: 10000,
+    maxDistanceKm: 50,
+  });
   const [address, setAddress] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [locDetecting, setLocDetecting] = useState(false);
@@ -64,6 +77,17 @@ export default function CartDrawer() {
     deliveryType: string;
     pharmacyName: string;
   } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/orders/delivery-config")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.ok && data.config) {
+          setDeliveryConfig(data.config);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -594,9 +618,35 @@ export default function CartDrawer() {
                     )}
                   </div>
                 ) : (
-                  <div className="mt-2 rounded-xl bg-blue-50/70 border border-blue-200/60 p-2.5 text-[12px] text-blue-900">
-                    🚚 Dorixona kuryeri buyurtmani ko&apos;rsatilgan manzilga yetkazib beradi.
-                  </div>
+                  (() => {
+                    const selectedTotalCount =
+                      cart?.lines
+                        .filter((l) => selectedIds.has(l.medicine.id))
+                        .reduce((s, l) => s + l.qty, 0) ?? 0;
+                    const isFree = selectedTotalCount >= deliveryConfig.minOrderQty;
+                    return isFree ? (
+                      <div className="mt-2 rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-[12px] text-emerald-900 shadow-sm">
+                        <div className="flex items-center gap-1.5 font-black text-emerald-800 text-[13px]">
+                          <span>🎉</span> Bepul Yetkazib Berish!
+                        </div>
+                        <p className="mt-0.5 text-[11.5px] text-emerald-700 leading-relaxed">
+                          Savatdagi dorilar soni <b>{selectedTotalCount} ta</b> ({deliveryConfig.minOrderQty} tadan ko&apos;p). Buyurtmangiz dorixona tomonidan <b>bepul</b> yetkazib beriladi!
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="mt-2 rounded-xl bg-blue-50 border border-blue-200 p-3 text-[12px] text-blue-900 shadow-sm">
+                        <div className="flex items-center gap-1.5 font-bold text-blue-900">
+                          <span>🚚</span> Yetkazib berish shartlari:
+                        </div>
+                        <p className="mt-0.5 text-[11.5px] text-blue-800 leading-relaxed">
+                          Masofaga qarab har 1 km uchun <b>{deliveryConfig.pricePerKm.toLocaleString("uz-UZ")} so&apos;m</b> to&apos;lanadi.
+                        </p>
+                        <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-blue-100/80 px-2.5 py-1.5 text-[11.5px] font-semibold text-blue-900">
+                          <span>💡</span> Yana <b>{deliveryConfig.minOrderQty - selectedTotalCount} ta</b> dori qo&apos;shsangiz, yetkazib berish <b>mutlaqo BEPUL</b> bo&apos;ladi!
+                        </div>
+                      </div>
+                    );
+                  })()
                 )}
               </div>
 

@@ -615,6 +615,16 @@ function getSettingLabel(key: string): string {
       return "Eskiz SMS email";
     case SETTING_KEYS.eskizPassword:
       return "Eskiz SMS parol";
+    case SETTING_KEYS.deliveryEnabled:
+      return "Yetkazib berish xizmati faolligi (true / false)";
+    case SETTING_KEYS.deliveryMinOrderQty:
+      return "Yetkazib berish bepul bo'ladigan minimal buyurtma soni (dona) — Masalan: 5";
+    case SETTING_KEYS.deliveryPricePerKm:
+      return "Yetkazib berish: har 1 km uchun narx (so'm) — Masalan: 3000";
+    case SETTING_KEYS.deliveryBasePrice:
+      return "Yetkazib berish: bazaviy boshlang'ich narx (so'm) — Masalan: 10000";
+    case SETTING_KEYS.deliveryMaxDistanceKm:
+      return "Maksimal yetkazib berish masofasi (km) — Masalan: 50";
     default:
       return key;
   }

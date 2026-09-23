@@ -5,8 +5,19 @@ import { notifyPharmacyNewOrder, notifyPharmacyStockAlert } from "../lib/orders-
 import { db } from "../db/index.js";
 import { orders, orderItems, specialists } from "../db/schema.js";
 import { eq, desc, and, or, sql } from "drizzle-orm";
+import { getDeliverySettings } from "../lib/settings.js";
 
 const router = Router();
+
+// GET /api/orders/delivery-config
+router.get("/delivery-config", async (_req, res) => {
+  try {
+    const config = await getDeliverySettings();
+    res.json({ ok: true, config });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Xatolik" });
+  }
+});
 
 // POST /api/orders
 router.post("/", async (req, res) => {
@@ -49,12 +60,27 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "Savatda yaroqli dori yo'q" });
     }
 
+    const deliveryConfig = await getDeliverySettings();
+    if (deliveryType === "delivery" && !deliveryConfig.enabled) {
+      return res.status(400).json({ error: "Hozirda yetkazib berish xizmati vaqtincha faol emas. Iltimos, dorixonadan olib ketishni tanlang." });
+    }
+
+    const totalQty = rawItems.reduce((acc, it) => acc + it.qty, 0);
+    const isFreeDelivery = totalQty >= deliveryConfig.minOrderQty;
+    let combinedNote = cleanText(body.note, 300) ?? "";
+    if (deliveryType === "delivery") {
+      const deliveryStatusNote = isFreeDelivery
+        ? `🚚 Yetkazib berish: BEPUL (${totalQty} ta dori buyurtma qilindi)`
+        : `🚚 Yetkazib berish: har 1 km uchun ${deliveryConfig.pricePerKm} so'm (bepul bo'lishi uchun kamida ${deliveryConfig.minOrderQty} ta dori kerak)`;
+      combinedNote = combinedNote ? `${combinedNote}\n${deliveryStatusNote}` : deliveryStatusNote;
+    }
+
     const result = await createOrder({
       userId: null,
       pharmacySpecialistId,
       customerName: name,
       customerPhone: phone,
-      note: cleanText(body.note, 300) ?? null,
+      note: combinedNote || null,
       deliveryType,
       customerAddress,
       items: rawItems,
