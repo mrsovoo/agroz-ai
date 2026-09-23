@@ -5,6 +5,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bell, ShoppingCart, Sprout } from "lucide-react";
 import { loadCart, closeCart, toggleCart, CART_EVENT } from "@/lib/cart-store";
+import {
+  fetchRealAppNotifications,
+  countUnreadNotifications,
+  subscribeToNotificationChanges,
+} from "@/lib/notifications-store";
 
 const links = [
   { href: "/", label: "Asosiy" },
@@ -17,18 +22,34 @@ const links = [
 export default function WebTopNav() {
   const pathname = usePathname();
   const [cartCount, setCartCount] = useState(0);
+  const [unreadNotifs, setUnreadNotifs] = useState(0);
 
   useEffect(() => {
-    const sync = () => {
+    const syncCart = () => {
       const c = loadCart();
       setCartCount(c?.lines?.reduce((s, l) => s + l.qty, 0) ?? 0);
     };
-    sync();
-    window.addEventListener(CART_EVENT, sync);
-    window.addEventListener("storage", sync);
+    syncCart();
+    window.addEventListener(CART_EVENT, syncCart);
+    window.addEventListener("storage", syncCart);
+
+    const syncNotifs = async () => {
+      try {
+        const items = await fetchRealAppNotifications("Toshkent");
+        setUnreadNotifs(countUnreadNotifications(items));
+      } catch {
+        setUnreadNotifs(0);
+      }
+    };
+    syncNotifs();
+    const unsubNotifs = subscribeToNotificationChanges(() => {
+      syncNotifs();
+    });
+
     return () => {
-      window.removeEventListener(CART_EVENT, sync);
-      window.removeEventListener("storage", sync);
+      window.removeEventListener(CART_EVENT, syncCart);
+      window.removeEventListener("storage", syncCart);
+      unsubNotifs();
     };
   }, []);
 
@@ -77,10 +98,15 @@ export default function WebTopNav() {
             href="/bildirishnomalar"
             prefetch={true}
             onClick={() => closeCart()}
-            className="flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-black/10 text-neutral-700 hover:text-black hover:border-black/20 hover:bg-black/5 transition-all active:scale-95 shadow-2xs"
+            className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-black/10 text-neutral-700 hover:text-black hover:border-black/20 hover:bg-black/5 transition-all active:scale-95 shadow-2xs"
             title="Bildirishnomalar"
           >
-            <Bell size={18} />
+            <Bell size={18} className={unreadNotifs > 0 ? "text-[var(--brand-green)]" : "text-neutral-700"} />
+            {unreadNotifs > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-black text-white shadow-xs">
+                {unreadNotifs > 9 ? "9+" : unreadNotifs}
+              </span>
+            )}
           </Link>
 
           {/* Savat — ochadi / yopadi */}

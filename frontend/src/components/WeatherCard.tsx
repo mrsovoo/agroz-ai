@@ -14,6 +14,8 @@ import {
   Sparkles,
   MapPin,
   Leaf,
+  Moon,
+  ShieldAlert,
 } from "lucide-react";
 
 type AdviceScope = "crop" | "animal" | "both";
@@ -21,11 +23,17 @@ type Tip = { id: string; scope: AdviceScope; title: string; body: string };
 
 type Weather = {
   temp: number;
+  tempDay?: number;
+  tempNight?: number;
+  isDay?: boolean;
+  sunrise?: string;
+  sunset?: string;
   wind: number;
   humidity: number;
   rain: number;
   level: "ok" | "caution" | "warning" | "danger";
   advice: string;
+  adviceNight?: string;
   tips?: Tip[];
 };
 
@@ -36,7 +44,6 @@ const levelIcon: Record<Weather["level"], ReactNode> = {
   danger: <TriangleAlert size={18} strokeWidth={2.4} />,
 };
 
-/** Maslahat qaysi sohaga tegishli ekaniga qarab rang va belgi. */
 const scopeStyle: Record<AdviceScope, { bg: string; fg: string; icon: ReactNode; label: string }> = {
   crop: {
     bg: "var(--brand-green-soft)",
@@ -57,9 +64,7 @@ export default function WeatherCard({
   showTips = false,
   showRegion = false,
 }: {
-  /** Hudud va mavsumga qarab to'liq maslahatlarni ko'rsatish (Maslahatlar sahifasi). */
   showTips?: boolean;
-  /** Teskari geokodlash orqali hudud nomini ko'rsatish. */
   showRegion?: boolean;
 }) {
   const [w, setW] = useState<Weather | null>(null);
@@ -87,7 +92,7 @@ export default function WeatherCard({
           setLoadFailed(true);
         });
 
-      // Real ogohlantirishlar mavjudligini tekshirish (sun'iy sample=1 siz)
+      // Real ogohlantirishlar
       fetch(`/api/weather/alerts${q}`)
         .then((r) => r.json())
         .then((d) => {
@@ -99,11 +104,17 @@ export default function WeatherCard({
         })
         .catch(() => setActiveAlert(null));
 
-      if (showRegion && lat !== undefined && lng !== undefined) {
+      // Manzilni aniqlash
+      if (lat !== undefined && lng !== undefined) {
         fetch(`/api/location?lat=${lat}&lng=${lng}`)
           .then((r) => r.json())
-          .then((d: { place?: string | null }) => setRegion(d?.place ?? null))
-          .catch(() => setRegion(null));
+          .then((d: { place?: string | null }) => {
+            if (d?.place) {
+              setPlace(d.place);
+              setRegion(d.place);
+            }
+          })
+          .catch(() => {});
       }
     };
 
@@ -125,78 +136,201 @@ export default function WeatherCard({
     }
   }, [showRegion]);
 
+  // Purkash sharoitini hisoblash
+  const sprayCondition = (() => {
+    if (!w) return null;
+    if (w.rain > 0.1) {
+      return { status: "bad", label: "Purkash tavsiya etilmaydi (yog'in bor)" };
+    }
+    if (w.wind >= 5) {
+      return { status: "bad", label: `Purkash mumkin emas (shamol ${w.wind} m/s)` };
+    }
+    if (w.wind >= 3.5 || w.temp >= 33) {
+      return { status: "fair", label: "Ehtiyotkorlik bilan (shamol o'rtacha)" };
+    }
+    return { status: "great", label: "Dori purkashga a'lo sharoit" };
+  })();
+
+  // Real parametrlar asosida "Diqqat {manzil}" ogohlantirishini tuzish
+  const advisory = (() => {
+    const loc = activeAlert?.region || region || place || "Sizning hududingiz";
+
+    if (activeAlert) {
+      return {
+        isHazard: true,
+        tag: `⚠️ Diqqat (${loc}):`,
+        text: activeAlert.title,
+      };
+    }
+    if (!w) return null;
+
+    if (w.wind >= 5) {
+      return {
+        isHazard: true,
+        tag: `💨 Diqqat (${loc}):`,
+        text: `Kuchli shamol (${w.wind} m/s) — dori purkash samarasiz, preparatlar havoga uchib yerga to'g'ri tushmaydi.`,
+      };
+    }
+    if (w.rain > 0.1) {
+      return {
+        isHazard: true,
+        tag: `🌧️ Diqqat (${loc}):`,
+        text: `Yog'ingarchilik (${w.rain} mm) — barglar ho'lligi sababli o'g'it va dorilashni to'xtating, preparatlar yuvilib ketadi.`,
+      };
+    }
+    if (w.humidity < 30) {
+      return {
+        isHazard: false,
+        tag: `☀️ Diqqat (${loc}):`,
+        text: `Havo quruq (namlik ${w.humidity}%) — ekinlarda suv bug'lanishi kuchli, tomchilatib sug'orishni amalga oshiring.`,
+      };
+    }
+    if (w.humidity > 80) {
+      return {
+        isHazard: false,
+        tag: `🌿 Diqqat (${loc}):`,
+        text: `Namlik yuqori (${w.humidity}%) — zamburug'li kasalliklar xavfi mavjud, profilaktik fungitsid qo'llang.`,
+      };
+    }
+    if (typeof w.tempNight === "number" && w.tempNight <= 3) {
+      return {
+        isHazard: true,
+        tag: `❄️ Diqqat (${loc}):`,
+        text: `Kechasi harorat ${w.tempNight}°C gacha tushishi kutilmoqda — parnik va nozik ko'chatlarni himoyalang.`,
+      };
+    }
+    if (w.temp >= 35) {
+      return {
+        isHazard: true,
+        tag: `☀️ Diqqat (${loc}):`,
+        text: `Yuqori harorat (${w.temp}°C) — kunduzgi quyosh tig'ida dorilamang, sug'orishni erta tongda bajaring.`,
+      };
+    }
+
+    return {
+      isHazard: false,
+      tag: `✅ Diqqat (${loc}):`,
+      text: `Hozirda ob-havo mo'tadil (harorat ${w.temp}°C, shamol ${w.wind} m/s) — dori purkash va dala ishlari uchun juda qulay.`,
+    };
+  })();
+
   return (
     <div>
       <div
         className="overflow-hidden rounded-[28px] p-5 text-white shadow-[0_20px_40px_-20px_rgba(2,142,17,0.45)]"
         style={{ background: "linear-gradient(135deg,#028e11 0%,#0a9c1b 50%,#76b44d 100%)" }}
       >
+        {/* Joylashuv va Asosiy harorat */}
         <div className="flex items-start justify-between">
           <div>
-            <p className="flex items-center gap-1.5 text-[13px] font-medium text-white/80">
+            <p className="flex items-center gap-1.5 text-[13px] font-medium text-white/90">
               <Sun size={14} /> Bugun · {place}
             </p>
-            <div className="mt-2 flex items-end gap-2">
+            <div className="mt-1.5 flex items-end gap-2">
               <span className="text-[54px] font-black leading-none tracking-tight">
                 {w ? w.temp : "—"}
               </span>
               <span className="pb-2 text-2xl font-semibold text-white/80">°C</span>
             </div>
+
+            {/* Kunduzi va Kechasi harorati */}
+            {w && (
+              <p className="mt-1 flex items-center gap-2 text-[12.5px] font-semibold text-white/85">
+                <span className="flex items-center gap-1">
+                  <Sun size={12} className="text-yellow-300" />
+                  Kunduzi: +{w.tempDay ?? w.temp}°C
+                </span>
+                <span>·</span>
+                <span className="flex items-center gap-1">
+                  <Moon size={12} className="text-sky-200" />
+                  Kechasi: +{w.tempNight ?? (w.temp - 6)}°C
+                </span>
+              </p>
+            )}
           </div>
-          <div
-            className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--brand-ink)]"
-            style={{ background: "var(--brand-yellow)" }}
-          >
-            <Sun size={22} strokeWidth={2.2} />
+
+          <div className="flex flex-col items-end gap-2">
+            <div
+              className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--brand-ink)] shadow-xs"
+              style={{ background: "var(--brand-yellow)" }}
+            >
+              <Sun size={22} strokeWidth={2.2} />
+            </div>
+
+            {/* Purkash indeksi nishoni */}
+            {sprayCondition && (
+              <span
+                className={`rounded-full px-2.5 py-1 text-[11px] font-extrabold shadow-2xs ${
+                  sprayCondition.status === "great"
+                    ? "bg-emerald-800/80 text-emerald-100 border border-emerald-400/40"
+                    : sprayCondition.status === "fair"
+                      ? "bg-amber-800/80 text-amber-100 border border-amber-400/40"
+                      : "bg-red-800/80 text-red-100 border border-red-400/40"
+                }`}
+              >
+                {sprayCondition.label}
+              </span>
+            )}
           </div>
         </div>
 
+        {/* 3 ta muhim parametr: Shamol, Namlik, Yog'in */}
         <div className="mt-4 grid grid-cols-3 gap-2 text-center">
           <div className="rounded-2xl bg-white/15 py-2.5 backdrop-blur">
-            <div className="flex items-center justify-center gap-1 text-[11px] opacity-80">
+            <div className="flex items-center justify-center gap-1 text-[11px] opacity-85">
               <Wind size={11} /> Shamol
             </div>
             <p className="text-base font-bold">{w ? `${w.wind} m/s` : "—"}</p>
           </div>
           <div className="rounded-2xl bg-white/15 py-2.5 backdrop-blur">
-            <div className="flex items-center justify-center gap-1 text-[11px] opacity-80">
+            <div className="flex items-center justify-center gap-1 text-[11px] opacity-85">
               <Droplets size={11} /> Namlik
             </div>
             <p className="text-base font-bold">{w ? `${w.humidity}%` : "—"}</p>
           </div>
           <div className="rounded-2xl bg-white/15 py-2.5 backdrop-blur">
-            <div className="flex items-center justify-center gap-1 text-[11px] opacity-80">
+            <div className="flex items-center justify-center gap-1 text-[11px] opacity-85">
               <CloudRain size={11} /> Yog'in
             </div>
             <p className="text-base font-bold">{w ? `${w.rain} mm` : "—"}</p>
           </div>
         </div>
 
-        <div
-          className="mt-4 flex items-start gap-2.5 rounded-[18px] px-4 py-3 text-[14px] font-semibold leading-snug"
-          style={{ background: "var(--brand-yellow)", color: "var(--brand-ink)" }}
-        >
-          <span className="mt-0.5 shrink-0">
-            {activeAlert ? <TriangleAlert size={18} strokeWidth={2.4} className="text-red-700" /> : w ? levelIcon[w.level] : null}
-          </span>
-          <span>
-            {activeAlert ? (
-              <>
-                <b className="font-extrabold text-red-700 mr-1">⚠️ Diqqat ({activeAlert.region}):</b>
-                {activeAlert.title}
-              </>
-            ) : w ? (
-              w.advice
-            ) : loadFailed ? (
-              "Ob-havo hozircha olinmadi — keyinroq qayta urinib ko'ring."
-            ) : (
-              "Ob-havo yuklanmoqda..."
-            )}
-          </span>
-        </div>
+        {/* Diqqat {manzil} Ogohlantirish va Agrometeorologik Tavsiya Bloki */}
+        {advisory ? (
+          <div
+            className={`mt-4 flex items-start gap-2.5 rounded-[20px] px-4 py-3 text-[14px] font-semibold leading-snug transition-all ${
+              advisory.isHazard
+                ? "bg-amber-300 text-neutral-950 shadow-xs"
+                : "bg-white/20 border border-white/25 text-white backdrop-blur shadow-2xs"
+            }`}
+          >
+            <span className="mt-0.5 shrink-0">
+              {advisory.isHazard ? (
+                <TriangleAlert size={18} strokeWidth={2.4} className="text-amber-950" />
+              ) : (
+                <CheckCircle2 size={18} strokeWidth={2.4} className="text-white" />
+              )}
+            </span>
+            <span>
+              <b className={`font-extrabold mr-1.5 ${advisory.isHazard ? "text-amber-950" : "text-white"}`}>
+                {advisory.tag}
+              </b>
+              {advisory.text}
+            </span>
+          </div>
+        ) : loadFailed ? (
+          <div className="mt-4 rounded-[18px] bg-red-500/20 border border-red-500/30 px-4 py-3 text-[13px] text-white">
+            Ob-havo ma&apos;lumotini yuklab bo&apos;lmadi. Qayta urinib ko&apos;ring.
+          </div>
+        ) : (
+          <div className="mt-4 rounded-[18px] bg-white/10 px-4 py-3 text-[13px] text-white/80">
+            Ob-havo ma&apos;lumotlari tahlil qilinmoqda...
+          </div>
+        )}
       </div>
 
-      {/* Hudud va mavsumga qarab maslahatlar */}
+      {/* Hudud va mavsumga qarab maslahatlar (agar showTips bo'lsa) */}
       {showTips && (
         <>
           <div className="mt-5 flex items-center justify-between gap-2">
