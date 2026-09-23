@@ -22,7 +22,7 @@ import { getNewsFeed } from "../lib/news.js";
 import { escapeHtml } from "../lib/tg-escape.js";
 import { db } from "../db/index.js";
 import { otpCodes, sessions, users } from "../db/schema.js";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
 
 const router = Router();
@@ -71,59 +71,148 @@ setInterval(() => {
   }
 }, 30 * 60 * 1000);
 
+/** Xavfsiz foydalanuvchi qidirish (agar bazada second_phone ustuni hali yo'q bo'lsa ham yiqilmaydi) */
+async function findUserByTelegramId(fromId: number): Promise<typeof users.$inferSelect | null> {
+  try {
+    const rows = await db.select().from(users).where(eq(users.telegramId, fromId)).limit(1);
+    return rows[0] || null;
+  } catch (err: any) {
+    console.warn("[bot] findUserByTelegramId ogohlantirish, tiklash harakati:", err?.message || err);
+    try {
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS second_phone varchar(32);`);
+      const rows = await db.select().from(users).where(eq(users.telegramId, fromId)).limit(1);
+      return rows[0] || null;
+    } catch {
+      try {
+        const raw = await db.execute(
+          sql`SELECT id, phone, name, region, district, created_at FROM users WHERE telegram_id = ${fromId} LIMIT 1`
+        );
+        if (raw.rows && raw.rows.length > 0) {
+          return raw.rows[0] as typeof users.$inferSelect;
+        }
+      } catch {}
+    }
+    return null;
+  }
+}
+
+/** Xavfsiz telefon orqali foydalanuvchi qidirish */
+async function findUserByPhone(phone: string): Promise<typeof users.$inferSelect | null> {
+  try {
+    const rows = await db.select().from(users).where(eq(users.phone, phone)).limit(1);
+    return rows[0] || null;
+  } catch (err: any) {
+    console.warn("[bot] findUserByPhone ogohlantirish:", err?.message || err);
+    try {
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS second_phone varchar(32);`);
+      const rows = await db.select().from(users).where(eq(users.phone, phone)).limit(1);
+      return rows[0] || null;
+    } catch {
+      try {
+        const raw = await db.execute(
+          sql`SELECT id, phone, name, region, district, created_at FROM users WHERE phone = ${phone} LIMIT 1`
+        );
+        if (raw.rows && raw.rows.length > 0) {
+          return raw.rows[0] as typeof users.$inferSelect;
+        }
+      } catch {}
+    }
+    return null;
+  }
+}
+
 async function finalizeUserRegistration(
   telegramId: number,
   chatId: number,
   data: { name: string; phone: string; secondPhone?: string; token?: string }
 ): Promise<void> {
-  let user = (
-    await db.select().from(users).where(eq(users.telegramId, telegramId)).limit(1)
-  )[0];
-
+  let user: typeof users.$inferSelect | undefined;
   const trimmedSecond = data.secondPhone?.trim() || null;
 
-  if (user) {
-    await db
-      .update(users)
-      .set({
-        name: data.name || user.name,
-        phone: data.phone,
-        secondPhone: trimmedSecond || user.secondPhone || null,
-      })
-      .where(eq(users.id, user.id));
-    user.name = data.name || user.name;
-    user.phone = data.phone;
-    user.secondPhone = trimmedSecond || user.secondPhone || null;
-  } else {
-    const byPhone = (
-      await db.select().from(users).where(eq(users.phone, data.phone)).limit(1)
-    )[0];
-    if (byPhone) {
-      await db
-        .update(users)
-        .set({
-          telegramId,
-          name: data.name || byPhone.name,
-          secondPhone: trimmedSecond || byPhone.secondPhone || null,
-        })
-        .where(eq(users.id, byPhone.id));
-      user = byPhone;
+  try {
+    user = (await findUserByTelegramId(telegramId)) ?? undefined;
+
+    if (user) {
+      try {
+        await db
+          .update(users)
+          .set({
+            name: data.name || user.name,
+            phone: data.phone,
+            secondPhone: trimmedSecond || user.secondPhone || null,
+          })
+          .where(eq(users.id, user.id));
+      } catch {
+        await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS second_phone varchar(32);`);
+        await db
+          .update(users)
+          .set({
+            name: data.name || user.name,
+            phone: data.phone,
+            secondPhone: trimmedSecond || user.secondPhone || null,
+          })
+          .where(eq(users.id, user.id));
+      }
+      user.name = data.name || user.name;
+      user.phone = data.phone;
+      user.secondPhone = trimmedSecond || user.secondPhone || null;
     } else {
-      const [created] = await db
-        .insert(users)
-        .values({
-          telegramId,
-          name: data.name,
-          phone: data.phone,
-          secondPhone: trimmedSecond,
-        })
-        .returning();
-      user = created;
+      const byPhone = (await findUserByPhone(data.phone)) ?? undefined;
+      if (byPhone) {
+        try {
+          await db
+            .update(users)
+            .set({
+              telegramId,
+              name: data.name || byPhone.name,
+              secondPhone: trimmedSecond || byPhone.secondPhone || null,
+            })
+            .where(eq(users.id, byPhone.id));
+        } catch {
+          await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS second_phone varchar(32);`);
+          await db
+            .update(users)
+            .set({
+              telegramId,
+              name: data.name || byPhone.name,
+              secondPhone: trimmedSecond || byPhone.secondPhone || null,
+            })
+            .where(eq(users.id, byPhone.id));
+        }
+        user = byPhone;
+      } else {
+        try {
+          const [created] = await db
+            .insert(users)
+            .values({
+              telegramId,
+              name: data.name,
+              phone: data.phone,
+              secondPhone: trimmedSecond,
+            })
+            .returning();
+          user = created;
+        } catch {
+          await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS second_phone varchar(32);`);
+          const [created] = await db
+            .insert(users)
+            .values({
+              telegramId,
+              name: data.name,
+              phone: data.phone,
+              secondPhone: trimmedSecond,
+            })
+            .returning();
+          user = created;
+        }
+      }
     }
+  } catch (err: any) {
+    console.error("[bot] finalizeUserRegistration DB xatosi:", err);
   }
 
   // Agar veb-brauzer orqali auth_ token kutilayotgan bo'lsa, sessiyani avtomatik ochamiz
-  if (data.token) {
+  if (data.token && user?.id) {
     const rows = await db
       .select()
       .from(otpCodes)
@@ -145,14 +234,14 @@ async function finalizeUserRegistration(
     }
   }
 
-  const welcomeName = escapeHtml(user.name || data.name);
+  const welcomeName = escapeHtml(user?.name || data.name);
   const successText = [
     `🎉 <b>Tabriklaymiz, ${welcomeName}!</b>`,
     `Siz muvaffaqiyatli ro'yxatdan o'tdingiz.`,
     "",
     `👤 <b>Ism:</b> ${welcomeName}`,
-    `📞 <b>Telefon:</b> <code>${escapeHtml(user.phone || data.phone)}</code>`,
-    user.secondPhone ? `📞 <b>Qo'shimcha:</b> <code>${escapeHtml(user.secondPhone)}</code>` : "",
+    `📞 <b>Telefon:</b> <code>${escapeHtml(user?.phone || data.phone)}</code>`,
+    user?.secondPhone ? `📞 <b>Qo'shimcha:</b> <code>${escapeHtml(user.secondPhone)}</code>` : "",
     "",
     `Ilovani ochish uchun quyidagi tugmani bosing 👇`,
   ]
@@ -187,9 +276,7 @@ async function handleMainBotCallback(query: NonNullable<TelegramUpdate["callback
         });
         regStates.delete(fromId);
       } else {
-        const existing = (
-          await db.select().from(users).where(eq(users.telegramId, fromId)).limit(1)
-        )[0];
+        const existing = await findUserByTelegramId(fromId);
         if (existing && existing.phone) {
           await sendMessage(
             chatId,
@@ -322,9 +409,7 @@ router.post("/webhook", async (req, res) => {
         firstName ||
         "Foydalanuvchi";
 
-      const existingUser = (
-        await db.select().from(users).where(eq(users.telegramId, fromId)).limit(1)
-      )[0];
+      const existingUser = await findUserByTelegramId(fromId);
 
       if (existingUser && existingUser.phone) {
         await sendMessage(
@@ -367,9 +452,7 @@ router.post("/webhook", async (req, res) => {
     const payload = rest.join(" ").trim();
 
     if (command === "/yangiliklar") {
-      const existingUser = (
-        await db.select().from(users).where(eq(users.telegramId, fromId)).limit(1)
-      )[0];
+      const existingUser = await findUserByTelegramId(fromId);
 
       if (!existingUser || !existingUser.phone) {
         regStates.set(fromId, { step: "ask_name", updatedAt: Date.now() });
@@ -417,9 +500,7 @@ router.post("/webhook", async (req, res) => {
     }
 
     if (isStart(command)) {
-      const existingUser = (
-        await db.select().from(users).where(eq(users.telegramId, fromId)).limit(1)
-      )[0];
+      const existingUser = await findUserByTelegramId(fromId);
 
       if (payload && payload.startsWith("auth_")) {
         const rows = await db
@@ -569,16 +650,19 @@ router.post("/webhook", async (req, res) => {
     }
 
     // Oddiy matn xabarlarini qayta ishlash
-    const existingUser = (
-      await db.select().from(users).where(eq(users.telegramId, fromId)).limit(1)
-    )[0];
+    const existingUser = await findUserByTelegramId(fromId);
 
     // Agar foydalanuvchi allaqachon ro'yxatdan o'tgan bo'lsa:
     if (existingUser && existingUser.phone) {
       const digits = text.replace(/\D/g, "");
       if (digits.length >= 9) {
         const newSecond = `+998${digits.slice(-9)}`;
-        await db.update(users).set({ secondPhone: newSecond }).where(eq(users.id, existingUser.id));
+        try {
+          await db.update(users).set({ secondPhone: newSecond }).where(eq(users.id, existingUser.id));
+        } catch {
+          await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS second_phone varchar(32);`);
+          await db.update(users).set({ secondPhone: newSecond }).where(eq(users.id, existingUser.id));
+        }
         await sendMessage(
           chatId,
           `✅ Qo'shimcha telefon raqamingiz yangilandi: <code>${escapeHtml(newSecond)}</code>`,
@@ -725,7 +809,7 @@ router.post("/webhook", async (req, res) => {
     await sendMessage(chatId, askPhoneText, { keyboard: { remove_keyboard: true } });
     return res.json({ ok: true });
   } catch (err) {
-    console.error("[bot] webhook xatosi:", err);
+    console.error("[bot] webhook xatosi:", err instanceof Error ? err.stack : err);
     await sendMessage(chatId, errorMessage(), { keyboard: greetingKeyboard() });
     return res.json({ ok: true });
   }

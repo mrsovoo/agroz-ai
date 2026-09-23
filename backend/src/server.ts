@@ -19,6 +19,7 @@ import advertisementsRouter from "./routes/advertisements.js";
 import pharmaciesRouter from "./routes/pharmacies.js";
 
 import { ensureSeed } from "./lib/seed.js";
+import { ensureSchema } from "./db/migrate.js";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -92,6 +93,9 @@ app.listen(PORT, async () => {
   console.log(`\n🚀 Agroz AI Backend server ishga tushdi: http://localhost:${PORT}`);
   console.log(`📡 CORS ruxsat berilgan manbalar: ${allowedOrigins.join(", ")}`);
   console.log(`🩺 Healthcheck: http://localhost:${PORT}/api/health\n`);
+
+  // Bazadagi yetishmayotgan ustun va jadvallarni avtomatik yaratish/sinxronlash
+  await ensureSchema();
 
   // Demo ma'lumotlar faqat SEED_DEMO_DATA === "true" bo'lganda kiritiladi
   if (process.env.SEED_DEMO_DATA === "true") {
