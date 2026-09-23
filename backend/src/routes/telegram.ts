@@ -5,7 +5,6 @@ import {
   alreadyVerifiedMessage,
   answerCallbackQuery,
   codeMessage,
-  contactRequestKeyboard,
   errorMessage,
   expiredLinkMessage,
   greetingKeyboard,
@@ -146,19 +145,13 @@ async function finalizeUserRegistration(
   const welcomeName = escapeHtml(user.name || data.name);
   const successText = [
     `🎉 <b>Tabriklaymiz, ${welcomeName}!</b>`,
+    `Siz muvaffaqiyatli ro'yxatdan o'tdingiz.`,
     "",
-    `✅ <b>Profilingiz muvaffaqiyatli faollashtirildi!</b>`,
     `👤 <b>Ism:</b> ${welcomeName}`,
-    `📞 <b>Asosiy telefon:</b> <code>${escapeHtml(user.phone || data.phone)}</code>`,
-    user.secondPhone ? `📞 <b>Qo'shimcha telefon:</b> <code>${escapeHtml(user.secondPhone)}</code>` : "",
+    `📞 <b>Telefon:</b> <code>${escapeHtml(user.phone || data.phone)}</code>`,
+    user.secondPhone ? `📞 <b>Qo'shimcha:</b> <code>${escapeHtml(user.secondPhone)}</code>` : "",
     "",
-    `Endi siz <b>Agroz AI</b> platformasining barcha imkoniyatlaridan to'liq foydalanishingiz mumkin:`,
-    `• 🌾 Ekin va chorva kasalliklarini AI yordamida tashxis qilish`,
-    `• 💊 Yaqin dorixonalardan dori vositalarini buyurtma qilish (5 km)`,
-    `• 👨‍🌾 Malakali agronom va veterinar mutaxassislarni chaqirish`,
-    "",
-    data.token ? `<i>(Brauzerdagi sahifangizga ham avtomatik kirdingiz)</i>\n` : "",
-    `Pastdagi <b>«🚀 Agroz AI»</b> tugmasi orqali ilovani oching 👇`,
+    `Ilovani ochish uchun quyidagi tugmani bosing 👇`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -192,14 +185,14 @@ async function handleMainBotCallback(query: NonNullable<TelegramUpdate["callback
         if (existing && existing.phone) {
           await sendMessage(
             chatId,
-            `✅ <b>Siz allaqachon ro'yxatdan o'tgansiz!</b>\n\nIlovadan foydalanish uchun quyidagi tugmani bosing 👇`,
+            `✅ <b>Siz ro'yxatdan o'tgansiz!</b>\n\nIlovani ochish uchun pastdagi tugmani bosing 👇`,
             { keyboard: greetingKeyboard() }
           );
         } else {
           regStates.set(fromId, { step: "ask_name", updatedAt: Date.now() });
           await sendMessage(
             chatId,
-            `👋 Assalomu alaykum! Agroz AI platformasidan foydalanish uchun, iltimos, <b>Ism va familiyangizni</b> kiriting:`,
+            `👋 Assalomu alaykum!\n\n1️⃣ <b>Ism va familiyangizni yozing:</b>`,
             { keyboard: { remove_keyboard: true } }
           );
         }
@@ -242,7 +235,7 @@ async function handleMainBotCallback(query: NonNullable<TelegramUpdate["callback
           "✅ <b>Rahmat! Bahoyingiz qabul qilindi.</b>",
           "",
           "Sizning fikringiz dorixona reytingini shakllantirishga yordam beradi.",
-          medReviewUrl ? "Dorilar bo'yicha fikrlarni ko'rish yoki izoh qoldirish uchun pastdagi tugmadan foydalanishingiz mumkin." : "",
+          medReviewUrl ? "Dorilar bo'yicha fikrlarni ko'rish uchun pastdagi tugmadan foydalanishingiz mumkin." : "",
         ]
           .filter(Boolean)
           .join("\n"),
@@ -308,7 +301,7 @@ router.post("/webhook", async (req, res) => {
   const firstName = message?.from?.first_name;
 
   try {
-    // 1. Foydalanuvchi "Telefon raqamni yuborish" tugmasini bosganda (contact)
+    // Agar foydalanuvchi kontakt ulashgan bo'lsa (ixtiyoriy)
     if (message?.contact && message.contact.phone_number) {
       const rawPhone = message.contact.phone_number.trim();
       const phone = "+" + rawPhone.replace(/\D/g, "");
@@ -321,17 +314,15 @@ router.post("/webhook", async (req, res) => {
         await db.select().from(users).where(eq(users.telegramId, fromId)).limit(1)
       )[0];
 
-      // Agar allaqachon to'liq ro'yxatdan o'tgan bo'lsa
       if (existingUser && existingUser.phone) {
         await sendMessage(
           chatId,
-          `👋 <b>Assalomu alaykum, ${escapeHtml(existingUser.name || contactName)}!</b>\n\nSiz allaqachon ro'yxatdan o'tgansiz. Ilovani ochish uchun pastdagi tugmani bosing 👇`,
+          `👋 <b>Assalomu alaykum, ${escapeHtml(existingUser.name || contactName)}!</b>\n\nSiz ro'yxatdan o'tgansiz. Ilovani ochish uchun pastdagi tugmani bosing 👇`,
           { keyboard: greetingKeyboard() }
         );
         return res.json({ ok: true });
       }
 
-      // Ro'yxatdan o'tish jarayonida: asosiy raqam olindi, endi qo'shimcha raqam so'raymiz
       const regState = regStates.get(fromId);
       const chosenName = regState?.name || existingUser?.name || contactName;
 
@@ -344,16 +335,15 @@ router.post("/webhook", async (req, res) => {
       });
 
       const askSecondPhoneText = [
-        `📞 Asosiy telefon raqamingiz: <code>${escapeHtml(phone)}</code> qabul qilindi!`,
+        `📞 Raqamingiz: <code>${escapeHtml(phone)}</code>`,
         "",
-        `Sizda <b>qo'shimcha ikkinchi telefon raqamingiz</b> bormi?`,
-        `Agar bo'lsa, ikkinchi raqamingizni yozib yuboring (masalan: <code>91 234 56 78</code>).`,
-        `Agar bo'lmasa, quyidagi <b>«✅ Raqamni tasdiqlash»</b> tugmasini bosing 👇`,
+        `3️⃣ <b>Qo'shimcha ikkinchi telefon raqamingiz bormi?</b>`,
+        `Bo'lsa yozing, bo'lmasa pastdagi tugmani bosing 👇`,
       ].join("\n");
 
       await sendMessage(chatId, askSecondPhoneText, {
         keyboard: {
-          inline_keyboard: [[{ text: "✅ Raqamni tasdiqlash", callback_data: "reg:confirm" }]],
+          inline_keyboard: [[{ text: "✅ Tasdiqlash", callback_data: "reg:confirm" }]],
         },
       });
       return res.json({ ok: true });
@@ -372,7 +362,7 @@ router.post("/webhook", async (req, res) => {
         regStates.set(fromId, { step: "ask_name", updatedAt: Date.now() });
         await sendMessage(
           chatId,
-          `⚠️ Yangiliklar va platformadan foydalanish uchun avval ro'yxatdan o'ting.\n\n1️⃣ Iltimos, <b>Ism va familiyangizni</b> kiriting:`,
+          `⚠️ Foydalanish uchun avval ro'yxatdan o'ting.\n\n1️⃣ <b>Ism va familiyangizni yozing:</b>`,
           { keyboard: { remove_keyboard: true } }
         );
         return res.json({ ok: true });
@@ -463,12 +453,9 @@ router.post("/webhook", async (req, res) => {
 
             const verifiedText = [
               `✅ <b>Salom, ${escapeHtml(existingUser.name || chosenName)}!</b>`,
+              `Profilingiz faollashtirildi.`,
               "",
-              "🎉 <b>Profilingiz muvaffaqiyatli faollashtirildi!</b>",
-              `📞 Tasdiqlangan telefoningiz: <code>${escapeHtml(existingUser.phone)}</code>`,
-              "",
-              "Siz brauzerdagi sahifada avtomatik ravishda profilingizga kirdingiz.",
-              "Yoki quyidagi tugma orqali ilovani ochishingiz mumkin 👇",
+              `Ilovani ochish uchun pastdagi tugmani bosing 👇`,
             ].join("\n");
 
             await sendMessage(chatId, verifiedText, { keyboard: greetingKeyboard() });
@@ -488,22 +475,20 @@ router.post("/webhook", async (req, res) => {
 
             const askSecondText = [
               `👋 <b>Assalomu alaykum, ${escapeHtml(chosenName)}!</b>`,
+              `📞 Raqamingiz: <code>${escapeHtml(targetPhone)}</code>`,
               "",
-              `📞 Asosiy telefon raqamingiz: <code>${escapeHtml(targetPhone)}</code>`,
-              "",
-              `Sizda <b>qo'shimcha ikkinchi telefon raqamingiz</b> bormi?`,
-              `Agar bo'lsa, ikkinchi raqamingizni yuboring (masalan: <code>91 234 56 78</code>).`,
-              `Agar bo'lmasa, quyidagi <b>«✅ Raqamni tasdiqlash»</b> tugmasini bosing 👇`,
+              `<b>Qo'shimcha ikkinchi telefon raqamingiz bormi?</b>`,
+              `Bo'lsa yozing, bo'lmasa pastdagi tugmani bosing 👇`,
             ].join("\n");
 
             await sendMessage(chatId, askSecondText, {
               keyboard: {
-                inline_keyboard: [[{ text: "✅ Raqamni tasdiqlash", callback_data: "reg:confirm" }]],
+                inline_keyboard: [[{ text: "✅ Tasdiqlash", callback_data: "reg:confirm" }]],
               },
             });
             return res.json({ ok: true });
           } else {
-            // Telefon ham yo'q, ismdan boshlaymiz
+            // Telefon yo'q, ismdan boshlaymiz
             regStates.set(fromId, {
               step: "ask_name",
               token: payload,
@@ -511,13 +496,11 @@ router.post("/webhook", async (req, res) => {
             });
 
             const askNameText = [
-              `👋 <b>Assalomu alaykum, ${escapeHtml(firstName || "Do'stim")}!</b>`,
+              `👋 <b>Assalomu alaykum!</b>`,
+              `Platformadan foydalanish uchun ro'yxatdan o'ting.`,
               "",
-              `🌱 <b>Agroz AI</b> platformasiga xush kelibsiz!`,
-              `Platforma va Mini App imkoniyatlaridan to'liq foydalanish uchun ro'yxatdan o'tishingiz lozim.`,
-              "",
-              `1️⃣ Iltimos, <b>Ism va familiyangizni</b> kiriting:`,
-              `<i>(Masalan: Rustam Olimov)</i>`,
+              `1️⃣ <b>Ism va familiyangizni yozing:</b>`,
+              `<i>(Masalan: Dilshod Ergashev)</i>`,
             ].join("\n");
 
             await sendMessage(chatId, askNameText, { keyboard: { remove_keyboard: true } });
@@ -542,33 +525,28 @@ router.post("/webhook", async (req, res) => {
       // Oddiy /start: Agar allaqachon to'liq ro'yxatdan o'tgan bo'lsa
       if (existingUser && existingUser.phone) {
         const welcomeText = [
-          `👋 <b>Assalomu alaykum, ${escapeHtml(existingUser.name || firstName || "Do'stim")}!</b>`,
+          `👋 <b>Assalomu alaykum, ${escapeHtml(existingUser.name || firstName || "Foydalanuvchi")}!</b>`,
           "",
-          `🌱 <b>Agroz AI</b> — dehqon va chorvadorlar uchun aqlli yordamchi platforma.`,
-          `📞 Tasdiqlangan faol raqamingiz: <code>${escapeHtml(existingUser.phone)}</code>`,
-          existingUser.secondPhone ? `📞 Qo'shimcha raqam: <code>${escapeHtml(existingUser.secondPhone)}</code>` : "",
+          `🌱 <b>Agroz AI</b> platformasiga xush kelibsiz.`,
+          `📞 Telefoningiz: <code>${escapeHtml(existingUser.phone)}</code>`,
           "",
-          `Ilovadan foydalanish uchun quyidagi <b>«🚀 Agroz AI»</b> tugmasini bosing 👇`,
-        ]
-          .filter(Boolean)
-          .join("\n");
+          `Ilovani ochish uchun quyidagi <b>«🚀 Agroz AI»</b> tugmasini bosing 👇`,
+        ].join("\n");
         await sendMessage(chatId, welcomeText, { keyboard: greetingKeyboard() });
         return res.json({ ok: true });
       }
 
-      // Agar hali telefon kiritilmagan bo'lsa, ro'yxatdan o'tkazishni boshlaymiz (MINI APP BERILMAYDI!)
+      // Agar hali ro'yxatdan o'tmagan bo'lsa (MINI APP BERILMAYDI!)
       regStates.set(fromId, {
         step: "ask_name",
         updatedAt: Date.now(),
       });
 
       const promptText = [
-        `👋 <b>Assalomu alaykum, ${escapeHtml(firstName || "Do'stim")}!</b>`,
+        `👋 <b>Assalomu alaykum!</b>`,
+        `Platformadan foydalanish uchun ro'yxatdan o'ting.`,
         "",
-        `🌱 <b>Agroz AI</b> platformasiga xush kelibsiz!`,
-        `Platforma va Mini App imkoniyatlaridan to'liq foydalanish uchun, iltimos, ro'yxatdan o'ting.`,
-        "",
-        `1️⃣ Iltimos, <b>Ism va familiyangizni</b> kiriting:`,
+        `1️⃣ <b>Ism va familiyangizni yozing:</b>`,
         `<i>(Masalan: Dilshod Ergashev)</i>`,
       ].join("\n");
 
@@ -614,10 +592,10 @@ router.post("/webhook", async (req, res) => {
       } else {
         await sendMessage(
           chatId,
-          "📞 Agar qo'shimcha ikkinchi raqamingiz bo'lsa, 9 xonali raqam yuboring (masalan: <code>91 234 56 78</code>).\n\nAgar bo'lmasa, pastdagi <b>«✅ Raqamni tasdiqlash»</b> tugmasini bosing 👇",
+          "📞 Qo'shimcha raqam bo'lsa yozing (masalan: <code>91 234 56 78</code>).\nBo'lmasa pastdagi tugmani bosing 👇",
           {
             keyboard: {
-              inline_keyboard: [[{ text: "✅ Raqamni tasdiqlash", callback_data: "reg:confirm" }]],
+              inline_keyboard: [[{ text: "✅ Tasdiqlash", callback_data: "reg:confirm" }]],
             },
           }
         );
@@ -640,8 +618,8 @@ router.post("/webhook", async (req, res) => {
       if (digits.length < 9) {
         await sendMessage(
           chatId,
-          "⚠️ Telefon raqami noto'g'ri kiritildi.\n\nIltimos, 9 xonali faol telefon raqamingizni yozing (masalan: <code>90 123 45 67</code>) yoki pastdagi tugmani bosing 👇",
-          { keyboard: contactRequestKeyboard() }
+          "⚠️ Telefon raqami noto'g'ri kiritildi.\n\nIltimos, 9 xonali telefon raqamingizni yozing:\n<i>(Masalan: 90 123 45 67)</i>",
+          { keyboard: { remove_keyboard: true } }
         );
         return res.json({ ok: true });
       }
@@ -655,16 +633,15 @@ router.post("/webhook", async (req, res) => {
       });
 
       const askSecond = [
-        `📞 Asosiy telefon: <code>${escapeHtml(primaryPhone)}</code> qabul qilindi!`,
+        `📞 Raqamingiz: <code>${escapeHtml(primaryPhone)}</code>`,
         "",
-        `Sizda <b>qo'shimcha ikkinchi telefon raqamingiz</b> bormi?`,
-        `Agar bo'lsa, ikkinchi raqamingizni yuboring (masalan: <code>91 234 56 78</code>).`,
-        `Agar bo'lmasa, quyidagi <b>«✅ Raqamni tasdiqlash»</b> tugmasini bosing 👇`,
+        `3️⃣ <b>Qo'shimcha ikkinchi telefon raqamingiz bormi?</b>`,
+        `Bo'lsa yozing, bo'lmasa pastdagi tugmani bosing 👇`,
       ].join("\n");
 
       await sendMessage(chatId, askSecond, {
         keyboard: {
-          inline_keyboard: [[{ text: "✅ Raqamni tasdiqlash", callback_data: "reg:confirm" }]],
+          inline_keyboard: [[{ text: "✅ Tasdiqlash", callback_data: "reg:confirm" }]],
         },
       });
       return res.json({ ok: true });
@@ -674,7 +651,7 @@ router.post("/webhook", async (req, res) => {
     const digits = text.replace(/\D/g, "");
     const textWithoutDigits = text.replace(/[\d\+\s\-\(\)\/\:\,]/g, " ").trim();
 
-    // Agar foydalanuvchi birato'la raqam yoki ism + raqam yuborgan bo'lsa
+    // Agar foydalanuvchi birato'la raqam yoki ism + raqam yozgan bo'lsa
     if (digits.length >= 9) {
       const primaryPhone = `+998${digits.slice(-9)}`;
       const chosenName = textWithoutDigits.length >= 2 ? textWithoutDigits : (firstName || "Foydalanuvchi");
@@ -689,16 +666,15 @@ router.post("/webhook", async (req, res) => {
 
       const askSecond = [
         `👤 Ism: <b>${escapeHtml(chosenName)}</b>`,
-        `📞 Asosiy telefon: <code>${escapeHtml(primaryPhone)}</code>`,
+        `📞 Telefon: <code>${escapeHtml(primaryPhone)}</code>`,
         "",
-        `Sizda <b>qo'shimcha ikkinchi telefon raqamingiz</b> bormi?`,
-        `Agar bo'lsa, ikkinchi raqamingizni yuboring (masalan: <code>91 234 56 78</code>).`,
-        `Agar bo'lmasa, quyidagi <b>«✅ Raqamni tasdiqlash»</b> tugmasini bosing 👇`,
+        `<b>Qo'shimcha ikkinchi telefon raqamingiz bormi?</b>`,
+        `Bo'lsa yozing, bo'lmasa pastdagi tugmani bosing 👇`,
       ].join("\n");
 
       await sendMessage(chatId, askSecond, {
         keyboard: {
-          inline_keyboard: [[{ text: "✅ Raqamni tasdiqlash", callback_data: "reg:confirm" }]],
+          inline_keyboard: [[{ text: "✅ Tasdiqlash", callback_data: "reg:confirm" }]],
         },
       });
       return res.json({ ok: true });
@@ -706,7 +682,7 @@ router.post("/webhook", async (req, res) => {
 
     const enteredName = text.trim();
     if (enteredName.length < 2) {
-      await sendMessage(chatId, "⚠️ Iltimos, ism va familiyangizni to'liqroq kiriting (kamida 2 ta harf):");
+      await sendMessage(chatId, "⚠️ Iltimos, ism va familiyangizni yozing (kamida 2 ta harf):");
       return res.json({ ok: true });
     }
 
@@ -720,14 +696,11 @@ router.post("/webhook", async (req, res) => {
     const askPhoneText = [
       `Rahmat, <b>${escapeHtml(enteredName)}</b>!`,
       "",
-      `2️⃣ Endi, iltimos, <b>ishlab turgan asosiy telefon raqamingizni</b> yozing:`,
-      `⚠️ <i>Eslatma: Ko'p odamlarning Telegram raqami o'chgan yoki ishlamaydi. Mutaxassislar va dorixonalar siz bilan bog'lana olishi uchun faol ishlayotgan raqamingizni kiriting!</i>`,
-      "",
-      `✍️ Masalan: <code>90 123 45 67</code> yoki <code>+998901234567</code>`,
-      `<i>(Yoki pastdagi «📱 Telefon raqamni yuborish» tugmasini bosing)</i> 👇`,
+      `2️⃣ <b>Telefon raqamingizni yozing:</b>`,
+      `<i>(Masalan: 90 123 45 67 yoki +998901234567)</i>`,
     ].join("\n");
 
-    await sendMessage(chatId, askPhoneText, { keyboard: contactRequestKeyboard() });
+    await sendMessage(chatId, askPhoneText, { keyboard: { remove_keyboard: true } });
     return res.json({ ok: true });
   } catch (err) {
     console.error("[bot] webhook xatosi:", err);

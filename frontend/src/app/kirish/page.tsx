@@ -534,14 +534,13 @@ export default function LoginPage() {
               ) : (
                 /* Brauzerda Telegram orqali ishlaydigan raqam bilan kirish */
                 <div className="space-y-4">
-                  <div className="rounded-2xl bg-amber-50 p-4 border border-amber-200">
-                    <div className="flex items-center gap-2 text-amber-900 font-bold text-[13.5px]">
-                      <AlertCircle size={17} className="text-amber-600 shrink-0" />
-                      <span>Muhim eslatma: Faol telefon raqam</span>
+                  <div className="rounded-2xl bg-emerald-50 p-3.5 border border-emerald-200">
+                    <div className="flex items-center gap-2 text-emerald-950 font-bold text-[13px]">
+                      <ShieldCheck size={16} className="text-emerald-600 shrink-0" />
+                      <span>Ism va telefoningizni kiriting</span>
                     </div>
-                    <p className="mt-1 text-[12px] leading-relaxed text-amber-900/80">
-                      Ko&apos;p foydalanuvchilarning Telegramga ulangan eski raqami ishlamasligi yoki kuygan bo&apos;lishi mumkin.
-                      Mutaxassis va dorixonalar siz bilan to&apos;g&apos;ridan-to&apos;g&apos;ri bog&apos;lana olishi uchun, iltimos, <b>hozirda ishlab turgan telefon raqamingizni</b> kiriting:
+                    <p className="mt-0.5 text-[11.5px] leading-relaxed text-emerald-800">
+                      Mutaxassislar va dorixonalar siz bilan bog&apos;lana olishi uchun ishlayotgan telefon raqamingizni yozing.
                     </p>
                   </div>
 
