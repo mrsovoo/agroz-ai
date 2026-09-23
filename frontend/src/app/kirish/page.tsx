@@ -53,6 +53,16 @@ export default function LoginPage() {
   const [botStartUrl, setBotStartUrl] = useState("");
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Botdan olingan tasdiqlangan profil ma'lumotlari
+  const [botUser, setBotUser] = useState<{
+    id: number;
+    name: string | null;
+    phone: string | null;
+    secondPhone?: string | null;
+    region?: string | null;
+  } | null>(null);
+  const [checkingBot, setCheckingBot] = useState(false);
+
   // Tezkor kirish state'lari (Ism + Hudud)
   const [name, setName] = useState("");
   const [region, setRegion] = useState(REGIONS[0]);
@@ -87,16 +97,42 @@ export default function LoginPage() {
     };
   }, []);
 
-  // Telegram WebApp yuklanganligini aniqlash va avtomatik login taklif qilish
+  // Telegram WebApp yuklanganligini aniqlash va botdagi ma'lumotlarni avto-tekshirish
   useEffect(() => {
-    onTelegramReady((tg) => {
+    return onTelegramReady((tg) => {
       const user = tg.initDataUnsafe?.user ?? null;
       if (user) {
         setTgUser(user);
         setAuthMethod("telegram");
-        if (user.first_name) {
-          setName(`${user.first_name} ${user.last_name || ""}`.trim());
-        }
+      }
+
+      if (tg.initData) {
+        (async () => {
+          try {
+            setCheckingBot(true);
+            const res = await fetch("/api/auth/telegram/check", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ initData: tg.initData }),
+            });
+            const data = await res.json();
+            if (data.ok && data.registered && data.user) {
+              setBotUser(data.user);
+              if (data.user.name) setName(data.user.name);
+              if (data.user.phone) setPhoneInput(normalize(data.user.phone));
+              if (data.user.secondPhone) setSecondPhoneInput(normalize(data.user.secondPhone));
+              if (data.user.region) setRegion(data.user.region);
+            } else if (user?.first_name) {
+              setName(`${user.first_name} ${user.last_name || ""}`.trim());
+            }
+          } catch {
+            if (user?.first_name) {
+              setName(`${user.first_name} ${user.last_name || ""}`.trim());
+            }
+          } finally {
+            setCheckingBot(false);
+          }
+        })();
       }
     });
   }, []);
@@ -401,17 +437,50 @@ export default function LoginPage() {
               {tgUser ? (
                 /* Telegram MiniApp ichida to'g'ridan-to'g'ri */
                 <div className="space-y-4">
-                  <div className="flex items-center gap-3 rounded-2xl bg-sky-50 p-4 border border-sky-100">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-sky-500 text-lg font-black text-white shadow-xs">
-                      {(tgUser.first_name || "T").slice(0, 1).toUpperCase()}
+                  {botUser ? (
+                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 space-y-3">
+                      <div className="flex items-center gap-2.5 text-emerald-800">
+                        <CheckCircle2 size={20} className="text-emerald-600 shrink-0" />
+                        <div>
+                          <p className="text-[14px] font-black">Bot orqali yozgan ma&apos;lumotlaringiz aniqlandi!</p>
+                          <p className="text-[12px] text-emerald-700">Tasdiqlash tugmasini bosib profilingizga kiring:</p>
+                        </div>
+                      </div>
+                      <div className="rounded-xl bg-white/95 p-3 border border-emerald-100 text-xs space-y-1.5 font-medium text-slate-700">
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">👤 Ism:</span>
+                          <span className="font-bold text-slate-900">{botUser.name || name}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">📞 Asosiy telefon:</span>
+                          <span className="font-bold text-slate-900">{botUser.phone || `+998 ${phoneInput}`}</span>
+                        </div>
+                        {botUser.secondPhone && (
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">📞 Qo&apos;shimcha:</span>
+                            <span className="font-bold text-slate-900">{botUser.secondPhone}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-bold text-slate-800">
-                        {tgUser.first_name} {tgUser.last_name ?? ""}
-                      </p>
-                      <p className="text-xs text-sky-600 font-medium">Telegram hisobingiz tasdiqlandi</p>
+                  ) : checkingBot ? (
+                    <div className="flex items-center gap-2.5 rounded-2xl bg-slate-50 p-4 border border-slate-100 text-xs text-slate-500">
+                      <Loader2 size={16} className="animate-spin text-emerald-600" />
+                      <span>Botdagi ma&apos;lumotlaringiz tekshirilmoqda...</span>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="flex items-center gap-3 rounded-2xl bg-sky-50 p-4 border border-sky-100">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-sky-500 text-lg font-black text-white shadow-xs">
+                        {(tgUser.first_name || "T").slice(0, 1).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-800">
+                          {tgUser.first_name} {tgUser.last_name ?? ""}
+                        </p>
+                        <p className="text-xs text-sky-600 font-medium">Telegram hisobingiz tasdiqlandi</p>
+                      </div>
+                    </div>
+                  )}
 
                   <div>
                     <label className="mb-1.5 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-widest text-[var(--brand-muted)]">
@@ -485,10 +554,10 @@ export default function LoginPage() {
                     onClick={telegramMiniAppLogin}
                     disabled={busy}
                     className="ios-btn"
-                    style={{ background: "#2AABEE" }}
+                    style={{ background: "#028e11" }}
                   >
-                    {busy ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-                    <span>Tasdiqlash va Kirish</span>
+                    {busy ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
+                    <span>{busy ? "Kirilmoqda..." : "✅ Tasdiqlash va Kirish"}</span>
                   </button>
                 </div>
               ) : waitingBot ? (

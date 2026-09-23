@@ -70,3 +70,4 @@ export async function ensureSchema(): Promise<void> {
     console.warn("[db] ensureSchema ogohlantirish (bazaga ulanish yoki migratsiya):", err?.message || err);
   }
 }
+

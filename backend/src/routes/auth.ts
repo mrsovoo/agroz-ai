@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
 import { otpCodes, sessions, users } from "../db/schema.js";
-import { and, eq, lt, or } from "drizzle-orm";
+import { and, eq, lt, or, sql } from "drizzle-orm";
 import { randomBytes, randomInt } from "node:crypto";
 import { normalizePhone } from "../lib/validate.js";
 import { sendOtpSms, smsConfigured } from "../lib/sms.js";
@@ -35,6 +35,21 @@ async function telegramIdFromInitData(initData: unknown): Promise<number | null>
     return Number.isSafeInteger(id) && id > 0 ? id : null;
   } catch {
     return null;
+  }
+}
+
+async function findUserByTelegramId(fromId: number): Promise<typeof users.$inferSelect | null> {
+  try {
+    const rows = await db.select().from(users).where(eq(users.telegramId, fromId)).limit(1);
+    return rows[0] || null;
+  } catch (err: any) {
+    try {
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS second_phone varchar(32);`);
+      const rows = await db.select().from(users).where(eq(users.telegramId, fromId)).limit(1);
+      return rows[0] || null;
+    } catch {
+      return null;
+    }
   }
 }
 
@@ -152,6 +167,57 @@ router.post("/verify", async (req, res) => {
   }
 });
 
+// POST /api/auth/telegram/check — Mini App ochilganda botda ro'yxatdan o'tganligini tekshirish va ma'lumotlarini olish
+router.post("/telegram/check", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const initData = body.initData;
+    const botToken = await telegramBotToken();
+
+    if (!botToken || !initData || !verifyInitData(initData, botToken)) {
+      return res.status(401).json({ error: "Telegram ma'lumotlari haqiqiy emas" });
+    }
+
+    const params = new URLSearchParams(initData);
+    const tgUser = JSON.parse(params.get("user") || "{}");
+    const telegramId = Number(tgUser.id);
+
+    if (!telegramId) {
+      return res.status(400).json({ error: "Telegram ID topilmadi" });
+    }
+
+    const user = await findUserByTelegramId(telegramId);
+    if (user && user.phone) {
+      return res.json({
+        ok: true,
+        registered: true,
+        user: {
+          id: user.id,
+          name: user.name,
+          phone: user.phone,
+          secondPhone: user.secondPhone,
+          region: user.region,
+          district: user.district,
+        },
+      });
+    }
+
+    return res.json({
+      ok: true,
+      registered: false,
+      tgUser: {
+        id: telegramId,
+        firstName: tgUser.first_name || "",
+        lastName: tgUser.last_name || "",
+        username: tgUser.username || "",
+      },
+    });
+  } catch (err: any) {
+    console.error("[telegram check error]:", err);
+    res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
+
 // POST /api/auth/telegram
 router.post("/telegram", async (req, res) => {
   try {
@@ -172,39 +238,45 @@ router.post("/telegram", async (req, res) => {
     }
 
     const rawName = typeof body.name === "string" ? body.name.trim() : "";
-    const name =
-      rawName || [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ") || "Foydalanuvchi";
     const phone = body.phone ? normalizePhone(body.phone) : null;
     const secondPhone = body.secondPhone ? normalizePhone(body.secondPhone) : null;
     const region = typeof body.region === "string" ? body.region.trim() : null;
 
-    let user = (await db.select().from(users).where(eq(users.telegramId, telegramId)).limit(1))[0];
+    let user = await findUserByTelegramId(telegramId);
+
     if (!user) {
       if (phone) {
         const byPhone = (await db.select().from(users).where(eq(users.phone, phone)).limit(1))[0];
         if (byPhone) {
+          const finalName = rawName || byPhone.name || [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ");
           await db
             .update(users)
             .set({
               telegramId,
-              name,
+              name: finalName,
               secondPhone: secondPhone || byPhone.secondPhone,
               region: region || byPhone.region,
             })
             .where(eq(users.id, byPhone.id));
-          user = byPhone;
+          user = { ...byPhone, telegramId, name: finalName, secondPhone: secondPhone || byPhone.secondPhone, region: region || byPhone.region };
+        } else {
+          const finalName = rawName || [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ") || "Foydalanuvchi";
+          const created = await db
+            .insert(users)
+            .values({ telegramId, name: finalName, phone, secondPhone, region })
+            .returning();
+          user = created[0];
         }
-      }
-      if (!user) {
-        const created = await db
-          .insert(users)
-          .values({ telegramId, name, phone, secondPhone, region })
-          .returning();
-        user = created[0];
+      } else {
+        return res.status(400).json({
+          error: "Foydalanuvchi topilmadi. Avval bot orqali ro'yxatdan o'ting yoki telefon raqamingizni kiriting.",
+          registered: false,
+        });
       }
     } else {
+      // Foydalanuvchi bot orqali avval ro'yxatdan o'tgan
       const updateData: any = {};
-      if (name && name !== user.name) updateData.name = name;
+      if (rawName && rawName !== user.name) updateData.name = rawName;
       if (region && region !== user.region) updateData.region = region;
       if (phone && (!user.phone || phone !== user.phone)) updateData.phone = phone;
       if (secondPhone && (!user.secondPhone || secondPhone !== user.secondPhone)) {
@@ -216,10 +288,20 @@ router.post("/telegram", async (req, res) => {
       }
     }
 
+    if (!user) {
+      return res.status(400).json({ error: "Foydalanuvchi ma'lumotlari topilmadi", registered: false });
+    }
+
     const sessionId = randomBytes(32).toString("hex");
     await db.insert(sessions).values({ id: sessionId, userId: user.id });
 
-    res.json({ ok: true, sessionId, user });
+    res.cookie("agroai_session", sessionId, {
+      path: "/",
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      sameSite: "lax",
+    });
+
+    res.json({ ok: true, sessionId, user, registered: Boolean(user.phone) });
   } catch (err: any) {
     console.error("[auth telegram error]:", err);
     res.status(500).json({ error: err.message || "Server xatosi" });

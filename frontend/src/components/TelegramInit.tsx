@@ -31,6 +31,23 @@ export default function TelegramInit() {
         tg.disableVerticalSwipes?.();
         tg.setHeaderColor?.("#fcbd00");
         tg.setBackgroundColor?.("#f2f3f5");
+
+        // Telegram Mini App ochilganda, agar foydalanuvchi bot orqali ro'yxatdan o'tgan bo'lsa,
+        // sessiyani avtomatik faollashtirish (background auth)
+        if (tg.initData && typeof document !== "undefined" && !document.cookie.includes("agroai_session=")) {
+          fetch("/api/auth/telegram", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ initData: tg.initData }),
+          })
+            .then((r) => r.json())
+            .then((data) => {
+              if (data.ok && data.sessionId && data.registered) {
+                document.cookie = `agroai_session=${data.sessionId}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
+              }
+            })
+            .catch(() => {});
+        }
       } catch {
         /* ignore */
       }

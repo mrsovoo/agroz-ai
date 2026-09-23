@@ -25,6 +25,7 @@ async function getProfileData(): Promise<{ user: any; diagnoses: any[] } | null>
 export async function getCurrentUser(): Promise<{
   id: number;
   phone: string | null;
+  secondPhone?: string | null;
   name: string | null;
   telegramId?: number | null;
   region: string | null;

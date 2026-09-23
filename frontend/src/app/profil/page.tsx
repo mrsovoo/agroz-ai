@@ -4,6 +4,7 @@ import LogoutButton from "@/components/LogoutButton";
 import ProfileEdit from "@/components/ProfileEdit";
 import ProfileOrdersAndCalls from "@/components/ProfileOrdersAndCalls";
 import CompactAlertStrip from "@/components/CompactAlertStrip";
+import ProfileTelegramAutoAuth from "@/components/ProfileTelegramAutoAuth";
 import {
   Sprout,
   PawPrint,
@@ -23,37 +24,7 @@ export default async function ProfilePage() {
   const user = await getCurrentUser();
 
   if (!user) {
-    return (
-      <main className="px-5 pb-6 pt-3">
-        <p className="ios-sub">Profil</p>
-        <h1 className="ios-title">Kirish</h1>
-        <div className="ios-card mt-6 flex flex-col items-center gap-4 p-6 text-center">
-          <div
-            className="flex h-16 w-16 items-center justify-center rounded-[22px] text-[var(--brand-ink)]"
-            style={{ background: "var(--brand-yellow)" }}
-          >
-            <Sprout size={32} />
-          </div>
-          <p className="text-[15px] leading-relaxed text-[var(--brand-ink)]">
-            Yaqin dorixonalarni ko&apos;rish, mutaxassislar bilan bog&apos;lanish va savatingizni boshqarish uchun profilingizga kiring.
-          </p>
-          <div className="w-full max-w-sm space-y-2.5 pt-2">
-            <Link href="/kirish" className="block w-full">
-              <button
-                className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-[15px] font-extrabold text-white shadow-md hover:brightness-105 active:scale-95 transition"
-                style={{ background: "#2AABEE" }}
-              >
-                <Send size={18} />
-                <span>Telegram orqali 1 bosishda kirish</span>
-              </button>
-            </Link>
-            <Link href="/kirish" className="block text-[13px] font-bold text-[var(--brand-green)] hover:underline">
-              Yoki ismingiz bilan tezkor kirish →
-            </Link>
-          </div>
-        </div>
-      </main>
-    );
+    return <ProfileTelegramAutoAuth />;
   }
 
   return (
@@ -84,6 +55,11 @@ export default async function ProfilePage() {
               ) : user.telegramId ? (
                 <p className="mt-0.5 flex items-center gap-1.5 text-[13px] opacity-90">
                   <Send size={12} /> TG ID: {user.telegramId}
+                </p>
+              ) : null}
+              {user.secondPhone ? (
+                <p className="mt-0.5 flex items-center gap-1.5 text-[13px] opacity-90">
+                  <Phone size={12} /> Qo&apos;shimcha: {user.secondPhone}
                 </p>
               ) : null}
               {user.region && (
