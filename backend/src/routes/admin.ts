@@ -181,20 +181,48 @@ router.get("/stats", async (req, res) => {
         defaultRadiusKmSetting(),
       ]);
 
-    // Oxirgi 5 ta buyurtma
-    const recentOrders = await db
+    // Oxirgi 5 ta buyurtma to'liq ma'lumotlari (mahsulotlar va manzil) bilan
+    const recentOrdersRows = await db
       .select({
         id: orders.id,
+        pharmacySpecialistId: orders.pharmacySpecialistId,
+        pharmacyName: specialists.name,
+        pharmacyOrg: specialists.organization,
+        pharmacyPhone: specialists.phone,
+        pharmacyAddress: specialists.address,
         customerName: orders.customerName,
         customerPhone: orders.customerPhone,
+        note: orders.note,
+        deliveryType: orders.deliveryType,
+        customerAddress: orders.customerAddress,
         totalSum: orders.totalSum,
         status: orders.status,
         ratingStars: orders.ratingStars,
         createdAt: orders.createdAt,
       })
       .from(orders)
+      .leftJoin(specialists, eq(specialists.id, orders.pharmacySpecialistId))
       .orderBy(desc(orders.id))
       .limit(5);
+
+    const recentOrderIds = recentOrdersRows.map((r) => r.id);
+    const recentItems =
+      recentOrderIds.length > 0
+        ? await db
+            .select({
+              orderId: orderItems.orderId,
+              name: orderItems.name,
+              price: orderItems.price,
+              qty: orderItems.qty,
+            })
+            .from(orderItems)
+            .where(inArray(orderItems.orderId, recentOrderIds))
+        : [];
+
+    const recentOrders = recentOrdersRows.map((o) => ({
+      ...o,
+      items: recentItems.filter((it) => it.orderId === o.id),
+    }));
 
     res.json({
       ok: true,
@@ -834,6 +862,7 @@ router.get("/orders", requireAdmin, async (req, res) => {
         pharmacyName: specialists.name,
         pharmacyOrg: specialists.organization,
         pharmacyPhone: specialists.phone,
+        pharmacyAddress: specialists.address,
         customerName: orders.customerName,
         customerPhone: orders.customerPhone,
         note: orders.note,

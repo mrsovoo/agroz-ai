@@ -382,7 +382,7 @@ async function handleMenuButton(
       });
       return;
     }
-    await sendAuthMessage(chatId, ordersHintMessage(orders.length), {
+    await sendAuthMessage(chatId, ordersHintMessage(orders), {
       inline: ordersListKeyboard(orders),
       replyKeyboard: approvedPharmacyMenuKeyboard(),
     });
@@ -480,7 +480,7 @@ async function handleCommand(
       });
       return;
     }
-    await sendAuthMessage(chatId, ordersHintMessage(orders.length), {
+    await sendAuthMessage(chatId, ordersHintMessage(orders), {
       inline: ordersListKeyboard(orders),
       replyKeyboard: approvedPharmacyMenuKeyboard(),
     });
@@ -828,7 +828,7 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
         await sendAuthMessage(chatId, ordersEmptyMessage());
         return;
       }
-      await sendAuthMessage(chatId, ordersHintMessage(orders.length), {
+      await sendAuthMessage(chatId, ordersHintMessage(orders), {
         inline: ordersListKeyboard(orders),
       });
       return;

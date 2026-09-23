@@ -115,11 +115,13 @@ export function orderActionsKeyboard(order: OrderWithItems): InlineKeyboard {
 export function ordersListKeyboard(orders: OrderWithItems[]): InlineKeyboard {
   const rows = orders.slice(0, 20).map((o) => {
     const st = orderStatusLabel(o.status);
-    // Baholangan buyurtmada yulduzcha ko'rinadi — qancha yaxshi bo'lsa shuncha ★.
     const stars = o.ratingStars ? ` · ${"★".repeat(o.ratingStars)}` : "";
+    const itemsCount = o.items ? o.items.reduce((s, it) => s + it.qty, 0) : 0;
+    const itemsLabel = itemsCount > 0 ? ` · (${itemsCount} ta)` : "";
+    const deliveryIcon = o.deliveryType === "delivery" ? "🚚" : "🏪";
     return [
       {
-        text: `${st.emoji} #${o.id} · ${o.customerName} · ${o.totalSum !== null ? shortSum(o.totalSum) + " so'm" : "narxsiz"}${stars}`,
+        text: `${st.emoji} #${o.id} · ${o.customerName} ${deliveryIcon}${itemsLabel} · ${o.totalSum !== null ? shortSum(o.totalSum) + " so'm" : "narxsiz"}${stars}`,
         callback_data: `o:view:${o.id}`,
       },
     ];
@@ -137,13 +139,55 @@ export function ordersEmptyMessage(): string {
   ].join("\n");
 }
 
-/** /buyurtmalar ro'yxati sarlavhasi. */
-export function ordersHintMessage(count: number): string {
+/** /buyurtmalar ro'yxati sarlavhasi va batafsil xulosasi. */
+export function ordersHintMessage(ordersOrCount: OrderWithItems[] | number): string {
+  if (typeof ordersOrCount === "number") {
+    return [
+      `📋 <b>Buyurtmalar</b> (${ordersOrCount} ta)`,
+      "",
+      "Batafsil ko'rish va holatini o'zgartirish uchun buyurtmani bosing:",
+    ].join("\n");
+  }
+
+  const orders = ordersOrCount;
+  const count = orders.length;
+
+  const orderCards = orders.slice(0, 8).map((o, idx) => {
+    const st = orderStatusLabel(o.status);
+    const itemsText =
+      o.items && o.items.length > 0
+        ? o.items
+            .map(
+              (it) =>
+                `   • <b>${escapeHtml(it.name)}</b> × ${it.qty} ta${it.price ? ` (${shortSum(it.price * it.qty)} so'm)` : ""}`,
+            )
+            .join("\n")
+        : "   • Dori ko'rsatilmagan";
+
+    const addressText =
+      o.deliveryType === "delivery"
+        ? `📍 <b>Yetkazish manzili:</b> <code>${escapeHtml(o.customerAddress || "Manzil kiritilmagan")}</code>`
+        : `🏪 <b>Olib ketish:</b> Mijoz dorixonadan o'zi olib ketadi`;
+
+    return [
+      `<b>${idx + 1}. Buyurtma #${o.id}</b> [${st.emoji} ${st.label}]`,
+      `👤 <b>Mijoz:</b> ${escapeHtml(o.customerName)} (<code>${escapeHtml(o.customerPhone)}</code>)`,
+      addressText,
+      `📦 <b>Buyurtma qilingan mahsulotlar:</b>\n${itemsText}`,
+      `💰 <b>Jami summa:</b> <b>${o.totalSum ? shortSum(o.totalSum) + " so'm" : "kelishiladi"}</b>`,
+    ].join("\n");
+  });
+
   return [
-    `📋 <b>Buyurtmalar</b> (${count} ta)`,
+    `📋 <b>BUYURTMALAR RO'YXATI (${count} ta)</b>`,
     "",
-    "Batafsil ko'rish va holatini o'zgartirish uchun buyurtmani bosing:",
-  ].join("\n");
+    orderCards.join("\n\n───────────────────\n\n"),
+    count > 8 ? `\n<i>...va yana ${count - 8} ta buyurtma mavjud.</i>` : "",
+    "",
+    "👇 <b>Batafsil boshqarish va mijozga qo'ng'iroq qilish uchun buyurtmani tanlang:</b>",
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 /**

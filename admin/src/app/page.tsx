@@ -57,10 +57,24 @@ type RecentOrder = {
   id: number;
   customerName: string;
   customerPhone: string;
+  pharmacySpecialistId?: number;
+  pharmacyName?: string | null;
+  pharmacyOrg?: string | null;
+  pharmacyPhone?: string | null;
+  pharmacyAddress?: string | null;
+  note?: string | null;
+  deliveryType?: string;
+  customerAddress?: string | null;
   totalSum: number | null;
   status: string;
   ratingStars: number | null;
   createdAt: string;
+  items?: {
+    id?: number;
+    name: string;
+    price?: number | null;
+    qty: number;
+  }[];
 };
 
 type RegionStat = {
@@ -124,6 +138,7 @@ type AdminOrderItem = {
   pharmacyName: string | null;
   pharmacyOrg: string | null;
   pharmacyPhone: string | null;
+  pharmacyAddress?: string | null;
   customerName: string;
   customerPhone: string;
   note: string | null;
@@ -262,6 +277,7 @@ export default function SuperAdminPage() {
   const [adminOrders, setAdminOrders] = useState<AdminOrderItem[]>([]);
   const [orderStatusFilter, setOrderStatusFilter] = useState<string>("all");
   const [orderSearch, setOrderSearch] = useState<string>("");
+  const [selectedOrderDetail, setSelectedOrderDetail] = useState<AdminOrderItem | RecentOrder | null>(null);
 
   // Mutaxassis chaqiruvlari
   const [adminCalls, setAdminCalls] = useState<AdminSpecialistCallItem[]>([]);
@@ -820,43 +836,89 @@ export default function SuperAdminPage() {
                 <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="border-b border-zinc-800 text-zinc-400 uppercase text-[10px] tracking-wider font-mono">
-                      <th className="pb-3">ID</th>
-                      <th className="pb-3">Mijoz</th>
-                      <th className="pb-3">Telefon</th>
-                      <th className="pb-3">Summa</th>
-                      <th className="pb-3">Holat</th>
-                      <th className="pb-3">Baho</th>
+                      <th className="pb-3 px-3">ID</th>
+                      <th className="pb-3 px-3">Mijoz</th>
+                      <th className="pb-3 px-3">Mahsulotlar (Dorilar)</th>
+                      <th className="pb-3 px-3">Yetkazish & Manzil</th>
+                      <th className="pb-3 px-3">Summa</th>
+                      <th className="pb-3 px-3">Holat</th>
+                      <th className="pb-3 px-3 text-right">Amal</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-800/60 text-zinc-300">
                     {recentOrders.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-6 text-center text-zinc-500 font-medium">
+                        <td colSpan={7} className="py-6 text-center text-zinc-500 font-medium">
                           Hali buyurtmalar kelib tushmagan
                         </td>
                       </tr>
                     ) : (
                       recentOrders.map((o) => (
                         <tr key={o.id} className="hover:bg-zinc-900/40 transition">
-                          <td className="py-3 font-mono font-bold text-zinc-400">#{o.id}</td>
-                          <td className="py-3 font-semibold text-white">{o.customerName}</td>
-                          <td className="py-3 text-zinc-400 font-mono">{o.customerPhone}</td>
-                          <td className="py-3 font-mono font-bold text-white">
+                          <td className="py-3 px-3 font-mono font-bold text-zinc-400">#{o.id}</td>
+                          <td className="py-3 px-3">
+                            <p className="font-semibold text-white">{o.customerName}</p>
+                            <p className="text-[11px] text-zinc-400 font-mono">{o.customerPhone}</p>
+                          </td>
+                          <td className="py-3 px-3 max-w-xs">
+                            {o.items && o.items.length > 0 ? (
+                              <div className="space-y-0.5">
+                                {o.items.map((it, idx) => (
+                                  <p key={idx} className="text-[11px] text-zinc-200">
+                                    💊 <span className="font-semibold">{it.name}</span> × {it.qty} ta
+                                  </p>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-zinc-500 italic text-[11px]">Mahsulot ko&apos;rsatilmagan</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-3 max-w-xs">
+                            {o.deliveryType === "delivery" ? (
+                              <div>
+                                <span className="inline-flex items-center gap-1 rounded bg-zinc-900 border border-zinc-700 px-1.5 py-0.5 text-[10px] font-mono font-bold text-white">
+                                  🚚 Yetkazish
+                                </span>
+                                <p className="text-[11px] text-zinc-200 font-medium mt-0.5 break-words">
+                                  📍 {o.customerAddress || "Manzil ko'rsatilmagan"}
+                                </p>
+                              </div>
+                            ) : (
+                              <div>
+                                <span className="inline-flex items-center gap-1 rounded bg-zinc-900 border border-zinc-700 px-1.5 py-0.5 text-[10px] font-mono text-zinc-400">
+                                  🏪 Olib ketish
+                                </span>
+                                <p className="text-[10px] text-zinc-500 mt-0.5 truncate">
+                                  {o.pharmacyOrg || o.pharmacyName || "Dorixonadan"}
+                                </p>
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-3 px-3 font-mono font-bold text-white whitespace-nowrap">
                             {o.totalSum ? `${o.totalSum.toLocaleString()} so'm` : "—"}
                           </td>
-                          <td className="py-3">
-                            <span className="rounded-md bg-zinc-900 px-2 py-0.5 text-[10px] font-mono font-bold text-zinc-200 border border-zinc-700">
+                          <td className="py-3 px-3">
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-mono font-bold ${
+                                o.status === "yetkazildi"
+                                  ? "bg-zinc-900 text-white border border-zinc-700"
+                                  : o.status === "tasdiqlandi"
+                                  ? "bg-zinc-900 text-zinc-200 border border-zinc-700"
+                                  : o.status === "bekor"
+                                  ? "bg-zinc-900 text-zinc-500 border border-zinc-800 line-through"
+                                  : "bg-white text-black font-bold"
+                              }`}
+                            >
                               {o.status}
                             </span>
                           </td>
-                          <td className="py-3">
-                            {o.ratingStars ? (
-                              <span className="flex items-center gap-1 font-mono text-zinc-200">
-                                <Star size={12} fill="currentColor" className="text-white" /> {o.ratingStars}
-                              </span>
-                            ) : (
-                              "—"
-                            )}
+                          <td className="py-3 px-3 text-right">
+                            <button
+                              onClick={() => setSelectedOrderDetail(o)}
+                              className="rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white border border-zinc-700 px-2.5 py-1 text-[11px] font-semibold transition"
+                            >
+                              👁 Ko&apos;rish
+                            </button>
                           </td>
                         </tr>
                       ))
@@ -1145,26 +1207,61 @@ export default function SuperAdminPage() {
                             </p>
                             {o.pharmacyPhone && <p className="text-[10px] text-zinc-500 font-mono">{o.pharmacyPhone}</p>}
                           </td>
-                          <td className="py-3 px-4 max-w-xs">
-                            {o.items?.map((it, i) => (
-                              <p key={i} className="text-[11px] truncate text-zinc-300">
-                                • {it.name} × {it.qty}
-                              </p>
-                            ))}
+                          <td className="py-3 px-4 min-w-[200px]">
+                            {o.items && o.items.length > 0 ? (
+                              <div className="space-y-1">
+                                {o.items.map((it, i) => (
+                                  <div key={i} className="flex items-center justify-between gap-3 text-xs bg-black px-2 py-1 rounded border border-zinc-800/80">
+                                    <span className="font-semibold text-white">💊 {it.name}</span>
+                                    <span className="font-mono text-zinc-400 text-[11px] whitespace-nowrap">
+                                      × {it.qty} ta {it.price ? `(${it.price.toLocaleString()} so'm)` : ""}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-zinc-500 italic text-[11px]">Dorilar ko&apos;rsatilmagan</span>
+                            )}
                           </td>
-                          <td className="py-3 px-4 font-bold font-mono text-white">
+                          <td className="py-3 px-4 font-mono font-bold text-white whitespace-nowrap">
                             {o.totalSum ? `${o.totalSum.toLocaleString()} so'm` : "—"}
                           </td>
-                          <td className="py-3 px-4 text-[11px]">
+                          <td className="py-3 px-4 min-w-[220px]">
                             {o.deliveryType === "delivery" ? (
-                              <span className="font-bold text-white">🚚 Yetkazish</span>
+                              <div className="space-y-1">
+                                <div>
+                                  <span className="rounded bg-zinc-900 border border-zinc-700 px-1.5 py-0.5 text-[10px] font-mono font-bold text-white">
+                                    🚚 Yetkazib berish
+                                  </span>
+                                </div>
+                                <p className="text-xs font-semibold text-zinc-200 leading-snug break-words">
+                                  📍 {o.customerAddress || "Manzil kiritilmagan"}
+                                </p>
+                                {o.customerAddress && (
+                                  <a
+                                    href={`https://maps.google.com/?q=${encodeURIComponent(o.customerAddress)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[10px] text-zinc-400 hover:text-white underline inline-block"
+                                  >
+                                    🗺 Xaritada ochish
+                                  </a>
+                                )}
+                              </div>
                             ) : (
-                              <span className="text-zinc-400">🏪 Olib ketish</span>
-                            )}
-                            {o.customerAddress && (
-                              <p className="text-[10px] text-zinc-500 truncate max-w-[150px]">
-                                {o.customerAddress}
-                              </p>
+                              <div className="space-y-1">
+                                <span className="rounded bg-zinc-900 border border-zinc-700 px-1.5 py-0.5 text-[10px] font-mono text-zinc-400">
+                                  🏪 Olib ketish (Dorixonadan)
+                                </span>
+                                <p className="text-[11px] text-zinc-300">
+                                  {o.pharmacyOrg || o.pharmacyName || "Dorixona"}
+                                </p>
+                                {o.pharmacyAddress && (
+                                  <p className="text-[10px] text-zinc-500 break-words">
+                                    📍 {o.pharmacyAddress}
+                                  </p>
+                                )}
+                              </div>
                             )}
                           </td>
                           <td className="py-3 px-4">
@@ -1183,16 +1280,24 @@ export default function SuperAdminPage() {
                             </span>
                           </td>
                           <td className="py-3 px-4 text-right">
-                            <select
-                              value={o.status}
-                              onChange={(e) => handleUpdateOrderStatus(o.id, e.target.value)}
-                              className="rounded-lg bg-black px-2 py-1 text-[11px] font-semibold text-white border border-zinc-700 focus:outline-none focus:border-white"
-                            >
-                              <option value="yangi">Yangi</option>
-                              <option value="tasdiqlandi">Tasdiqlash</option>
-                              <option value="yetkazildi">Yetkazildi</option>
-                              <option value="bekor">Bekor qilish</option>
-                            </select>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => setSelectedOrderDetail(o)}
+                                className="rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white border border-zinc-700 px-2 py-1 text-[11px] font-semibold transition"
+                              >
+                                👁 Batafsil
+                              </button>
+                              <select
+                                value={o.status}
+                                onChange={(e) => handleUpdateOrderStatus(o.id, e.target.value)}
+                                className="rounded-lg bg-black px-2 py-1 text-[11px] font-semibold text-white border border-zinc-700 focus:outline-none focus:border-white"
+                              >
+                                <option value="yangi">Yangi</option>
+                                <option value="tasdiqlandi">Tasdiqlash</option>
+                                <option value="yetkazildi">Yetkazildi</option>
+                                <option value="bekor">Bekor qilish</option>
+                              </select>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -2127,6 +2232,212 @@ export default function SuperAdminPage() {
 
         {/* 5. BROADCAST TAB */}
         {activeTab === "broadcast" && <AdminWeatherAlertsBroadcast />}
+
+        {/* BUYURTMA BATAFSIL MODAL */}
+        {selectedOrderDetail && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 animate-in fade-in">
+            <div className="w-full max-w-2xl rounded-2xl bg-zinc-950 border border-zinc-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between border-b border-zinc-800 p-5 bg-black">
+                <div className="flex items-center gap-2.5">
+                  <Package className="text-white" size={20} />
+                  <div>
+                    <h3 className="font-bold text-white text-base flex items-center gap-2">
+                      Buyurtma #{selectedOrderDetail.id}
+                      <span
+                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-mono font-bold ${
+                          selectedOrderDetail.status === "yetkazildi"
+                            ? "bg-zinc-900 text-white border border-zinc-700"
+                            : selectedOrderDetail.status === "tasdiqlandi"
+                            ? "bg-zinc-900 text-zinc-200 border border-zinc-700"
+                            : selectedOrderDetail.status === "bekor"
+                            ? "bg-zinc-900 text-zinc-500 border border-zinc-800 line-through"
+                            : "bg-white text-black font-bold"
+                        }`}
+                      >
+                        {selectedOrderDetail.status}
+                      </span>
+                    </h3>
+                    <p className="text-[11px] text-zinc-500 font-mono">
+                      Yaratilgan sana: {selectedOrderDetail.createdAt ? new Date(selectedOrderDetail.createdAt).toLocaleString("uz-UZ") : "—"}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedOrderDetail(null)}
+                  className="rounded-lg p-2 text-zinc-400 hover:text-white hover:bg-zinc-900 transition text-sm font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 overflow-y-auto space-y-5">
+                {/* 1. Mijoz va Dorixona */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="rounded-xl bg-black p-4 border border-zinc-800 space-y-2">
+                    <span className="text-[10.5px] uppercase font-mono tracking-wider text-zinc-400 font-bold block">
+                      👤 Mijoz Ma&apos;lumotlari
+                    </span>
+                    <p className="font-bold text-white text-sm">{selectedOrderDetail.customerName}</p>
+                    <a
+                      href={`tel:${selectedOrderDetail.customerPhone}`}
+                      className="inline-flex items-center gap-1.5 font-mono text-xs font-semibold text-zinc-300 hover:text-white underline"
+                    >
+                      📞 {selectedOrderDetail.customerPhone}
+                    </a>
+                  </div>
+
+                  <div className="rounded-xl bg-black p-4 border border-zinc-800 space-y-2">
+                    <span className="text-[10.5px] uppercase font-mono tracking-wider text-zinc-400 font-bold block">
+                      🏪 Dorixona Ma&apos;lumotlari
+                    </span>
+                    <p className="font-bold text-white text-sm">
+                      {selectedOrderDetail.pharmacyOrg || selectedOrderDetail.pharmacyName || "Dorixona"}
+                    </p>
+                    {selectedOrderDetail.pharmacyPhone && (
+                      <a
+                        href={`tel:${selectedOrderDetail.pharmacyPhone}`}
+                        className="inline-flex items-center gap-1.5 font-mono text-xs text-zinc-400 hover:text-white block font-mono"
+                      >
+                        📞 {selectedOrderDetail.pharmacyPhone}
+                      </a>
+                    )}
+                    {selectedOrderDetail.pharmacyAddress && (
+                      <p className="text-[11px] text-zinc-400">
+                        📍 {selectedOrderDetail.pharmacyAddress}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. Yetkazish va Aniq Manzil */}
+                <div className="rounded-xl bg-black p-4 border border-zinc-800 space-y-2">
+                  <span className="text-[10.5px] uppercase font-mono tracking-wider text-zinc-400 font-bold block">
+                    🚚 Yetkazib Berish & Manzil
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`rounded px-2 py-0.5 text-xs font-mono font-bold ${
+                        selectedOrderDetail.deliveryType === "delivery"
+                          ? "bg-white text-black"
+                          : "bg-zinc-900 text-zinc-300 border border-zinc-700"
+                      }`}
+                    >
+                      {selectedOrderDetail.deliveryType === "delivery" ? "🚚 Kuryer orqali yetkazish" : "🏪 Dorixonadan olib ketish"}
+                    </span>
+                  </div>
+
+                  {selectedOrderDetail.deliveryType === "delivery" ? (
+                    <div className="mt-2 space-y-1">
+                      <p className="text-xs font-bold text-white">Yetkazish manzili:</p>
+                      <p className="text-sm font-semibold text-zinc-200 bg-zinc-950 p-2.5 rounded-lg border border-zinc-800 break-words">
+                        📍 {selectedOrderDetail.customerAddress || "Aniq manzil kiritilmagan"}
+                      </p>
+                      {selectedOrderDetail.customerAddress && (
+                        <a
+                          href={`https://maps.google.com/?q=${encodeURIComponent(selectedOrderDetail.customerAddress)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-white underline pt-1 font-mono"
+                        >
+                          🗺 Google Xaritasida ochish
+                        </a>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-zinc-400 mt-1">
+                      Mijoz dorixonaga kelib, dori vositalarini o&apos;zi olib ketadi.
+                    </p>
+                  )}
+                </div>
+
+                {/* 3. Buyurtma Qilingan Mahsulotlar Ro'yxati */}
+                <div className="rounded-xl bg-black p-4 border border-zinc-800 space-y-3">
+                  <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+                    <span className="text-[10.5px] uppercase font-mono tracking-wider text-zinc-400 font-bold">
+                      📦 Buyurtma Qilingan Dorilar ({selectedOrderDetail.items?.length ?? 0} xil)
+                    </span>
+                    <span className="text-xs font-mono font-bold text-white">
+                      Jami: {selectedOrderDetail.totalSum ? `${selectedOrderDetail.totalSum.toLocaleString()} so'm` : "—"}
+                    </span>
+                  </div>
+
+                  {!selectedOrderDetail.items || selectedOrderDetail.items.length === 0 ? (
+                    <p className="text-xs text-zinc-500 py-3 text-center font-mono">Dori vositalari ko&apos;rsatilmagan</p>
+                  ) : (
+                    <div className="divide-y divide-zinc-800/80">
+                      {selectedOrderDetail.items.map((it, idx) => (
+                        <div key={idx} className="flex items-center justify-between py-2.5 text-xs">
+                          <div>
+                            <p className="font-bold text-white flex items-center gap-1.5">
+                              <span>💊</span> {it.name}
+                            </p>
+                            <p className="text-[11px] font-mono text-zinc-400 mt-0.5">
+                              Dona narxi: {it.price ? `${it.price.toLocaleString()} so'm` : "—"}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <span className="rounded bg-zinc-900 px-2 py-0.5 font-mono font-bold text-white border border-zinc-700 text-xs">
+                              {it.qty} dona
+                            </span>
+                            {it.price && (
+                              <p className="text-xs font-mono font-bold text-white mt-1">
+                                {(it.price * it.qty).toLocaleString()} so&apos;m
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 4. Mijoz Izohi */}
+                {selectedOrderDetail.note && (
+                  <div className="rounded-xl bg-black p-3.5 border border-zinc-800">
+                    <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold block mb-1">
+                      📝 Mijoz Izohi:
+                    </span>
+                    <p className="text-xs text-zinc-300 italic whitespace-pre-line">
+                      {selectedOrderDetail.note}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer / Holatni o'zgartirish */}
+              <div className="border-t border-zinc-800 p-4 bg-black flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-zinc-400 font-semibold">Holatni o&apos;zgartirish:</span>
+                  {["tasdiqlandi", "yetkazildi", "bekor"].map((st) => (
+                    <button
+                      key={st}
+                      onClick={async () => {
+                        await handleUpdateOrderStatus(selectedOrderDetail.id, st);
+                        setSelectedOrderDetail({ ...selectedOrderDetail, status: st });
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs capitalize transition font-bold ${
+                        selectedOrderDetail.status === st
+                          ? "bg-white text-black"
+                          : "bg-zinc-900 text-zinc-300 border border-zinc-700 hover:text-white"
+                      }`}
+                    >
+                      {st}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setSelectedOrderDetail(null)}
+                  className="rounded-xl bg-zinc-900 hover:bg-zinc-800 px-4 py-2 text-xs font-bold text-white border border-zinc-700 transition"
+                >
+                  Yopish
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
