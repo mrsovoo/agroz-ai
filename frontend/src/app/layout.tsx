@@ -6,7 +6,6 @@ import BottomNav from "@/components/BottomNav";
 import TelegramInit from "@/components/TelegramInit";
 import WebFooter from "@/components/WebFooter";
 import WebTopNav from "@/components/WebTopNav";
-import GlobalCartBar from "@/components/GlobalCartBar";
 import CartDrawer from "@/components/CartDrawer";
 
 /** Next'ning absolute URL'lar uchun asosiy manzili (OG rasm va h.k.). */
@@ -100,7 +99,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <WebTopNav />
         <div className="app-shell">{children}</div>
         <WebFooter />
-        <GlobalCartBar />
         <CartDrawer />
         <BottomNav />
       </body>
