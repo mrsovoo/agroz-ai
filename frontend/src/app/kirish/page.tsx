@@ -60,6 +60,7 @@ export default function LoginPage() {
   // Telefon orqali kirish state'lari
   const [step, setStep] = useState<1 | 2>(1);
   const [phoneInput, setPhoneInput] = useState("");
+  const [secondPhoneInput, setSecondPhoneInput] = useState("");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [devCode, setDevCode] = useState("");
@@ -120,6 +121,7 @@ export default function LoginPage() {
         throw new Error("Telegram ma'lumotlari topilmadi");
       }
 
+      const cleanSecond = normalize(secondPhoneInput);
       const res = await fetch("/api/auth/telegram", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -127,6 +129,7 @@ export default function LoginPage() {
           initData: tg.initData,
           name: name.trim(),
           phone: `+998${cleanDigits}`,
+          secondPhone: cleanSecond && cleanSecond.length === 9 ? `+998${cleanSecond}` : undefined,
           region,
         }),
       });
@@ -166,12 +169,14 @@ export default function LoginPage() {
     setBusy(true);
     setError(null);
     try {
+      const cleanSecond = normalize(secondPhoneInput);
       const res = await fetch("/api/auth/start-telegram-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name.trim(),
           phone: `+998${cleanDigits}`,
+          secondPhone: cleanSecond && cleanSecond.length === 9 ? `+998${cleanSecond}` : undefined,
         }),
       });
       const data = await res.json();
@@ -423,7 +428,7 @@ export default function LoginPage() {
 
                   <div>
                     <label className="mb-1.5 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-widest text-[var(--brand-muted)]">
-                      <Phone size={12} /> Telefon raqamingiz
+                      <Phone size={12} /> Asosiy telefon raqamingiz
                     </label>
                     <div className="relative">
                       <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[14.5px] font-bold text-slate-400">
@@ -435,6 +440,26 @@ export default function LoginPage() {
                         value={phoneInput}
                         onChange={(e) => setPhoneInput(normalize(e.target.value).slice(0, 9))}
                         placeholder="90 123 45 67"
+                        className="ios-input pl-16 font-semibold"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 flex items-center justify-between text-[12px] font-bold uppercase tracking-widest text-[var(--brand-muted)]">
+                      <span className="flex items-center gap-1.5"><Phone size={12} /> Qo&apos;shimcha telefon</span>
+                      <span className="text-[11px] font-medium text-slate-400 normal-case">(ixtiyoriy)</span>
+                    </label>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[14.5px] font-bold text-slate-400">
+                        +998
+                      </span>
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        value={secondPhoneInput}
+                        onChange={(e) => setSecondPhoneInput(normalize(e.target.value).slice(0, 9))}
+                        placeholder="91 234 56 78"
                         className="ios-input pl-16 font-semibold"
                       />
                     </div>
@@ -536,7 +561,7 @@ export default function LoginPage() {
 
                   <div>
                     <label className="mb-1.5 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-widest text-[var(--brand-muted)]">
-                      <Phone size={12} /> Ishlayotgan telefon raqamingiz
+                      <Phone size={12} /> Ishlayotgan asosiy telefon raqamingiz
                     </label>
                     <div className="relative">
                       <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[14.5px] font-bold text-slate-400">
@@ -550,6 +575,26 @@ export default function LoginPage() {
                         placeholder="90 123 45 67"
                         className="ios-input pl-16 font-semibold !p-3"
                         required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 flex items-center justify-between text-[12px] font-bold uppercase tracking-widest text-[var(--brand-muted)]">
+                      <span className="flex items-center gap-1.5"><Phone size={12} /> Qo&apos;shimcha telefon</span>
+                      <span className="text-[11px] font-medium text-slate-400 normal-case">(ixtiyoriy)</span>
+                    </label>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[14.5px] font-bold text-slate-400">
+                        +998
+                      </span>
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        value={secondPhoneInput}
+                        onChange={(e) => setSecondPhoneInput(normalize(e.target.value).slice(0, 9))}
+                        placeholder="91 234 56 78"
+                        className="ios-input pl-16 font-semibold !p-3"
                       />
                     </div>
                   </div>

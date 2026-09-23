@@ -14,6 +14,7 @@ import {
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   phone: varchar("phone", { length: 32 }).unique(),
+  secondPhone: varchar("second_phone", { length: 32 }),
   telegramId: bigint("telegram_id", { mode: "number" }).unique(),
   name: varchar("name", { length: 120 }),
   region: varchar("region", { length: 120 }),

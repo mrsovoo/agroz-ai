@@ -175,6 +175,7 @@ router.post("/telegram", async (req, res) => {
     const name =
       rawName || [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ") || "Foydalanuvchi";
     const phone = body.phone ? normalizePhone(body.phone) : null;
+    const secondPhone = body.secondPhone ? normalizePhone(body.secondPhone) : null;
     const region = typeof body.region === "string" ? body.region.trim() : null;
 
     let user = (await db.select().from(users).where(eq(users.telegramId, telegramId)).limit(1))[0];
@@ -184,7 +185,12 @@ router.post("/telegram", async (req, res) => {
         if (byPhone) {
           await db
             .update(users)
-            .set({ telegramId, name, region: region || byPhone.region })
+            .set({
+              telegramId,
+              name,
+              secondPhone: secondPhone || byPhone.secondPhone,
+              region: region || byPhone.region,
+            })
             .where(eq(users.id, byPhone.id));
           user = byPhone;
         }
@@ -192,7 +198,7 @@ router.post("/telegram", async (req, res) => {
       if (!user) {
         const created = await db
           .insert(users)
-          .values({ telegramId, name, phone, region })
+          .values({ telegramId, name, phone, secondPhone, region })
           .returning();
         user = created[0];
       }
@@ -201,6 +207,9 @@ router.post("/telegram", async (req, res) => {
       if (name && name !== user.name) updateData.name = name;
       if (region && region !== user.region) updateData.region = region;
       if (phone && (!user.phone || phone !== user.phone)) updateData.phone = phone;
+      if (secondPhone && (!user.secondPhone || secondPhone !== user.secondPhone)) {
+        updateData.secondPhone = secondPhone;
+      }
       if (Object.keys(updateData).length > 0) {
         await db.update(users).set(updateData).where(eq(users.id, user.id));
         user = { ...user, ...updateData };
@@ -222,15 +231,21 @@ router.post("/start-telegram-login", async (req, res) => {
   try {
     const body = req.body || {};
     const rawPhone = body.phone ? normalizePhone(body.phone) : null;
+    const rawSecondPhone = body.secondPhone ? normalizePhone(body.secondPhone) : null;
     const rawName = typeof body.name === "string" ? body.name.trim() : null;
 
     const token = "auth_" + randomBytes(16).toString("hex");
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
     const botUser = (await getBotUsername()) || process.env.TELEGRAM_BOT_USERNAME?.replace(/^@/, "") || "agroz_ai_bot";
 
+    const payloadObj = {
+      name: rawName,
+      secondPhone: rawSecondPhone,
+    };
+
     await db.insert(otpCodes).values({
       phone: rawPhone || "tg_auth",
-      code: rawName ? `name:${rawName}` : "pending",
+      code: JSON.stringify(payloadObj),
       token,
       expiresAt,
     });

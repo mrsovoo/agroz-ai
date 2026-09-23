@@ -585,6 +585,10 @@ async function seedInTransaction() {
         console.log("  [seed] 2 ta reklama banneri kiritildi.");
       }
 
+      try {
+        await tx.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS second_phone varchar(32);`);
+      } catch {}
+
       console.log(
         `  [seed] Muvaffaqiyatli yakunlandi: ${pharmacyIds.length} ta dorixona, ${specialistIds.length} ta mutaxassis, 24 ta dori preparati, reytinglar va namuna buyurtma qo'shildi.`
       );
