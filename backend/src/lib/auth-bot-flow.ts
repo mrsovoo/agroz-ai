@@ -2230,7 +2230,6 @@ async function handleLocation(
     await setState(telegramId, "address_confirm", draft);
     await sendAuthMessage(chatId, askAddressConfirm(detected), {
       inline: ADDRESS_CONFIRM_KEYBOARD,
-      replyKeyboard: { keyboard: [], remove_keyboard: true },
     });
     return;
   }

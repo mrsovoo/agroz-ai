@@ -66,7 +66,19 @@ export async function sendAuthMessage(
   text: string,
   options?: { inline?: InlineKeyboard; replyKeyboard?: ReplyKeyboard },
 ): Promise<boolean> {
-  const replyMarkup = options?.replyKeyboard ?? options?.inline;
+  if (options?.inline && options?.replyKeyboard) {
+    // Agar ikkalasi ham berilgan bo'lsa, asosiy xabarga inline_keyboard biriktiriladi
+    const result = await callAuthBot<{ message_id?: number }>("sendMessage", {
+      chat_id: chatId,
+      text,
+      parse_mode: "HTML",
+      link_preview_options: { is_disabled: true },
+      reply_markup: options.inline,
+    });
+    return result !== null;
+  }
+
+  const replyMarkup = options?.inline ?? options?.replyKeyboard;
   const result = await callAuthBot<{ message_id?: number }>("sendMessage", {
     chat_id: chatId,
     text,
