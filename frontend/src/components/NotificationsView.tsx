@@ -30,7 +30,7 @@ import {
 export default function NotificationsView({ userRegion }: { userRegion?: string }) {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
-  const [filter, setFilter] = useState<"all" | "unread">("all");
+  const [filter, setFilter] = useState<"all" | "unread">("unread");
   const [loading, setLoading] = useState(true);
   const loadedItemsRef = useRef<AppNotification[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -85,7 +85,10 @@ export default function NotificationsView({ userRegion }: { userRegion?: string 
   };
 
   const unreadCount = notifications.filter((n) => !readIds.has(n.id)).length;
-  const displayed = filter === "unread" ? notifications.filter((n) => !readIds.has(n.id)) : notifications;
+  // Agar unreadCount === 0 bo'lsa va filter "unread" bo'lsa, bo'sh holat ko'rinadi
+  const displayed = filter === "unread" 
+    ? notifications.filter((n) => !readIds.has(n.id)) 
+    : notifications;
 
   const getIcon = (item: AppNotification) => {
     switch (item.type) {
@@ -200,8 +203,18 @@ export default function NotificationsView({ userRegion }: { userRegion?: string 
               {filter === "unread" ? "Barcha xabarlar o'qilgan" : "Hozircha yangi bildirishnoma yo'q"}
             </h3>
             <p className="mt-1 text-[13px] text-neutral-500">
-              Yangi ob-havo xavflari yoki agro-tavsiyalar paydo bo&apos;lganda shu yerda ko&apos;rinadi.
+              Yangi buyurtma, chaqiruv javobi yoki ob-havo xavfi paydo bo&apos;lganda shu yerda ko&apos;rinadi.
             </p>
+            {filter === "unread" && notifications.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setFilter("all")}
+                className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-neutral-100 px-4 py-2 text-xs font-bold text-neutral-700 hover:bg-neutral-200 transition"
+              >
+                <span>O&apos;qilgan xabarlar tarixi ({notifications.length})</span>
+                <span>→</span>
+              </button>
+            )}
           </div>
         ) : (
           displayed.map((item) => {

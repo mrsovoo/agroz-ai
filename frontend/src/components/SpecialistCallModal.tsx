@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, UserRound, Phone, MapPin, AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
 import { createSpecialistCall } from "@/lib/specialist-calls";
 import { apiUrl } from "@/lib/api-config";
@@ -27,8 +27,42 @@ export default function SpecialistCallModal({
   const [problem, setProblem] = useState("");
   const [address, setAddress] = useState("");
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState(false);
+  const [callState, setCallState] = useState<"idle" | "waiting" | "accepted" | "rejected">("idle");
+  const [createdCallId, setCreatedCallId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Mutaxassis javobini kutish uchun polling (har 3 soniyada tekshiradi)
+  useEffect(() => {
+    if (callState !== "waiting" || !createdCallId) return;
+
+    let cancelled = false;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(apiUrl(`/api/specialists/call/${createdCallId}/status`));
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+
+        if (data?.ok) {
+          if (data.status === "qabul_qilindi") {
+            setCallState("accepted");
+            clearInterval(interval);
+            onSuccess();
+          } else if (data.status === "bekor") {
+            setCallState("rejected");
+            clearInterval(interval);
+          }
+        }
+      } catch (e) {
+        // tarmoq xatosida davom etaveradi
+      }
+    }, 3000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [callState, createdCallId, onSuccess]);
 
   if (!isOpen || !specialist) return null;
 
@@ -53,6 +87,23 @@ export default function SpecialistCallModal({
 
     try {
       if (!specialist) return;
+
+      // Geolocation orqali koordinatani olishga harakat qilamiz
+      let userLat: number | undefined;
+      let userLng: number | undefined;
+
+      try {
+        if (navigator.geolocation) {
+          const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 3000 });
+          });
+          userLat = pos.coords.latitude;
+          userLng = pos.coords.longitude;
+        }
+      } catch {
+        // Lokatsiya berilmasa ham davom etadi
+      }
+
       const res = await fetch(apiUrl("/api/specialists/call"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -62,6 +113,8 @@ export default function SpecialistCallModal({
           customerPhone: `+998${cleanDigits}`,
           problem: problem.trim(),
           address: address.trim() || undefined,
+          userLat,
+          userLng,
         }),
       });
 
@@ -70,8 +123,12 @@ export default function SpecialistCallModal({
         throw new Error(data.error || "Chaqiruv yuborib bo'lmadi");
       }
 
+      const callId = Number(data.callId);
+      setCreatedCallId(callId);
+
       // Lokal tarix uchun ham saqlab qo'yamiz
       createSpecialistCall({
+        id: String(callId),
         specialistId: specialist.id,
         specialistName: specialist.organization || specialist.name,
         customerName: name.trim(),
@@ -80,12 +137,8 @@ export default function SpecialistCallModal({
         address: address.trim() || undefined,
       });
 
-      setDone(true);
-      setTimeout(() => {
-        setDone(false);
-        onSuccess();
-        onClose();
-      }, 1800);
+      // Foydalanuvchi talabi: "mutaxassis javobi kutilyapti diyish kerak bo'ladi"
+      setCallState("waiting");
     } catch (err: any) {
       setError(err.message || "Chaqiruv yuborishda xatolik yuz berdi");
     } finally {
@@ -93,9 +146,15 @@ export default function SpecialistCallModal({
     }
   }
 
+  const handleModalClose = () => {
+    setCallState("idle");
+    setCreatedCallId(null);
+    onClose();
+  };
+
   return (
     <div
-      onClick={onClose}
+      onClick={handleModalClose}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in"
     >
       <div
@@ -103,24 +162,73 @@ export default function SpecialistCallModal({
         className="relative w-full max-w-[480px] rounded-[24px] bg-white p-6 shadow-2xl animate-in zoom-in-95"
       >
         <button
-          onClick={onClose}
+          onClick={handleModalClose}
           className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200 transition"
         >
           <X size={18} />
         </button>
 
-        {done ? (
+        {callState === "waiting" ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mb-3 animate-bounce">
-              <CheckCircle2 size={36} />
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-amber-600 mb-4 animate-spin">
+              <Loader2 size={36} />
             </div>
+            <span className="inline-block rounded-full bg-amber-50 border border-amber-200 px-3 py-1 text-xs font-bold text-amber-800 mb-2">
+              ⏳ So&apos;rov yetkazildi
+            </span>
             <h3 className="text-xl font-extrabold text-neutral-900">
-              Chaqiruv yuborildi!
+              Mutaxassis javobi kutilmoqda...
             </h3>
-            <p className="mt-2 text-[14px] text-neutral-600 max-w-xs">
-              <b>{specialist.organization || specialist.name}</b> siz bilan tez orada bog&apos;lanadi.
-              Ish yakunlangach, baho va fikr bildirishingiz mumkin.
+            <p className="mt-2 text-[14px] text-neutral-600 max-w-xs leading-relaxed">
+              <b>{specialist.organization || specialist.name}</b> ga Telegram orqali xabarnoma yuborildi. Mutaxassis tasdiqlashi bilan darhol xabar olasiz.
             </p>
+            <div className="mt-6 flex flex-col gap-2 w-full max-w-xs">
+              <button
+                onClick={handleModalClose}
+                className="rounded-xl border border-neutral-200 bg-neutral-50 px-5 py-2.5 text-xs font-bold text-neutral-700 hover:bg-neutral-100 transition"
+              >
+                Kutish rejimida oynani yopish
+              </button>
+            </div>
+          </div>
+        ) : callState === "accepted" ? (
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mb-4 animate-bounce">
+              <CheckCircle2 size={38} />
+            </div>
+            <span className="inline-block rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-800 mb-2">
+              ✅ Qabul qilindi
+            </span>
+            <h3 className="text-xl font-extrabold text-neutral-900">
+              Mutaxassis chaqiruvni qabul qildi!
+            </h3>
+            <p className="mt-2 text-[14px] text-neutral-600 max-w-xs leading-relaxed">
+              <b>{specialist.organization || specialist.name}</b> sizning chaqiruvingizni qabul qildi va tez orada bog&apos;lanadi.
+            </p>
+            <button
+              onClick={handleModalClose}
+              className="mt-6 rounded-2xl bg-[var(--brand-green)] px-8 py-3 text-xs font-bold text-white shadow-sm hover:brightness-105 active:scale-95 transition"
+            >
+              Ajoyib, tushunarli
+            </button>
+          </div>
+        ) : callState === "rejected" ? (
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-red-600 mb-4">
+              <AlertCircle size={36} />
+            </div>
+            <h3 className="text-lg font-extrabold text-neutral-900">
+              Mutaxassis ayni vaqtda qabul qila olmadi
+            </h3>
+            <p className="mt-2 text-[13px] text-neutral-600 max-w-xs">
+              Mutaxassis bandligi tufayli chaqiruvni o&apos;tkazib yubordi. Iltimos, ro&apos;yxatdagi boshqa mutaxassisni tanlang.
+            </p>
+            <button
+              onClick={handleModalClose}
+              className="mt-6 rounded-2xl bg-neutral-900 px-8 py-2.5 text-xs font-bold text-white transition"
+            >
+              Boshqa mutaxassisni tanlash
+            </button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">

@@ -47,6 +47,7 @@ export function getActiveCallForSpecialist(specialistId: number): SpecialistCall
 }
 
 export function createSpecialistCall(params: {
+  id?: string;
   specialistId: number;
   specialistName: string;
   customerName: string;
@@ -55,7 +56,7 @@ export function createSpecialistCall(params: {
   address?: string;
 }): SpecialistCall {
   const newCall: SpecialistCall = {
-    id: `call_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    id: params.id || `call_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     specialistId: params.specialistId,
     specialistName: params.specialistName,
     customerName: params.customerName,

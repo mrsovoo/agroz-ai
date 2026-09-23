@@ -75,7 +75,7 @@ router.post("/rate", async (req, res) => {
 // POST /api/specialists/call
 router.post("/call", async (req, res) => {
   try {
-    const { specialistId, customerName, customerPhone, problem, address } = req.body || {};
+    const { specialistId, customerName, customerPhone, problem, address, userLat, userLng } = req.body || {};
     const specId = Number(specialistId);
 
     if (!Number.isInteger(specId) || specId <= 0) {
@@ -119,7 +119,15 @@ router.post("/call", async (req, res) => {
       })
       .returning();
 
-    // Mutaxassisning Telegram hisobiga xabar yuborish
+    // Masofani hisoblash (agar mijoz va mutaxassis koordinatasi bo'lsa)
+    let distanceText = "";
+    if (userLat && userLng && spec.lat && spec.lng) {
+      const { distanceKm } = await import("../lib/geo.js");
+      const km = distanceKm(Number(userLat), Number(userLng), spec.lat, spec.lng);
+      distanceText = `taxminan ${km.toFixed(1)} km`;
+    }
+
+    // Mutaxassisning Telegram hisobiga xabar yuborish (@agroz_auth_bot)
     if (spec.telegramId) {
       const cleanPhone = customerPhone.replace(/[^\d+]/g, "");
       const msg = [
@@ -128,9 +136,10 @@ router.post("/call", async (req, res) => {
         `👤 <b>Mijoz:</b> ${escapeHtml(customerName.trim())}`,
         `📞 <b>Telefon:</b> <code>${escapeHtml(customerPhone.trim())}</code>`,
         address ? `📍 <b>Manzil:</b> ${escapeHtml(address.trim())}` : "",
-        `📝 <b>Muammo:</b> <i>${escapeHtml(problem.trim())}</i>`,
+        distanceText ? `📏 <b>Masofa:</b> ${distanceText}` : "",
+        `📝 <b>Nima uchun / Izoh:</b> <i>${escapeHtml(problem.trim())}</i>`,
         "",
-        `⚠️ <b>DIQQAT:</b> Buyurtmani tasdiqlashdan oldin mijoz bilan bog'lanish talab qilinadi va masalaga to'liq oydinlik kiritilishi shart!`,
+        `⚠️ <b>DIQQAT:</b> Mijoz javobingizni kutmoqda. Iltimos, buyurtmani qabul qiling va mijoz bilan bog'laning!`,
       ]
         .filter(Boolean)
         .join("\n");
@@ -141,7 +150,7 @@ router.post("/call", async (req, res) => {
       }
       rows.push([
         { text: "✅ Qabul qilish", callback_data: `sc:accept:${call.id}` },
-        { text: "❌ Bekor qilish", callback_data: `sc:reject:${call.id}` },
+        { text: "❌ O'tkazib yuborish / Rad etish", callback_data: `sc:reject:${call.id}` },
       ]);
 
       if (await isAuthBotConfigured()) {
@@ -153,9 +162,74 @@ router.post("/call", async (req, res) => {
       }
     }
 
+    // Mijozga Agroz AI bot (@agrozai_bot) orqali avtomatik bildirishnoma
+    try {
+      const { users } = await import("../db/schema.js");
+      const { sql } = await import("drizzle-orm");
+      const cleanCustomerDigits = customerPhone.replace(/\D/g, "").slice(-9);
+
+      const [userRow] = await db
+        .select({ telegramId: users.telegramId })
+        .from(users)
+        .where(sql`RIGHT(REPLACE(${users.phone}, ' ', ''), 9) = ${cleanCustomerDigits}`)
+        .limit(1);
+
+      if (userRow?.telegramId) {
+        const { sendMessage } = await import("../lib/telegram-bot.js");
+        await sendMessage(
+          userRow.telegramId,
+          `👨‍⚕️ <b>Mutaxassis chaqiruvi yuborildi! (#${call.id})</b>\n\n` +
+            `<b>Mutaxassis:</b> ${escapeHtml(spec.name)} (${escapeHtml(spec.specialty || "Mutaxassis")})\n` +
+            `<b>Holat:</b> ⏳ <i>Mutaxassis javobi kutilmoqda...</i>\n\n` +
+            `Mutaxassis chaqiruvni qabul qilishi bilan sizga darhol xabar yetkaziladi!`,
+        );
+      }
+    } catch (e) {
+      console.error("[specialists/call] Customer notify error:", e);
+    }
+
     res.json({ ok: true, callId: call.id, specialistName: spec.name });
   } catch (err: any) {
     console.error("[specialists/call error]:", err);
+    res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
+
+// GET /api/specialists/call/:id/status
+router.get("/call/:id/status", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: "Noto'g'ri chaqiruv ID" });
+    }
+
+    const [call] = await db
+      .select()
+      .from(specialistCalls)
+      .where(eq(specialistCalls.id, id))
+      .limit(1);
+
+    if (!call) {
+      return res.status(404).json({ error: "Chaqiruv topilmadi" });
+    }
+
+    const [spec] = await db
+      .select()
+      .from(specialists)
+      .where(eq(specialists.id, call.specialistId))
+      .limit(1);
+
+    res.json({
+      ok: true,
+      id: call.id,
+      status: call.status, // yangi | qabul_qilindi | bajarildi | bekor
+      specialistId: call.specialistId,
+      specialistName: spec?.organization || spec?.name || "Mutaxassis",
+      specialistPhone: spec?.phone || null,
+      isBusy: spec?.isBusy ?? false,
+      updatedAt: call.updatedAt,
+    });
+  } catch (err: any) {
     res.status(500).json({ error: err.message || "Server xatosi" });
   }
 });

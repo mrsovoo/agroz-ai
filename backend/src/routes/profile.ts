@@ -88,4 +88,109 @@ router.delete("/", async (req, res) => {
   }
 });
 
+// GET /api/profile/activity — foydalanuvchining buyurtmalari va mutaxassis chaqiruvlari
+router.get("/activity", async (req, res) => {
+  try {
+    const user = await getUserFromReq(req);
+    const phoneQuery = (req.query.phone as string)?.trim();
+    const targetPhone = user?.phone || phoneQuery;
+
+    if (!user && !targetPhone) {
+      return res.status(401).json({ error: "Foydalanuvchi aniqlanmadi" });
+    }
+
+    const { orders, orderItems, specialistCalls, specialists } = await import("../db/schema.js");
+    const { or, sql } = await import("drizzle-orm");
+
+    // Telefon raqamdan faqat oxirgi 9 ta raqamni olish
+    const cleanDigits = targetPhone ? targetPhone.replace(/\D/g, "").slice(-9) : "";
+
+    // 1. Buyurtmalarni olish
+    let userOrders: any[] = [];
+    if (user?.id || cleanDigits) {
+      const orderConditions = [];
+      if (user?.id) orderConditions.push(eq(orders.userId, user.id));
+      if (cleanDigits) {
+        orderConditions.push(sql`RIGHT(REPLACE(${orders.customerPhone}, ' ', ''), 9) = ${cleanDigits}`);
+      }
+
+      const rawOrders = await db
+        .select()
+        .from(orders)
+        .where(or(...orderConditions))
+        .orderBy(desc(orders.createdAt))
+        .limit(30);
+
+      const allItems = await db.select().from(orderItems);
+      const allSpecialists = await db.select().from(specialists);
+      const specMap = new Map<number, (typeof allSpecialists)[0]>();
+      for (const s of allSpecialists) specMap.set(s.id, s);
+
+      const itemsMap = new Map<number, (typeof allItems)>();
+      for (const it of allItems) {
+        const arr = itemsMap.get(it.orderId) || [];
+        arr.push(it);
+        itemsMap.set(it.orderId, arr);
+      }
+
+      userOrders = rawOrders.map((o) => {
+        const pharmacy = specMap.get(o.pharmacySpecialistId);
+        return {
+          id: o.id,
+          pharmacyName: pharmacy?.organization || pharmacy?.name || "Agro Dorixona",
+          pharmacyPhone: pharmacy?.phone || null,
+          deliveryType: o.deliveryType,
+          customerAddress: o.customerAddress,
+          totalSum: o.totalSum || 0,
+          status: o.status,
+          createdAt: o.createdAt,
+          items: (itemsMap.get(o.id) || []).map((it) => ({
+            name: it.name,
+            price: it.price || 0,
+            qty: it.qty,
+          })),
+        };
+      });
+    }
+
+    // 2. Mutaxassis chaqiruvlarini olish
+    let userCalls: any[] = [];
+    if (cleanDigits) {
+      const rawCalls = await db
+        .select()
+        .from(specialistCalls)
+        .where(sql`RIGHT(REPLACE(${specialistCalls.customerPhone}, ' ', ''), 9) = ${cleanDigits}`)
+        .orderBy(desc(specialistCalls.createdAt))
+        .limit(30);
+
+      const allSpecialists = await db.select().from(specialists);
+      const specMap = new Map<number, (typeof allSpecialists)[0]>();
+      for (const s of allSpecialists) specMap.set(s.id, s);
+
+      userCalls = rawCalls.map((c) => {
+        const spec = specMap.get(c.specialistId);
+        return {
+          id: c.id,
+          specialistName: spec?.name || "Mutaxassis",
+          specialistPhone: spec?.phone || null,
+          specialistSpecialty: spec?.specialty || (spec?.role === "pharmacy" ? "Dorixona" : "Mutaxassis"),
+          problem: c.problem,
+          address: c.address,
+          status: c.status, // yangi | qabul_qilindi | bajarildi | bekor
+          createdAt: c.createdAt,
+        };
+      });
+    }
+
+    res.json({
+      ok: true,
+      orders: userOrders,
+      specialistCalls: userCalls,
+    });
+  } catch (err: any) {
+    console.error("[profile/activity error]:", err);
+    res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
+
 export default router;

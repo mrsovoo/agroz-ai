@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import {
   LocateFixed,
@@ -134,32 +134,34 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
     );
   }, []);
 
-  useEffect(() => {
+  const loadSpecialists = useCallback(() => {
     const params = new URLSearchParams();
     if (coords) {
       params.set("lat", String(coords.lat));
       params.set("lng", String(coords.lng));
       params.set("radius", String(selectedRadius));
     }
-    let cancelled = false;
-    setLoading(true);
     fetch(`/api/specialists?${params.toString()}`)
       .then((r) => r.json())
       .then((d: { items?: Specialist[]; radiusKm?: number }) => {
-        if (cancelled) return;
         setItems(Array.isArray(d?.items) ? d.items : []);
         setRadiusKm(typeof d?.radiusKm === "number" ? d.radiusKm : null);
       })
-      .catch(() => {
-        if (!cancelled) setItems([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [coords, selectedRadius]);
+
+  useEffect(() => {
+    setLoading(true);
+    loadSpecialists();
+
+    // Mutaxassis band bo'lganini bilish uchun har 10 soniyada yangilab turish
+    const timer = setInterval(() => {
+      loadSpecialists();
+    }, 10000);
+
+    return () => clearInterval(timer);
+  }, [loadSpecialists]);
 
   const visible = useMemo(
     () => (role === "all" ? items : items.filter((s) => s.role === role)),
@@ -604,6 +606,7 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
         onClose={() => setCallModalSpecialist(null)}
         onSuccess={() => {
           setCalls(getSpecialistCalls());
+          loadSpecialists();
         }}
       />
 

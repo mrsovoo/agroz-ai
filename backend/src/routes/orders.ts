@@ -117,6 +117,47 @@ router.post("/", async (req, res) => {
       console.warn(`[orders] Dorixona (#${result.pharmacy.id}) uchun telegramId mavjud emas`);
     }
 
+    // Xaridorga Agroz AI bot (@agrozai_bot) orqali avtomatik kvitansiya xabarnomasi
+    try {
+      const { users } = await import("../db/schema.js");
+      const { sql } = await import("drizzle-orm");
+      const cleanCustomerDigits = phone.replace(/\D/g, "").slice(-9);
+
+      const [userRow] = await db
+        .select({ telegramId: users.telegramId })
+        .from(users)
+        .where(sql`RIGHT(REPLACE(${users.phone}, ' ', ''), 9) = ${cleanCustomerDigits}`)
+        .limit(1);
+
+      if (userRow?.telegramId) {
+        const { sendMessage } = await import("../lib/telegram-bot.js");
+        const itemsList = result.items
+          .map((it: any) => `• ${it.name} — ${it.qty} dona (${(it.price || 0).toLocaleString()} so'm)`)
+          .join("\n");
+
+        const msgLines = [
+          `🧾 <b>BUYURTMANGIZ QABUL QILINDI! (#${result.orderId})</b>`,
+          "",
+          `🏪 <b>Dorixona:</b> ${result.pharmacy.name}`,
+          `📞 <b>Dorixona aloqa:</b> ${result.pharmacy.phone}`,
+          "",
+          `📦 <b>Buyurtma tarkibi:</b>`,
+          itemsList,
+          "",
+          `💰 <b>Jami summa:</b> ${result.total.toLocaleString()} so'm`,
+          deliveryType === "delivery"
+            ? `🚚 <b>Yetkazib berish:</b> Kuryer orqali (${customerAddress || "Ko'rsatilgan manzil"})`
+            : `🏬 <b>Olib ketish:</b> Dorixonadan o'zingiz olib ketasiz`,
+          "",
+          `<i>Dorixona mutaxassisi tez orada siz bilan bog'lanadi!</i>`,
+        ];
+
+        await sendMessage(userRow.telegramId, msgLines.join("\n"));
+      }
+    } catch (e) {
+      console.error("[orders] Customer telegram notify error:", e);
+    }
+
     res.json({
       ok: true,
       orderId: result.orderId,

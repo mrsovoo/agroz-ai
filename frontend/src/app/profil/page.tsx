@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/session";
 import LogoutButton from "@/components/LogoutButton";
 import ProfileEdit from "@/components/ProfileEdit";
+import ProfileOrdersAndCalls from "@/components/ProfileOrdersAndCalls";
 import CompactAlertStrip from "@/components/CompactAlertStrip";
 import {
   Sprout,
@@ -100,8 +101,11 @@ export default async function ProfilePage() {
       </div>
 
       <div>
+        {/* Mening Buyurtmalarim va Mutaxassis chaqiruvlari */}
+        <ProfileOrdersAndCalls userPhone={user.phone} />
+
         {/* Hududiy ob-havo ogohlantirishlari */}
-        <div className="mb-6">
+        <div className="mt-8 mb-6">
           <p className="ios-section-title flex items-center gap-1.5 web:mt-0">
             <BellRing size={14} className="text-red-500" /> Hududingizdagi muhim ob-havo xavflari
           </p>

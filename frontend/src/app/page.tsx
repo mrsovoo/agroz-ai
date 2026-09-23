@@ -85,17 +85,9 @@ export default async function HomePage() {
             </div>
           </div>
 
-          {/* Mobil uchun savat, bildirishnomalar va profil/kirish */}
-          <div className="mt-1 flex items-center gap-2 web:hidden">
-            <CartButton />
+          {/* Mobil uchun faqat bildirishnomalar qo'ng'irog'i (savat va profil pastki menyuda bor) */}
+          <div className="mt-1 flex items-center web:hidden">
             <NotificationBell />
-            <Link
-              href={user ? "/profil" : "/kirish"}
-              className="flex h-11 items-center gap-1.5 rounded-full bg-white px-4 text-[15px] font-bold text-[var(--brand-ink)] shadow-sm active:scale-95"
-            >
-              {user ? "Profil" : "Kirish"}
-              <ChevronRight size={16} className="text-[var(--brand-muted)]" />
-            </Link>
           </div>
         </header>
 

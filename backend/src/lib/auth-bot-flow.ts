@@ -1397,6 +1397,29 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
           chatId,
           `🏁 <b>Chaqiruv #${callId} muvaffaqiyatli yakunlandi!</b>\n\n🟢 <b>Holatingiz: BO'SH</b>. Endi sizga yana yangi buyurtma va chaqiruvlar tushishi mumkin.`,
         );
+
+        // Mijozga Agroz AI bot (@agrozai_bot) orqali xabar
+        try {
+          const { users } = await import("@/db/schema");
+          const { sql } = await import("drizzle-orm");
+          const cleanDigits = (callItem.customerPhone || "").replace(/\D/g, "").slice(-9);
+          const [customerUser] = await db
+            .select({ telegramId: users.telegramId })
+            .from(users)
+            .where(sql`RIGHT(REPLACE(${users.phone}, ' ', ''), 9) = ${cleanDigits}`)
+            .limit(1);
+
+          if (customerUser?.telegramId) {
+            const { sendMessage } = await import("@/lib/telegram-bot");
+            await sendMessage(
+              customerUser.telegramId,
+              `🏁 <b>Mutaxassis xizmati yakunlandi! (#${callId})</b>\n\n` +
+                `Xizmatdan mamnun bo'lsangiz, platforma orqali mutaxassisga baho va sharh qoldirishingiz mumkin.`,
+            );
+          }
+        } catch (e) {
+          console.error("[sc:done] Customer notify error:", e);
+        }
         return;
       }
 
@@ -1412,6 +1435,30 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
           .where(eq(specialists.currentCallId, callId));
 
         await sendAuthMessage(chatId, `❌ <b>Chaqiruv #${callId} bekor qilindi.</b>`);
+
+        // Mijozga Agroz AI bot (@agrozai_bot) orqali xabar
+        try {
+          const { users } = await import("@/db/schema");
+          const { sql } = await import("drizzle-orm");
+          const cleanDigits = (callItem.customerPhone || "").replace(/\D/g, "").slice(-9);
+          const [customerUser] = await db
+            .select({ telegramId: users.telegramId })
+            .from(users)
+            .where(sql`RIGHT(REPLACE(${users.phone}, ' ', ''), 9) = ${cleanDigits}`)
+            .limit(1);
+
+          if (customerUser?.telegramId) {
+            const { sendMessage } = await import("@/lib/telegram-bot");
+            await sendMessage(
+              customerUser.telegramId,
+              `⚠️ <b>Mutaxassis chaqiruvni qabul qila olmadi (#${callId})</b>\n\n` +
+                `Mutaxassis ayni paytda band yoki chaqiruvni o'tkazib yubordi.\n` +
+                `Iltimos, platformamiz orqali boshqa mutaxassisni tanlang.`,
+            );
+          }
+        } catch (e) {
+          console.error("[sc:reject] Customer notify error:", e);
+        }
         return;
       }
 
@@ -1453,6 +1500,31 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
           `✅ <b>Chaqiruv #${callId} qabul qilindi!</b>\n\n👤 <b>Mijoz:</b> ${escapeHtml(callItem.customerName)}\n📞 <b>Telefon:</b> <code>${escapeHtml(callItem.customerPhone)}</code>\n\n⚠️ <i>Iltimos, mijoz bilan zudlik bilan bog'laning va masalaga to'liq oydinlik kiriting!</i>\n\n🔴 <b>Holatingiz: BAND</b>. Yangi buyurtmalar qabul qilish to'xtatildi. Ishni yakunlagach, pastdagi «🏁 Ishni yakunlash» tugmasini bosing.`,
           { inline: { inline_keyboard: rows } },
         );
+
+        // Mijozga Agroz AI bot (@agrozai_bot) orqali darhol xabar
+        try {
+          const { users } = await import("@/db/schema");
+          const { sql } = await import("drizzle-orm");
+          const cleanDigits = (callItem.customerPhone || "").replace(/\D/g, "").slice(-9);
+          const [customerUser] = await db
+            .select({ telegramId: users.telegramId })
+            .from(users)
+            .where(sql`RIGHT(REPLACE(${users.phone}, ' ', ''), 9) = ${cleanDigits}`)
+            .limit(1);
+
+          if (customerUser?.telegramId) {
+            const { sendMessage } = await import("@/lib/telegram-bot");
+            await sendMessage(
+              customerUser.telegramId,
+              `✅ <b>Mutaxassis chaqiruvingizni qabul qildi!</b>\n\n` +
+                `👨‍⚕️ <b>Mutaxassis:</b> ${escapeHtml(currentSpec?.name || "Mutaxassis")}\n` +
+                `📞 <b>Telefon:</b> <code>${escapeHtml(currentSpec?.phone || "")}</code>\n\n` +
+                `Tez orada mutaxassis siz bilan bog'lanadi.`,
+            );
+          }
+        } catch (e) {
+          console.error("[sc:accept] Customer notify error:", e);
+        }
         return;
       }
     }
