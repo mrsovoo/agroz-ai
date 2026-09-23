@@ -497,8 +497,8 @@ async function main() {
     for (const p of PHARMACIES) {
       const res = await pool.query(
         `INSERT INTO specialists 
-          (telegram_id, name, phone, role, specialty, education, bio, helps_with, experience_years, organization, address, lat, lng, work_hours, is_active)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, true)
+          (telegram_id, name, phone, role, specialty, education, bio, helps_with, experience_years, organization, address, lat, lng, work_hours, is_active, is_approved)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, true, true)
          ON CONFLICT (telegram_id) DO UPDATE SET
           name = EXCLUDED.name,
           phone = EXCLUDED.phone,
@@ -507,7 +507,9 @@ async function main() {
           lat = EXCLUDED.lat,
           lng = EXCLUDED.lng,
           bio = EXCLUDED.bio,
-          specialty = EXCLUDED.specialty
+          specialty = EXCLUDED.specialty,
+          is_active = true,
+          is_approved = true
          RETURNING id, name, organization;`,
         [
           p.telegramId,
@@ -536,8 +538,8 @@ async function main() {
     for (const s of SPECIALISTS) {
       const res = await pool.query(
         `INSERT INTO specialists 
-          (telegram_id, name, phone, role, specialty, education, bio, helps_with, experience_years, organization, address, lat, lng, work_hours, is_active)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, true)
+          (telegram_id, name, phone, role, specialty, education, bio, helps_with, experience_years, organization, address, lat, lng, work_hours, is_active, is_approved)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, true, true)
          ON CONFLICT (telegram_id) DO UPDATE SET
           name = EXCLUDED.name,
           phone = EXCLUDED.phone,
@@ -546,7 +548,9 @@ async function main() {
           bio = EXCLUDED.bio,
           address = EXCLUDED.address,
           lat = EXCLUDED.lat,
-          lng = EXCLUDED.lng
+          lng = EXCLUDED.lng,
+          is_active = true,
+          is_approved = true
          RETURNING id, name, specialty;`,
         [
           s.telegramId,
