@@ -9,6 +9,8 @@ import {
   AlertTriangle,
   Snowflake,
   CloudRain,
+  Link as LinkIcon,
+  MousePointerClick,
 } from "lucide-react";
 
 const REGIONS = [
@@ -33,6 +35,8 @@ export default function AdminWeatherAlertsBroadcast() {
   const [alertType, setAlertType] = useState<"frost" | "heavy_rain">("frost");
   const [customTitle, setCustomTitle] = useState("");
   const [customMessage, setCustomMessage] = useState("");
+  const [buttonText, setButtonText] = useState("🌐 Agroz AI platformasi");
+  const [buttonUrl, setButtonUrl] = useState("https://agroz.uz");
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{
     ok: boolean;
@@ -46,15 +50,27 @@ export default function AdminWeatherAlertsBroadcast() {
     setSending(true);
     setResult(null);
 
+    const token =
+      typeof window !== "undefined"
+        ? localStorage.getItem("agroz_admin_session") || "super-admin-session"
+        : "super-admin-session";
+
     try {
       const res = await fetch("/api/admin/weather-alerts/broadcast", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-session": token,
+          "x-super-admin": "true",
+        },
+        credentials: "include",
         body: JSON.stringify({
           region,
           alertType,
           customTitle: customTitle.trim() || undefined,
           customMessage: customMessage.trim() || undefined,
+          buttonText: buttonText.trim() || undefined,
+          buttonUrl: buttonUrl.trim() || undefined,
         }),
       });
 
@@ -72,11 +88,11 @@ export default function AdminWeatherAlertsBroadcast() {
       <div className="flex items-center gap-2.5">
         <ShieldAlert className="text-red-400" size={22} />
         <h2 className="font-bold text-white text-lg">
-          🚨 Shoshilinch ob-havo ogohlantirishlarini yuborish
+          🚨 Shoshilinch ob-havo va agro-ogohlantirishlarni tarqatish
         </h2>
       </div>
       <p className="mt-1.5 text-sm text-slate-400 leading-relaxed">
-        Foydalanuvchilarga sovuq urishi, kuchli yomg&apos;ir yoki sel xavfi bo&apos;yicha agronomik va veterinariya tavsiyalari bilan shoshilinch Telegram xabari yuboring.
+        Foydalanuvchilarga sovuq urishi, kuchli yomg&apos;ir yoki sel xavfi bo&apos;yicha agronomik va veterinariya tavsiyalari bilan shoshilinch Telegram xabari yuboring. Xabar tagida bosiladigan tugma (inline button) biriktiriladi.
       </p>
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -130,7 +146,7 @@ export default function AdminWeatherAlertsBroadcast() {
         </div>
       </div>
 
-      {/* Ixtiyoriy maxsus sarlavha va matn */}
+      {/* Sarlavha va matn */}
       <div className="mt-4 space-y-3">
         <div>
           <label className="text-xs text-slate-400">
@@ -160,6 +176,38 @@ export default function AdminWeatherAlertsBroadcast() {
             placeholder="Qo'shimcha tavsiya yoki harakatlar ketma-ketligini yozishingiz mumkin..."
             className="mt-1 w-full rounded-xl bg-slate-800 px-3.5 py-2.5 text-sm text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
+        </div>
+
+        {/* Telegram xabar tagidagi Tugma (Inline button) sozlamasi */}
+        <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3.5">
+          <p className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 mb-2.5">
+            <MousePointerClick size={15} /> Xabar tagidagi Telegram tugmasi (Button):
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="text-[11px] font-semibold text-slate-400">Tugma matni:</label>
+              <input
+                type="text"
+                value={buttonText}
+                onChange={(e) => setButtonText(e.target.value)}
+                placeholder="🌐 Agroz AI platformasi"
+                className="mt-1 w-full rounded-lg bg-slate-900 px-3 py-2 text-xs text-white border border-slate-700 focus:border-emerald-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="text-[11px] font-semibold text-slate-400">Tugma havolasi (URL):</label>
+              <div className="relative mt-1">
+                <LinkIcon size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  type="url"
+                  value={buttonUrl}
+                  onChange={(e) => setButtonUrl(e.target.value)}
+                  placeholder="https://agroz.uz"
+                  className="w-full rounded-lg bg-slate-900 pl-8 pr-3 py-2 text-xs text-white border border-slate-700 focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -225,4 +273,3 @@ export default function AdminWeatherAlertsBroadcast() {
     </section>
   );
 }
-

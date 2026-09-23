@@ -283,3 +283,4 @@ export async function fetchRealAppNotifications(userRegion: string = "Toshkent")
 
   return items;
 }
+

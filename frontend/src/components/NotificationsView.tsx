@@ -287,3 +287,4 @@ export default function NotificationsView({ userRegion }: { userRegion?: string 
     </div>
   );
 }
+
