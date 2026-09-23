@@ -5,6 +5,7 @@ import {
   alreadyVerifiedMessage,
   answerCallbackQuery,
   codeMessage,
+  editMessageReplyMarkup,
   errorMessage,
   expiredLinkMessage,
   greetingKeyboard,
@@ -12,6 +13,7 @@ import {
   isBotConfigured,
   miniAppKeyboard,
   sendMessage,
+  sendMessageWithId,
   startLink,
 } from "../lib/telegram-bot.js";
 import { BOT_OTP_TTL_MINUTES } from "../lib/constants.js";
@@ -30,7 +32,7 @@ type TelegramUpdate = {
     id: string;
     data?: string;
     from?: { id?: number; first_name?: string };
-    message?: { chat?: { id?: number } };
+    message?: { chat?: { id?: number }; message_id?: number };
   };
   message?: {
     text?: string;
@@ -53,6 +55,7 @@ interface UserRegState {
   phone?: string;
   secondPhone?: string;
   token?: string;
+  promptMessageId?: number;
   updatedAt: number;
 }
 
@@ -162,11 +165,16 @@ async function finalizeUserRegistration(
 async function handleMainBotCallback(query: NonNullable<TelegramUpdate["callback_query"]>): Promise<void> {
   const chatId = query.message?.chat?.id ?? query.from?.id;
   const fromId = query.from?.id;
+  const messageId = query.message?.message_id;
   const data = query.data ?? "";
 
   try {
     if (data === "reg:confirm") {
       await answerCallbackQuery(query.id, "Tasdiqlandi!");
+      // Amaliyot bajarilgach, ortiqcha qolib chalg'itmasligi uchun inline tugmani darhol olib tashlaymiz
+      if (chatId && messageId) {
+        await editMessageReplyMarkup(chatId, messageId).catch(() => {});
+      }
       if (!fromId || !chatId) return;
 
       const state = regStates.get(fromId);
@@ -202,6 +210,10 @@ async function handleMainBotCallback(query: NonNullable<TelegramUpdate["callback
 
     if (data.startsWith("cr:rate:")) {
       await answerCallbackQuery(query.id);
+      // Baholash tugmalarini olib tashlaymiz
+      if (chatId && messageId) {
+        await editMessageReplyMarkup(chatId, messageId).catch(() => {});
+      }
       const [, , orderIdStr, starsStr] = data.split(":");
       const orderId = Number(orderIdStr);
       const stars = Number(starsStr);
@@ -326,14 +338,6 @@ router.post("/webhook", async (req, res) => {
       const regState = regStates.get(fromId);
       const chosenName = regState?.name || existingUser?.name || contactName;
 
-      regStates.set(fromId, {
-        ...regState,
-        step: "ask_second_phone",
-        name: chosenName,
-        phone,
-        updatedAt: Date.now(),
-      });
-
       const askSecondPhoneText = [
         `📞 Raqamingiz: <code>${escapeHtml(phone)}</code>`,
         "",
@@ -341,10 +345,19 @@ router.post("/webhook", async (req, res) => {
         `Bo'lsa yozing, bo'lmasa pastdagi tugmani bosing 👇`,
       ].join("\n");
 
-      await sendMessage(chatId, askSecondPhoneText, {
+      const sent = await sendMessageWithId(chatId, askSecondPhoneText, {
         keyboard: {
           inline_keyboard: [[{ text: "✅ Tasdiqlash", callback_data: "reg:confirm" }]],
         },
+      });
+
+      regStates.set(fromId, {
+        ...regState,
+        step: "ask_second_phone",
+        name: chosenName,
+        phone,
+        promptMessageId: sent.messageId,
+        updatedAt: Date.now(),
       });
       return res.json({ ok: true });
     }
@@ -464,15 +477,6 @@ router.post("/webhook", async (req, res) => {
 
           // Ro'yxatdan o'tmagan: agar veb orqali ism va telefon kiritilgan bo'lsa
           if (targetPhone) {
-            regStates.set(fromId, {
-              step: "ask_second_phone",
-              name: chosenName,
-              phone: targetPhone,
-              secondPhone: prefillSecondPhone || undefined,
-              token: payload,
-              updatedAt: Date.now(),
-            });
-
             const askSecondText = [
               `👋 <b>Assalomu alaykum, ${escapeHtml(chosenName)}!</b>`,
               `📞 Raqamingiz: <code>${escapeHtml(targetPhone)}</code>`,
@@ -481,10 +485,20 @@ router.post("/webhook", async (req, res) => {
               `Bo'lsa yozing, bo'lmasa pastdagi tugmani bosing 👇`,
             ].join("\n");
 
-            await sendMessage(chatId, askSecondText, {
+            const sent = await sendMessageWithId(chatId, askSecondText, {
               keyboard: {
                 inline_keyboard: [[{ text: "✅ Tasdiqlash", callback_data: "reg:confirm" }]],
               },
+            });
+
+            regStates.set(fromId, {
+              step: "ask_second_phone",
+              name: chosenName,
+              phone: targetPhone,
+              secondPhone: prefillSecondPhone || undefined,
+              token: payload,
+              promptMessageId: sent.messageId,
+              updatedAt: Date.now(),
             });
             return res.json({ ok: true });
           } else {
@@ -602,6 +616,11 @@ router.post("/webhook", async (req, res) => {
         return res.json({ ok: true });
       }
 
+      // Foydalanuvchi ikkinchi raqamni yozdi, avvalgi tugmani olib tashlaymiz
+      if (regState.promptMessageId && chatId) {
+        await editMessageReplyMarkup(chatId, regState.promptMessageId).catch(() => {});
+      }
+
       await finalizeUserRegistration(fromId, chatId, {
         name: regState.name || firstName || "Foydalanuvchi",
         phone: regState.phone || "+998900000000",
@@ -625,12 +644,6 @@ router.post("/webhook", async (req, res) => {
       }
 
       const primaryPhone = `+998${digits.slice(-9)}`;
-      regStates.set(fromId, {
-        ...regState,
-        step: "ask_second_phone",
-        phone: primaryPhone,
-        updatedAt: Date.now(),
-      });
 
       const askSecond = [
         `📞 Raqamingiz: <code>${escapeHtml(primaryPhone)}</code>`,
@@ -639,10 +652,18 @@ router.post("/webhook", async (req, res) => {
         `Bo'lsa yozing, bo'lmasa pastdagi tugmani bosing 👇`,
       ].join("\n");
 
-      await sendMessage(chatId, askSecond, {
+      const sent = await sendMessageWithId(chatId, askSecond, {
         keyboard: {
           inline_keyboard: [[{ text: "✅ Tasdiqlash", callback_data: "reg:confirm" }]],
         },
+      });
+
+      regStates.set(fromId, {
+        ...regState,
+        step: "ask_second_phone",
+        phone: primaryPhone,
+        promptMessageId: sent.messageId,
+        updatedAt: Date.now(),
       });
       return res.json({ ok: true });
     }
@@ -656,14 +677,6 @@ router.post("/webhook", async (req, res) => {
       const primaryPhone = `+998${digits.slice(-9)}`;
       const chosenName = textWithoutDigits.length >= 2 ? textWithoutDigits : (firstName || "Foydalanuvchi");
 
-      regStates.set(fromId, {
-        ...regState,
-        step: "ask_second_phone",
-        name: chosenName,
-        phone: primaryPhone,
-        updatedAt: Date.now(),
-      });
-
       const askSecond = [
         `👤 Ism: <b>${escapeHtml(chosenName)}</b>`,
         `📞 Telefon: <code>${escapeHtml(primaryPhone)}</code>`,
@@ -672,10 +685,19 @@ router.post("/webhook", async (req, res) => {
         `Bo'lsa yozing, bo'lmasa pastdagi tugmani bosing 👇`,
       ].join("\n");
 
-      await sendMessage(chatId, askSecond, {
+      const sent = await sendMessageWithId(chatId, askSecond, {
         keyboard: {
           inline_keyboard: [[{ text: "✅ Tasdiqlash", callback_data: "reg:confirm" }]],
         },
+      });
+
+      regStates.set(fromId, {
+        ...regState,
+        step: "ask_second_phone",
+        name: chosenName,
+        phone: primaryPhone,
+        promptMessageId: sent.messageId,
+        updatedAt: Date.now(),
       });
       return res.json({ ok: true });
     }

@@ -211,11 +211,11 @@ export function contactRequestKeyboard(): ReplyKeyboard {
   };
 }
 
-export async function sendMessage(
+export async function sendMessageWithId(
   chatId: number,
   text: string,
   options?: { keyboard?: InlineKeyboard | ReplyKeyboard | { remove_keyboard: true } },
-): Promise<boolean> {
+): Promise<{ ok: boolean; messageId?: number }> {
   const keyboard = options?.keyboard;
   const result = await callBot<{ message_id?: number }>("sendMessage", {
     chat_id: chatId,
@@ -223,6 +223,45 @@ export async function sendMessage(
     parse_mode: "HTML",
     link_preview_options: { is_disabled: true },
     ...(keyboard ? { reply_markup: keyboard } : {}),
+  });
+  return { ok: result !== null, messageId: result?.message_id };
+}
+
+export async function sendMessage(
+  chatId: number,
+  text: string,
+  options?: { keyboard?: InlineKeyboard | ReplyKeyboard | { remove_keyboard: true } },
+): Promise<boolean> {
+  const res = await sendMessageWithId(chatId, text, options);
+  return res.ok;
+}
+
+export async function editMessageReplyMarkup(
+  chatId: number,
+  messageId: number,
+  replyMarkup?: InlineKeyboard,
+): Promise<boolean> {
+  const result = await callBot("editMessageReplyMarkup", {
+    chat_id: chatId,
+    message_id: messageId,
+    reply_markup: replyMarkup ?? { inline_keyboard: [] },
+  });
+  return result !== null;
+}
+
+export async function editMessageText(
+  chatId: number,
+  messageId: number,
+  text: string,
+  options?: { keyboard?: InlineKeyboard },
+): Promise<boolean> {
+  const result = await callBot("editMessageText", {
+    chat_id: chatId,
+    message_id: messageId,
+    text,
+    parse_mode: "HTML",
+    link_preview_options: { is_disabled: true },
+    reply_markup: options?.keyboard ?? { inline_keyboard: [] },
   });
   return result !== null;
 }

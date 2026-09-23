@@ -128,7 +128,7 @@ export type AuthBotUpdate = {
     id: string;
     data?: string;
     from?: { id?: number; first_name?: string };
-    message?: { chat?: { id?: number } };
+    message?: { chat?: { id?: number }; message_id?: number };
   };
 };
 
@@ -734,6 +734,11 @@ async function handleIndependentCallback(
   // 1. Chaqiruvlar (sc:accept:, sc:done:, sc:reject:)
   if (data.startsWith("sc:")) {
     await answerCallbackQuery(query.id);
+    const msgId = query.message?.message_id;
+    if (msgId && chatId) {
+      const { editAuthMessageReplyMarkup } = await import("@/lib/auth-bot");
+      await editAuthMessageReplyMarkup(chatId, msgId).catch(() => {});
+    }
     const [, scAction, scIdPart] = data.split(":");
     const callId = Number(scIdPart);
     if (!Number.isSafeInteger(callId)) return true;
@@ -1152,6 +1157,11 @@ async function handleIndependentCallback(
   // 3. Mijoz bahosi (cr:rate:)
   if (data.startsWith("cr:rate:")) {
     await answerCallbackQuery(query.id);
+    const msgId = query.message?.message_id;
+    if (msgId && chatId) {
+      const { editAuthMessageReplyMarkup } = await import("@/lib/auth-bot");
+      await editAuthMessageReplyMarkup(chatId, msgId).catch(() => {});
+    }
     const [, , orderIdStr, starsStr] = data.split(":");
     const orderId = Number(orderIdStr);
     const stars = Number(starsStr);
@@ -1215,6 +1225,11 @@ async function handleIndependentCallback(
   }
   if (data === "pd:yes") {
     await answerCallbackQuery(query.id);
+    const msgId = query.message?.message_id;
+    if (msgId && chatId) {
+      const { editAuthMessageReplyMarkup } = await import("@/lib/auth-bot");
+      await editAuthMessageReplyMarkup(chatId, msgId).catch(() => {});
+    }
     const deleted = await deleteSpecialist(telegramId);
     await sendAuthMessage(
       chatId,
@@ -1224,6 +1239,11 @@ async function handleIndependentCallback(
   }
   if (data === "pd:no") {
     await answerCallbackQuery(query.id);
+    const msgId = query.message?.message_id;
+    if (msgId && chatId) {
+      const { editAuthMessageReplyMarkup } = await import("@/lib/auth-bot");
+      await editAuthMessageReplyMarkup(chatId, msgId).catch(() => {});
+    }
     await sendAuthMessage(chatId, profileDeleteCanceledMessage());
     return true;
   }
@@ -1911,6 +1931,11 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
 
     if (data === "c:ok") {
       await answerCallbackQuery(query.id);
+      const msgId = query.message?.message_id;
+      if (msgId && chatId) {
+        const { editAuthMessageReplyMarkup } = await import("@/lib/auth-bot");
+        await editAuthMessageReplyMarkup(chatId, msgId).catch(() => {});
+      }
       const saved = await saveDraft(telegramId, draft);
       if (!saved) {
         await sendAuthMessage(chatId, errorMessage());
@@ -2257,6 +2282,11 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
 
     if (data === "c:no") {
       await answerCallbackQuery(query.id);
+      const msgId = query.message?.message_id;
+      if (msgId && chatId) {
+        const { editAuthMessageReplyMarkup } = await import("@/lib/auth-bot");
+        await editAuthMessageReplyMarkup(chatId, msgId).catch(() => {});
+      }
       await clearState(telegramId);
       await sendAuthMessage(chatId, cancelMessage());
       return;

@@ -120,6 +120,36 @@ export async function answerCallbackQuery(id: string, text?: string): Promise<vo
   });
 }
 
+export async function editAuthMessageReplyMarkup(
+  chatId: number,
+  messageId: number,
+  replyMarkup?: InlineKeyboard,
+): Promise<boolean> {
+  const result = await callAuthBot("editMessageReplyMarkup", {
+    chat_id: chatId,
+    message_id: messageId,
+    reply_markup: replyMarkup ?? { inline_keyboard: [] },
+  });
+  return result !== null;
+}
+
+export async function editAuthMessageText(
+  chatId: number,
+  messageId: number,
+  text: string,
+  options?: { inline?: InlineKeyboard },
+): Promise<boolean> {
+  const result = await callAuthBot("editMessageText", {
+    chat_id: chatId,
+    message_id: messageId,
+    text,
+    parse_mode: "HTML",
+    link_preview_options: { is_disabled: true },
+    reply_markup: options?.inline ?? { inline_keyboard: [] },
+  });
+  return result !== null;
+}
+
 /** Telegram `parse_mode=HTML` uchun foydalanuvchi matnini ekranlaydi. */
 export function escapeHtml(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
