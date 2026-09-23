@@ -226,14 +226,29 @@ router.post("/call", async (req, res) => {
       }
 
       if (customerTelegramId) {
-        const { sendMessage, isBotConfigured } = await import("../lib/telegram-bot.js");
-        if (await isBotConfigured()) {
-          await sendMessage(
-            Number(customerTelegramId),
-            `👨‍⚕️ <b>Mutaxassis chaqiruvi muvaffaqiyatli yuborildi! (#${call.id})</b>\n\n` +
-              `<b>Mutaxassis:</b> ${escapeHtml(spec.name)} (${escapeHtml(spec.specialty || "Mutaxassis")})\n\n` +
-              `Mutaxassis chaqiruvni qabul qilishi bilan sizga darhol xabar yetkaziladi!`,
-          );
+        const msg =
+          `👨‍⚕️ <b>Hozirda ${escapeHtml(spec.name)}ga chaqiruv yuborildi, tez orada siz bilan bog'lanadi. (#${call.id})</b>\n\n` +
+          `<b>Xizmat turi:</b> ${escapeHtml(problem.trim())}\n` +
+          (spec.phone ? `<b>Mutaxassis raqami:</b> <code>${escapeHtml(spec.phone)}</code>\n` : "") +
+          `\nMutaxassis chaqiruvni tasdiqlashi bilan sizga yana xabar yetkaziladi!`;
+
+        let sent = false;
+        try {
+          const { sendMessage, isBotConfigured } = await import("../lib/telegram-bot.js");
+          if (await isBotConfigured()) {
+            await sendMessage(Number(customerTelegramId), msg);
+            sent = true;
+          }
+        } catch (botErr) {
+          console.error("[specialists/call] Main bot send error:", botErr);
+        }
+
+        if (!sent && (await isAuthBotConfigured())) {
+          try {
+            await sendAuthMessage(Number(customerTelegramId), msg);
+          } catch (authErr) {
+            console.error("[specialists/call] Auth bot fallback send error:", authErr);
+          }
         }
       }
     } catch (e) {
