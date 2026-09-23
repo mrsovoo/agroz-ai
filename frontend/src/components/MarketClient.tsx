@@ -45,6 +45,7 @@ import FadeImage from "@/components/FadeImage";
 import {
   loadCart,
   saveCart,
+  openCart,
   notifyCartChanged,
   CART_EVENT,
   type CartStoreState,
@@ -465,7 +466,7 @@ export default function MarketClient() {
             )}
           </button>
           <button
-            onClick={() => setCartOpen(true)}
+            onClick={() => openCart()}
             className="relative flex h-11 w-11 items-center justify-center rounded-full bg-white text-[var(--brand-green)] shadow-sm active:scale-95"
             aria-label="Savat"
           >

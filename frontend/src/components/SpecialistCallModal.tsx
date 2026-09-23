@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { X, UserRound, Phone, MapPin, AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
 import { createSpecialistCall } from "@/lib/specialist-calls";
+import { apiUrl } from "@/lib/api-config";
 
 export default function SpecialistCallModal({
   specialist,
@@ -52,6 +53,24 @@ export default function SpecialistCallModal({
 
     try {
       if (!specialist) return;
+      const res = await fetch(apiUrl("/api/specialists/call"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          specialistId: specialist.id,
+          customerName: name.trim(),
+          customerPhone: `+998${cleanDigits}`,
+          problem: problem.trim(),
+          address: address.trim() || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || "Chaqiruv yuborib bo'lmadi");
+      }
+
+      // Lokal tarix uchun ham saqlab qo'yamiz
       createSpecialistCall({
         specialistId: specialist.id,
         specialistName: specialist.organization || specialist.name,
@@ -67,8 +86,8 @@ export default function SpecialistCallModal({
         onSuccess();
         onClose();
       }, 1800);
-    } catch {
-      setError("Chaqiruv yuborishda xatolik yuz berdi");
+    } catch (err: any) {
+      setError(err.message || "Chaqiruv yuborishda xatolik yuz berdi");
     } finally {
       setBusy(false);
     }

@@ -111,6 +111,47 @@ type SpecialistItem = {
   updatedAt: string;
 };
 
+type AdminOrderItem = {
+  id: number;
+  pharmacySpecialistId: number;
+  pharmacyName: string | null;
+  pharmacyOrg: string | null;
+  pharmacyPhone: string | null;
+  customerName: string;
+  customerPhone: string;
+  note: string | null;
+  deliveryType: string;
+  customerAddress: string | null;
+  totalSum: number | null;
+  status: string;
+  ratingStars: number | null;
+  ratingNote: string | null;
+  createdAt: string;
+  items: {
+    id: number;
+    name: string;
+    price: number | null;
+    qty: number;
+  }[];
+};
+
+type AdminSpecialistCallItem = {
+  id: number;
+  specialistId: number;
+  specialistName: string | null;
+  specialistSpecialty: string | null;
+  specialistPhone: string | null;
+  specialistRole: string | null;
+  customerName: string;
+  customerPhone: string;
+  problem: string;
+  address: string | null;
+  status: string;
+  assignedOrderId: number | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 const AI_PRESETS: { label: string; baseUrl: string; model: string; hint: string }[] = [
   {
     label: "Google AI Studio (Gemini 2.5 Flash — Tavsiya)",
@@ -139,9 +180,9 @@ export default function SuperAdminPage() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Tablar: dashboard | specialists | regions | reviews | settings | broadcast
+  // Tablar: dashboard | orders | specialist_calls | specialists | regions | reviews | settings | broadcast
   const [activeTab, setActiveTab] = useState<
-    "dashboard" | "specialists" | "regions" | "reviews" | "settings" | "broadcast"
+    "dashboard" | "orders" | "specialist_calls" | "specialists" | "regions" | "reviews" | "settings" | "broadcast"
   >("dashboard");
 
   const [stats, setStats] = useState<Stats | null>(null);
@@ -159,6 +200,16 @@ export default function SuperAdminPage() {
   const [specialistStatusFilter, setSpecialistStatusFilter] = useState<"all" | "pending" | "approved">("all");
   const [specialistRoleFilter, setSpecialistRoleFilter] = useState<"all" | "pharmacy" | "specialist">("all");
   const [specialistSearch, setSpecialistSearch] = useState("");
+
+  // Buyurtmalar
+  const [adminOrders, setAdminOrders] = useState<AdminOrderItem[]>([]);
+  const [orderStatusFilter, setOrderStatusFilter] = useState<string>("all");
+  const [orderSearch, setOrderSearch] = useState<string>("");
+
+  // Mutaxassis chaqiruvlari
+  const [adminCalls, setAdminCalls] = useState<AdminSpecialistCallItem[]>([]);
+  const [callStatusFilter, setCallStatusFilter] = useState<string>("all");
+  const [callSearch, setCallSearch] = useState<string>("");
 
   const [notice, setNotice] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
 
@@ -178,12 +229,14 @@ export default function SuperAdminPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [statsRes, regionsRes, reviewsRes, settingsRes, specsRes] = await Promise.all([
+      const [statsRes, regionsRes, reviewsRes, settingsRes, specsRes, ordersRes, callsRes] = await Promise.all([
         fetch("/api/admin/stats").then((r) => (r.ok ? r.json() : null)).catch(() => null),
         fetch("/api/admin/regions").then((r) => (r.ok ? r.json() : null)).catch(() => null),
         fetch("/api/admin/reviews").then((r) => (r.ok ? r.json() : null)).catch(() => null),
         fetch("/api/admin/settings").then((r) => (r.ok ? r.json() : null)).catch(() => null),
         fetch("/api/admin/specialists").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        fetch("/api/admin/orders").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        fetch("/api/admin/specialist-calls").then((r) => (r.ok ? r.json() : null)).catch(() => null),
       ]);
 
       if (statsRes?.ok) {
@@ -214,10 +267,56 @@ export default function SuperAdminPage() {
           setSpecialistsSummary(specsRes.summary);
         }
       }
+      if (ordersRes?.ok) {
+        setAdminOrders(ordersRes.orders || []);
+      }
+      if (callsRes?.ok) {
+        setAdminCalls(callsRes.calls || []);
+      }
     } catch (e) {
       console.error("Admin ma'lumotlarini yuklashda xatolik:", e);
     }
   }, []);
+
+  async function handleUpdateOrderStatus(orderId: number, nextStatus: string) {
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      if (res.ok) {
+        setAdminOrders((prev) =>
+          prev.map((o) => (o.id === orderId ? { ...o, status: nextStatus } : o)),
+        );
+        setNotice({ kind: "ok", text: `Buyurtma #${orderId} holati "${nextStatus}" ga o'zgartirildi.` });
+      } else {
+        setNotice({ kind: "err", text: "Buyurtma holatini o'zgartirib bo'lmadi." });
+      }
+    } catch {
+      setNotice({ kind: "err", text: "Tarmoq xatosi yuz berdi." });
+    }
+  }
+
+  async function handleUpdateCallStatus(callId: number, nextStatus: string) {
+    try {
+      const res = await fetch(`/api/admin/specialist-calls/${callId}/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      if (res.ok) {
+        setAdminCalls((prev) =>
+          prev.map((c) => (c.id === callId ? { ...c, status: nextStatus } : c)),
+        );
+        setNotice({ kind: "ok", text: `Chaqiruv #${callId} holati "${nextStatus}" ga o'zgartirildi.` });
+      } else {
+        setNotice({ kind: "err", text: "Chaqiruv holatini o'zgartirib bo'lmadi." });
+      }
+    } catch {
+      setNotice({ kind: "err", text: "Tarmoq xatosi yuz berdi." });
+    }
+  }
 
   useEffect(() => {
     checkAuth();

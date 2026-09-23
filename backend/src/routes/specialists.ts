@@ -3,6 +3,11 @@ import { listSpecialists } from "../lib/specialists.js";
 import { clampRadiusKm, parseCoords } from "../lib/geo.js";
 import { rateSpecialist } from "../lib/specialists.js";
 import crypto from "node:crypto";
+import { db } from "../db/index.js";
+import { specialists, specialistCalls } from "../db/schema.js";
+import { eq } from "drizzle-orm";
+import { sendAuthMessage, isAuthBotConfigured } from "../lib/auth-bot.js";
+import { escapeHtml } from "../lib/tg-escape.js";
 
 const router = Router();
 
@@ -63,6 +68,88 @@ router.post("/rate", async (req, res) => {
     res.json({ ok: true, ...result });
   } catch (err: any) {
     console.error("[rate error]:", err);
+    res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
+
+// POST /api/specialists/call
+router.post("/call", async (req, res) => {
+  try {
+    const { specialistId, customerName, customerPhone, problem, address } = req.body || {};
+    const specId = Number(specialistId);
+
+    if (!Number.isInteger(specId) || specId <= 0) {
+      return res.status(400).json({ error: "Mutaxassis tanlanmagan" });
+    }
+    if (!customerName || typeof customerName !== "string" || customerName.trim().length < 2) {
+      return res.status(400).json({ error: "Ismingizni to'liq kiriting" });
+    }
+    if (!customerPhone || typeof customerPhone !== "string") {
+      return res.status(400).json({ error: "Telefon raqam kiritilishi shart" });
+    }
+    if (!problem || typeof problem !== "string" || problem.trim().length < 3) {
+      return res.status(400).json({ error: "Muammo yoki so'rovingizni yozing" });
+    }
+
+    const [spec] = await db
+      .select()
+      .from(specialists)
+      .where(eq(specialists.id, specId))
+      .limit(1);
+
+    if (!spec) {
+      return res.status(404).json({ error: "Mutaxassis topilmadi" });
+    }
+
+    const [call] = await db
+      .insert(specialistCalls)
+      .values({
+        specialistId: specId,
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.trim(),
+        problem: problem.trim(),
+        address: address && typeof address === "string" ? address.trim() : null,
+        status: "yangi",
+      })
+      .returning();
+
+    // Mutaxassisning Telegram hisobiga xabar yuborish
+    if (spec.telegramId) {
+      const cleanPhone = customerPhone.replace(/[^\d+]/g, "");
+      const msg = [
+        `🔔 <b>YANGI MUTAXASSIS CHAQIRUVI! (#${call.id})</b>`,
+        "",
+        `👤 <b>Mijoz:</b> ${escapeHtml(customerName.trim())}`,
+        `📞 <b>Telefon:</b> <code>${escapeHtml(customerPhone.trim())}</code>`,
+        address ? `📍 <b>Manzil:</b> ${escapeHtml(address.trim())}` : "",
+        `📝 <b>Muammo:</b> <i>${escapeHtml(problem.trim())}</i>`,
+        "",
+        `⚠️ <b>DIQQAT:</b> Buyurtmani tasdiqlashdan oldin mijoz bilan bog'lanish talab qilinadi va masalaga to'liq oydinlik kiritilishi shart!`,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      const rows: any[] = [];
+      if (cleanPhone) {
+        rows.push([{ text: `📞 Mijozga qo'ng'iroq`, url: `tel:${cleanPhone}` }]);
+      }
+      rows.push([
+        { text: "✅ Qabul qilish", callback_data: `sc:accept:${call.id}` },
+        { text: "❌ Bekor qilish", callback_data: `sc:reject:${call.id}` },
+      ]);
+
+      if (await isAuthBotConfigured()) {
+        try {
+          await sendAuthMessage(spec.telegramId, msg, { inline: { inline_keyboard: rows } });
+        } catch (err) {
+          console.error("[specialists/call] Telegram xabar yuborishda xato:", err);
+        }
+      }
+    }
+
+    res.json({ ok: true, callId: call.id, specialistName: spec.name });
+  } catch (err: any) {
+    console.error("[specialists/call error]:", err);
     res.status(500).json({ error: err.message || "Server xatosi" });
   }
 });

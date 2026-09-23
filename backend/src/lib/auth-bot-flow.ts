@@ -1149,11 +1149,12 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
       return;
     }
 
-    // Buyurtma ko'rish / holat o'zgartirish (o:view:<id>, o:confirm:<id>, o:cancel:<id>, o:done:<id>).
+    // Buyurtma ko'rish / holat o'zgartirish / mutaxassis biriktirish (o:view:<id>, o:confirm:<id>, o:cancel:<id>, o:done:<id>, o:spec:<id>, o:assign:<id>:<specId>).
     if (data.startsWith("o:")) {
       await answerCallbackQuery(query.id);
-      const [, action, idPart] = data.split(":");
-      const orderId = Number(idPart);
+      const parts = data.split(":");
+      const action = parts[1];
+      const orderId = Number(parts[2]);
       if (!Number.isSafeInteger(orderId)) return;
 
       const { listOrders, setOrderStatus } = await import("@/lib/orders");
@@ -1181,6 +1182,145 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
         return;
       }
 
+      // Mutaxassis chiqarish / biriktirish ro'yxati
+      if (action === "spec") {
+        const profile = await getSpecialistByTelegramId(telegramId);
+        if (!profile || profile.role !== "pharmacy") {
+          await sendAuthMessage(chatId, errorMessage());
+          return;
+        }
+        const { specialists } = await import("@/db/schema");
+        const { eq, and } = await import("drizzle-orm");
+        const specs = await db
+          .select()
+          .from(specialists)
+          .where(and(eq(specialists.role, "specialist"), eq(specialists.isActive, true), eq(specialists.isApproved, true)))
+          .limit(20);
+
+        if (specs.length === 0) {
+          await sendAuthMessage(
+            chatId,
+            "👨‍🌾 Hozircha tizimda tasdiqlangan faol mutaxassislar (agronom / veterinar) mavjud emas.",
+            { inline: { inline_keyboard: [[{ text: "🔙 Buyurtmaga qaytish", callback_data: `o:view:${orderId}` }]] } },
+          );
+          return;
+        }
+
+        const rows = specs.map((s) => [
+          {
+            text: `👨‍🌾 ${s.name} (${s.specialty || "Mutaxassis"}) · ${s.phone}`,
+            callback_data: `o:assign:${orderId}:${s.id}`,
+          },
+        ]);
+        rows.push([{ text: "🔙 Bekor qilish", callback_data: `o:view:${orderId}` }]);
+
+        await sendAuthMessage(
+          chatId,
+          `👨‍🌾 <b>Buyurtma #${orderId} uchun mutaxassis tanlang:</b>\n\nTanlangan mutaxassisga mijoz va buyurtma tafsilotlari darhol yetkaziladi hamda uning aniq telefon raqami sizga beriladi:`,
+          { inline: { inline_keyboard: rows } },
+        );
+        return;
+      }
+
+      // Tanlangan mutaxassisni biriktirish
+      if (action === "assign") {
+        const specId = Number(parts[3]);
+        if (!Number.isSafeInteger(specId)) return;
+
+        const profile = await getSpecialistByTelegramId(telegramId);
+        if (!profile || profile.role !== "pharmacy") {
+          await sendAuthMessage(chatId, errorMessage());
+          return;
+        }
+
+        const { specialists, specialistCalls } = await import("@/db/schema");
+        const { eq } = await import("drizzle-orm");
+
+        const [spec] = await db.select().from(specialists).where(eq(specialists.id, specId)).limit(1);
+        const ordersList = await listOrders({ orderId });
+        const order = ordersList[0];
+
+        if (!spec || !order) {
+          await sendAuthMessage(chatId, "⚠️ Mutaxassis yoki buyurtma topilmadi.");
+          return;
+        }
+
+        const medItemsText = order.items.map((i) => `${i.name} (${i.qty} ta)`).join(", ");
+        const [createdCall] = await db
+          .insert(specialistCalls)
+          .values({
+            specialistId: specId,
+            customerName: order.customerName,
+            customerPhone: order.customerPhone,
+            problem: `Dorixona buyurtmasi #${order.id} uchun mutaxassis yordami. Dorilar: ${medItemsText}`,
+            address: order.customerAddress || "Dorixonadan olib ketish",
+            status: "yangi",
+            assignedOrderId: order.id,
+          })
+          .returning();
+
+        // Mutaxassisga xabarnoma yuborish
+        if (spec.telegramId) {
+          const cleanCustomerPhone = (order.customerPhone || "").replace(/[^\d+]/g, "");
+          const cleanPharmacyPhone = (profile.phone || "").replace(/[^\d+]/g, "");
+
+          const specMsg = [
+            `🔔 <b>DORIXONADAN SIZGA BUYURTMA BIRIKTIRILDI! (#${order.id})</b>`,
+            "",
+            `🏪 <b>Dorixona:</b> ${escapeHtml(profile.organization || profile.name)}`,
+            `📞 <b>Dorixona telefoni:</b> <code>${escapeHtml(profile.phone)}</code>`,
+            `👤 <b>Mijoz:</b> ${escapeHtml(order.customerName)}`,
+            `📞 <b>Mijoz telefoni:</b> <code>${escapeHtml(order.customerPhone)}</code>`,
+            order.customerAddress ? `📍 <b>Yetkazish manzili:</b> ${escapeHtml(order.customerAddress)}` : "",
+            `📦 <b>Buyurtma qilingan dorilar:</b> ${escapeHtml(medItemsText)}`,
+            order.note ? `📝 <b>Mijoz izohi:</b> <i>${escapeHtml(order.note)}</i>` : "",
+            "",
+            `⚠️ <b>DIQQAT:</b> Buyurtmani tasdiqlashdan oldin mijoz bilan bog'lanish talab qilinadi va masalaga to'liq oydinlik kiritilishi shart!`,
+          ]
+            .filter(Boolean)
+            .join("\n");
+
+          const specRows: any[] = [];
+          if (cleanCustomerPhone) {
+            specRows.push([{ text: `📞 Mijozga qo'ng'iroq`, url: `tel:${cleanCustomerPhone}` }]);
+          }
+          if (cleanPharmacyPhone) {
+            specRows.push([{ text: `📞 Dorixonaga qo'ng'iroq`, url: `tel:${cleanPharmacyPhone}` }]);
+          }
+          specRows.push([
+            { text: "✅ Qabul qilish", callback_data: `sc:accept:${createdCall.id}` },
+            { text: "❌ Bekor qilish", callback_data: `sc:reject:${createdCall.id}` },
+          ]);
+
+          try {
+            await sendAuthMessage(spec.telegramId, specMsg, { inline: { inline_keyboard: specRows } });
+          } catch (e) {
+            console.error("[orders] Mutaxassisga telegram yuborishda xato:", e);
+          }
+        }
+
+        // Dorixona egasiga mutaxassis ma'lumotlarini aniq ko'rsatish
+        const cleanSpecPhone = (spec.phone || "").replace(/[^\d+]/g, "");
+        const confirmMsg = [
+          `✅ <b>Buyurtma #${order.id} ga mutaxassis muvaffaqiyatli biriktirildi!</b>`,
+          "",
+          `👨‍🌾 <b>Mutaxassis:</b> ${escapeHtml(spec.name)} (${escapeHtml(spec.specialty || "Mutaxassis")})`,
+          `📞 <b>Mutaxassis telefoni:</b> <code>${escapeHtml(spec.phone)}</code>`,
+          `📍 <b>Manzili:</b> ${escapeHtml(spec.address)}`,
+          "",
+          `Mutaxassisga buyurtma va mijoz ma'lumotlari yetkazildi. U mijoz bilan bog'lanadi.`,
+        ].join("\n");
+
+        const confRows: any[] = [];
+        if (cleanSpecPhone) {
+          confRows.push([{ text: `📞 Mutaxassisga qo'ng'iroq (${spec.phone})`, url: `tel:${cleanSpecPhone}` }]);
+        }
+        confRows.push([{ text: "🔙 Buyurtmaga qaytish", callback_data: `o:view:${order.id}` }]);
+
+        await sendAuthMessage(chatId, confirmMsg, { inline: { inline_keyboard: confRows } });
+        return;
+      }
+
       const statusMap: Record<string, "tasdiqlandi" | "bekor" | "yetkazildi"> = {
         confirm: "tasdiqlandi",
         cancel: "bekor",
@@ -1203,6 +1343,53 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
             console.error("[orders] mijozga yetkazildi xabarnomasi yuborilmadi:", err),
           );
         }
+      }
+      return;
+    }
+
+    // Mutaxassis chaqiruvi holatini o'zgartirish (sc:accept:<id>, sc:reject:<id>)
+    if (data.startsWith("sc:")) {
+      await answerCallbackQuery(query.id);
+      const [, scAction, scIdPart] = data.split(":");
+      const callId = Number(scIdPart);
+      if (!Number.isSafeInteger(callId)) return;
+
+      const { specialistCalls } = await import("@/db/schema");
+      const { eq } = await import("drizzle-orm");
+
+      const [callItem] = await db
+        .select()
+        .from(specialistCalls)
+        .where(eq(specialistCalls.id, callId))
+        .limit(1);
+
+      if (!callItem) {
+        await sendAuthMessage(chatId, "⚠️ Chaqiruv topilmadi.");
+        return;
+      }
+
+      const nextCallStatus = scAction === "accept" ? "qabul_qilindi" : "bekor";
+      await db
+        .update(specialistCalls)
+        .set({ status: nextCallStatus, updatedAt: new Date() })
+        .where(eq(specialistCalls.id, callId));
+
+      if (nextCallStatus === "qabul_qilindi") {
+        const cleanCustomerPhone = (callItem.customerPhone || "").replace(/[^\d+]/g, "");
+        const rows = cleanCustomerPhone
+          ? [[{ text: `📞 Mijozga qo'ng'iroq qilish`, url: `tel:${cleanCustomerPhone}` }]]
+          : [];
+
+        await sendAuthMessage(
+          chatId,
+          `✅ <b>Chaqiruv #${callId} qabul qilindi!</b>\n\n👤 <b>Mijoz:</b> ${escapeHtml(callItem.customerName)}\n📞 <b>Telefon:</b> <code>${escapeHtml(callItem.customerPhone)}</code>\n\n⚠️ <i>Iltimos, mijoz bilan zudlik bilan bog'laning va masalaga to'liq oydinlik kiriting!</i>`,
+          { inline: { inline_keyboard: rows } },
+        );
+      } else {
+        await sendAuthMessage(
+          chatId,
+          `❌ <b>Chaqiruv #${callId} bekor qilindi.</b>`,
+        );
       }
       return;
     }

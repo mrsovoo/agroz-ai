@@ -78,16 +78,23 @@ export function orderMessage(order: OrderWithItems): string {
     .join("\n");
 }
 
-/** Holat o'zgartirish klaviaturasi (faqat yangi/tasdiqlandi uchun). */
+/** Holat o'zgartirish klaviaturasi (qo'ng'iroq, holat va mutaxassis biriktirish). */
 export function orderActionsKeyboard(order: OrderWithItems): InlineKeyboard {
   const rows: InlineKeyboard["inline_keyboard"] = [];
+  const cleanPhone = (order.customerPhone || "").replace(/[^\d+]/g, "");
+
+  // 1. Mijozga to'g'ridan-to'g'ri qo'ng'iroq qilish tugmasi
+  if (cleanPhone) {
+    rows.push([{ text: "📞 Mijozga qo'ng'iroq qilish", url: `tel:${cleanPhone}` }]);
+  }
+
+  // 2. Buyurtma holati tugmalari
   if (order.status === "yangi") {
     rows.push([
       { text: "✅ Qabul qilish", callback_data: `o:confirm:${order.id}` },
       { text: "❌ Bekor qilish", callback_data: `o:cancel:${order.id}` },
     ]);
-  }
-  if (order.status === "tasdiqlandi") {
+  } else if (order.status === "tasdiqlandi") {
     rows.push([
       {
         text: order.deliveryType === "delivery" ? "🛵 Yetkazildi" : "✅ Mijoz olib ketdi",
@@ -95,6 +102,12 @@ export function orderActionsKeyboard(order: OrderWithItems): InlineKeyboard {
       },
     ]);
   }
+
+  // 3. Mutaxassis (agronom/veterinar) chiqarish yoki biriktirish tugmasi
+  rows.push([
+    { text: "👨‍🌾 Mutaxassis biriktirish", callback_data: `o:spec:${order.id}` },
+  ]);
+
   return { inline_keyboard: rows };
 }
 

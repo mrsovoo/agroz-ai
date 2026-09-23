@@ -7,6 +7,7 @@ import {
   orders,
   orderItems,
   specialistRatings,
+  specialistCalls,
   diagnoses,
   appSettings,
   adminSessions,
@@ -782,6 +783,138 @@ router.delete("/specialists/:id", requireAdmin, async (req, res) => {
     res.json({ ok: true, message: "O'chirildi" });
   } catch (err: any) {
     console.error("[admin delete specialist error]:", err);
+    res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
+
+// -------------------------------------------------------------
+// 10. ORDERS MANAGEMENT
+// -------------------------------------------------------------
+
+// GET /api/admin/orders
+router.get("/orders", requireAdmin, async (req, res) => {
+  try {
+    const statusFilter = (req.query.status as string) || null;
+    const search = (req.query.search as string)?.trim().toLowerCase() || null;
+
+    const allOrders = await db
+      .select({
+        id: orders.id,
+        pharmacySpecialistId: orders.pharmacySpecialistId,
+        pharmacyName: specialists.name,
+        pharmacyOrg: specialists.organization,
+        pharmacyPhone: specialists.phone,
+        customerName: orders.customerName,
+        customerPhone: orders.customerPhone,
+        note: orders.note,
+        deliveryType: orders.deliveryType,
+        customerAddress: orders.customerAddress,
+        totalSum: orders.totalSum,
+        status: orders.status,
+        ratingStars: orders.ratingStars,
+        ratingNote: orders.ratingNote,
+        createdAt: orders.createdAt,
+      })
+      .from(orders)
+      .leftJoin(specialists, eq(specialists.id, orders.pharmacySpecialistId))
+      .orderBy(desc(orders.id));
+
+    const allItems = await db.select().from(orderItems);
+    const itemsByOrderId = new Map<number, typeof allItems>();
+    for (const item of allItems) {
+      const list = itemsByOrderId.get(item.orderId) || [];
+      list.push(item);
+      itemsByOrderId.set(item.orderId, list);
+    }
+
+    let result = allOrders.map((o) => ({
+      ...o,
+      items: itemsByOrderId.get(o.id) || [],
+    }));
+
+    if (statusFilter && statusFilter !== "all") {
+      result = result.filter((o) => o.status === statusFilter);
+    }
+
+    if (search) {
+      result = result.filter(
+        (o) =>
+          o.customerName?.toLowerCase().includes(search) ||
+          o.customerPhone?.toLowerCase().includes(search) ||
+          o.pharmacyName?.toLowerCase().includes(search) ||
+          o.pharmacyOrg?.toLowerCase().includes(search) ||
+          String(o.id).includes(search),
+      );
+    }
+
+    res.json({ ok: true, orders: result });
+  } catch (err: any) {
+    console.error("[admin/orders error]:", err);
+    res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
+
+// POST /api/admin/orders/:id/status
+router.post("/orders/:id/status", requireAdmin, async (req, res) => {
+  try {
+    const orderId = Number(req.params.id);
+    const { status } = req.body || {};
+    if (!Number.isSafeInteger(orderId) || !["yangi", "tasdiqlandi", "yetkazildi", "bekor"].includes(status)) {
+      return res.status(400).json({ error: "Holat noto'g'ri" });
+    }
+    await db.update(orders).set({ status }).where(eq(orders.id, orderId));
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
+
+// -------------------------------------------------------------
+// 11. SPECIALIST CALLS MANAGEMENT
+// -------------------------------------------------------------
+
+// GET /api/admin/specialist-calls
+router.get("/specialist-calls", requireAdmin, async (req, res) => {
+  try {
+    const calls = await db
+      .select({
+        id: specialistCalls.id,
+        specialistId: specialistCalls.specialistId,
+        specialistName: specialists.name,
+        specialistSpecialty: specialists.specialty,
+        specialistPhone: specialists.phone,
+        specialistRole: specialists.role,
+        customerName: specialistCalls.customerName,
+        customerPhone: specialistCalls.customerPhone,
+        problem: specialistCalls.problem,
+        address: specialistCalls.address,
+        status: specialistCalls.status,
+        assignedOrderId: specialistCalls.assignedOrderId,
+        createdAt: specialistCalls.createdAt,
+        updatedAt: specialistCalls.updatedAt,
+      })
+      .from(specialistCalls)
+      .leftJoin(specialists, eq(specialists.id, specialistCalls.specialistId))
+      .orderBy(desc(specialistCalls.id));
+
+    res.json({ ok: true, calls });
+  } catch (err: any) {
+    console.error("[admin/specialist-calls error]:", err);
+    res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
+
+// POST /api/admin/specialist-calls/:id/status
+router.post("/specialist-calls/:id/status", requireAdmin, async (req, res) => {
+  try {
+    const callId = Number(req.params.id);
+    const { status } = req.body || {};
+    if (!Number.isSafeInteger(callId) || !["yangi", "qabul_qilindi", "bajarildi", "bekor"].includes(status)) {
+      return res.status(400).json({ error: "Holat noto'g'ri" });
+    }
+    await db.update(specialistCalls).set({ status, updatedAt: new Date() }).where(eq(specialistCalls.id, callId));
+    res.json({ ok: true });
+  } catch (err: any) {
     res.status(500).json({ error: err.message || "Server xatosi" });
   }
 });

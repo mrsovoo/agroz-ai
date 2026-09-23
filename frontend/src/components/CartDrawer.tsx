@@ -308,11 +308,11 @@ export default function CartDrawer() {
   return (
     <div
       onClick={close}
-      className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in"
+      className="fixed inset-0 z-[100] flex justify-end bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative flex h-full w-full max-w-[500px] flex-col bg-white shadow-2xl animate-in slide-in-from-bottom web:slide-in-from-right"
+        className="relative flex h-[100dvh] max-h-[100dvh] w-full max-w-[500px] flex-col bg-white shadow-2xl animate-in slide-in-from-bottom web:slide-in-from-right"
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-black/5 px-5 py-4">
@@ -407,8 +407,8 @@ export default function CartDrawer() {
           </div>
         ) : (
           /* Mahsulotlar va Buyurtma Formasi */
-          <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
-            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          <form onSubmit={handleSubmit} className="flex flex-1 min-h-0 flex-col overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4">
               {/* Dorixona ma'lumoti */}
               <div className="rounded-2xl bg-neutral-50 p-3.5 border border-black/5">
                 <div className="flex items-center gap-2 text-[13px] font-extrabold text-neutral-900">
@@ -670,8 +670,8 @@ export default function CartDrawer() {
               )}
             </div>
 
-            {/* Pastki Harakatlar Paneli */}
-            <div className="border-t border-black/10 bg-neutral-50 p-4">
+            {/* Pastki Harakatlar Paneli (Har doim ko'rinib turishi uchun shrink-0 va safe-area) */}
+            <div className="shrink-0 border-t border-black/10 bg-white p-4 pb-[max(1rem,calc(env(safe-area-inset-bottom)+0.75rem))] shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
               <button
                 type="submit"
                 disabled={submitting || selectedLines.length === 0}

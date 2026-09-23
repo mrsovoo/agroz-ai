@@ -132,6 +132,10 @@ export const specialists = pgTable("specialists", {
   isActive: boolean("is_active").default(true).notNull(),
   /** Admin arizani tasdiqlaganmi. Yangi ro'yxatdan o'tganlar kutilmoqda (false) bo'ladi. */
   isApproved: boolean("is_approved").default(false).notNull(),
+  /** Mutaxassis ayni paytda chaqiruv ustida ishlayotgani (bandligi). */
+  isBusy: boolean("is_busy").default(false).notNull(),
+  /** Ayni paytda bajarayotgan chaqiruvi ID si. */
+  currentCallId: integer("current_call_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -160,6 +164,10 @@ export const specialistMedicines = pgTable("specialist_medicines", {
   status: varchar("status", { length: 20 }).notNull().default("bor"), // bor | yoq
   /** Narx so'mda (ixtiyoriy) — dorixona egasi yozadi, mijozga ko'rinadi. */
   price: integer("price"),
+  /** Dori qoldiq miqdori (dona, kg, litr). */
+  stock: integer("stock").default(10).notNull(),
+  /** O'lchov birligi (dona | kg | litr). */
+  stockUnit: varchar("stock_unit", { length: 20 }).default("dona").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -252,4 +260,23 @@ export const adminSessions = pgTable("admin_sessions", {
   id: varchar("id", { length: 64 }).primaryKey(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   expiresAt: timestamp("expires_at").notNull(),
+});
+
+/**
+ * Fermerlar va mijozlar tomonidan mutaxassislarga yuborilgan chaqiruvlar
+ * yoki dorixona buyurtmasi uchun biriktirilgan mutaxassislar.
+ */
+export const specialistCalls = pgTable("specialist_calls", {
+  id: serial("id").primaryKey(),
+  specialistId: integer("specialist_id").notNull(),
+  customerName: varchar("customer_name", { length: 120 }).notNull(),
+  customerPhone: varchar("customer_phone", { length: 32 }).notNull(),
+  problem: text("problem").notNull(),
+  address: text("address"),
+  /** yangi | qabul_qilindi | bajarildi | bekor */
+  status: varchar("status", { length: 20 }).notNull().default("yangi"),
+  /** Agar dorixona buyurtmasi uchun biriktirilgan bo'lsa */
+  assignedOrderId: integer("assigned_order_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
