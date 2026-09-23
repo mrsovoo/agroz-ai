@@ -96,7 +96,7 @@ async function setupMainBot() {
   const webhookUrl = `${webhookBaseUrl}/api/telegram/webhook`;
   await call("setWebhook", {
     url: webhookUrl,
-    allowed_updates: ["message"],
+    allowed_updates: ["message", "callback_query"],
     ...(mainSecret ? { secret_token: mainSecret } : {}),
   });
   console.log(`✓ Asosiy webhook: ${webhookUrl}`);

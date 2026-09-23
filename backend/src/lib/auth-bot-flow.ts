@@ -722,6 +722,666 @@ async function cancelMedicineFlow(chatId: number, telegramId: number): Promise<v
 }
 
 // ---------------------------------------------------------------------------
+// Mustaqil Callbacklar (Ro'yxatdan o'tish state'ini talab qilmaydi)
+// ---------------------------------------------------------------------------
+
+async function handleIndependentCallback(
+  chatId: number,
+  telegramId: number,
+  data: string,
+  query: NonNullable<AuthBotUpdate["callback_query"]>,
+): Promise<boolean> {
+  // 1. Chaqiruvlar (sc:accept:, sc:done:, sc:reject:)
+  if (data.startsWith("sc:")) {
+    await answerCallbackQuery(query.id);
+    const [, scAction, scIdPart] = data.split(":");
+    const callId = Number(scIdPart);
+    if (!Number.isSafeInteger(callId)) return true;
+
+    const { specialistCalls, specialists } = await import("@/db/schema");
+    const { eq } = await import("drizzle-orm");
+
+    const [callItem] = await db
+      .select()
+      .from(specialistCalls)
+      .where(eq(specialistCalls.id, callId))
+      .limit(1);
+
+    if (!callItem) {
+      await sendAuthMessage(chatId, "⚠️ Chaqiruv topilmadi.");
+      return true;
+    }
+
+    if (scAction === "done") {
+      await db
+        .update(specialistCalls)
+        .set({ status: "bajarildi", updatedAt: new Date() })
+        .where(eq(specialistCalls.id, callId));
+
+      await db
+        .update(specialists)
+        .set({ isBusy: false, currentCallId: null, updatedAt: new Date() })
+        .where(eq(specialists.id, callItem.specialistId));
+
+      await sendAuthMessage(
+        chatId,
+        `🏁 <b>Chaqiruv #${callId} muvaffaqiyatli yakunlandi!</b>\n\n🟢 <b>Holatingiz: BO'SH</b>. Endi sizga yana yangi buyurtma va chaqiruvlar tushishi mumkin.`,
+      );
+
+      try {
+        const { users } = await import("@/db/schema");
+        const { sql } = await import("drizzle-orm");
+        const cleanDigits = (callItem.customerPhone || "").replace(/\D/g, "").slice(-9);
+        const [customerUser] = await db
+          .select({ telegramId: users.telegramId })
+          .from(users)
+          .where(sql`RIGHT(REPLACE(${users.phone}, ' ', ''), 9) = ${cleanDigits}`)
+          .limit(1);
+
+        if (customerUser?.telegramId) {
+          const { sendMessage } = await import("@/lib/telegram-bot");
+          await sendMessage(
+            customerUser.telegramId,
+            `🏁 <b>Mutaxassis xizmati yakunlandi! (#${callId})</b>\n\n` +
+              `Xizmatdan mamnun bo'lsangiz, platforma orqali mutaxassisga baho va sharh qoldirishingiz mumkin.`,
+          );
+        }
+      } catch (e) {
+        console.error("[sc:done] Customer notify error:", e);
+      }
+      return true;
+    }
+
+    if (scAction === "reject") {
+      await db
+        .update(specialistCalls)
+        .set({ status: "bekor", updatedAt: new Date() })
+        .where(eq(specialistCalls.id, callId));
+
+      await db
+        .update(specialists)
+        .set({ isBusy: false, currentCallId: null, updatedAt: new Date() })
+        .where(eq(specialists.currentCallId, callId));
+
+      await sendAuthMessage(chatId, `❌ <b>Chaqiruv #${callId} bekor qilindi.</b>`);
+
+      try {
+        const { users } = await import("@/db/schema");
+        const { sql } = await import("drizzle-orm");
+        const cleanDigits = (callItem.customerPhone || "").replace(/\D/g, "").slice(-9);
+        const [customerUser] = await db
+          .select({ telegramId: users.telegramId })
+          .from(users)
+          .where(sql`RIGHT(REPLACE(${users.phone}, ' ', ''), 9) = ${cleanDigits}`)
+          .limit(1);
+
+        if (customerUser?.telegramId) {
+          const { sendMessage } = await import("@/lib/telegram-bot");
+          await sendMessage(
+            customerUser.telegramId,
+            `⚠️ <b>Mutaxassis chaqiruvni qabul qila olmadi (#${callId})</b>\n\n` +
+              `Mutaxassis ayni paytda band yoki chaqiruvni o'tkazib yubordi.\n` +
+              `Iltimos, platformamiz orqali boshqa mutaxassisni tanlang.`,
+          );
+        }
+      } catch (e) {
+        console.error("[sc:reject] Customer notify error:", e);
+      }
+      return true;
+    }
+
+    if (scAction === "accept") {
+      const [currentSpec] = await db
+        .select()
+        .from(specialists)
+        .where(eq(specialists.id, callItem.specialistId))
+        .limit(1);
+
+      if (currentSpec?.isBusy && currentSpec.currentCallId !== callId) {
+        await sendAuthMessage(
+          chatId,
+          `⚠️ Siz ayni paytda boshqa chaqiruv (#${currentSpec.currentCallId}) ustida ishlayapsiz. Avval o'sha buyurtmani yakunlashingiz kerak!`,
+        );
+        return true;
+      }
+
+      await db
+        .update(specialistCalls)
+        .set({ status: "qabul_qilindi", updatedAt: new Date() })
+        .where(eq(specialistCalls.id, callId));
+
+      await db
+        .update(specialists)
+        .set({ isBusy: true, currentCallId: callId, updatedAt: new Date() })
+        .where(eq(specialists.id, callItem.specialistId));
+
+      const rows: any[] = [];
+      rows.push([{ text: "🏁 Ishni yakunlash (Bajarildi)", callback_data: `sc:done:${callId}` }]);
+
+      await sendAuthMessage(
+        chatId,
+        `✅ <b>Chaqiruv #${callId} qabul qilindi!</b>\n\n👤 <b>Mijoz:</b> ${escapeHtml(callItem.customerName)}\n📞 <b>Telefon:</b> <code>${escapeHtml(callItem.customerPhone)}</code>\n\n⚠️ <i>Iltimos, mijoz bilan zudlik bilan bog'laning va masalaga to'liq oydinlik kiriting!</i>\n\n🔴 <b>Holatingiz: BAND</b>. Yangi buyurtmalar qabul qilish to'xtatildi. Ishni yakunlagach, pastdagi «🏁 Ishni yakunlash» tugmasini bosing.`,
+        { inline: { inline_keyboard: rows } },
+      );
+
+      try {
+        const { users } = await import("@/db/schema");
+        const { sql } = await import("drizzle-orm");
+        const cleanDigits = (callItem.customerPhone || "").replace(/\D/g, "").slice(-9);
+        const [customerUser] = await db
+          .select({ telegramId: users.telegramId })
+          .from(users)
+          .where(sql`RIGHT(REPLACE(${users.phone}, ' ', ''), 9) = ${cleanDigits}`)
+          .limit(1);
+
+        if (customerUser?.telegramId) {
+          const { sendMessage } = await import("@/lib/telegram-bot");
+          await sendMessage(
+            customerUser.telegramId,
+            `✅ <b>Mutaxassis chaqiruvingizni qabul qildi!</b>\n\n` +
+              `👨‍⚕️ <b>Mutaxassis:</b> ${escapeHtml(currentSpec?.name || "Mutaxassis")}\n` +
+              `📞 <b>Telefon:</b> <code>${escapeHtml(currentSpec?.phone || "")}</code>\n\n` +
+              `Tez orada mutaxassis siz bilan bog'lanadi.`,
+          );
+        }
+      } catch (e) {
+        console.error("[sc:accept] Customer notify error:", e);
+      }
+      return true;
+    }
+    return true;
+  }
+
+  // 2. Buyurtmalar (o:)
+  if (data.startsWith("o:")) {
+    await answerCallbackQuery(query.id);
+    const parts = data.split(":");
+    const action = parts[1];
+    const orderId = Number(parts[2]);
+    if (!Number.isSafeInteger(orderId)) return true;
+
+    const { listOrders, setOrderStatus } = await import("@/lib/orders");
+    const { orderMessage, orderActionsKeyboard } = await import("@/lib/orders-bot");
+
+    if (action === "view") {
+      const orders = await listOrders({ orderId });
+      const order = orders[0];
+      if (!order) {
+        await sendAuthMessage(chatId, errorMessage());
+        return true;
+      }
+      const profile = await getSpecialistByTelegramId(telegramId);
+      if (!profile || order.customerName === undefined) {
+        await sendAuthMessage(chatId, errorMessage());
+        return true;
+      }
+      const mine = await listOrders({ pharmacySpecialistId: profile.id, limit: 100 });
+      if (!mine.some((o) => o.id === orderId)) {
+        await sendAuthMessage(chatId, errorMessage());
+        return true;
+      }
+      await sendAuthMessage(chatId, orderMessage(order), { inline: orderActionsKeyboard(order) });
+      return true;
+    }
+
+    if (action === "spec") {
+      const profile = await getSpecialistByTelegramId(telegramId);
+      if (!profile || profile.role !== "pharmacy") {
+        await sendAuthMessage(chatId, errorMessage());
+        return true;
+      }
+      const { specialists } = await import("@/db/schema");
+      const { eq, and } = await import("drizzle-orm");
+      const specs = await db
+        .select()
+        .from(specialists)
+        .where(and(eq(specialists.role, "specialist"), eq(specialists.isActive, true), eq(specialists.isApproved, true)))
+        .limit(20);
+
+      if (specs.length === 0) {
+        await sendAuthMessage(
+          chatId,
+          "👨‍🌾 Hozircha tizimda tasdiqlangan faol mutaxassislar (agronom / veterinar) mavjud emas.",
+          { inline: { inline_keyboard: [[{ text: "🔙 Buyurtmaga qaytish", callback_data: `o:view:${orderId}` }]] } },
+        );
+        return true;
+      }
+
+      const rows = specs.map((s) => [
+        {
+          text: `👨‍🌾 ${s.name} (${s.specialty || "Mutaxassis"}) · ${s.phone}`,
+          callback_data: `o:assign:${orderId}:${s.id}`,
+        },
+      ]);
+      rows.push([{ text: "🔙 Bekor qilish", callback_data: `o:view:${orderId}` }]);
+
+      await sendAuthMessage(
+        chatId,
+        `👨‍🌾 <b>Buyurtma #${orderId} uchun mutaxassis tanlang:</b>\n\nTanlangan mutaxassisga mijoz va buyurtma tafsilotlari darhol yetkaziladi hamda uning aniq telefon raqami sizga beriladi:`,
+        { inline: { inline_keyboard: rows } },
+      );
+      return true;
+    }
+
+    if (action === "assign") {
+      const specId = Number(parts[3]);
+      if (!Number.isSafeInteger(specId)) return true;
+
+      const profile = await getSpecialistByTelegramId(telegramId);
+      if (!profile || profile.role !== "pharmacy") {
+        await sendAuthMessage(chatId, errorMessage());
+        return true;
+      }
+
+      const { specialists, specialistCalls } = await import("@/db/schema");
+      const { eq } = await import("drizzle-orm");
+
+      const [spec] = await db.select().from(specialists).where(eq(specialists.id, specId)).limit(1);
+      const ordersList = await listOrders({ orderId });
+      const order = ordersList[0];
+
+      if (!spec || !order) {
+        await sendAuthMessage(chatId, "⚠️ Mutaxassis yoki buyurtma topilmadi.");
+        return true;
+      }
+
+      const medItemsText = order.items.map((i) => `${i.name} (${i.qty} ta)`).join(", ");
+      const [createdCall] = await db
+        .insert(specialistCalls)
+        .values({
+          specialistId: specId,
+          customerName: order.customerName,
+          customerPhone: order.customerPhone,
+          problem: `Dorixona buyurtmasi #${order.id} uchun mutaxassis yordami. Dorilar: ${medItemsText}`,
+          address: order.customerAddress || "Dorixonadan olib ketish",
+          status: "yangi",
+          assignedOrderId: order.id,
+        })
+        .returning();
+
+      if (spec.telegramId) {
+        const specMsg = [
+          `🔔 <b>DORIXONADAN SIZGA BUYURTMA BIRIKTIRILDI! (#${order.id})</b>`,
+          "",
+          `🏪 <b>Dorixona:</b> ${escapeHtml(profile.organization || profile.name)}`,
+          `📞 <b>Dorixona telefoni:</b> <code>${escapeHtml(profile.phone)}</code>`,
+          `👤 <b>Mijoz:</b> ${escapeHtml(order.customerName)}`,
+          `📞 <b>Mijoz telefoni:</b> <code>${escapeHtml(order.customerPhone)}</code>`,
+          order.customerAddress ? `📍 <b>Yetkazish manzili:</b> ${escapeHtml(order.customerAddress)}` : "",
+          `📦 <b>Buyurtma qilingan dorilar:</b> ${escapeHtml(medItemsText)}`,
+          order.note ? `📝 <b>Mijoz izohi:</b> <i>${escapeHtml(order.note)}</i>` : "",
+          "",
+          `⚠️ <b>DIQQAT:</b> Buyurtmani tasdiqlashdan oldin mijoz bilan bog'lanish talab qilinadi va masalaga to'liq oydinlik kiritilishi shart!`,
+        ]
+          .filter(Boolean)
+          .join("\n");
+
+        const specRows: any[] = [];
+        specRows.push([
+          { text: "✅ Qabul qilish", callback_data: `sc:accept:${createdCall.id}` },
+          { text: "❌ Bekor qilish", callback_data: `sc:reject:${createdCall.id}` },
+        ]);
+
+        try {
+          await sendAuthMessage(spec.telegramId, specMsg, { inline: { inline_keyboard: specRows } });
+        } catch (e) {
+          console.error("[orders] Mutaxassisga telegram yuborishda xato:", e);
+        }
+      }
+
+      const confirmMsg = [
+        `✅ <b>Buyurtma #${order.id} ga mutaxassis muvaffaqiyatli biriktirildi!</b>`,
+        "",
+        `👨‍🌾 <b>Mutaxassis:</b> ${escapeHtml(spec.name)} (${escapeHtml(spec.specialty || "Mutaxassis")})`,
+        `📞 <b>Mutaxassis telefoni:</b> <code>${escapeHtml(spec.phone)}</code>`,
+        `📍 <b>Manzili:</b> ${escapeHtml(spec.address)}`,
+        "",
+        `Mutaxassisga buyurtma va mijoz ma'lumotlari yetkazildi. U mijoz bilan bog'lanadi.`,
+      ].join("\n");
+
+      const confRows: any[] = [];
+      confRows.push([{ text: "🔙 Buyurtmaga qaytish", callback_data: `o:view:${order.id}` }]);
+
+      await sendAuthMessage(chatId, confirmMsg, { inline: { inline_keyboard: confRows } });
+      return true;
+    }
+
+    const statusMap: Record<string, "tasdiqlandi" | "bekor" | "yetkazildi"> = {
+      confirm: "tasdiqlandi",
+      cancel: "bekor",
+      done: "yetkazildi",
+    };
+    const nextStatus = statusMap[action];
+    if (!nextStatus) return true;
+    const ok = await setOrderStatus(telegramId, orderId, nextStatus);
+    if (!ok) {
+      await sendAuthMessage(chatId, errorMessage());
+      return true;
+    }
+    const orders = await listOrders({ orderId });
+    const order = orders[0];
+    if (order) {
+      await sendAuthMessage(chatId, orderMessage(order), { inline: orderActionsKeyboard(order) });
+      if (nextStatus === "yetkazildi") {
+        const { notifyCustomerOrderDelivered } = await import("@/lib/orders-bot");
+        notifyCustomerOrderDelivered(orderId).catch((err) =>
+          console.error("[orders] mijozga yetkazildi xabarnomasi yuborilmadi:", err),
+        );
+      }
+    }
+    return true;
+  }
+
+  // 3. Mijoz bahosi (cr:rate:)
+  if (data.startsWith("cr:rate:")) {
+    await answerCallbackQuery(query.id);
+    const [, , orderIdStr, starsStr] = data.split(":");
+    const orderId = Number(orderIdStr);
+    const stars = Number(starsStr);
+    if (!Number.isSafeInteger(orderId) || !Number.isSafeInteger(stars)) return true;
+
+    const { rateOrderDirectly, listOrders } = await import("@/lib/orders");
+    const res = await rateOrderDirectly(orderId, stars);
+    if (!res.ok) {
+      await sendAuthMessage(
+        chatId,
+        `⚠️ ${res.error || "Ushbu buyurtma allaqachon baholangan yoki mavjud emas."}`,
+      );
+      return true;
+    }
+
+    const orders = await listOrders({ orderId });
+    const order = orders[0];
+    const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL?.trim()?.replace(/\/+$/, "");
+    const firstMed = order?.items?.[0];
+    const medReviewUrl =
+      firstMed && rawAppUrl
+        ? `${rawAppUrl}/dori/${firstMed.medicineId ?? firstMed.id}`
+        : rawAppUrl
+          ? `${rawAppUrl}/dorilar`
+          : "";
+
+    const starEmoji = "⭐️".repeat(Math.max(1, Math.min(5, stars)));
+    const reviewMsg = [
+      `⭐️ <b>Katta rahmat!</b>`,
+      `Sizning ${starEmoji} (${stars}/5) bahoyingiz qabul qilindi.`,
+      "",
+      "Sizning fikringiz boshqa fermer va bog'bonlar uchun eng to'g'ri dori vositalarini tanlashda yordam beradi.",
+    ].join("\n");
+
+    await sendAuthMessage(chatId, reviewMsg, {
+      inline: medReviewUrl
+        ? {
+            inline_keyboard: [
+              [
+                {
+                  text: "💬 Fermerlar sharhlariga o'tish / Fikr bildirish",
+                  url: medReviewUrl,
+                },
+              ],
+            ],
+          }
+        : undefined,
+    });
+    return true;
+  }
+
+  // 4. Profil o'chirish (pd:)
+  if (data === "pd:ask") {
+    await answerCallbackQuery(query.id);
+    const profile = await getSpecialistByTelegramId(telegramId);
+    if (!profile) return true;
+    await sendAuthMessage(chatId, askProfileDelete(profile.name, profile.role), {
+      inline: PROFILE_DELETE_KEYBOARD,
+    });
+    return true;
+  }
+  if (data === "pd:yes") {
+    await answerCallbackQuery(query.id);
+    const deleted = await deleteSpecialist(telegramId);
+    await sendAuthMessage(
+      chatId,
+      deleted ? profileDeletedMessage() : errorMessage(),
+    );
+    return true;
+  }
+  if (data === "pd:no") {
+    await answerCallbackQuery(query.id);
+    await sendAuthMessage(chatId, profileDeleteCanceledMessage());
+    return true;
+  }
+
+  // 5. Dorini o'chirish (md:)
+  if (data.startsWith("md:")) {
+    await answerCallbackQuery(query.id);
+    const medId = Number(data.slice(3));
+    if (!Number.isSafeInteger(medId)) return true;
+    const deleted = await deleteMedicine(telegramId, medId);
+    if (!deleted) {
+      await sendAuthMessage(chatId, errorMessage());
+      return true;
+    }
+    const rest = await listMedicines(telegramId);
+    const total = rest?.medicines.length ?? 0;
+    await sendAuthMessage(chatId, medicineDeletedMessage(`Dori #${medId}`, total));
+    if (total > 0 && rest) {
+      await sendAuthMessage(chatId, medicinesListMessage(rest.medicines), {
+        inline: medicinesListKeyboard(rest.medicines),
+      });
+    }
+    return true;
+  }
+
+  // 6. Dori boshqaruvi (mm:, ms:, mp:set:)
+  if (data.startsWith("mm:")) {
+    await answerCallbackQuery(query.id);
+    const medId = Number(data.slice(3));
+    if (!Number.isSafeInteger(medId)) return true;
+    const data2 = await listMedicines(telegramId);
+    const med = data2?.medicines.find((m) => m.id === medId);
+    if (!data2 || !med) {
+      await sendAuthMessage(chatId, errorMessage());
+      return true;
+    }
+    await sendAuthMessage(chatId, medicineManageMessage(med), {
+      inline: medicineManageKeyboard(med),
+    });
+    return true;
+  }
+
+  if (data.startsWith("ms:")) {
+    await answerCallbackQuery(query.id);
+    const [, idPart, statusPart] = data.split(":");
+    const medId = Number(idPart);
+    const status = statusPart === "yoq" ? "yoq" : "bor";
+    if (!Number.isSafeInteger(medId)) return true;
+    const ok = await setMedicineStatus(telegramId, medId, status);
+    if (!ok) {
+      await sendAuthMessage(chatId, errorMessage());
+      return true;
+    }
+    const data2 = await listMedicines(telegramId);
+    const med = data2?.medicines.find((m) => m.id === medId);
+    if (med) {
+      await sendAuthMessage(chatId, medicineManageMessage(med), {
+        inline: medicineManageKeyboard(med),
+      });
+    }
+    return true;
+  }
+
+  if (data.startsWith("mp:set:")) {
+    const medId = Number(data.slice("mp:set:".length));
+    if (!Number.isSafeInteger(medId)) {
+      await answerCallbackQuery(query.id);
+      return true;
+    }
+    const data2 = await listMedicines(telegramId);
+    const med = data2?.medicines.find((m) => m.id === medId);
+    if (!data2 || !med) {
+      await answerCallbackQuery(query.id);
+      await sendAuthMessage(chatId, errorMessage());
+      return true;
+    }
+    await setState(telegramId, "med_price_edit", { editingPriceFor: medId });
+    await answerCallbackQuery(query.id);
+    await sendAuthMessage(
+      chatId,
+      `💰 <b>${escapeHtml(med.name)}</b> uchun yangi narxni yozing (so'mda).\n\nMasalan: <i>45000</i>\nNarxni olib tashlash uchun <i>/skip</i> yozing.`,
+      { inline: MEDICINE_PRICE_CANCEL_KEYBOARD },
+    );
+    return true;
+  }
+
+  // 7. Ro'yxatlar va menyu tugmalari
+  if (data === "m:orders") {
+    await answerCallbackQuery(query.id);
+    const { listOrders } = await import("@/lib/orders");
+    const { ordersListKeyboard, ordersEmptyMessage, ordersHintMessage } = await import("@/lib/orders-bot");
+    const profile = await getSpecialistByTelegramId(telegramId);
+    if (!profile || profile.role !== "pharmacy") {
+      await sendAuthMessage(chatId, onlyPharmacyMessage(profile?.role));
+      return true;
+    }
+    const orders = await listOrders({ pharmacySpecialistId: profile.id, limit: 20 });
+    if (orders.length === 0) {
+      await sendAuthMessage(chatId, ordersEmptyMessage());
+      return true;
+    }
+    await sendAuthMessage(chatId, ordersHintMessage(orders), {
+      inline: ordersListKeyboard(orders),
+    });
+    return true;
+  }
+
+  if (data === "m:list") {
+    await answerCallbackQuery(query.id);
+    const data2 = await listMedicines(telegramId);
+    if (!data2 || data2.medicines.length === 0) {
+      await sendAuthMessage(chatId, noMedicinesMessage());
+      return true;
+    }
+    await sendAuthMessage(chatId, medicinesListMessage(data2.medicines), {
+      inline: medicinesListKeyboard(data2.medicines),
+    });
+    return true;
+  }
+
+  if (data === "m:profile") {
+    await answerCallbackQuery(query.id);
+    const profile = await getSpecialistByTelegramId(telegramId);
+    if (profile) {
+      await sendAuthMessage(chatId, profileMessage(profile), { inline: profileKeyboard(profile) });
+    }
+    return true;
+  }
+
+  if (data === "m:start" || data === "m:again" || data === "m:restart") {
+    await answerCallbackQuery(query.id);
+    const profile = await getSpecialistByTelegramId(telegramId);
+    if (profile && !profile.isApproved) {
+      await sendAuthMessage(chatId, pendingBlockedMessage(), {
+        replyKeyboard: pendingApprovalMenuKeyboard(),
+      });
+      return true;
+    }
+    await startMedicineAdd(chatId, telegramId);
+    return true;
+  }
+
+  if (data === "m:no") {
+    await answerCallbackQuery(query.id);
+    await cancelMedicineFlow(chatId, telegramId);
+    return true;
+  }
+
+  // 8. Ariza holati (app:status)
+  if (data === "app:status") {
+    await answerCallbackQuery(query.id);
+    const profile = await getSpecialistByTelegramId(telegramId);
+    if (profile) {
+      const keyboard = profile.isApproved
+        ? profile.role === "pharmacy"
+          ? approvedPharmacyMenuKeyboard()
+          : approvedSpecialistMenuKeyboard()
+        : pendingApprovalMenuKeyboard();
+      await sendAuthMessage(chatId, applicationStatusMessage(profile), {
+        inline: profileKeyboard(profile),
+        replyKeyboard: keyboard,
+      });
+    }
+    return true;
+  }
+
+  // 9. Profilni qisman tahrirlash (ed:)
+  if (data === "ed:name") {
+    await answerCallbackQuery(query.id);
+    await setState(telegramId, "edit_name", {});
+    await sendAuthMessage(
+      chatId,
+      "✏️ <b>Yangi ism va familiyangizni yozing:</b>\n\nMasalan: <i>Dilshod Ergashev</i>\n\nBekor qilish uchun: /bekor",
+    );
+    return true;
+  }
+
+  if (data === "ed:phone") {
+    await answerCallbackQuery(query.id);
+    await setState(telegramId, "edit_phone", {});
+    await sendAuthMessage(
+      chatId,
+      "📞 <b>Yangi telefon raqamingizni yuboring:</b>\n\nPastdagi «📱 Telefon raqamni yuborish» tugmasini bosing yoki qo'lda yozing (masalan: <i>+998901234567</i>):",
+      { replyKeyboard: contactKeyboard() },
+    );
+    return true;
+  }
+
+  if (data === "ed:hours") {
+    await answerCallbackQuery(query.id);
+    await setState(telegramId, "edit_hours", {});
+    await sendAuthMessage(
+      chatId,
+      "⏰ <b>Yangi ish vaqtingizni tanlang yoki yozing:</b>",
+      { inline: WORK_HOURS_KEYBOARD },
+    );
+    return true;
+  }
+
+  if (data === "ed:loc") {
+    await answerCallbackQuery(query.id);
+    await setState(telegramId, "edit_loc", {});
+    await sendAuthMessage(
+      chatId,
+      "📍 <b>Yangi lokatsiyangizni yuboring:</b>\n\nPastdagi «📍 Lokatsiyani yuborish» tugmasini bosing:",
+      { replyKeyboard: locationKeyboard() },
+    );
+    return true;
+  }
+
+  if (data === "ed:org") {
+    await answerCallbackQuery(query.id);
+    await setState(telegramId, "edit_org", {});
+    await sendAuthMessage(
+      chatId,
+      "🏪 <b>Dorixona yoki tashkilotingizning yangi nomini yozing:</b>\n\nMasalan: <i>Baraka Agro Pharm</i>\n\nBekor qilish uchun: /bekor",
+    );
+    return true;
+  }
+
+  if (data === "ed:spec") {
+    await answerCallbackQuery(query.id);
+    await setState(telegramId, "edit_spec", {});
+    await sendAuthMessage(
+      chatId,
+      "🎯 <b>Yangi mutaxassisligingizni tanlang:</b>",
+      { inline: SPECIALTY_KEYBOARD },
+    );
+    return true;
+  }
+
+  return false;
+}
+
+// ---------------------------------------------------------------------------
 // Callback (tugmalar)
 // ---------------------------------------------------------------------------
 
@@ -741,140 +1401,9 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
       return;
     }
 
-    // sc: (specialist call) callbacklari uchun botStates holati SHART EMAS.
-    // Mutaxassis ro'yxatdan o'tib bo'lsa, profili bor, lekin botStates da holati yo'q.
-    // Shuning uchun sc: callbacklarini getState tekshiruvidan oldin ishlatamiz.
-    if (data.startsWith("sc:")) {
-      await answerCallbackQuery(query.id);
-      const [, scAction, scIdPart] = data.split(":");
-      const callId = Number(scIdPart);
-      if (Number.isSafeInteger(callId)) {
-        const { specialistCalls, specialists } = await import("@/db/schema");
-        const { eq } = await import("drizzle-orm");
-        const { db } = await import("@/db");
-
-        const [callItem] = await db
-          .select()
-          .from(specialistCalls)
-          .where(eq(specialistCalls.id, callId))
-          .limit(1);
-
-        if (callItem) {
-          if (scAction === "done") {
-            await db
-              .update(specialistCalls)
-              .set({ status: "bajarildi", updatedAt: new Date() })
-              .where(eq(specialistCalls.id, callId));
-            await db
-              .update(specialists)
-              .set({ isBusy: false, currentCallId: null, updatedAt: new Date() })
-              .where(eq(specialists.id, callItem.specialistId));
-            await sendAuthMessage(
-              chatId,
-              `🏁 <b>Chaqiruv #${callId} muvaffaqiyatli yakunlandi!</b>\n\n🟢 <b>Holatingiz: BO'SH</b>. Endi sizga yana yangi buyurtma va chaqiruvlar tushishi mumkin.`,
-            );
-            // Mijozga xabar
-            try {
-              const { users } = await import("@/db/schema");
-              const { sql } = await import("drizzle-orm");
-              const cleanDigits = (callItem.customerPhone || "").replace(/\D/g, "").slice(-9);
-              const [customerUser] = await db
-                .select({ telegramId: users.telegramId })
-                .from(users)
-                .where(sql`RIGHT(REPLACE(${users.phone}, ' ', ''), 9) = ${cleanDigits}`)
-                .limit(1);
-              if (customerUser?.telegramId) {
-                const { sendMessage } = await import("@/lib/telegram-bot");
-                await sendMessage(
-                  customerUser.telegramId,
-                  `🏁 <b>Mutaxassis xizmati yakunlandi! (#${callId})</b>\n\nXizmatdan mamnun bo'lsangiz, platforma orqali mutaxassisga baho va sharh qoldirishingiz mumkin.`,
-                );
-              }
-            } catch (e) {
-              console.error("[sc:done] Customer notify error:", e);
-            }
-          } else if (scAction === "reject") {
-            await db
-              .update(specialistCalls)
-              .set({ status: "bekor", updatedAt: new Date() })
-              .where(eq(specialistCalls.id, callId));
-            await db
-              .update(specialists)
-              .set({ isBusy: false, currentCallId: null, updatedAt: new Date() })
-              .where(eq(specialists.currentCallId, callId));
-            await sendAuthMessage(chatId, `❌ <b>Chaqiruv #${callId} bekor qilindi.</b>`);
-            // Mijozga xabar
-            try {
-              const { users } = await import("@/db/schema");
-              const { sql } = await import("drizzle-orm");
-              const cleanDigits = (callItem.customerPhone || "").replace(/\D/g, "").slice(-9);
-              const [customerUser] = await db
-                .select({ telegramId: users.telegramId })
-                .from(users)
-                .where(sql`RIGHT(REPLACE(${users.phone}, ' ', ''), 9) = ${cleanDigits}`)
-                .limit(1);
-              if (customerUser?.telegramId) {
-                const { sendMessage } = await import("@/lib/telegram-bot");
-                await sendMessage(
-                  customerUser.telegramId,
-                  `⚠️ <b>Mutaxassis chaqiruvni qabul qila olmadi (#${callId})</b>\n\nMutaxassis ayni paytda band yoki chaqiruvni o'tkazib yubordi.\nIltimos, platformamiz orqali boshqa mutaxassisni tanlang.`,
-                );
-              }
-            } catch (e) {
-              console.error("[sc:reject] Customer notify error:", e);
-            }
-          } else if (scAction === "accept") {
-            const [currentSpec] = await db
-              .select()
-              .from(specialists)
-              .where(eq(specialists.id, callItem.specialistId))
-              .limit(1);
-            if (currentSpec?.isBusy && currentSpec.currentCallId !== callId) {
-              await sendAuthMessage(
-                chatId,
-                `⚠️ Siz ayni paytda boshqa chaqiruv (#${currentSpec.currentCallId}) ustida ishlayapsiz. Avval o'sha buyurtmani yakunlashingiz kerak!`,
-              );
-            } else {
-              await db
-                .update(specialistCalls)
-                .set({ status: "qabul_qilindi", updatedAt: new Date() })
-                .where(eq(specialistCalls.id, callId));
-              await db
-                .update(specialists)
-                .set({ isBusy: true, currentCallId: callId, updatedAt: new Date() })
-                .where(eq(specialists.id, callItem.specialistId));
-              const rows = [[{ text: "🏁 Ishni yakunlash (Bajarildi)", callback_data: `sc:done:${callId}` }]];
-              await sendAuthMessage(
-                chatId,
-                `✅ <b>Chaqiruv #${callId} qabul qilindi!</b>\n\n👤 <b>Mijoz:</b> ${escapeHtml(callItem.customerName)}\n📞 <b>Telefon:</b> <code>${escapeHtml(callItem.customerPhone)}</code>\n\n⚠️ <i>Iltimos, mijoz bilan zudlik bilan bog'laning va masalaga to'liq oydinlik kiriting!</i>\n\n🔴 <b>Holatingiz: BAND</b>. Yangi buyurtmalar qabul qilish to'xtatildi. Ishni yakunlagach, pastdagi «🏁 Ishni yakunlash» tugmasini bosing.`,
-                { inline: { inline_keyboard: rows } },
-              );
-              // Mijozga xabar
-              try {
-                const { users } = await import("@/db/schema");
-                const { sql } = await import("drizzle-orm");
-                const cleanDigits = (callItem.customerPhone || "").replace(/\D/g, "").slice(-9);
-                const [customerUser] = await db
-                  .select({ telegramId: users.telegramId })
-                  .from(users)
-                  .where(sql`RIGHT(REPLACE(${users.phone}, ' ', ''), 9) = ${cleanDigits}`)
-                  .limit(1);
-                if (customerUser?.telegramId) {
-                  const { sendMessage } = await import("@/lib/telegram-bot");
-                  await sendMessage(
-                    customerUser.telegramId,
-                    `✅ <b>Mutaxassis chaqiruvingizni qabul qildi!</b>\n\n👨‍⚕️ <b>Mutaxassis:</b> ${escapeHtml(currentSpec?.name || "Mutaxassis")}\n📞 <b>Telefon:</b> <code>${escapeHtml(currentSpec?.phone || "")}</code>\n\nTez orada mutaxassis siz bilan bog'lanadi.`,
-                  );
-                }
-              } catch (e) {
-                console.error("[sc:accept] Customer notify error:", e);
-              }
-            }
-          }
-        } else {
-          await sendAuthMessage(chatId, "⚠️ Chaqiruv topilmadi.");
-        }
-      }
+    // Mustaqil callbacklar (state talab qilmaydi)
+    const handled = await handleIndependentCallback(chatId, telegramId, data, query);
+    if (handled) {
       return;
     }
 
@@ -2411,4 +2940,3 @@ async function saveDraft(
       }
     : null;
 }
-

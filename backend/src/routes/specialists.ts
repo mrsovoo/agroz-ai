@@ -192,7 +192,10 @@ router.post("/call", async (req, res) => {
         try {
           const { sendMessage, isBotConfigured } = await import("../lib/telegram-bot.js");
           if (await isBotConfigured()) {
-            await sendMessage(Number(spec.telegramId), msg, { keyboard: { inline_keyboard: rows } });
+            await sendMessage(
+              Number(spec.telegramId),
+              `${msg}\n\n⚠️ Qabul qilish/rad etish tugmalari faqat @agroz_auth_bot orqali ishlaydi. Iltimos, auth bot webhook/token sozlamalarini tekshiring.`,
+            );
           }
         } catch (err) {
           console.error("[specialists/call] Asosiy bot fallback xatosi:", err);
@@ -279,4 +282,3 @@ router.get("/call/:id/status", async (req, res) => {
 });
 
 export default router;
-

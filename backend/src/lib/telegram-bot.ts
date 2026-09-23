@@ -226,3 +226,10 @@ export async function sendMessage(
   });
   return result !== null;
 }
+
+export async function answerCallbackQuery(id: string, text?: string): Promise<void> {
+  await callBot("answerCallbackQuery", {
+    callback_query_id: id,
+    ...(text ? { text } : {}),
+  });
+}

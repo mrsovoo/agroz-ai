@@ -6,6 +6,10 @@
 
 import { escapeHtml } from "@/lib/tg-escape";
 import { isAuthBotConfigured, sendAuthMessage, type InlineKeyboard } from "@/lib/auth-bot";
+import {
+  isBotConfigured as isMainBotConfigured,
+  sendMessage as sendMainBotMessage,
+} from "@/lib/telegram-bot";
 import type { OrderStatus, OrderWithItems } from "@/lib/orders";
 
 /** Buyurtma holati uchun emoji va yorliq. */
@@ -240,14 +244,18 @@ export async function notifyPharmacyNewOrder(
     }
   }
 
-  // Fallback: Agar auth bot orqali bormasa, asosiy bot orqali yuborish
+  // Fallback: Agar auth bot orqali bormasa, asosiy bot orqali faqat xabar beramiz.
+  // Auth bot buyurtma boshqaruv callbacklarini qayta ishlaydi; asosiy botga shu
+  // tugmalarni yuborish ishlamaydigan inline tugmalar paydo qiladi.
   if (!sent) {
     try {
-      const { sendMessage, isBotConfigured } = await import("@/lib/telegram-bot");
-      if (await isBotConfigured()) {
-        sent = await sendMessage(telegramId, text, { keyboard: kb });
+      if (await isMainBotConfigured()) {
+        sent = await sendMainBotMessage(
+          telegramId,
+          `${text}\n\n⚠️ Buyurtmani boshqarish tugmalari faqat @agroz_auth_bot orqali ishlaydi. Iltimos, auth bot webhook/token sozlamalarini tekshiring.`,
+        );
         if (sent) {
-          console.log(`[orders] Buyurtma #${order.id} dorixona egasiga (@agrozai_bot, TG: ${telegramId}) yuborildi`);
+          console.log(`[orders] Buyurtma #${order.id} dorixona egasiga asosiy bot orqali tugmasiz yuborildi (TG: ${telegramId})`);
         }
       }
     } catch (e) {
@@ -263,7 +271,7 @@ export async function notifyPharmacyNewOrder(
  * - Dori sahifasida fikr bildirish uchun havola
  */
 export async function notifyCustomerOrderDelivered(orderId: number): Promise<void> {
-  if (!(await isAuthBotConfigured())) return;
+  if (!(await isMainBotConfigured())) return;
 
   const { db } = await import("@/db");
   const { orders, orderItems, specialists, users } = await import("@/db/schema");
@@ -355,8 +363,8 @@ export async function notifyCustomerOrderDelivered(orderId: number): Promise<voi
     ]);
   }
 
-  await sendAuthMessage(customerTelegramId, msg, {
-    inline: { inline_keyboard: keyboardRows },
+  await sendMainBotMessage(customerTelegramId, msg, {
+    keyboard: { inline_keyboard: keyboardRows },
   });
 }
 
@@ -401,4 +409,3 @@ export async function notifyPharmacyStockAlert(
     console.error("[orders-bot] Stock alert yuborishda xato:", err);
   }
 }
-

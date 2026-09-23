@@ -17,6 +17,10 @@ const { Pool } = pg;
 
 const TABLES = [
   // Bog'liqlik tartibida emas — TRUNCATE CASCADE o'zi hal qiladi.
+  "order_items",
+  "orders",
+  "specialist_calls",
+  "specialist_ratings",
   "specialist_medicines",
   "specialists",
   "pharmacy_stocks",
@@ -24,6 +28,7 @@ const TABLES = [
   "pharmacies",
   "diagnoses",
   "news",
+  "advertisements",
   "otp_codes",
   "sessions",
   "users",

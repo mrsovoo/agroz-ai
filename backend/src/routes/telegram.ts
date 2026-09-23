@@ -3,6 +3,7 @@ import { handleAuthBotUpdate, type AuthBotUpdate } from "../lib/auth-bot-flow.js
 import { isAuthBotConfigured } from "../lib/auth-bot.js";
 import {
   alreadyVerifiedMessage,
+  answerCallbackQuery,
   codeMessage,
   contactRequestKeyboard,
   errorMessage,
@@ -25,6 +26,12 @@ import { randomBytes } from "node:crypto";
 const router = Router();
 
 type TelegramUpdate = {
+  callback_query?: {
+    id: string;
+    data?: string;
+    from?: { id?: number; first_name?: string };
+    message?: { chat?: { id?: number } };
+  };
   message?: {
     text?: string;
     chat?: { id?: number; type?: string };
@@ -39,6 +46,69 @@ function isStart(command: string | undefined): boolean {
 }
 
 type DeliveryState = "sent" | "already" | "used" | "invalid";
+
+async function handleMainBotCallback(query: NonNullable<TelegramUpdate["callback_query"]>): Promise<void> {
+  const chatId = query.message?.chat?.id ?? query.from?.id;
+  const data = query.data ?? "";
+
+  try {
+    if (data.startsWith("cr:rate:")) {
+      await answerCallbackQuery(query.id);
+      const [, , orderIdStr, starsStr] = data.split(":");
+      const orderId = Number(orderIdStr);
+      const stars = Number(starsStr);
+      if (!chatId || !Number.isSafeInteger(orderId) || !Number.isSafeInteger(stars)) return;
+
+      const { rateOrderDirectly, listOrders } = await import("../lib/orders.js");
+      const result = await rateOrderDirectly(orderId, stars);
+      if (!result.ok) {
+        await sendMessage(
+          chatId,
+          `⚠️ ${escapeHtml(result.error || "Ushbu buyurtma allaqachon baholangan yoki mavjud emas.")}`,
+          { keyboard: greetingKeyboard() },
+        );
+        return;
+      }
+
+      const orders = await listOrders({ orderId });
+      const order = orders[0];
+      const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL?.trim()?.replace(/\/+$/, "");
+      const firstMed = order?.items?.[0];
+      const medReviewUrl =
+        firstMed && rawAppUrl
+          ? `${rawAppUrl}/dori/${firstMed.medicineId ?? firstMed.id}`
+          : rawAppUrl
+            ? `${rawAppUrl}/dorilar`
+            : "";
+
+      await sendMessage(
+        chatId,
+        [
+          "✅ <b>Rahmat! Bahoyingiz qabul qilindi.</b>",
+          "",
+          "Sizning fikringiz dorixona reytingini shakllantirishga yordam beradi.",
+          medReviewUrl ? "Dorilar bo'yicha fikrlarni ko'rish yoki izoh qoldirish uchun pastdagi tugmadan foydalanishingiz mumkin." : "",
+        ]
+          .filter(Boolean)
+          .join("\n"),
+        medReviewUrl
+          ? {
+              keyboard: {
+                inline_keyboard: [[{ text: "💬 Dorilar fikrlariga o'tish", url: medReviewUrl }]],
+              },
+            }
+          : { keyboard: greetingKeyboard() },
+      );
+      return;
+    }
+
+    await answerCallbackQuery(query.id, "Bu tugma hozir asosiy botda ishlamaydi.");
+  } catch (err) {
+    console.error("[bot] callback xatosi:", err);
+    await answerCallbackQuery(query.id, "Xatolik yuz berdi.");
+    if (chatId) await sendMessage(chatId, errorMessage(), { keyboard: greetingKeyboard() });
+  }
+}
 
 async function deliverCode(chatId: number, token: string, fromId: number): Promise<DeliveryState> {
   const rows = await db.select().from(otpCodes).where(eq(otpCodes.token, token)).limit(1);
@@ -70,6 +140,11 @@ router.post("/webhook", async (req, res) => {
   }
 
   const update = (req.body ?? null) as TelegramUpdate | null;
+  if (update?.callback_query) {
+    await handleMainBotCallback(update.callback_query);
+    return res.json({ ok: true });
+  }
+
   const message = update?.message;
   const chatId = message?.chat?.id;
   if (!chatId) return res.json({ ok: true });
@@ -345,4 +420,3 @@ router.post("/auth-webhook", async (req, res) => {
 });
 
 export default router;
-
