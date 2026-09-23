@@ -25,17 +25,17 @@ export const MAX_AUDIO_BYTES = 8 * 1024 * 1024;
 export const MAX_DIAGNOSIS_TEXT = 2000;
 
 /** Yaqin atrofdagi qidiruv uchun yagona standart radius (km). */
-export const NEARBY_RADIUS_KM = 5;
-export const DEFAULT_SEARCH_RADIUS_KM = 5;
+export const NEARBY_RADIUS_KM = 15;
+export const DEFAULT_SEARCH_RADIUS_KM = 15;
 
 /**
  * Yaqin atrof qidiruvining chegarasi (km).
- * Standart yagona 5 km radius belgilanadi.
+ * Admin sozlamalari orqali 100 km gacha kengaytirilishi mumkin.
  */
-export const MAX_NEARBY_RADIUS_KM = 5;
+export const MAX_NEARBY_RADIUS_KM = 100;
 
-/** UI'da qo'llaniladigan standart yagona radius (5 km). */
-export const RADIUS_OPTIONS = [5] as const;
+/** UI'da qo'llaniladigan radius variantlari (km). */
+export const RADIUS_OPTIONS = [5, 10, 15, 25, 50] as const;
 
 /**
  * AI tashxisi shu foizdan past ishonch bilan qaytsa — foydalanuvchi

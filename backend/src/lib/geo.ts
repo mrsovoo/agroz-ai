@@ -25,9 +25,9 @@ export function roundKm(km: number): number {
  * So'rovdagi radiusni o'qiydi va **hech qachon** `MAX_NEARBY_RADIUS_KM`dan
  * oshirmaydi — yaqin atrof qidiruvi maksimal 5 km bilan cheklangan.
  */
-export function clampRadiusKm(raw: unknown): number {
+export function clampRadiusKm(raw: unknown, fallbackKm: number = NEARBY_RADIUS_KM): number {
   const value = typeof raw === "string" ? parseFloat(raw) : typeof raw === "number" ? raw : NaN;
-  if (!Number.isFinite(value) || value <= 0) return NEARBY_RADIUS_KM;
+  if (!Number.isFinite(value) || value <= 0) return fallbackKm;
   return Math.min(value, MAX_NEARBY_RADIUS_KM);
 }
 

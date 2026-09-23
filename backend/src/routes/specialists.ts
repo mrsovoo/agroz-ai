@@ -8,6 +8,7 @@ import { specialists, specialistCalls } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 import { sendAuthMessage, isAuthBotConfigured } from "../lib/auth-bot.js";
 import { escapeHtml } from "../lib/tg-escape.js";
+import { pharmacyRadiusKmSetting, specialistRadiusKmSetting } from "../lib/settings.js";
 
 const router = Router();
 
@@ -17,7 +18,11 @@ router.get("/", async (req, res) => {
     const latRaw = req.query.lat as string | undefined;
     const lngRaw = req.query.lng as string | undefined;
     const coords = parseCoords(latRaw, lngRaw);
-    const radiusKm = clampRadiusKm(req.query.radius);
+    const role = (req.query.role as string) || null;
+    const defaultRadius = role === "pharmacy" 
+      ? await pharmacyRadiusKmSetting() 
+      : await specialistRadiusKmSetting();
+    const radiusKm = clampRadiusKm(req.query.radius, defaultRadius);
 
     const medsQuery = req.query.med;
     const meds = Array.isArray(medsQuery)

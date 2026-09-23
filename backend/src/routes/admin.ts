@@ -298,6 +298,14 @@ router.get("/regions", async (_req, res) => {
       })
       .from(orders);
 
+    // 4. Mutaxassis chaqiruvlari viloyat/manzil bo'yicha
+    const callRows = await db
+      .select({
+        address: specialistCalls.address,
+        status: specialistCalls.status,
+      })
+      .from(specialistCalls);
+
     const userCountByRegion: Record<string, number> = {};
     for (const r of userRows) {
       if (r.region) {
@@ -328,6 +336,12 @@ router.get("/regions", async (_req, res) => {
       ordersByRegion[reg] = cur;
     }
 
+    const callsByRegion: Record<string, number> = {};
+    for (const c of callRows) {
+      const reg = findMatchingRegion(c.address || "");
+      callsByRegion[reg] = (callsByRegion[reg] || 0) + 1;
+    }
+
     const totalUsers = Object.values(userCountByRegion).reduce((a, b) => a + b, 0) || 1;
 
     const result = UZBEKISTAN_REGIONS.map((regionName) => {
@@ -335,6 +349,7 @@ router.get("/regions", async (_req, res) => {
       const pCount = pharmaciesByRegion[regionName] || 0;
       const sCount = specialistsByRegion[regionName] || 0;
       const ord = ordersByRegion[regionName] || { count: 0, totalSum: 0 };
+      const cCount = callsByRegion[regionName] || 0;
 
       return {
         region: regionName,
@@ -342,6 +357,7 @@ router.get("/regions", async (_req, res) => {
         pharmacies: pCount,
         specialists: sCount,
         orders: ord.count,
+        calls: cCount,
         totalSales: ord.totalSum,
         sharePercent: Math.round((uCount / totalUsers) * 100),
       };
@@ -683,14 +699,15 @@ router.get("/specialists", async (req, res) => {
         workHours: specialists.workHours,
         isActive: specialists.isActive,
         isApproved: specialists.isApproved,
+        isBusy: specialists.isBusy,
         createdAt: specialists.createdAt,
         updatedAt: specialists.updatedAt,
       })
       .from(specialists)
       .orderBy(desc(specialists.id));
 
-    // Dori va buyurtma sonlarini bir yo'la hisoblash
-    const [medCounts, orderCounts] = await Promise.all([
+    // Dori, buyurtma, chaqiruv va reytinglarni bir yo'la hisoblash
+    const [medCounts, orderCounts, callCounts, ratingStats] = await Promise.all([
       db
         .select({
           specialistId: specialistMedicines.specialistId,
@@ -706,6 +723,21 @@ router.get("/specialists", async (req, res) => {
         .from(orders)
         .where(isNotNull(orders.pharmacySpecialistId))
         .groupBy(orders.pharmacySpecialistId),
+      db
+        .select({
+          specialistId: specialistCalls.specialistId,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(specialistCalls)
+        .groupBy(specialistCalls.specialistId),
+      db
+        .select({
+          specialistId: specialistRatings.specialistId,
+          avg: sql<number>`avg(${specialistRatings.stars})::float`,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(specialistRatings)
+        .groupBy(specialistRatings.specialistId),
     ]);
 
     const medMap = new Map<number, number>();
@@ -716,12 +748,27 @@ router.get("/specialists", async (req, res) => {
     for (const o of orderCounts) {
       if (o.specialistId) orderMap.set(o.specialistId, o.count);
     }
+    const callMap = new Map<number, number>();
+    for (const c of callCounts) {
+      callMap.set(c.specialistId, c.count);
+    }
+    const ratingMap = new Map<number, { avg: number; count: number }>();
+    for (const r of ratingStats) {
+      ratingMap.set(r.specialistId, { avg: r.avg, count: r.count });
+    }
 
-    let result = allSpecs.map((s) => ({
-      ...s,
-      medicinesCount: medMap.get(s.id) ?? 0,
-      ordersCount: orderMap.get(s.id) ?? 0,
-    }));
+    let result = allSpecs.map((s) => {
+      const r = ratingMap.get(s.id);
+      return {
+        ...s,
+        medicinesCount: medMap.get(s.id) ?? 0,
+        ordersCount: orderMap.get(s.id) ?? 0,
+        callsCount: callMap.get(s.id) ?? 0,
+        ratingAvg: r ? Math.round(r.avg * 10) / 10 : null,
+        ratingCount: r?.count ?? 0,
+        isBusy: s.isBusy ?? false,
+      };
+    });
 
     if (role && (role === "pharmacy" || role === "specialist")) {
       result = result.filter((s) => s.role === role);
@@ -747,6 +794,51 @@ router.get("/specialists", async (req, res) => {
     });
   } catch (err: any) {
     console.error("[admin specialists list error]:", err);
+    res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
+
+// GET /api/admin/pharmacies/:id/medicines
+router.get("/pharmacies/:id/medicines", requireAdmin, async (req, res) => {
+  try {
+    const pharmacyId = Number(req.params.id);
+    if (!pharmacyId) return res.status(400).json({ error: "Dorixona ID noto'g'ri" });
+
+    const pharmacy = await db
+      .select()
+      .from(specialists)
+      .where(eq(specialists.id, pharmacyId))
+      .limit(1);
+
+    const items = await db
+      .select()
+      .from(specialistMedicines)
+      .where(eq(specialistMedicines.specialistId, pharmacyId))
+      .orderBy(desc(specialistMedicines.id));
+
+    res.json({
+      ok: true,
+      pharmacy: pharmacy[0] ? {
+        id: pharmacy[0].id,
+        name: pharmacy[0].name,
+        organization: pharmacy[0].organization,
+        phone: pharmacy[0].phone,
+        address: pharmacy[0].address,
+      } : null,
+      items: items.map((m) => ({
+        id: m.id,
+        name: m.name,
+        type: m.type,
+        usage: m.usage,
+        price: m.price,
+        stock: m.stock,
+        status: m.status,
+        photoFileId: m.photoFileId,
+        createdAt: m.createdAt,
+      })),
+      totalCount: items.length,
+    });
+  } catch (err: any) {
     res.status(500).json({ error: err.message || "Server xatosi" });
   }
 });

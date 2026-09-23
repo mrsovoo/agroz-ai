@@ -450,7 +450,7 @@ export async function listSpecialists(opts: {
       (s.experienceYears ?? 0) >= 5 &&
       (ratingBySpecialist.get(s.id)?.count ?? 0) > 0 &&
       (ratingBySpecialist.get(s.id)?.avg ?? 0) >= 4;
-    const limit = extended ? Math.min(radiusKm * 3, 15) : radiusKm;
+    const limit = extended ? Math.max(radiusKm * 1.5, radiusKm) : radiusKm;
     return withMeta(s, d, d > limit);
   });
 

@@ -26,6 +26,9 @@ export const SETTING_KEYS = {
   adminUsername: "admin_username",
   adminPassword: "admin_password",
   defaultRadiusKm: "default_radius_km",
+  pharmacyRadiusKm: "pharmacy_radius_km",
+  specialistRadiusKm: "specialist_radius_km",
+  orderMaxRadiusKm: "order_max_radius_km",
   deliveryEnabled: "delivery_enabled",
   deliveryMinOrderQty: "delivery_min_order_qty",
   deliveryPricePerKm: "delivery_price_per_km",
@@ -99,7 +102,10 @@ export function envFallback(key: SettingKey): string | null {
     [SETTING_KEYS.eskizFrom]: process.env.ESKIZ_FROM,
     [SETTING_KEYS.adminUsername]: process.env.ADMIN_USERNAME,
     [SETTING_KEYS.adminPassword]: process.env.ADMIN_PASSWORD,
-    [SETTING_KEYS.defaultRadiusKm]: process.env.DEFAULT_RADIUS_KM || "5",
+    [SETTING_KEYS.defaultRadiusKm]: process.env.DEFAULT_RADIUS_KM || "15",
+    [SETTING_KEYS.pharmacyRadiusKm]: process.env.PHARMACY_RADIUS_KM || "15",
+    [SETTING_KEYS.specialistRadiusKm]: process.env.SPECIALIST_RADIUS_KM || "25",
+    [SETTING_KEYS.orderMaxRadiusKm]: process.env.ORDER_MAX_RADIUS_KM || "50",
     [SETTING_KEYS.deliveryEnabled]: process.env.DELIVERY_ENABLED || "true",
     [SETTING_KEYS.deliveryMinOrderQty]: process.env.DELIVERY_MIN_ORDER_QTY || "5",
     [SETTING_KEYS.deliveryPricePerKm]: process.env.DELIVERY_PRICE_PER_KM || "3000",
@@ -180,7 +186,10 @@ const LABELS: Record<SettingKey, string> = {
   [SETTING_KEYS.eskizFrom]: "Eskiz.uz sender nomi",
   [SETTING_KEYS.adminUsername]: "Admin login",
   [SETTING_KEYS.adminPassword]: "Admin parol",
-  [SETTING_KEYS.defaultRadiusKm]: "Qidiruv radiusi (km) — Standart: 5 km",
+  [SETTING_KEYS.defaultRadiusKm]: "Standart qidiruv radiusi (km)",
+  [SETTING_KEYS.pharmacyRadiusKm]: "Dorixonalar ko'rinish radiusi (km)",
+  [SETTING_KEYS.specialistRadiusKm]: "Mutaxassislar ko'rinish radiusi (km)",
+  [SETTING_KEYS.orderMaxRadiusKm]: "Buyurtmalar qabul qilish maksimal radiusi (km)",
   [SETTING_KEYS.deliveryEnabled]: "Yetkazib berish xizmati (true / false)",
   [SETTING_KEYS.deliveryMinOrderQty]: "Bepul yetkazib berish chegarasi (dori soni)",
   [SETTING_KEYS.deliveryPricePerKm]: "1 km uchun yetkazib berish narxi (so'm)",
@@ -247,7 +256,25 @@ export async function asrModel(): Promise<string | null> {
 export async function defaultRadiusKmSetting(): Promise<number> {
   const val = await getSetting(SETTING_KEYS.defaultRadiusKm);
   const num = Number(val);
-  return Number.isFinite(num) && num > 0 ? num : 5;
+  return Number.isFinite(num) && num > 0 ? num : 15;
+}
+
+export async function pharmacyRadiusKmSetting(): Promise<number> {
+  const val = await getSetting(SETTING_KEYS.pharmacyRadiusKm);
+  const num = Number(val);
+  return Number.isFinite(num) && num > 0 ? num : 15;
+}
+
+export async function specialistRadiusKmSetting(): Promise<number> {
+  const val = await getSetting(SETTING_KEYS.specialistRadiusKm);
+  const num = Number(val);
+  return Number.isFinite(num) && num > 0 ? num : 25;
+}
+
+export async function orderMaxRadiusKmSetting(): Promise<number> {
+  const val = await getSetting(SETTING_KEYS.orderMaxRadiusKm);
+  const num = Number(val);
+  return Number.isFinite(num) && num > 0 ? num : 50;
 }
 
 export async function adminUsernameSetting(): Promise<string | null> {

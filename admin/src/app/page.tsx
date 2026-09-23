@@ -83,6 +83,7 @@ type RegionStat = {
   pharmacies: number;
   specialists: number;
   orders: number;
+  calls?: number;
   totalSales: number;
   sharePercent: number;
 };
@@ -122,8 +123,12 @@ type SpecialistItem = {
   workHours: string | null;
   isActive: boolean;
   isApproved: boolean;
+  isBusy?: boolean;
   medicinesCount: number;
   ordersCount: number;
+  callsCount?: number;
+  ratingAvg?: number | null;
+  ratingCount?: number;
   experienceYears?: number | null;
   helpsWith?: string | null;
   education?: string | null;
@@ -336,6 +341,13 @@ export default function SuperAdminPage() {
   // Dorixona arizalari filtrlari
   const [pharmacyStatusFilter, setPharmacyStatusFilter] = useState<"all" | "pending" | "approved">("all");
   const [pharmacySearch, setPharmacySearch] = useState("");
+  const [selectedPharmacyForMeds, setSelectedPharmacyForMeds] = useState<{
+    id: number;
+    name: string;
+    organization?: string;
+  } | null>(null);
+  const [pharmacyMeds, setPharmacyMeds] = useState<any[]>([]);
+  const [loadingPharmacyMeds, setLoadingPharmacyMeds] = useState(false);
 
   // Mutaxassislar filtrlari
   const [specialistStatusFilter, setSpecialistStatusFilter] = useState<"all" | "pending" | "approved">("all");
@@ -483,6 +495,24 @@ export default function SuperAdminPage() {
       }
     } catch {
       setNotice({ kind: "err", text: "Tarmoq xatosi yuz berdi." });
+    }
+  }
+
+  async function handleViewPharmacyMedicines(p: SpecialistItem) {
+    setSelectedPharmacyForMeds({ id: p.id, name: p.name, organization: p.organization || undefined });
+    setLoadingPharmacyMeds(true);
+    try {
+      const res = await adminFetch(`/api/admin/pharmacies/${p.id}/medicines`);
+      const data = await res.json();
+      if (data?.ok) {
+        setPharmacyMeds(data.items || []);
+      } else {
+        setPharmacyMeds([]);
+      }
+    } catch {
+      setPharmacyMeds([]);
+    } finally {
+      setLoadingPharmacyMeds(false);
     }
   }
 
@@ -1239,6 +1269,16 @@ export default function SuperAdminPage() {
         {/* 1.2. BUYURTMALAR TAB */}
         {activeTab === "orders" && (
           <div className="space-y-6">
+            <div className="rounded-2xl bg-zinc-50 border border-zinc-200 p-4 text-xs text-zinc-700 flex items-start gap-3">
+              <ShieldCheck size={18} className="text-zinc-800 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-zinc-900">Super-Admin Nazorat va Monitoring Rejimi</p>
+                <p className="text-zinc-500 mt-0.5">
+                  Buyurtma holatlari dorixonalar tomonidan Telegram boti orqali mustaqil boshqariladi. Bu bo&apos;limda siz barcha xaridorlar va sotuvchi dorixonalar o&apos;rtasidagi buyurtmalarni, manzillarni va mahsulotlarni kuzatasiz hamda kompaniya darajasida monitoring qilasiz.
+                </p>
+              </div>
+            </div>
+
             <div className="rounded-2xl bg-white p-5 border border-zinc-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.03)] flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="relative flex-1 max-w-md">
                 <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
@@ -1367,38 +1407,30 @@ export default function SuperAdminPage() {
                           </td>
                           <td className="py-3 px-4">
                             <span
-                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-mono font-bold ${
+                              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-mono font-bold ${
                                 o.status === "yetkazildi"
                                   ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
                                   : o.status === "tasdiqlandi"
                                   ? "bg-blue-50 text-blue-800 border border-blue-200"
                                   : o.status === "bekor"
-                                  ? "bg-zinc-100 text-zinc-400 border border-zinc-200 line-through"
-                                  : "bg-zinc-900 text-white font-bold"
+                                  ? "bg-red-50 text-red-700 border border-red-200 font-bold"
+                                  : "bg-amber-50 text-amber-800 border border-amber-200"
                               }`}
                             >
-                              {o.status}
+                              {o.status === "yetkazildi" && "✅ Yetkazildi"}
+                              {o.status === "tasdiqlandi" && "🔵 Tasdiqlandi"}
+                              {o.status === "bekor" && "⚠️ Bekor qilingan"}
+                              {o.status === "yangi" && "⏳ Yangi"}
+                              {!["yetkazildi", "tasdiqlandi", "bekor", "yangi"].includes(o.status) && o.status}
                             </span>
                           </td>
                           <td className="py-3 px-4 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button
-                                onClick={() => setSelectedOrderDetail(o)}
-                                className="rounded-lg bg-white hover:bg-zinc-50 text-zinc-800 border border-zinc-200/80 shadow-2xs px-2 py-1 text-[11px] font-semibold transition"
-                              >
-                                👁 Batafsil
-                              </button>
-                              <select
-                                value={o.status}
-                                onChange={(e) => handleUpdateOrderStatus(o.id, e.target.value)}
-                                className="rounded-lg bg-white px-2 py-1 text-[11px] font-semibold text-zinc-900 border border-zinc-200 focus:outline-none focus:border-zinc-400"
-                              >
-                                <option value="yangi">Yangi</option>
-                                <option value="tasdiqlandi">Tasdiqlash</option>
-                                <option value="yetkazildi">Yetkazildi</option>
-                                <option value="bekor">Bekor qilish</option>
-                              </select>
-                            </div>
+                            <button
+                              onClick={() => setSelectedOrderDetail(o)}
+                              className="rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white shadow-2xs px-3 py-1.5 text-[11px] font-semibold transition"
+                            >
+                              👁 Batafsil
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -1412,6 +1444,16 @@ export default function SuperAdminPage() {
         {/* 1.3. MUTAXASSIS CHAQIRUVLARI TAB */}
         {activeTab === "specialist_calls" && (
           <div className="space-y-6">
+            <div className="rounded-2xl bg-zinc-50 border border-zinc-200 p-4 text-xs text-zinc-700 flex items-start gap-3">
+              <ShieldCheck size={18} className="text-zinc-800 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-zinc-900">Super-Admin Nazorat va Monitoring Rejimi</p>
+                <p className="text-zinc-500 mt-0.5">
+                  Mutaxassis chaqiruvlari agronom va veterinarlar tomonidan Telegram auth bot (@agroz_auth_bot) orqali to&apos;g&apos;ridan-to&apos;g&apos;ri qabul qilinadi yoki yakunlanadi. Bu bo&apos;limda siz barcha chaqiruvlarni, masofalarni va yuzaga kelgan xatoliklarni kuzatasiz.
+                </p>
+              </div>
+            </div>
+
             <div className="rounded-2xl bg-white p-5 border border-zinc-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.03)] flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="relative flex-1 max-w-md">
                 <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
@@ -1452,7 +1494,7 @@ export default function SuperAdminPage() {
                       <th className="py-3 px-4">Muammo Tavsifi</th>
                       <th className="py-3 px-4">Manzil</th>
                       <th className="py-3 px-4">Holat</th>
-                      <th className="py-3 px-4 text-right">Amal</th>
+                      <th className="py-3 px-4 text-right">Vaqti</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-100 text-zinc-700">
@@ -1497,30 +1539,32 @@ export default function SuperAdminPage() {
                           </td>
                           <td className="py-3 px-4">
                             <span
-                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-mono font-bold ${
+                              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-mono font-bold ${
                                 c.status === "bajarildi"
                                   ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
                                   : c.status === "qabul_qilindi"
                                   ? "bg-blue-50 text-blue-800 border border-blue-200"
                                   : c.status === "bekor"
-                                  ? "bg-zinc-100 text-zinc-400 border border-zinc-200 line-through"
-                                  : "bg-zinc-900 text-white font-bold"
+                                  ? "bg-red-50 text-red-700 border border-red-200 font-bold"
+                                  : "bg-amber-50 text-amber-800 border border-amber-200"
                               }`}
                             >
-                              {c.status}
+                              {c.status === "bajarildi" && "✅ Bajarildi"}
+                              {c.status === "qabul_qilindi" && "🔵 Qabul qilindi"}
+                              {c.status === "bekor" && "⚠️ Rad etildi / Bekor"}
+                              {c.status === "yangi" && "⏳ Kutilmoqda"}
+                              {!["bajarildi", "qabul_qilindi", "bekor", "yangi"].includes(c.status) && c.status}
                             </span>
                           </td>
                           <td className="py-3 px-4 text-right">
-                            <select
-                              value={c.status}
-                              onChange={(e) => handleUpdateCallStatus(c.id, e.target.value)}
-                              className="rounded-lg bg-white px-2 py-1 text-[11px] font-semibold text-zinc-900 border border-zinc-200 focus:outline-none focus:border-zinc-400"
-                            >
-                              <option value="yangi">Yangi</option>
-                              <option value="qabul_qilindi">Qabul qilindi</option>
-                              <option value="bajarildi">Bajarildi</option>
-                              <option value="bekor">Bekor</option>
-                            </select>
+                            <span className="text-[11px] font-mono text-zinc-500 font-semibold whitespace-nowrap">
+                              {new Date(c.createdAt).toLocaleDateString("uz-UZ", {
+                                month: "short",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
                           </td>
                         </tr>
                       ))}
@@ -1726,6 +1770,13 @@ export default function SuperAdminPage() {
                           </td>
                           <td className="py-3 px-4 text-right">
                             <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => handleViewPharmacyMedicines(s)}
+                                title="Ushbu dorixonadagi barcha mahsulotlarni ko'rish"
+                                className="flex items-center gap-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border border-zinc-200 px-2.5 py-1.5 text-xs font-semibold transition"
+                              >
+                                <Package size={13} /> Mahsulotlar ({s.medicinesCount})
+                              </button>
                               {!s.isApproved ? (
                                 <>
                                   <button
@@ -1770,6 +1821,102 @@ export default function SuperAdminPage() {
                 </table>
               </div>
             </div>
+
+            {/* DORIXONA MAHSULOTLARI MODALI */}
+            {selectedPharmacyForMeds && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in">
+                <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl border border-zinc-200 max-h-[85vh] flex flex-col">
+                  <div className="flex items-center justify-between border-b border-zinc-200 pb-4">
+                    <div>
+                      <h3 className="text-base font-bold text-zinc-900 flex items-center gap-2">
+                        <Package size={18} className="text-zinc-900" />
+                        {selectedPharmacyForMeds.organization || selectedPharmacyForMeds.name} mahsulotlari
+                      </h3>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        Ushbu dorixona katalogiga kiritilgan barcha dori vositalari va qoldiqlar
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setSelectedPharmacyForMeds(null)}
+                      className="rounded-lg bg-zinc-100 p-1.5 text-zinc-500 hover:bg-zinc-200 transition"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto py-4 space-y-3">
+                    {loadingPharmacyMeds ? (
+                      <div className="py-12 text-center text-xs text-zinc-500 flex items-center justify-center gap-2">
+                        <RefreshCw className="animate-spin" size={16} /> Mahsulotlar yuklanmoqda...
+                      </div>
+                    ) : pharmacyMeds.length === 0 ? (
+                      <div className="py-12 text-center text-xs text-zinc-400">
+                        Ushbu dorixonada hali hech qanday dori vositasi qo&apos;shilmagan.
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-zinc-100">
+                        {pharmacyMeds.map((med) => (
+                          <div key={med.id} className="py-3 flex items-start justify-between gap-4">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-zinc-900 text-sm">💊 {med.name}</span>
+                                <span
+                                  className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
+                                    med.type === "crop" || med.type === "ekin"
+                                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                      : "bg-blue-50 text-blue-700 border border-blue-200"
+                                  }`}
+                                >
+                                  {med.type === "crop" || med.type === "ekin"
+                                    ? "🌱 O'simliklar uchun"
+                                    : "🐄 Chorva uchun"}
+                                </span>
+                                <span
+                                  className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                                    med.status === "bor"
+                                      ? "bg-zinc-100 text-zinc-800"
+                                      : "bg-red-50 text-red-600"
+                                  }`}
+                                >
+                                  {med.status === "bor" ? "Mavjud" : "Tugagan"}
+                                </span>
+                              </div>
+                              {med.usage && (
+                                <p className="text-xs text-zinc-600 leading-relaxed max-w-lg">
+                                  {med.usage}
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-right shrink-0">
+                              <span className="font-mono font-bold text-zinc-900 text-sm block">
+                                {med.price ? `${Number(med.price).toLocaleString()} so'm` : "Narxsiz"}
+                              </span>
+                              {med.stock !== null && med.stock !== undefined && (
+                                <span className="text-[11px] font-mono text-zinc-400">
+                                  Qoldiq: {med.stock} dona
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="border-t border-zinc-200 pt-3 flex items-center justify-between text-xs text-zinc-500">
+                    <span>
+                      Jami: <b>{pharmacyMeds.length}</b> ta dori vositasi
+                    </span>
+                    <button
+                      onClick={() => setSelectedPharmacyForMeds(null)}
+                      className="rounded-xl bg-zinc-900 px-4 py-2 text-xs font-bold text-white hover:bg-zinc-800 transition"
+                    >
+                      Yopish
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1904,6 +2051,7 @@ export default function SuperAdminPage() {
                       <th className="py-3 px-4">Aloqa</th>
                       <th className="py-3 px-4">Manzil</th>
                       <th className="py-3 px-4">Bandlik</th>
+                      <th className="py-3 px-4">Chaqiruv / Reyting</th>
                       <th className="py-3 px-4">Holat</th>
                       <th className="py-3 px-4 text-right">Amallar</th>
                     </tr>
@@ -1911,7 +2059,7 @@ export default function SuperAdminPage() {
                   <tbody className="divide-y divide-zinc-100 text-zinc-700">
                     {filteredSpecialists.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="py-8 text-center text-zinc-500 font-medium">
+                        <td colSpan={9} className="py-8 text-center text-zinc-500 font-medium">
                           Mutaxassislar topilmadi.
                         </td>
                       </tr>
@@ -1942,15 +2090,24 @@ export default function SuperAdminPage() {
                             {s.address || "—"}
                           </td>
                           <td className="py-3 px-4">
-                            {s.assignedOrderId ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-mono font-bold text-amber-700 border border-amber-200">
-                                🔴 Band (#{s.assignedOrderId})
+                            {s.isBusy || s.assignedOrderId ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-mono font-bold text-red-700 border border-red-200">
+                                🔴 Band
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-mono font-bold text-emerald-700 border border-emerald-200">
                                 🟢 Bo&apos;sh
                               </span>
                             )}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-1 text-[11px] font-mono font-semibold text-zinc-800">
+                              <Phone size={11} className="text-zinc-400" /> {s.callsCount || 0} ta chaqiruv
+                            </div>
+                            <div className="flex items-center gap-1 text-[10.5px] font-bold text-amber-600 mt-0.5">
+                              <Star size={11} fill="currentColor" /> {s.ratingAvg ? s.ratingAvg.toFixed(1) : "—"}
+                              <span className="text-[10px] font-normal text-zinc-400">({s.ratingCount || 0} ta baho)</span>
+                            </div>
                           </td>
                           <td className="py-3 px-4">
                             {s.isApproved ? (
@@ -2241,10 +2398,56 @@ export default function SuperAdminPage() {
         {activeTab === "regions" && (
           <div className="space-y-6">
             <div className="rounded-2xl bg-white p-6 border border-zinc-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-              <h2 className="text-base font-bold text-zinc-900 flex items-center gap-2 mb-4">
-                <Globe size={18} className="text-zinc-900" /> 14 ta Hudud Bo&apos;yicha Faollik va Tahlil
-              </h2>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div>
+                  <h2 className="text-base font-bold text-zinc-900 flex items-center gap-2">
+                    <Globe size={18} className="text-zinc-900" /> 14 ta Hudud Bo&apos;yicha Kompleks Tahlil va Statistika
+                  </h2>
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Qaysi viloyatda qancha foydalanuvchi, mutaxassis va dorixona borligi, shuningdek dori buyurtmalari va mutaxassis chaqiruvlari tahlili.
+                  </p>
+                </div>
+              </div>
 
+              {/* Viloyatlar xulosa jadvali */}
+              <div className="rounded-xl border border-zinc-200 overflow-hidden mb-6">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase text-[10px] tracking-wider font-mono">
+                        <th className="py-3 px-4">Viloyat / Hudud</th>
+                        <th className="py-3 px-4">👥 Foydalanuvchilar</th>
+                        <th className="py-3 px-4">🏪 Dorixonalar</th>
+                        <th className="py-3 px-4">👨‍⚕️ Mutaxassislar</th>
+                        <th className="py-3 px-4">🛒 Dori Buyurtmalari</th>
+                        <th className="py-3 px-4">📞 Mutaxassis Chaqiruvlari</th>
+                        <th className="py-3 px-4">💰 Savdo Hajmi</th>
+                        <th className="py-3 px-4 text-right">Ulushi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-100 text-zinc-700">
+                      {regions.map((r, i) => (
+                        <tr key={i} className="hover:bg-zinc-50/70 transition">
+                          <td className="py-3 px-4 font-bold text-zinc-900">{r.region}</td>
+                          <td className="py-3 px-4 font-mono font-semibold text-zinc-800">{r.users} ta</td>
+                          <td className="py-3 px-4 font-mono font-semibold text-zinc-800">{r.pharmacies} ta</td>
+                          <td className="py-3 px-4 font-mono font-semibold text-zinc-800">{r.specialists} ta</td>
+                          <td className="py-3 px-4 font-mono font-semibold text-zinc-800">{r.orders} ta</td>
+                          <td className="py-3 px-4 font-mono font-semibold text-blue-700">{r.calls || 0} ta</td>
+                          <td className="py-3 px-4 font-mono font-bold text-zinc-900">
+                            {r.totalSales ? `${r.totalSales.toLocaleString()} so'm` : "0 so'm"}
+                          </td>
+                          <td className="py-3 px-4 text-right font-mono text-[11px] font-bold text-zinc-700">
+                            {r.sharePercent}%
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Viloyatlar kartochkalari */}
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {regions.map((r, i) => (
                   <div key={i} className="rounded-xl bg-zinc-50/80 p-4 border border-zinc-200/80">
@@ -2257,20 +2460,30 @@ export default function SuperAdminPage() {
 
                     <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                       <div className="rounded-lg bg-white p-2 border border-zinc-200/60 shadow-2xs">
-                        <span className="text-zinc-500 text-[10px]">Foydalanuvchilar</span>
+                        <span className="text-zinc-500 text-[10px]">👥 Foydalanuvchilar</span>
                         <p className="font-bold text-zinc-900 font-mono">{r.users} ta</p>
                       </div>
                       <div className="rounded-lg bg-white p-2 border border-zinc-200/60 shadow-2xs">
-                        <span className="text-zinc-500 text-[10px]">Dorixonalar</span>
+                        <span className="text-zinc-500 text-[10px]">🏪 Dorixonalar</span>
                         <p className="font-bold text-zinc-900 font-mono">{r.pharmacies} ta</p>
                       </div>
                       <div className="rounded-lg bg-white p-2 border border-zinc-200/60 shadow-2xs">
-                        <span className="text-zinc-500 text-[10px]">Mutaxassislar</span>
+                        <span className="text-zinc-500 text-[10px]">👨‍⚕️ Mutaxassislar</span>
                         <p className="font-bold text-zinc-900 font-mono">{r.specialists} ta</p>
                       </div>
                       <div className="rounded-lg bg-white p-2 border border-zinc-200/60 shadow-2xs">
-                        <span className="text-zinc-500 text-[10px]">Buyurtmalar</span>
+                        <span className="text-zinc-500 text-[10px]">🛒 Dori Buyurtmalari</span>
                         <p className="font-bold text-zinc-900 font-mono">{r.orders} ta</p>
+                      </div>
+                      <div className="rounded-lg bg-white p-2 border border-zinc-200/60 shadow-2xs">
+                        <span className="text-zinc-500 text-[10px]">📞 Chaqiruvlar</span>
+                        <p className="font-bold text-blue-700 font-mono">{r.calls || 0} ta</p>
+                      </div>
+                      <div className="rounded-lg bg-white p-2 border border-zinc-200/60 shadow-2xs">
+                        <span className="text-zinc-500 text-[10px]">💰 Savdo summasi</span>
+                        <p className="font-bold text-zinc-900 font-mono text-[11px] truncate">
+                          {r.totalSales ? `${r.totalSales.toLocaleString()} so'm` : "0 so'm"}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -2382,7 +2595,99 @@ export default function SuperAdminPage() {
         {/* 4. SOZLAMALAR & YETKAZIB BERISH TAB */}
         {activeTab === "settings" && (
           <form onSubmit={saveSettings} className="space-y-6">
-            {/* 4.1. Yetkazib Berish (Delivery) Sozlamalari */}
+            {/* 4.1. Qidiruv Radiusi va Qamrov Sozlamalari */}
+            <div className="rounded-2xl bg-white p-6 border border-zinc-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] space-y-4">
+              <div className="flex items-center justify-between border-b border-zinc-200 pb-3">
+                <div>
+                  <h2 className="text-base font-bold text-zinc-900 flex items-center gap-2">
+                    <MapPin size={18} className="text-zinc-900" /> 📍 Qidiruv Radiusi va Qamrov Sozlamalari
+                  </h2>
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Platformada dorixonalar, mutaxassislar va buyurtmalar qabul qilish uchun qamrov radiuslari (km). Hech qanday kod o&apos;zgartirishsiz boshqariladi.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-xl bg-zinc-50/80 p-4 border border-zinc-200/80 space-y-2">
+                  <label className="block text-xs font-bold text-zinc-800">
+                    Standart Qidiruv Radiusi
+                  </label>
+                  <p className="text-[11px] font-mono text-zinc-400">default_radius_km</p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={settingsValues["default_radius_km"] ?? "15"}
+                      onChange={(e) => setSettingsValues({ ...settingsValues, default_radius_km: e.target.value })}
+                      className="w-full rounded-xl bg-white px-3.5 py-2.5 text-sm text-zinc-900 font-mono font-bold border border-zinc-200 focus:outline-none focus:border-zinc-400 transition"
+                    />
+                    <span className="text-xs font-mono font-bold text-zinc-500">km</span>
+                  </div>
+                  <p className="text-[10px] text-zinc-500">Bosh sahifadagi umumiy qidiruv radiusi.</p>
+                </div>
+
+                <div className="rounded-xl bg-zinc-50/80 p-4 border border-zinc-200/80 space-y-2">
+                  <label className="block text-xs font-bold text-zinc-800">
+                    Dorixonalar Ko&apos;rinish Radiusi
+                  </label>
+                  <p className="text-[11px] font-mono text-zinc-400">pharmacy_radius_km</p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={settingsValues["pharmacy_radius_km"] ?? "15"}
+                      onChange={(e) => setSettingsValues({ ...settingsValues, pharmacy_radius_km: e.target.value })}
+                      className="w-full rounded-xl bg-white px-3.5 py-2.5 text-sm text-zinc-900 font-mono font-bold border border-zinc-200 focus:outline-none focus:border-zinc-400 transition"
+                    />
+                    <span className="text-xs font-mono font-bold text-zinc-500">km</span>
+                  </div>
+                  <p className="text-[10px] text-zinc-500">Fermerga dorixonalar ko&apos;rinadigan masofa.</p>
+                </div>
+
+                <div className="rounded-xl bg-zinc-50/80 p-4 border border-zinc-200/80 space-y-2">
+                  <label className="block text-xs font-bold text-zinc-800">
+                    Mutaxassislar Ko&apos;rinish Radiusi
+                  </label>
+                  <p className="text-[11px] font-mono text-zinc-400">specialist_radius_km</p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={settingsValues["specialist_radius_km"] ?? "25"}
+                      onChange={(e) => setSettingsValues({ ...settingsValues, specialist_radius_km: e.target.value })}
+                      className="w-full rounded-xl bg-white px-3.5 py-2.5 text-sm text-zinc-900 font-mono font-bold border border-zinc-200 focus:outline-none focus:border-zinc-400 transition"
+                    />
+                    <span className="text-xs font-mono font-bold text-zinc-500">km</span>
+                  </div>
+                  <p className="text-[10px] text-zinc-500">Agronom va veterinarlar ko&apos;rinadigan masofa.</p>
+                </div>
+
+                <div className="rounded-xl bg-zinc-50/80 p-4 border border-zinc-200/80 space-y-2">
+                  <label className="block text-xs font-bold text-zinc-800">
+                    Buyurtmalar Qabul Radiusi
+                  </label>
+                  <p className="text-[11px] font-mono text-zinc-400">order_max_radius_km</p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={settingsValues["order_max_radius_km"] ?? "50"}
+                      onChange={(e) => setSettingsValues({ ...settingsValues, order_max_radius_km: e.target.value })}
+                      className="w-full rounded-xl bg-white px-3.5 py-2.5 text-sm text-zinc-900 font-mono font-bold border border-zinc-200 focus:outline-none focus:border-zinc-400 transition"
+                    />
+                    <span className="text-xs font-mono font-bold text-zinc-500">km</span>
+                  </div>
+                  <p className="text-[10px] text-zinc-500">Buyurtma va chaqiruv qabul qilish maksimal radiusi.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* 4.2. Yetkazib Berish (Delivery) Sozlamalari */}
             <div className="rounded-2xl bg-white p-6 border border-zinc-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] space-y-4">
               <div className="flex items-center justify-between border-b border-zinc-200 pb-3">
                 <div>
@@ -2496,7 +2801,7 @@ export default function SuperAdminPage() {
               </div>
             </div>
 
-            {/* 4.2. Tizim Parametrlari va Botlar */}
+            {/* 4.3. Tizim Parametrlari va Botlar */}
             <div className="rounded-2xl bg-white p-6 border border-zinc-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
               <h2 className="text-base font-bold text-zinc-900 flex items-center gap-2 mb-2">
                 <Settings size={18} className="text-zinc-900" /> Tizim Parametrlari va Telegram Botlar Sozlamalari
@@ -2507,7 +2812,7 @@ export default function SuperAdminPage() {
 
               <div className="grid gap-6 sm:grid-cols-2">
                 {settingsList
-                  .filter((item) => !item.key.startsWith("delivery_"))
+                  .filter((item) => !item.key.startsWith("delivery_") && !item.key.endsWith("_radius_km") && item.key !== "default_radius_km")
                   .map((item) => (
                     <div key={item.key} className="rounded-xl bg-zinc-50/80 p-4 border border-zinc-200/80 space-y-2">
                       <label className="block text-xs font-bold text-zinc-800">
@@ -2515,31 +2820,15 @@ export default function SuperAdminPage() {
                       </label>
                       <p className="text-[11px] font-mono text-zinc-400">{item.key}</p>
 
-                      {item.key === "default_radius_km" ? (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            min={1}
-                            max={100}
-                            value={settingsValues[item.key] ?? "5"}
-                            onChange={(e) =>
-                              setSettingsValues({ ...settingsValues, [item.key]: e.target.value })
-                            }
-                            className="w-full rounded-xl bg-white px-3.5 py-2.5 text-sm text-zinc-900 font-mono font-bold border border-zinc-200 focus:outline-none focus:border-zinc-400 transition"
-                          />
-                          <span className="text-xs font-mono font-bold text-zinc-500 whitespace-nowrap">km</span>
-                        </div>
-                      ) : (
-                        <input
-                          type={item.secret ? "password" : "text"}
-                          value={settingsValues[item.key] ?? ""}
-                          onChange={(e) =>
-                            setSettingsValues({ ...settingsValues, [item.key]: e.target.value })
-                          }
-                          placeholder={item.preview || "Qiymatni kiriting..."}
-                          className="w-full rounded-xl bg-white px-3.5 py-2.5 text-xs text-zinc-900 font-mono border border-zinc-200 focus:outline-none focus:border-zinc-400 transition"
-                        />
-                      )}
+                      <input
+                        type={item.secret ? "password" : "text"}
+                        value={settingsValues[item.key] ?? ""}
+                        onChange={(e) =>
+                          setSettingsValues({ ...settingsValues, [item.key]: e.target.value })
+                        }
+                        placeholder={item.preview || "Qiymatni kiriting..."}
+                        className="w-full rounded-xl bg-white px-3.5 py-2.5 text-xs text-zinc-900 font-mono border border-zinc-200 focus:outline-none focus:border-zinc-400 transition"
+                      />
                     </div>
                   ))}
               </div>
