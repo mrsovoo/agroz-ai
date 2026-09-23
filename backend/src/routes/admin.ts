@@ -11,6 +11,7 @@ import {
   diagnoses,
   appSettings,
   adminSessions,
+  sessions,
 } from "../db/schema.js";
 import { sql, eq, desc, isNotNull, and, or, inArray } from "drizzle-orm";
 import {
@@ -1675,6 +1676,38 @@ router.get("/users", requireAdmin, async (req, res) => {
   } catch (err: any) {
     console.error("[admin/users error]:", err);
     res.status(500).json({ error: err.message || "Foydalanuvchilarni yuklashda xatolik" });
+  }
+});
+
+// DELETE /api/admin/users/:id
+router.delete("/users/:id", requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      return res.status(400).json({ error: "Noto'g'ri foydalanuvchi ID" });
+    }
+
+    const [user] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    if (!user) {
+      return res.status(404).json({ error: "Foydalanuvchi topilmadi" });
+    }
+
+    // 1. Sessiyalarni o'chirish
+    await db.delete(sessions).where(eq(sessions.userId, id));
+
+    // 2. Diagnostika natijalarini o'chirish
+    await db.delete(diagnoses).where(eq(diagnoses.userId, id));
+
+    // 3. Buyurtmalardagi userId ni null qilish (tarix saqlanib qolishi uchun)
+    await db.update(orders).set({ userId: null }).where(eq(orders.userId, id));
+
+    // 4. Foydalanuvchini o'chirish
+    await db.delete(users).where(eq(users.id, id));
+
+    res.json({ ok: true, message: "Foydalanuvchi profili o'chirildi" });
+  } catch (err: any) {
+    console.error("[admin delete user error]:", err);
+    res.status(500).json({ error: err.message || "Foydalanuvchini o'chirishda xatolik" });
   }
 });
 

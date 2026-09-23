@@ -667,6 +667,26 @@ export default function SuperAdminPage() {
     }
   }
 
+  async function handleDeleteUser(id: number) {
+    if (!confirm("Haqiqatan ham ushbu foydalanuvchi profilini butunlay o'chirmoqchimisiz?")) return;
+    setBusy(true);
+    try {
+      const res = await adminFetch(`/api/admin/users/${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.ok) {
+        setNotice({ kind: "ok", text: "🗑 Foydalanuvchi profili muvaffaqiyatli o'chirildi." });
+        setSelectedUserDetail(null);
+        setUsersList((prev) => prev.filter((u) => u.id !== id));
+      } else {
+        alert(data.error || "O'chirishda xatolik");
+      }
+    } catch {
+      alert("Server bilan bog'lanishda xatolik");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (me === null) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-[#fafafa] text-zinc-900">
@@ -3296,7 +3316,16 @@ export default function SuperAdminPage() {
               </div>
 
               {/* Modal Footer */}
-              <div className="border-t border-zinc-200 p-4 bg-zinc-50/80 flex items-center justify-end">
+              <div className="border-t border-zinc-200 p-4 bg-zinc-50/80 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => handleDeleteUser(selectedUserDetail.id)}
+                  disabled={busy}
+                  className="inline-flex items-center gap-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 px-4 py-2 text-xs font-bold transition active:scale-95"
+                >
+                  <Trash2 size={14} />
+                  <span>Profilni butunlay o&apos;chirish</span>
+                </button>
                 <button
                   onClick={() => setSelectedUserDetail(null)}
                   className="rounded-xl bg-zinc-900 hover:bg-zinc-800 px-5 py-2 text-xs font-bold text-white shadow-xs transition"
