@@ -37,7 +37,7 @@ export default function GlobalCartBar() {
   return (
     <aside
       aria-label="Savatdagi mahsulotlar"
-      className="pointer-events-none fixed inset-x-0 bottom-[68px] z-40 flex justify-center px-4 web:bottom-6 web:left-auto web:right-6 web:px-0"
+      className="pointer-events-none fixed inset-x-0 bottom-[calc(65px+max(10px,env(safe-area-inset-bottom)))] z-40 flex justify-center px-4 web:bottom-6 web:left-auto web:right-6 web:px-0"
     >
       <button
         onClick={() => openCart()}

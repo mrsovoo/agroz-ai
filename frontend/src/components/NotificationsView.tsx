@@ -32,22 +32,26 @@ export default function NotificationsView({ userRegion }: { userRegion?: string 
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [loading, setLoading] = useState(true);
+  const loadedItemsRef = useRef<AppNotification[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const loadData = async () => {
     setLoading(true);
     try {
       const items = await fetchRealAppNotifications(userRegion || "Toshkent");
+      loadedItemsRef.current = items;
       setNotifications(items);
       const readSet = getReadNotificationIds();
       setReadIds(readSet);
 
-      // Sahifaga kirganda 2 soniyadan so'ng yoki foydalanuvchi ko'rgach barchasini o'qilgan qilish
-      // Foydalanuvchi aytgan: "bildirishnomaga kirib qayta chiqib ketsa oqilgandek bosinda"
+      // Sahifaga kirganda qisqa vaqtdan so'ng barchasini o'qilgan qilish
+      // Foydalanuvchi talabi: "bildirishnomaga kirib qayta chiqib ketsa oqilgandek bosinda"
       setTimeout(() => {
-        markAllNotificationsRead(items);
-        setReadIds(getReadNotificationIds());
-      }, 1500);
+        if (items.length > 0) {
+          markAllNotificationsRead(items);
+          setReadIds(getReadNotificationIds());
+        }
+      }, 1000);
     } finally {
       setLoading(false);
     }
@@ -58,7 +62,13 @@ export default function NotificationsView({ userRegion }: { userRegion?: string 
     const unsub = subscribeToNotificationChanges(() => {
       setReadIds(getReadNotificationIds());
     });
-    return unsub;
+    return () => {
+      // Sahifadan chiqib ketganda barcha yuklangan xabarlarni avtomatik o'qilgan deb belgilash
+      if (loadedItemsRef.current.length > 0) {
+        markAllNotificationsRead(loadedItemsRef.current);
+      }
+      unsub();
+    };
   }, [userRegion]);
 
   // Foydalanuvchi pastga scroll qilganda ham darhol o'qilgan deb belgilash
