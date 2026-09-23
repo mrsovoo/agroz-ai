@@ -171,11 +171,40 @@ router.post("/telegram", async (req, res) => {
       return res.status(400).json({ error: "Telegram ID topilmadi" });
     }
 
+    const rawName = typeof body.name === "string" ? body.name.trim() : "";
+    const name =
+      rawName || [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ") || "Foydalanuvchi";
+    const phone = body.phone ? normalizePhone(body.phone) : null;
+    const region = typeof body.region === "string" ? body.region.trim() : null;
+
     let user = (await db.select().from(users).where(eq(users.telegramId, telegramId)).limit(1))[0];
     if (!user) {
-      const name = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ");
-      const created = await db.insert(users).values({ telegramId, name }).returning();
-      user = created[0];
+      if (phone) {
+        const byPhone = (await db.select().from(users).where(eq(users.phone, phone)).limit(1))[0];
+        if (byPhone) {
+          await db
+            .update(users)
+            .set({ telegramId, name, region: region || byPhone.region })
+            .where(eq(users.id, byPhone.id));
+          user = byPhone;
+        }
+      }
+      if (!user) {
+        const created = await db
+          .insert(users)
+          .values({ telegramId, name, phone, region })
+          .returning();
+        user = created[0];
+      }
+    } else {
+      const updateData: any = {};
+      if (name && name !== user.name) updateData.name = name;
+      if (region && region !== user.region) updateData.region = region;
+      if (phone && (!user.phone || phone !== user.phone)) updateData.phone = phone;
+      if (Object.keys(updateData).length > 0) {
+        await db.update(users).set(updateData).where(eq(users.id, user.id));
+        user = { ...user, ...updateData };
+      }
     }
 
     const sessionId = randomBytes(32).toString("hex");

@@ -94,6 +94,16 @@ export default function LoginPage() {
 
   // Mini App ichida avtomatik yoki 1 bosishda kirish
   async function telegramMiniAppLogin() {
+    if (!name.trim() || name.trim().length < 2) {
+      setError("Iltimos, ismingizni to'liq kiriting");
+      return;
+    }
+    const cleanDigits = normalize(phoneInput);
+    if (!cleanDigits || cleanDigits.length !== 9) {
+      setError("Iltimos, 9 xonali telefon raqamingizni kiriting (namuna: 90 123 45 67)");
+      return;
+    }
+
     setBusy(true);
     setError(null);
     try {
@@ -107,7 +117,8 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           initData: tg.initData,
-          name,
+          name: name.trim(),
+          phone: `+998${cleanDigits}`,
           region,
         }),
       });
@@ -358,7 +369,7 @@ export default function LoginPage() {
               {tgUser ? (
                 /* Telegram MiniApp ichida to'g'ridan-to'g'ri */
                 <div className="space-y-4">
-                  <div className="flex items-center gap-3 rounded-2xl bg-sky-50 p-4">
+                  <div className="flex items-center gap-3 rounded-2xl bg-sky-50 p-4 border border-sky-100">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-sky-500 text-lg font-black text-white shadow-xs">
                       {(tgUser.first_name || "T").slice(0, 1).toUpperCase()}
                     </div>
@@ -366,7 +377,39 @@ export default function LoginPage() {
                       <p className="font-bold text-slate-800">
                         {tgUser.first_name} {tgUser.last_name ?? ""}
                       </p>
-                      <p className="text-xs text-sky-600 font-medium">Telegram Mini App foydalanuvchisi</p>
+                      <p className="text-xs text-sky-600 font-medium">Telegram hisobingiz tasdiqlandi</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-widest text-[var(--brand-muted)]">
+                      <UserRound size={12} /> Ism va familiyangiz
+                    </label>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Ismingizni kiriting"
+                      className="ios-input"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-widest text-[var(--brand-muted)]">
+                      <Phone size={12} /> Telefon raqamingiz
+                    </label>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[14.5px] font-bold text-slate-400">
+                        +998
+                      </span>
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        value={phoneInput}
+                        onChange={(e) => setPhoneInput(normalize(e.target.value).slice(0, 9))}
+                        placeholder="90 123 45 67"
+                        className="ios-input pl-16 font-semibold"
+                      />
                     </div>
                   </div>
 
@@ -393,7 +436,7 @@ export default function LoginPage() {
                     style={{ background: "#2AABEE" }}
                   >
                     {busy ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-                    <span>{tgUser.first_name || "Telegram"} hisobi bilan kirish</span>
+                    <span>Tasdiqlash va Kirish</span>
                   </button>
                 </div>
               ) : waitingBot ? (
@@ -442,11 +485,11 @@ export default function LoginPage() {
                   <div className="rounded-2xl bg-sky-50 p-4 border border-sky-100">
                     <div className="flex items-center gap-2 text-sky-800 font-bold text-[14px]">
                       <Zap size={16} className="text-sky-500" />
-                      <span>Parol yoki usernamesiz tezkor kirish</span>
+                      <span>Telegram orqali xavfsiz tasdiqlash</span>
                     </div>
                     <p className="mt-1.5 text-[12.5px] leading-relaxed text-sky-900/80">
-                      Quyidagi tugmani bosing — botimiz ochiladi va <b>«Start»</b> bosishingiz bilan
-                      profilingiz saytda avtomatik ochiladi.
+                      Quyidagi tugmani bosing — botimiz ochiladi va <b>«Start»</b> hamda <b>«📱 Telefon raqamni yuborish»</b> tugmasini bosishingiz bilan
+                      profilingiz saytda avtomatik tasdiqlanib ochiladi.
                     </p>
                   </div>
 

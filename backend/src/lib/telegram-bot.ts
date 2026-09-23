@@ -16,6 +16,13 @@ export type InlineKeyboard = {
   inline_keyboard: { text: string; url?: string; web_app?: { url: string }; callback_data?: string }[][];
 };
 
+export type ReplyKeyboard = {
+  keyboard: { text: string; request_contact?: boolean; request_location?: boolean }[][];
+  resize_keyboard?: boolean;
+  one_time_keyboard?: boolean;
+  remove_keyboard?: boolean;
+};
+
 /** Token: DB (admin panel) > env. */
 export async function resolveBotToken(): Promise<string | null> {
   return telegramBotToken();
@@ -196,10 +203,18 @@ export function errorMessage(): string {
   ].join("\n");
 }
 
+export function contactRequestKeyboard(): ReplyKeyboard {
+  return {
+    keyboard: [[{ text: "📱 Telefon raqamni yuborish", request_contact: true }]],
+    resize_keyboard: true,
+    one_time_keyboard: true,
+  };
+}
+
 export async function sendMessage(
   chatId: number,
   text: string,
-  options?: { keyboard?: InlineKeyboard },
+  options?: { keyboard?: InlineKeyboard | ReplyKeyboard | { remove_keyboard: true } },
 ): Promise<boolean> {
   const keyboard = options?.keyboard;
   const result = await callBot<{ message_id?: number }>("sendMessage", {
