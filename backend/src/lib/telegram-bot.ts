@@ -13,7 +13,7 @@ import { telegramBotToken } from "@/lib/settings";
 const API_BASE = "https://api.telegram.org";
 
 export type InlineKeyboard = {
-  inline_keyboard: { text: string; url?: string; web_app?: { url: string } }[][];
+  inline_keyboard: { text: string; url?: string; web_app?: { url: string }; callback_data?: string }[][];
 };
 
 /** Token: DB (admin panel) > env. */

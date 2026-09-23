@@ -4,13 +4,29 @@ import { clampRadiusKm, parseCoords } from "../lib/geo.js";
 import { rateSpecialist } from "../lib/specialists.js";
 import crypto from "node:crypto";
 import { db } from "../db/index.js";
-import { specialists, specialistCalls } from "../db/schema.js";
-import { eq } from "drizzle-orm";
+import { specialists, specialistCalls, sessions, users } from "../db/schema.js";
+import { eq, sql } from "drizzle-orm";
 import { sendAuthMessage, isAuthBotConfigured } from "../lib/auth-bot.js";
 import { escapeHtml } from "../lib/tg-escape.js";
 import { pharmacyRadiusKmSetting, specialistRadiusKmSetting } from "../lib/settings.js";
 
 const router = Router();
+
+async function getUserFromReq(req: any) {
+  const authHeader = req.headers.authorization;
+  const cookieSession = req.headers.cookie
+    ?.split(";")
+    .find((c: string) => c.trim().startsWith("agroz_session="))
+    ?.split("=")[1];
+  const sessionId = authHeader?.replace("Bearer ", "") || cookieSession;
+  if (!sessionId) return null;
+
+  const s = (await db.select().from(sessions).where(eq(sessions.id, sessionId)).limit(1))[0];
+  if (!s) return null;
+
+  const u = (await db.select().from(users).where(eq(users.id, s.userId)).limit(1))[0];
+  return u ?? null;
+}
 
 // GET /api/specialists
 router.get("/", async (req, res) => {
@@ -124,6 +140,12 @@ router.post("/call", async (req, res) => {
       })
       .returning();
 
+    const user = await getUserFromReq(req);
+    if (user && !user.phone) {
+      await db.update(users).set({ phone: customerPhone.trim() }).where(eq(users.id, user.id));
+      user.phone = customerPhone.trim();
+    }
+
     // Masofani hisoblash (agar mijoz va mutaxassis koordinatasi bo'lsa)
     let distanceText = "";
     if (userLat && userLng && spec.lat && spec.lng) {
@@ -144,50 +166,67 @@ router.post("/call", async (req, res) => {
         distanceText ? `📏 <b>Masofa:</b> ${distanceText}` : "",
         `📝 <b>Nima uchun / Izoh:</b> <i>${escapeHtml(problem.trim())}</i>`,
         "",
-        `⚠️ <b>DIQQAT:</b> Mijoz javobingizni kutmoqda. Iltimos, buyurtmani qabul qiling va mijoz bilan bog'laning!`,
+        `⚠️ <b>DIQQAT:</b> Mijoz javobingizni kutmoqda. Iltimos, chaqiruvni qabul qiling va mijoz bilan bog'laning!`,
       ]
         .filter(Boolean)
         .join("\n");
 
-      const rows: any[] = [];
-      if (cleanPhone) {
-        rows.push([{ text: `📞 Mijozga qo'ng'iroq`, url: `tel:${cleanPhone}` }]);
-      }
-      rows.push([
-        { text: "✅ Qabul qilish", callback_data: `sc:accept:${call.id}` },
-        { text: "❌ O'tkazib yuborish / Rad etish", callback_data: `sc:reject:${call.id}` },
-      ]);
+      const rows: any[] = [
+        [
+          { text: "✅ Qabul qilish", callback_data: `sc:accept:${call.id}` },
+          { text: "❌ O'tkazib yuborish / Rad etish", callback_data: `sc:reject:${call.id}` },
+        ],
+      ];
 
+      let sentToSpec = false;
       if (await isAuthBotConfigured()) {
         try {
-          await sendAuthMessage(spec.telegramId, msg, { inline: { inline_keyboard: rows } });
+          sentToSpec = await sendAuthMessage(Number(spec.telegramId), msg, { inline: { inline_keyboard: rows } });
         } catch (err) {
-          console.error("[specialists/call] Telegram xabar yuborishda xato:", err);
+          console.error("[specialists/call] Auth bot xabar yuborishda xato:", err);
+        }
+      }
+
+      // Fallback: Agar auth bot orqali bormasa, asosiy bot orqali yuborish
+      if (!sentToSpec) {
+        try {
+          const { sendMessage, isBotConfigured } = await import("../lib/telegram-bot.js");
+          if (await isBotConfigured()) {
+            await sendMessage(Number(spec.telegramId), msg, { keyboard: { inline_keyboard: rows } });
+          }
+        } catch (err) {
+          console.error("[specialists/call] Asosiy bot fallback xatosi:", err);
         }
       }
     }
 
     // Mijozga Agroz AI bot (@agrozai_bot) orqali avtomatik bildirishnoma
     try {
-      const { users } = await import("../db/schema.js");
-      const { sql } = await import("drizzle-orm");
       const cleanCustomerDigits = customerPhone.replace(/\D/g, "").slice(-9);
+      let customerTelegramId = user?.telegramId ?? null;
 
-      const [userRow] = await db
-        .select({ telegramId: users.telegramId })
-        .from(users)
-        .where(sql`RIGHT(REPLACE(${users.phone}, ' ', ''), 9) = ${cleanCustomerDigits}`)
-        .limit(1);
+      if (!customerTelegramId && cleanCustomerDigits) {
+        const [userRow] = await db
+          .select({ telegramId: users.telegramId })
+          .from(users)
+          .where(sql`RIGHT(REPLACE(${users.phone}, ' ', ''), 9) = ${cleanCustomerDigits}`)
+          .limit(1);
+        if (userRow?.telegramId) {
+          customerTelegramId = userRow.telegramId;
+        }
+      }
 
-      if (userRow?.telegramId) {
-        const { sendMessage } = await import("../lib/telegram-bot.js");
-        await sendMessage(
-          userRow.telegramId,
-          `👨‍⚕️ <b>Mutaxassis chaqiruvi yuborildi! (#${call.id})</b>\n\n` +
-            `<b>Mutaxassis:</b> ${escapeHtml(spec.name)} (${escapeHtml(spec.specialty || "Mutaxassis")})\n` +
-            `<b>Holat:</b> ⏳ <i>Mutaxassis javobi kutilmoqda...</i>\n\n` +
-            `Mutaxassis chaqiruvni qabul qilishi bilan sizga darhol xabar yetkaziladi!`,
-        );
+      if (customerTelegramId) {
+        const { sendMessage, isBotConfigured } = await import("../lib/telegram-bot.js");
+        if (await isBotConfigured()) {
+          await sendMessage(
+            Number(customerTelegramId),
+            `👨‍⚕️ <b>Mutaxassis chaqiruvi yuborildi! (#${call.id})</b>\n\n` +
+              `<b>Mutaxassis:</b> ${escapeHtml(spec.name)} (${escapeHtml(spec.specialty || "Mutaxassis")})\n` +
+              `<b>Holat:</b> ⏳ <i>Mutaxassis javobi kutilmoqda...</i>\n\n` +
+              `Mutaxassis chaqiruvni qabul qilishi bilan sizga darhol xabar yetkaziladi!`,
+          );
+        }
       }
     } catch (e) {
       console.error("[specialists/call] Customer notify error:", e);

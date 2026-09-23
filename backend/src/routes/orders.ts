@@ -3,11 +3,27 @@ import { createOrder, rateOrder, type OrderInputItem } from "../lib/orders.js";
 import { normalizePhone, cleanText } from "../lib/validate.js";
 import { notifyPharmacyNewOrder, notifyPharmacyStockAlert } from "../lib/orders-bot.js";
 import { db } from "../db/index.js";
-import { orders, orderItems, specialists } from "../db/schema.js";
+import { orders, orderItems, specialists, sessions, users } from "../db/schema.js";
 import { eq, desc, and, or, sql } from "drizzle-orm";
 import { getDeliverySettings } from "../lib/settings.js";
 
 const router = Router();
+
+async function getUserFromReq(req: any) {
+  const authHeader = req.headers.authorization;
+  const cookieSession = req.headers.cookie
+    ?.split(";")
+    .find((c: string) => c.trim().startsWith("agroz_session="))
+    ?.split("=")[1];
+  const sessionId = authHeader?.replace("Bearer ", "") || cookieSession;
+  if (!sessionId) return null;
+
+  const s = (await db.select().from(sessions).where(eq(sessions.id, sessionId)).limit(1))[0];
+  if (!s) return null;
+
+  const u = (await db.select().from(users).where(eq(users.id, s.userId)).limit(1))[0];
+  return u ?? null;
+}
 
 // GET /api/orders/delivery-config
 router.get("/delivery-config", async (_req, res) => {
@@ -75,8 +91,28 @@ router.post("/", async (req, res) => {
       combinedNote = combinedNote ? `${combinedNote}\n${deliveryStatusNote}` : deliveryStatusNote;
     }
 
+    const user = await getUserFromReq(req);
+    let userId = user?.id ?? null;
+    const cleanCustomerDigits = phone.replace(/\D/g, "").slice(-9);
+
+    if (!userId) {
+      const [existingUser] = await db
+        .select({ id: users.id, telegramId: users.telegramId, phone: users.phone })
+        .from(users)
+        .where(sql`RIGHT(REPLACE(${users.phone}, ' ', ''), 9) = ${cleanCustomerDigits}`)
+        .limit(1);
+      if (existingUser) {
+        userId = existingUser.id;
+      }
+    }
+
+    if (user && !user.phone) {
+      await db.update(users).set({ phone }).where(eq(users.id, user.id));
+      user.phone = phone;
+    }
+
     const result = await createOrder({
-      userId: null,
+      userId,
       pharmacySpecialistId,
       customerName: name,
       customerPhone: phone,
@@ -90,9 +126,9 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: result.error });
     }
 
-    // Telegram orqali dorixonaga xabar
+    // Telegram orqali dorixonaga xabar (@agroz_auth_bot)
     if (result.pharmacy.telegramId) {
-      notifyPharmacyNewOrder(result.pharmacy.telegramId, {
+      notifyPharmacyNewOrder(Number(result.pharmacy.telegramId), {
         id: result.orderId,
         customerName: name,
         customerPhone: phone,
@@ -106,7 +142,7 @@ router.post("/", async (req, res) => {
       if (result.stockAlerts && result.stockAlerts.length > 0) {
         for (const alert of result.stockAlerts) {
           notifyPharmacyStockAlert(
-            result.pharmacy.telegramId,
+            Number(result.pharmacy.telegramId),
             alert.medName,
             alert.remainingStock,
             alert.stockUnit,
@@ -119,40 +155,45 @@ router.post("/", async (req, res) => {
 
     // Xaridorga Agroz AI bot (@agrozai_bot) orqali avtomatik kvitansiya xabarnomasi
     try {
-      const { users } = await import("../db/schema.js");
-      const { sql } = await import("drizzle-orm");
-      const cleanCustomerDigits = phone.replace(/\D/g, "").slice(-9);
+      let customerTelegramId = user?.telegramId ?? null;
 
-      const [userRow] = await db
-        .select({ telegramId: users.telegramId })
-        .from(users)
-        .where(sql`RIGHT(REPLACE(${users.phone}, ' ', ''), 9) = ${cleanCustomerDigits}`)
-        .limit(1);
+      if (!customerTelegramId && cleanCustomerDigits) {
+        const [userRow] = await db
+          .select({ telegramId: users.telegramId })
+          .from(users)
+          .where(sql`RIGHT(REPLACE(${users.phone}, ' ', ''), 9) = ${cleanCustomerDigits}`)
+          .limit(1);
+        if (userRow?.telegramId) {
+          customerTelegramId = userRow.telegramId;
+        }
+      }
 
-      if (userRow?.telegramId) {
-        const { sendMessage } = await import("../lib/telegram-bot.js");
-        const itemsList = result.items
-          .map((it: any) => `• ${it.name} — ${it.qty} dona (${(it.price || 0).toLocaleString()} so'm)`)
-          .join("\n");
+      if (customerTelegramId) {
+        const { sendMessage, isBotConfigured } = await import("../lib/telegram-bot.js");
+        if (await isBotConfigured()) {
+          const itemsList = result.items
+            .map((it: any) => `• ${it.name} — ${it.qty} dona (${(it.price || 0).toLocaleString()} so'm)`)
+            .join("\n");
 
-        const msgLines = [
-          `🧾 <b>BUYURTMANGIZ QABUL QILINDI! (#${result.orderId})</b>`,
-          "",
-          `🏪 <b>Dorixona:</b> ${result.pharmacy.name}`,
-          `📞 <b>Dorixona aloqa:</b> ${result.pharmacy.phone}`,
-          "",
-          `📦 <b>Buyurtma tarkibi:</b>`,
-          itemsList,
-          "",
-          `💰 <b>Jami summa:</b> ${result.total.toLocaleString()} so'm`,
-          deliveryType === "delivery"
-            ? `🚚 <b>Yetkazib berish:</b> Kuryer orqali (${customerAddress || "Ko'rsatilgan manzil"})`
-            : `🏬 <b>Olib ketish:</b> Dorixonadan o'zingiz olib ketasiz`,
-          "",
-          `<i>Dorixona mutaxassisi tez orada siz bilan bog'lanadi!</i>`,
-        ];
+          const msgLines = [
+            `🧾 <b>BUYURTMANGIZ QABUL QILINDI! (#${result.orderId})</b>`,
+            "",
+            `🏪 <b>Dorixona:</b> ${result.pharmacy.name}`,
+            `📞 <b>Dorixona aloqa:</b> ${result.pharmacy.phone}`,
+            "",
+            `📦 <b>Buyurtma tarkibi:</b>`,
+            itemsList,
+            "",
+            `💰 <b>Jami summa:</b> ${result.total.toLocaleString()} so'm`,
+            deliveryType === "delivery"
+              ? `🚚 <b>Yetkazib berish:</b> Kuryer orqali (${customerAddress || "Ko'rsatilgan manzil"})`
+              : `🏬 <b>Olib ketish:</b> Dorixonadan o'zingiz olib ketasiz`,
+            "",
+            `<i>Dorixona tez orada buyurtmangizni tayyorlaydi va siz bilan bog'lanadi!</i>`,
+          ];
 
-        await sendMessage(userRow.telegramId, msgLines.join("\n"));
+          await sendMessage(Number(customerTelegramId), msgLines.join("\n"));
+        }
       }
     } catch (e) {
       console.error("[orders] Customer telegram notify error:", e);

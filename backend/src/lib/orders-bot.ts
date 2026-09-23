@@ -83,10 +83,7 @@ export function orderActionsKeyboard(order: OrderWithItems): InlineKeyboard {
   const rows: InlineKeyboard["inline_keyboard"] = [];
   const cleanPhone = (order.customerPhone || "").replace(/[^\d+]/g, "");
 
-  // 1. Mijozga to'g'ridan-to'g'ri qo'ng'iroq qilish tugmasi
-  if (cleanPhone) {
-    rows.push([{ text: "📞 Mijozga qo'ng'iroq qilish", url: `tel:${cleanPhone}` }]);
-  }
+
 
   // 2. Buyurtma holati tugmalari
   if (order.status === "yangi") {

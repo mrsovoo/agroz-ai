@@ -280,3 +280,6 @@ export const specialistCalls = pgTable("specialist_calls", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+import { advertisements } from "./advertisements.js";
+export { advertisements };

@@ -322,9 +322,6 @@ async function showSpecialistCalls(chatId: number, profileId: number): Promise<v
   if (activeCall) {
     const cleanPhone = (activeCall.customerPhone || "").replace(/[^\d+]/g, "");
     const rows: any[] = [];
-    if (cleanPhone) {
-      rows.push([{ text: `📞 Mijozga qo'ng'iroq`, url: `tel:${cleanPhone}` }]);
-    }
     if (activeCall.status === "yangi") {
       rows.push([
         { text: "✅ Qabul qilish", callback_data: `sc:accept:${activeCall.id}` },
@@ -1366,12 +1363,6 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
             .join("\n");
 
           const specRows: any[] = [];
-          if (cleanCustomerPhone) {
-            specRows.push([{ text: `📞 Mijozga qo'ng'iroq`, url: `tel:${cleanCustomerPhone}` }]);
-          }
-          if (cleanPharmacyPhone) {
-            specRows.push([{ text: `📞 Dorixonaga qo'ng'iroq`, url: `tel:${cleanPharmacyPhone}` }]);
-          }
           specRows.push([
             { text: "✅ Qabul qilish", callback_data: `sc:accept:${createdCall.id}` },
             { text: "❌ Bekor qilish", callback_data: `sc:reject:${createdCall.id}` },
@@ -1397,9 +1388,6 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
         ].join("\n");
 
         const confRows: any[] = [];
-        if (cleanSpecPhone) {
-          confRows.push([{ text: `📞 Mutaxassisga qo'ng'iroq (${spec.phone})`, url: `tel:${cleanSpecPhone}` }]);
-        }
         confRows.push([{ text: "🔙 Buyurtmaga qaytish", callback_data: `o:view:${order.id}` }]);
 
         await sendAuthMessage(chatId, confirmMsg, { inline: { inline_keyboard: confRows } });
@@ -1561,9 +1549,6 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
 
         const cleanCustomerPhone = (callItem.customerPhone || "").replace(/[^\d+]/g, "");
         const rows: any[] = [];
-        if (cleanCustomerPhone) {
-          rows.push([{ text: `📞 Mijozga qo'ng'iroq qilish`, url: `tel:${cleanCustomerPhone}` }]);
-        }
         rows.push([{ text: "🏁 Ishni yakunlash (Bajarildi)", callback_data: `sc:done:${callId}` }]);
 
         await sendAuthMessage(

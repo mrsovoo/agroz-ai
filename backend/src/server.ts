@@ -15,6 +15,7 @@ import authRouter from "./routes/auth.js";
 import profileRouter from "./routes/profile.js";
 import telegramRouter from "./routes/telegram.js";
 import adminRouter from "./routes/admin.js";
+import advertisementsRouter from "./routes/advertisements.js";
 
 import { ensureSeed } from "./lib/seed.js";
 
@@ -71,6 +72,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/profile", profileRouter);
 app.use("/api/telegram", telegramRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/advertisements", advertisementsRouter);
 
 // 404 Handler
 app.use((_req, res) => {

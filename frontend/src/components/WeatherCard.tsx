@@ -136,20 +136,7 @@ export default function WeatherCard({
     }
   }, [showRegion]);
 
-  // Purkash sharoitini hisoblash
-  const sprayCondition = (() => {
-    if (!w) return null;
-    if (w.rain > 0.1) {
-      return { status: "bad", label: "Purkash tavsiya etilmaydi (yog'in bor)" };
-    }
-    if (w.wind >= 5) {
-      return { status: "bad", label: `Purkash mumkin emas (shamol ${w.wind} m/s)` };
-    }
-    if (w.wind >= 3.5 || w.temp >= 33) {
-      return { status: "fair", label: "Ehtiyotkorlik bilan (shamol o'rtacha)" };
-    }
-    return { status: "great", label: "Dori purkashga a'lo sharoit" };
-  })();
+
 
   // Real parametrlar asosida "Diqqat {manzil}" ogohlantirishini tuzish
   const advisory = (() => {
@@ -257,20 +244,7 @@ export default function WeatherCard({
               <Sun size={22} strokeWidth={2.2} />
             </div>
 
-            {/* Purkash indeksi nishoni */}
-            {sprayCondition && (
-              <span
-                className={`rounded-full px-2.5 py-1 text-[11px] font-extrabold shadow-2xs ${
-                  sprayCondition.status === "great"
-                    ? "bg-emerald-800/80 text-emerald-100 border border-emerald-400/40"
-                    : sprayCondition.status === "fair"
-                      ? "bg-amber-800/80 text-amber-100 border border-amber-400/40"
-                      : "bg-red-800/80 text-red-100 border border-red-400/40"
-                }`}
-              >
-                {sprayCondition.label}
-              </span>
-            )}
+
           </div>
         </div>
 

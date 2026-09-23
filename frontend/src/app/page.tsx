@@ -2,6 +2,7 @@ import Link from "next/link";
 import WeatherCard from "@/components/WeatherCard";
 import NotificationBell from "@/components/NotificationBell";
 import CartButton from "@/components/CartButton";
+import AdCarousel from "@/components/AdCarousel";
 import HomeMedicinesShowcase, { type ShowcaseMedicine } from "@/components/HomeMedicinesShowcase";
 import { getCurrentUser } from "@/lib/session";
 import { apiUrl } from "@/lib/api-config";
@@ -94,6 +95,11 @@ export default async function HomePage() {
         <div className="mt-5 web:mt-0">
           <WeatherCard />
         </div>
+      </div>
+
+      {/* Reklama karuseli */}
+      <div className="mt-5">
+        <AdCarousel />
       </div>
 
       {/* TO'LIQ DORILAR VITRINASI — faqat real API ma'lumotlari */}

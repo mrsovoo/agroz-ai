@@ -8,7 +8,11 @@ const router = Router();
 
 async function getUserFromReq(req: any) {
   const authHeader = req.headers.authorization;
-  const sessionId = authHeader?.replace("Bearer ", "") || req.cookies?.agroz_session;
+  const cookieSession = req.headers.cookie
+    ?.split(";")
+    .find((c: string) => c.trim().startsWith("agroz_session="))
+    ?.split("=")[1];
+  const sessionId = authHeader?.replace("Bearer ", "") || req.cookies?.agroz_session || cookieSession;
   if (!sessionId) return null;
 
   const s = (await db.select().from(sessions).where(eq(sessions.id, sessionId)).limit(1))[0];
@@ -93,27 +97,67 @@ router.get("/activity", async (req, res) => {
   try {
     const user = await getUserFromReq(req);
     const phoneQuery = (req.query.phone as string)?.trim();
-    const targetPhone = user?.phone || phoneQuery;
-
-    if (!user && !targetPhone) {
-      return res.status(401).json({ error: "Foydalanuvchi aniqlanmadi" });
-    }
+    let targetPhone = user?.phone || phoneQuery || "";
 
     const { orders, orderItems, specialistCalls, specialists } = await import("../db/schema.js");
-    const { or, sql } = await import("drizzle-orm");
+    const { or, and, sql } = await import("drizzle-orm");
+
+    // Agar user bor lekin telefoni yo'q bo'lsa, mutaxassislar yoki buyurtmalardan telefonini aniqlaymiz
+    if (user && !targetPhone && user.telegramId) {
+      const [spec] = await db
+        .select({ phone: specialists.phone })
+        .from(specialists)
+        .where(eq(specialists.telegramId, user.telegramId))
+        .limit(1);
+      if (spec?.phone) {
+        targetPhone = spec.phone;
+        await db.update(users).set({ phone: spec.phone }).where(eq(users.id, user.id));
+      }
+    }
 
     // Telefon raqamdan faqat oxirgi 9 ta raqamni olish
-    const cleanDigits = targetPhone ? targetPhone.replace(/\D/g, "").slice(-9) : "";
+    let cleanDigits = targetPhone ? targetPhone.replace(/\D/g, "").slice(-9) : "";
+
+    // Agar hali ham cleanDigits bo'lmasa lekin user.id bo'lsa, user buyurtmalaridan oxirgi telefonni olamiz
+    if (!cleanDigits && user?.id) {
+      const [latestOrder] = await db
+        .select({ customerPhone: orders.customerPhone })
+        .from(orders)
+        .where(eq(orders.userId, user.id))
+        .orderBy(desc(orders.id))
+        .limit(1);
+      if (latestOrder?.customerPhone) {
+        cleanDigits = latestOrder.customerPhone.replace(/\D/g, "").slice(-9);
+        await db.update(users).set({ phone: latestOrder.customerPhone }).where(eq(users.id, user.id));
+      }
+    }
+
+    // Foydalanuvchi buyurtmalarini uning hisobiga (userId) bog'lab qo'yish
+    if (user?.id && cleanDigits) {
+      await db
+        .update(orders)
+        .set({ userId: user.id })
+        .where(
+          and(
+            sql`${orders.userId} IS NULL`,
+            sql`RIGHT(REPLACE(${orders.customerPhone}, ' ', ''), 9) = ${cleanDigits}`
+          )
+        );
+    }
+
+    if (!user && !cleanDigits) {
+      return res.json({ ok: true, orders: [], specialistCalls: [] });
+    }
 
     // 1. Buyurtmalarni olish
     let userOrders: any[] = [];
-    if (user?.id || cleanDigits) {
-      const orderConditions = [];
-      if (user?.id) orderConditions.push(eq(orders.userId, user.id));
-      if (cleanDigits) {
-        orderConditions.push(sql`RIGHT(REPLACE(${orders.customerPhone}, ' ', ''), 9) = ${cleanDigits}`);
-      }
+    const orderConditions = [];
+    if (user?.id) orderConditions.push(eq(orders.userId, user.id));
+    if (cleanDigits) {
+      orderConditions.push(sql`RIGHT(REPLACE(${orders.customerPhone}, ' ', ''), 9) = ${cleanDigits}`);
+    }
 
+    if (orderConditions.length > 0) {
       const rawOrders = await db
         .select()
         .from(orders)
