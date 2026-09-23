@@ -292,36 +292,7 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
         </p>
       )}
 
-      {/* Faol chaqiruvlar bannerni ko'rsatish (Yakunlash faqat mutaxassis botida) */}
-      {calls.filter((c) => c.status === "pending").length > 0 && (
-        <div className="mt-3 space-y-2">
-          {calls
-            .filter((c) => c.status === "pending")
-            .map((c) => (
-              <div
-                key={c.id}
-                className="flex items-center justify-between rounded-2xl bg-amber-50 p-3.5 border border-amber-200"
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500 text-white shrink-0">
-                    <Clock size={16} className="animate-pulse" />
-                  </span>
-                  <div>
-                    <p className="text-[13px] font-bold text-amber-950">
-                      Chaqiruv yuborildi: {c.specialistName}
-                    </p>
-                    <p className="text-[11.5px] text-amber-800 font-medium">
-                      Mutaxassis javobi kutilmoqda. Xizmat mutaxassis botida yakunlanadi.
-                    </p>
-                  </div>
-                </div>
-                <span className="rounded-xl bg-amber-200/80 px-2.5 py-1 text-[11px] font-bold text-amber-900 shrink-0">
-                  Kutilmoqda
-                </span>
-              </div>
-            ))}
-        </div>
-      )}
+
 
       {/* Mutaxassis xizmati yakunlangan va hali baholanmagan chaqiruvlar */}
       {calls.filter((c) => c.status === "completed" && !c.stars).length > 0 && (
@@ -445,9 +416,6 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
           {visible.map((s) => {
             const isPharmacy = s.role === "pharmacy";
             const inRange = !s.locked;
-            const activeCall = calls.find(
-              (c) => c.specialistId === s.id && c.status === "pending",
-            );
             return (
               <li
                 key={s.id}
@@ -611,17 +579,7 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
                 {/* Mutaxassisni chaqirish yoki chaqiruv holati (Yakunlash faqat mutaxassis botida) */}
                 {!isPharmacy && (
                   <div className="mt-2.5">
-                    {activeCall ? (
-                      <div className="flex items-center justify-between rounded-2xl bg-amber-50 p-3 border border-amber-200">
-                        <div className="flex items-center gap-2 text-[12.5px] font-bold text-amber-900">
-                          <Clock size={15} className="shrink-0 animate-pulse text-amber-600" />
-                          <span>Mutaxassis javobi kutilmoqda...</span>
-                        </div>
-                        <span className="rounded-lg bg-amber-200/80 px-2 py-0.5 text-[11px] font-bold text-amber-900">
-                          Jarayonda
-                        </span>
-                      </div>
-                    ) : s.isBusy ? (
+                    {s.isBusy ? (
                       <div
                         className="flex w-full items-center justify-center gap-1.5 rounded-2xl bg-neutral-100 py-3 text-[13px] font-bold text-neutral-400 border border-neutral-200 cursor-not-allowed select-none"
                         title="Mutaxassis hozir boshqa chaqiruvni bajarmoqda"
