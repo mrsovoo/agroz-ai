@@ -12,7 +12,7 @@ import {
   appSettings,
   adminSessions,
 } from "../db/schema.js";
-import { sql, eq, desc, isNotNull, and } from "drizzle-orm";
+import { sql, eq, desc, isNotNull, and, or, inArray } from "drizzle-orm";
 import {
   adminEnabled,
   adminLogin,
@@ -586,7 +586,7 @@ function getSettingLabel(key: string): string {
     case SETTING_KEYS.openaiApiKey:
       return "AI API kaliti (Google Gemini yoki OpenAI)";
     case SETTING_KEYS.aiModel:
-      return "Tashxis AI modeli (gemini-2.5-flash / gemini-3.8-flash)";
+      return "Agro AI modeli (gemini-2.5-flash / gemini-3.8-flash)";
     case SETTING_KEYS.adminUsername:
       return "Admin login (username)";
     case SETTING_KEYS.adminPassword:
@@ -915,6 +915,239 @@ router.post("/specialist-calls/:id/status", requireAdmin, async (req, res) => {
     await db.update(specialistCalls).set({ status, updatedAt: new Date() }).where(eq(specialistCalls.id, callId));
     res.json({ ok: true });
   } catch (err: any) {
+    res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
+
+// -------------------------------------------------------------
+// 12. SUPER ADMIN ANALYTICS & STATS (Foydalanuvchilar, Kasalliklar va Dorilar)
+// -------------------------------------------------------------
+router.get("/analytics", async (_req, res) => {
+  try {
+    // 1. Foydalanuvchilar, agronomlar, veterinarlar va dorixonalar sonlari
+    const [
+      uCount,
+      uTgCount,
+      agronomistsCount,
+      veterinariansCount,
+      pharmaciesCount,
+      totalSpecialistsCount,
+      busyCount,
+    ] = await Promise.all([
+      db.select({ count: sql<number>`count(*)::int` }).from(users),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(users)
+        .where(isNotNull(users.telegramId)),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(specialists)
+        .where(
+          and(
+            eq(specialists.role, "specialist"),
+            or(eq(specialists.helpsWith, "crop"), eq(specialists.helpsWith, "both")),
+          ),
+        ),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(specialists)
+        .where(
+          and(
+            eq(specialists.role, "specialist"),
+            or(eq(specialists.helpsWith, "animal"), eq(specialists.helpsWith, "both")),
+          ),
+        ),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(specialists)
+        .where(eq(specialists.role, "pharmacy")),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(specialists)
+        .where(eq(specialists.role, "specialist")),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(specialists)
+        .where(eq(specialists.isBusy, true)),
+    ]);
+
+    // 2. Chaqiruvlar tahlili: Hayvonlar va Ekinlar bo'yicha eng ko'p uchrayotgan kasalliklar
+    const allCalls = await db
+      .select({
+        id: specialistCalls.id,
+        problem: specialistCalls.problem,
+        helpsWith: specialists.helpsWith,
+        specialty: specialists.specialty,
+        createdAt: specialistCalls.createdAt,
+      })
+      .from(specialistCalls)
+      .leftJoin(specialists, eq(specialists.id, specialistCalls.specialistId));
+
+    // Hayvonlar kasalliklari / muammolari lug'ati va hisobi
+    const ANIMAL_DISEASE_KEYWORDS = [
+      { key: "oqsoqlik", label: "Oqsoqlik va tuyoq kasalligi (Nekrobakterioz)", icon: "🐄" },
+      { key: "mastit", label: "Yelin shamollashi (Mastit)", icon: "🥛" },
+      { key: "qorason", label: "Qorason (Emkar)", icon: "⚠️" },
+      { key: "brutsell", label: "Brutsellyoz", icon: "🔬" },
+      { key: "isitma", label: "Yuqori isitma va holsizlik", icon: "🌡️" },
+      { key: "qurt", label: "Gelmintoz (Gijja / Qurt tushishi)", icon: "🪱" },
+      { key: "ich", label: "Oshqozon-ichak buzilishi (Diareya)", icon: "💧" },
+      { key: "tuxum", label: "Parrandalarda tuxum tug'ish pasayishi", icon: "🐔" },
+      { key: "o'lat", label: "Parranda o'lati / Vabo", icon: "🚨" },
+      { key: "tug'ruq", label: "Tug'ruq asoratlari va yordam", icon: "🩺" },
+    ];
+
+    const CROP_DISEASE_KEYWORDS = [
+      { key: "zang", label: "Zang kasalligi (Bug'doy va g'alla)", icon: "🌾" },
+      { key: "shira", label: "Shira (Tlya zararkunandasi)", icon: "🐛" },
+      { key: "fitoftor", label: "Fitoftoroz (Pomidor va kartoshka)", icon: "🍅" },
+      { key: "un shudring", label: "Un shudring kasalligi", icon: "⚪" },
+      { key: "bujmay", label: "Barg bujmayishi / Mozaika virusi", icon: "🍃" },
+      { key: "qurt", label: "Meva va poya qurtlari (Tunlam / Kolorado)", icon: "🐛" },
+      { key: "ildiz", label: "Ildiz chirishi kasalligi", icon: "🌱" },
+      { key: "sarg'ay", label: "Barglar sarg'ayishi (Xloroz)", icon: "🍂" },
+      { key: "qurish", label: "Qurish va so'lish (Fuzarioz)", icon: "🥀" },
+      { key: "kanasi", label: "O'rgimchakkana zarari", icon: "🕷️" },
+    ];
+
+    const animalStatsMap: Record<string, { label: string; icon: string; count: number }> = {};
+    for (const d of ANIMAL_DISEASE_KEYWORDS) {
+      animalStatsMap[d.key] = { label: d.label, icon: d.icon, count: 0 };
+    }
+    const cropStatsMap: Record<string, { label: string; icon: string; count: number }> = {};
+    for (const d of CROP_DISEASE_KEYWORDS) {
+      cropStatsMap[d.key] = { label: d.label, icon: d.icon, count: 0 };
+    }
+
+    let otherAnimalCount = 0;
+    let otherCropCount = 0;
+
+    for (const c of allCalls) {
+      const prob = (c.problem || "").toLowerCase();
+      const isAnimal =
+        c.helpsWith === "animal" ||
+        (!c.helpsWith &&
+          (prob.includes("mol") ||
+            prob.includes("sigir") ||
+            prob.includes("buzoq") ||
+            prob.includes("qo'y") ||
+            prob.includes("echki") ||
+            prob.includes("ot") ||
+            prob.includes("tovuq")));
+
+      if (isAnimal) {
+        let matched = false;
+        for (const item of ANIMAL_DISEASE_KEYWORDS) {
+          if (prob.includes(item.key) || (item.key === "oqsoqlik" && prob.includes("tuyoq"))) {
+            animalStatsMap[item.key].count++;
+            matched = true;
+            break;
+          }
+        }
+        if (!matched && prob.length > 0) otherAnimalCount++;
+      } else {
+        let matched = false;
+        for (const item of CROP_DISEASE_KEYWORDS) {
+          if (prob.includes(item.key) || (item.key === "un shudring" && prob.includes("kul"))) {
+            cropStatsMap[item.key].count++;
+            matched = true;
+            break;
+          }
+        }
+        if (!matched && prob.length > 0) otherCropCount++;
+      }
+    }
+
+    const topAnimalDiseases = Object.values(animalStatsMap)
+      .filter((a) => a.count > 0)
+      .sort((a, b) => b.count - a.count);
+    if (otherAnimalCount > 0) {
+      topAnimalDiseases.push({
+        label: "Boshqa chorva murojaatlari",
+        icon: "🐄",
+        count: otherAnimalCount,
+      });
+    }
+
+    const topCropDiseases = Object.values(cropStatsMap)
+      .filter((a) => a.count > 0)
+      .sort((a, b) => b.count - a.count);
+    if (otherCropCount > 0) {
+      topCropDiseases.push({
+        label: "Boshqa ekin kasalliklari va zararkunandalari",
+        icon: "🌱",
+        count: otherCropCount,
+      });
+    }
+
+    // 3. Eng ko'p sotilayotgan va talab yuqori bo'lgan dorilar (Marketplace Top Demanded Medicines)
+    const topMedicinesQuery = await db
+      .select({
+        medicineId: orderItems.medicineId,
+        name: orderItems.name,
+        totalSoldQty: sql<number>`coalesce(sum(${orderItems.qty}), 0)::int`,
+        ordersCount: sql<number>`count(distinct ${orderItems.orderId})::int`,
+        totalRevenue: sql<number>`coalesce(sum(${orderItems.qty} * coalesce(${orderItems.price}, 0)), 0)::int`,
+      })
+      .from(orderItems)
+      .groupBy(orderItems.medicineId, orderItems.name)
+      .orderBy(desc(sql`sum(${orderItems.qty})`))
+      .limit(10);
+
+    const topMedicineIds = topMedicinesQuery.map((m) => m.medicineId).filter(Boolean);
+    const medStockMap = new Map<
+      number,
+      { stock: number | null; status: string; pharmacyName: string | null }
+    >();
+    if (topMedicineIds.length > 0) {
+      const stockRows = await db
+        .select({
+          id: specialistMedicines.id,
+          stock: specialistMedicines.stock,
+          status: specialistMedicines.status,
+          pharmacyName: specialists.organization,
+        })
+        .from(specialistMedicines)
+        .leftJoin(specialists, eq(specialists.id, specialistMedicines.specialistId))
+        .where(inArray(specialistMedicines.id, topMedicineIds));
+      for (const s of stockRows) {
+        medStockMap.set(s.id, {
+          stock: s.stock,
+          status: s.status,
+          pharmacyName: s.pharmacyName,
+        });
+      }
+    }
+
+    const topMedicines = topMedicinesQuery.map((m) => {
+      const stockInfo = medStockMap.get(m.medicineId);
+      return {
+        ...m,
+        stock: stockInfo?.stock ?? null,
+        status: stockInfo?.status ?? "bor",
+        pharmacyName: stockInfo?.pharmacyName ?? "Dorixona",
+      };
+    });
+
+    res.json({
+      ok: true,
+      counts: {
+        totalUsers: uCount[0]?.count ?? 0,
+        telegramUsers: uTgCount[0]?.count ?? 0,
+        phoneUsers: (uCount[0]?.count ?? 0) - (uTgCount[0]?.count ?? 0),
+        agronomists: agronomistsCount[0]?.count ?? 0,
+        veterinarians: veterinariansCount[0]?.count ?? 0,
+        pharmacies: pharmaciesCount[0]?.count ?? 0,
+        totalSpecialists: totalSpecialistsCount[0]?.count ?? 0,
+        busySpecialists: busyCount[0]?.count ?? 0,
+      },
+      topAnimalDiseases,
+      topCropDiseases,
+      topMedicines,
+      totalCallsCount: allCalls.length,
+    });
+  } catch (err: any) {
+    console.error("[admin analytics error]:", err);
     res.status(500).json({ error: err.message || "Server xatosi" });
   }
 });

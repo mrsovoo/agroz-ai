@@ -11,6 +11,8 @@ export type CartStoreMedicine = {
   hasPhoto: boolean;
   usage: string | null;
   status: string;
+  stock?: number | null;
+  stockUnit?: string | null;
 };
 
 export type CartStorePharmacy = {

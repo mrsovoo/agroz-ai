@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { createOrder, rateOrder, type OrderInputItem } from "../lib/orders.js";
 import { normalizePhone, cleanText } from "../lib/validate.js";
-import { notifyPharmacyNewOrder } from "../lib/orders-bot.js";
+import { notifyPharmacyNewOrder, notifyPharmacyStockAlert } from "../lib/orders-bot.js";
 import { db } from "../db/index.js";
 import { orders, orderItems, specialists } from "../db/schema.js";
 import { eq, desc, and, or, sql } from "drizzle-orm";
@@ -76,6 +76,17 @@ router.post("/", async (req, res) => {
         total: result.total,
         items: result.items,
       }).catch((err) => console.error("[orders] bot xabari yuborilmadi:", err));
+
+      if (result.stockAlerts && result.stockAlerts.length > 0) {
+        for (const alert of result.stockAlerts) {
+          notifyPharmacyStockAlert(
+            result.pharmacy.telegramId,
+            alert.medName,
+            alert.remainingStock,
+            alert.stockUnit,
+          ).catch((err) => console.error("[orders] stock alert xatosi:", err));
+        }
+      }
     } else {
       console.warn(`[orders] Dorixona (#${result.pharmacy.id}) uchun telegramId mavjud emas`);
     }

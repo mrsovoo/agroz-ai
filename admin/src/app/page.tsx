@@ -31,6 +31,8 @@ import {
   LogOut,
   AlertCircle,
   Building,
+  Phone,
+  Clock,
 } from "lucide-react";
 
 type Me = { enabled: boolean; authenticated: boolean; username: string | null };
@@ -152,6 +154,32 @@ type AdminSpecialistCallItem = {
   updatedAt: string;
 };
 
+type AnalyticsData = {
+  counts: {
+    totalUsers: number;
+    telegramUsers: number;
+    phoneUsers: number;
+    agronomists: number;
+    veterinarians: number;
+    pharmacies: number;
+    totalSpecialists: number;
+    busySpecialists: number;
+  };
+  topAnimalDiseases: { label: string; icon: string; count: number }[];
+  topCropDiseases: { label: string; icon: string; count: number }[];
+  topMedicines: {
+    medicineId: number;
+    name: string;
+    totalSoldQty: number;
+    ordersCount: number;
+    totalRevenue: number;
+    stock: number | null;
+    status: string;
+    pharmacyName: string;
+  }[];
+  totalCallsCount: number;
+};
+
 const AI_PRESETS: { label: string; baseUrl: string; model: string; hint: string }[] = [
   {
     label: "Google AI Studio (Gemini 2.5 Flash — Tavsiya)",
@@ -180,12 +208,13 @@ export default function SuperAdminPage() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Tablar: dashboard | orders | specialist_calls | specialists | regions | reviews | settings | broadcast
+  // Tablar: dashboard | analytics | orders | specialist_calls | specialists | regions | reviews | settings | broadcast
   const [activeTab, setActiveTab] = useState<
-    "dashboard" | "orders" | "specialist_calls" | "specialists" | "regions" | "reviews" | "settings" | "broadcast"
+    "dashboard" | "analytics" | "orders" | "specialist_calls" | "specialists" | "regions" | "reviews" | "settings" | "broadcast"
   >("dashboard");
 
   const [stats, setStats] = useState<Stats | null>(null);
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [regions, setRegions] = useState<RegionStat[]>([]);
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
@@ -229,8 +258,9 @@ export default function SuperAdminPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [statsRes, regionsRes, reviewsRes, settingsRes, specsRes, ordersRes, callsRes] = await Promise.all([
+      const [statsRes, analyticsRes, regionsRes, reviewsRes, settingsRes, specsRes, ordersRes, callsRes] = await Promise.all([
         fetch("/api/admin/stats").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        fetch("/api/admin/analytics").then((r) => (r.ok ? r.json() : null)).catch(() => null),
         fetch("/api/admin/regions").then((r) => (r.ok ? r.json() : null)).catch(() => null),
         fetch("/api/admin/reviews").then((r) => (r.ok ? r.json() : null)).catch(() => null),
         fetch("/api/admin/settings").then((r) => (r.ok ? r.json() : null)).catch(() => null),
@@ -242,6 +272,19 @@ export default function SuperAdminPage() {
       if (statsRes?.ok) {
         setStats(statsRes.stats);
         setRecentOrders(statsRes.recentOrders || []);
+      }
+      if (analyticsRes?.ok) {
+        setAnalytics(analyticsRes);
+      }
+      if (ordersRes?.ok) {
+        setAdminOrders(ordersRes.orders || []);
+      }
+      if (callsRes?.ok) {
+        setAdminCalls(callsRes.calls || []);
+      }
+      if (specsRes?.ok) {
+        setSpecialistsList(specsRes.specialists || []);
+        setSpecialistsSummary(specsRes.summary || { total: 0, pending: 0, approved: 0 });
       }
       if (regionsRes?.ok) {
         setRegions(regionsRes.regions || []);
@@ -608,6 +651,19 @@ export default function SuperAdminPage() {
           <div className="flex space-x-1 overflow-x-auto pb-2 scrollbar-none">
             {[
               { id: "dashboard", label: "Dashboard", icon: BarChart3 },
+              { id: "analytics", label: "📊 Analitika & Tahlil", icon: TrendingUp },
+              {
+                id: "orders",
+                label: "Buyurtmalar",
+                icon: ShoppingCart,
+                badge: adminOrders.filter((o) => o.status === "yangi").length > 0 ? adminOrders.filter((o) => o.status === "yangi").length : undefined,
+              },
+              {
+                id: "specialist_calls",
+                label: "Chaqiruvlar",
+                icon: Phone,
+                badge: adminCalls.filter((c) => c.status === "yangi").length > 0 ? adminCalls.filter((c) => c.status === "yangi").length : undefined,
+              },
               {
                 id: "specialists",
                 label: "Arizalar & Dorixonalar",
@@ -746,6 +802,463 @@ export default function SuperAdminPage() {
                         </tr>
                       ))
                     )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 1.1. ANALITIKA VA TAHLIL TAB */}
+        {activeTab === "analytics" && (
+          <div className="space-y-6">
+            {/* 1. Foydalanuvchilar va mutaxassislar soni */}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              <div className="rounded-2xl bg-slate-900 p-4 border border-slate-800 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-slate-400">Dehqon & Fermerlar</span>
+                  <Users className="text-blue-400" size={18} />
+                </div>
+                <p className="mt-2 text-2xl font-black text-white">{analytics?.counts.totalUsers ?? 0}</p>
+                <p className="mt-1 text-[10.5px] text-slate-500 font-medium">
+                  {analytics?.counts.telegramUsers ?? 0} TG · {analytics?.counts.phoneUsers ?? 0} Tel
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-slate-900 p-4 border border-slate-800 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-slate-400">Agronomlar</span>
+                  <Activity className="text-emerald-400" size={18} />
+                </div>
+                <p className="mt-2 text-2xl font-black text-emerald-400">{analytics?.counts.agronomists ?? 0}</p>
+                <p className="mt-1 text-[10.5px] text-slate-500 font-medium">O&apos;simlikshunoslar</p>
+              </div>
+
+              <div className="rounded-2xl bg-slate-900 p-4 border border-slate-800 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-slate-400">Veterinarlar</span>
+                  <Building className="text-amber-400" size={18} />
+                </div>
+                <p className="mt-2 text-2xl font-black text-amber-400">{analytics?.counts.veterinarians ?? 0}</p>
+                <p className="mt-1 text-[10.5px] text-slate-500 font-medium">Chorvachilik bo&apos;yicha</p>
+              </div>
+
+              <div className="rounded-2xl bg-slate-900 p-4 border border-slate-800 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-slate-400">Agro-Dorixonalar</span>
+                  <Store className="text-purple-400" size={18} />
+                </div>
+                <p className="mt-2 text-2xl font-black text-purple-400">{analytics?.counts.pharmacies ?? 0}</p>
+                <p className="mt-1 text-[10.5px] text-slate-500 font-medium">Dorixona filiallari</p>
+              </div>
+
+              <div className="rounded-2xl bg-slate-900 p-4 border border-slate-800 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-slate-400">Band Mutaxassislar</span>
+                  <Clock className="text-rose-400" size={18} />
+                </div>
+                <p className="mt-2 text-2xl font-black text-rose-400">{analytics?.counts.busySpecialists ?? 0}</p>
+                <p className="mt-1 text-[10.5px] text-slate-500 font-medium">
+                  Jami: {analytics?.counts.totalSpecialists ?? 0} ta
+                </p>
+              </div>
+            </div>
+
+            {/* 2. Kasalliklar tahlili: Hayvonlar va Ekinlar (2 ustun) */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              {/* Hayvonlar kasalliklari */}
+              <div className="rounded-2xl bg-slate-900 p-5 border border-slate-800 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <span>🐄</span> Chorva / Hayvonlarda eng ko&apos;p kasalliklar
+                  </h3>
+                  <span className="text-xs text-slate-400 font-medium">Chaqiruvlar tahlili</span>
+                </div>
+
+                {!analytics?.topAnimalDiseases || analytics.topAnimalDiseases.length === 0 ? (
+                  <p className="py-6 text-center text-xs text-slate-500 font-medium">
+                    Hozircha chorvachilik bo&apos;yicha chaqiruv ma&apos;lumotlari yo&apos;q
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {analytics.topAnimalDiseases.map((d, idx) => {
+                      const totalAnimalCalls =
+                        analytics.topAnimalDiseases.reduce((acc, curr) => acc + curr.count, 0) || 1;
+                      const pct = Math.round((d.count / totalAnimalCalls) * 100);
+                      return (
+                        <div key={idx} className="rounded-xl bg-slate-950 p-3 border border-slate-800/80">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-xs font-semibold text-slate-200 flex items-center gap-2">
+                              <span>{d.icon}</span> {d.label}
+                            </span>
+                            <span className="text-xs font-bold text-amber-400">
+                              {d.count} ta ({pct}%)
+                            </span>
+                          </div>
+                          <div className="h-2 w-full rounded-full bg-slate-800 overflow-hidden">
+                            <div
+                              className="h-full bg-amber-500 rounded-full transition-all"
+                              style={{ width: `${Math.max(5, pct)}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Ekinlar kasalliklari va zararkunandalar */}
+              <div className="rounded-2xl bg-slate-900 p-5 border border-slate-800 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <span>🌱</span> Ekinlar bo&apos;yicha eng ko&apos;p kasallik & zararkunandalar
+                  </h3>
+                  <span className="text-xs text-slate-400 font-medium">Agronom chaqiruvlari</span>
+                </div>
+
+                {!analytics?.topCropDiseases || analytics.topCropDiseases.length === 0 ? (
+                  <p className="py-6 text-center text-xs text-slate-500 font-medium">
+                    Hozircha ekinlar bo&apos;yicha chaqiruv ma&apos;lumotlari yo&apos;q
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {analytics.topCropDiseases.map((d, idx) => {
+                      const totalCropCalls =
+                        analytics.topCropDiseases.reduce((acc, curr) => acc + curr.count, 0) || 1;
+                      const pct = Math.round((d.count / totalCropCalls) * 100);
+                      return (
+                        <div key={idx} className="rounded-xl bg-slate-950 p-3 border border-slate-800/80">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-xs font-semibold text-slate-200 flex items-center gap-2">
+                              <span>{d.icon}</span> {d.label}
+                            </span>
+                            <span className="text-xs font-bold text-emerald-400">
+                              {d.count} ta ({pct}%)
+                            </span>
+                          </div>
+                          <div className="h-2 w-full rounded-full bg-slate-800 overflow-hidden">
+                            <div
+                              className="h-full bg-emerald-500 rounded-full transition-all"
+                              style={{ width: `${Math.max(5, pct)}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 3. Eng ko'p sotilayotgan va talab yuqori bo'lgan dorilar */}
+            <div className="rounded-2xl bg-slate-900 p-6 border border-slate-800 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <Package className="text-purple-400" size={18} /> Eng Ko&apos;p Sotilgan & Talab Yuqori Bo&apos;lgan Dorilar
+                </h3>
+                <span className="text-xs text-slate-400">Marketplace Tahlili</span>
+              </div>
+
+              {!analytics?.topMedicines || analytics.topMedicines.length === 0 ? (
+                <p className="py-8 text-center text-xs text-slate-500 font-medium">
+                  Hozircha buyurtma qilingan dori vositalari mavjud emas.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider">
+                        <th className="pb-3">Dori Nomi</th>
+                        <th className="pb-3">Dorixona</th>
+                        <th className="pb-3 text-center">Sotilgan Miqdor</th>
+                        <th className="pb-3 text-center">Buyurtmalar</th>
+                        <th className="pb-3">Jami Savdo</th>
+                        <th className="pb-3">Qoldiq Holati</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/80 text-slate-300">
+                      {analytics.topMedicines.map((m, idx) => (
+                        <tr key={idx} className="hover:bg-slate-800/40 transition">
+                          <td className="py-3 font-bold text-white flex items-center gap-2">
+                            <span>💊</span> {m.name}
+                          </td>
+                          <td className="py-3 text-slate-400">{m.pharmacyName}</td>
+                          <td className="py-3 text-center font-bold text-emerald-400">{m.totalSoldQty} dona</td>
+                          <td className="py-3 text-center font-semibold text-slate-300">{m.ordersCount} ta</td>
+                          <td className="py-3 font-mono font-bold text-cyan-400">
+                            {m.totalRevenue ? `${m.totalRevenue.toLocaleString()} so'm` : "—"}
+                          </td>
+                          <td className="py-3">
+                            {m.stock !== null && m.stock !== undefined && m.stock <= 0 ? (
+                              <span className="rounded-full bg-rose-950 px-2.5 py-0.5 text-[10px] font-bold text-rose-300 border border-rose-800">
+                                🔴 Tugagan
+                              </span>
+                            ) : m.stock !== null && m.stock !== undefined && m.stock <= 3 ? (
+                              <span className="rounded-full bg-amber-950 px-2.5 py-0.5 text-[10px] font-bold text-amber-300 border border-amber-800">
+                                ⚠️ {m.stock} dona qoldi
+                              </span>
+                            ) : (
+                              <span className="rounded-full bg-emerald-950 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300 border border-emerald-800">
+                                🟢 {m.stock !== null && m.stock !== undefined ? `${m.stock} dona bor` : "Bor"}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 1.2. BUYURTMALAR TAB */}
+        {activeTab === "orders" && (
+          <div className="space-y-6">
+            <div className="rounded-2xl bg-slate-900 p-5 border border-slate-800 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="relative flex-1 max-w-md">
+                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Mijoz ismi, telefon yoki manzil..."
+                  value={orderSearch}
+                  onChange={(e) => setOrderSearch(e.target.value)}
+                  className="w-full rounded-xl bg-slate-950 pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 border border-slate-800 focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex rounded-xl bg-slate-950 p-1 border border-slate-800 text-xs font-semibold">
+                {["all", "yangi", "tasdiqlandi", "yetkazildi", "bekor"].map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setOrderStatusFilter(st)}
+                    className={`px-3 py-1 rounded-lg capitalize transition ${
+                      orderStatusFilter === st
+                        ? "bg-slate-800 text-white"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    {st === "all" ? "Barchasi" : st}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="bg-slate-950/60 border-b border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider">
+                      <th className="py-3 px-4">ID</th>
+                      <th className="py-3 px-4">Mijoz</th>
+                      <th className="py-3 px-4">Dorixona</th>
+                      <th className="py-3 px-4">Dorilar</th>
+                      <th className="py-3 px-4">Summa</th>
+                      <th className="py-3 px-4">Yetkazish</th>
+                      <th className="py-3 px-4">Holat</th>
+                      <th className="py-3 px-4 text-right">Amal</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                    {adminOrders
+                      .filter((o) => {
+                        if (orderStatusFilter !== "all" && o.status !== orderStatusFilter) return false;
+                        if (!orderSearch.trim()) return true;
+                        const q = orderSearch.toLowerCase();
+                        return (
+                          o.customerName.toLowerCase().includes(q) ||
+                          o.customerPhone.includes(q) ||
+                          (o.customerAddress && o.customerAddress.toLowerCase().includes(q))
+                        );
+                      })
+                      .map((o) => (
+                        <tr key={o.id} className="hover:bg-slate-800/40 transition">
+                          <td className="py-3 px-4 font-mono font-bold text-slate-400">#{o.id}</td>
+                          <td className="py-3 px-4">
+                            <p className="font-bold text-white">{o.customerName}</p>
+                            <p className="text-[11px] text-slate-400 font-mono">{o.customerPhone}</p>
+                          </td>
+                          <td className="py-3 px-4">
+                            <p className="font-semibold text-slate-200">
+                              {o.pharmacyOrg || o.pharmacyName || "Dorixona"}
+                            </p>
+                            {o.pharmacyPhone && <p className="text-[10px] text-slate-500">{o.pharmacyPhone}</p>}
+                          </td>
+                          <td className="py-3 px-4 max-w-xs">
+                            {o.items?.map((it, i) => (
+                              <p key={i} className="text-[11px] truncate">
+                                • {it.name} × {it.qty}
+                              </p>
+                            ))}
+                          </td>
+                          <td className="py-3 px-4 font-bold text-emerald-400">
+                            {o.totalSum ? `${o.totalSum.toLocaleString()} so'm` : "—"}
+                          </td>
+                          <td className="py-3 px-4 text-[11px]">
+                            {o.deliveryType === "delivery" ? (
+                              <span className="text-cyan-400">🚚 Yetkazish</span>
+                            ) : (
+                              <span className="text-amber-400">🏪 Olib ketish</span>
+                            )}
+                            {o.customerAddress && (
+                              <p className="text-[10px] text-slate-500 truncate max-w-[150px]">
+                                {o.customerAddress}
+                              </p>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                                o.status === "yetkazildi"
+                                  ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
+                                  : o.status === "tasdiqlandi"
+                                  ? "bg-blue-950 text-blue-300 border border-blue-800"
+                                  : o.status === "bekor"
+                                  ? "bg-rose-950 text-rose-300 border border-rose-800"
+                                  : "bg-amber-950 text-amber-300 border border-amber-800 animate-pulse"
+                              }`}
+                            >
+                              {o.status}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <select
+                              value={o.status}
+                              onChange={(e) => handleUpdateOrderStatus(o.id, e.target.value)}
+                              className="rounded-lg bg-slate-950 px-2 py-1 text-[11px] font-semibold text-slate-300 border border-slate-700"
+                            >
+                              <option value="yangi">Yangi</option>
+                              <option value="tasdiqlandi">Tasdiqlash</option>
+                              <option value="yetkazildi">Yetkazildi</option>
+                              <option value="bekor">Bekor qilish</option>
+                            </select>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 1.3. MUTAXASSIS CHAQIRUVLARI TAB */}
+        {activeTab === "specialist_calls" && (
+          <div className="space-y-6">
+            <div className="rounded-2xl bg-slate-900 p-5 border border-slate-800 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="relative flex-1 max-w-md">
+                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Mijoz ismi, muammo yoki telefon..."
+                  value={callSearch}
+                  onChange={(e) => setCallSearch(e.target.value)}
+                  className="w-full rounded-xl bg-slate-950 pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 border border-slate-800 focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex rounded-xl bg-slate-950 p-1 border border-slate-800 text-xs font-semibold">
+                {["all", "yangi", "qabul_qilindi", "bajarildi", "bekor"].map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setCallStatusFilter(st)}
+                    className={`px-3 py-1 rounded-lg capitalize transition ${
+                      callStatusFilter === st
+                        ? "bg-slate-800 text-white"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    {st === "all" ? "Barchasi" : st}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="bg-slate-950/60 border-b border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider">
+                      <th className="py-3 px-4">ID</th>
+                      <th className="py-3 px-4">Mijoz (Dehqon)</th>
+                      <th className="py-3 px-4">Mutaxassis</th>
+                      <th className="py-3 px-4">Muammo Tavsifi</th>
+                      <th className="py-3 px-4">Manzil</th>
+                      <th className="py-3 px-4">Holat</th>
+                      <th className="py-3 px-4 text-right">Amal</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                    {adminCalls
+                      .filter((c) => {
+                        if (callStatusFilter !== "all" && c.status !== callStatusFilter) return false;
+                        if (!callSearch.trim()) return true;
+                        const q = callSearch.toLowerCase();
+                        return (
+                          c.customerName.toLowerCase().includes(q) ||
+                          c.customerPhone.includes(q) ||
+                          c.problem.toLowerCase().includes(q)
+                        );
+                      })
+                      .map((c) => (
+                        <tr key={c.id} className="hover:bg-slate-800/40 transition">
+                          <td className="py-3 px-4 font-mono font-bold text-slate-400">#{c.id}</td>
+                          <td className="py-3 px-4">
+                            <p className="font-bold text-white">{c.customerName}</p>
+                            <a
+                              href={`tel:${c.customerPhone}`}
+                              className="text-[11px] text-emerald-400 font-mono hover:underline"
+                            >
+                              📞 {c.customerPhone}
+                            </a>
+                          </td>
+                          <td className="py-3 px-4">
+                            <p className="font-semibold text-slate-200">
+                              {c.specialistName || "Mutaxassis"}
+                            </p>
+                            {c.specialistPhone && (
+                              <p className="text-[10px] text-slate-500 font-mono">{c.specialistPhone}</p>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 max-w-sm">
+                            <p className="text-xs text-slate-200 font-medium leading-relaxed">
+                              {c.problem}
+                            </p>
+                          </td>
+                          <td className="py-3 px-4 text-slate-400 text-[11px] max-w-xs truncate">
+                            {c.address || "—"}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                                c.status === "bajarildi"
+                                  ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
+                                  : c.status === "qabul_qilindi"
+                                  ? "bg-blue-950 text-blue-300 border border-blue-800"
+                                  : c.status === "bekor"
+                                  ? "bg-rose-950 text-rose-300 border border-rose-800"
+                                  : "bg-amber-950 text-amber-300 border border-amber-800 animate-pulse"
+                              }`}
+                            >
+                              {c.status}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <select
+                              value={c.status}
+                              onChange={(e) => handleUpdateCallStatus(c.id, e.target.value)}
+                              className="rounded-lg bg-slate-950 px-2 py-1 text-[11px] font-semibold text-slate-300 border border-slate-700"
+                            >
+                              <option value="yangi">Yangi</option>
+                              <option value="qabul_qilindi">Qabul qilindi</option>
+                              <option value="bajarildi">Bajarildi</option>
+                              <option value="bekor">Bekor</option>
+                            </select>
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>

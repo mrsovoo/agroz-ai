@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Minus, Heart, Pill, Sprout, Syringe, MapPin, Star } from "lucide-react";
+import { Plus, Minus, Heart, Pill, Sprout, Syringe, MapPin, Star, Bell } from "lucide-react";
 import FadeImage from "@/components/FadeImage";
 import {
   loadCart,
@@ -64,6 +64,7 @@ export default function ProductCard({
 }) {
   const [liked, setLiked] = useState(false);
   const [qty, setQty] = useState(0);
+  const [notified, setNotified] = useState(false);
 
   useEffect(() => {
     const sync = () => {
@@ -141,6 +142,14 @@ export default function ProductCard({
   const href = linkHref ?? `/dori/${medicine.id}`;
   const shortCity = getShortCity(pharmacy.address, pharmacy.name);
   const medRating = calculateMedicineRating(medicine.id);
+  const isOutOfStock =
+    (medicine.stock !== null && medicine.stock !== undefined && medicine.stock <= 0) ||
+    medicine.status === "yoq";
+  const isLowStock =
+    medicine.stock !== null &&
+    medicine.stock !== undefined &&
+    medicine.stock > 0 &&
+    medicine.stock <= 3;
 
   return (
     <div className="group flex w-full flex-col justify-between overflow-hidden rounded-[18px] border border-black/8 bg-white shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
@@ -206,6 +215,12 @@ export default function ProductCard({
         <span className="absolute left-2 top-2 rounded-md bg-black/60 px-1.5 py-0.5 text-[9px] font-bold text-white backdrop-blur-xs">
           {medicine.type === "animal" ? "Chorva" : "Ekin"}
         </span>
+
+        {isOutOfStock && (
+          <span className="absolute left-2 bottom-2 rounded-md bg-rose-600/90 px-1.5 py-0.5 text-[9px] font-bold text-white shadow-xs backdrop-blur-xs">
+            Tugagan
+          </span>
+        )}
       </div>
 
       {/* Ma'lumot: Dori nomi, Narxi va Savatga / Hisoblagich (- soni +) */}
@@ -244,11 +259,36 @@ export default function ProductCard({
               <span className="text-[11.5px] font-bold text-neutral-500">Kelishiladi</span>
             )}
           </div>
+          {isLowStock && (
+            <p className="mt-0.5 text-[10.5px] font-bold text-amber-700">
+              ⚠️ Faqat {medicine.stock} {medicine.stockUnit || "dona"} qoldi
+            </p>
+          )}
         </div>
 
-        {/* Savatga qo'shish yoki - {soni} + hisoblagichi (Dehqonlar uchun qulay va katta tugmalar) */}
+        {/* Savatga qo'shish yoki Tugagan bo'lsa Kelganda xabar berish */}
         <div className="mt-2.5">
-          {qty > 0 ? (
+          {isOutOfStock ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setNotified(true);
+                alert(
+                  `Xabarnoma olindi! "${medicine.name}" dori vositasi dorixonaga kelganda sizga Telegram orqali xabar yuboriladi.`,
+                );
+              }}
+              className={`flex h-9 sm:h-9.5 w-full items-center justify-center gap-1.5 rounded-xl border text-[11.5px] font-bold transition active:scale-95 ${
+                notified
+                  ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                  : "border-neutral-300 bg-neutral-100 text-neutral-750 hover:bg-neutral-200"
+              }`}
+            >
+              <Bell size={13} className={notified ? "text-emerald-600 fill-emerald-600" : "text-neutral-500"} />
+              <span>{notified ? "Xabar beriladi ✓" : "Kelganda xabar berish"}</span>
+            </button>
+          ) : qty > 0 ? (
             <div className="flex h-9 sm:h-9.5 w-full items-center justify-between rounded-xl bg-[var(--brand-green-soft)] border border-[var(--brand-green)]/30 p-0.5 text-[var(--brand-green)]">
               <button
                 type="button"

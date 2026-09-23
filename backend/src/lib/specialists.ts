@@ -63,6 +63,9 @@ export type MedicineDto = {
   usage: string | null;
   /** Narx so'mda — dorixona egasi yozgan bo'lsa ko'rinadi. */
   price: number | null;
+  /** Dori qoldig'i (dona/kg). */
+  stock: number;
+  stockUnit: string;
 };
 
 export type SpecialistDto = {
@@ -90,6 +93,8 @@ export type SpecialistDto = {
    * holatda (yo'nalish o'rniga qo'ng'iroq tavsiya etiladi).
    */
   locked: boolean;
+  /** Mutaxassis ayni vaqtda boshqa buyurtma ustida ishlayotgani (bandligi). */
+  isBusy: boolean;
   /** Reyting: 1–5 yulduz o'rtachasi (ovoz bo'lmasa null). */
   ratingAvg: number | null;
   /** Reyting ovozlari soni. */
@@ -243,6 +248,8 @@ export async function addMedicine(params: {
   usage?: string | null;
   /** Narx so'mda (ixtiyoriy). */
   price?: number | null;
+  stock?: number;
+  stockUnit?: string;
 }) {
   const rows = await db
     .insert(specialistMedicines)
@@ -254,7 +261,9 @@ export async function addMedicine(params: {
       type: params.type ?? "general",
       usage: params.usage ?? null,
       price: params.price ?? null,
-      status: "bor",
+      stock: params.stock !== undefined ? Math.max(0, params.stock) : 10,
+      stockUnit: params.stockUnit || "dona",
+      status: (params.stock !== undefined && params.stock <= 0) ? "yoq" : "bor",
     })
     .returning();
   return rows[0];
@@ -367,6 +376,8 @@ export async function listSpecialists(opts: {
       type: m.type,
       usage: m.usage,
       price: m.price ?? null,
+      stock: m.stock ?? 10,
+      stockUnit: m.stockUnit ?? "dona",
     });
     bySpecialist.set(m.specialistId, list);
   }
@@ -413,6 +424,7 @@ export async function listSpecialists(opts: {
     workHours: s.workHours,
     distanceKm: distance,
     locked,
+    isBusy: s.isBusy ?? false,
     ratingAvg: ratingBySpecialist.get(s.id)?.avg ?? null,
     ratingCount: ratingBySpecialist.get(s.id)?.count ?? 0,
     medicines: bySpecialist.get(s.id) ?? [],

@@ -319,3 +319,45 @@ export async function notifyCustomerOrderDelivered(orderId: number): Promise<voi
   });
 }
 
+/**
+ * Dorixona egasiga dori qoldig'i kam qolgani (<= 3) yoki tugagani (0) haqida
+ * Telegram (@agroz_auth_bot) orqali darhol ogohlantirish yuboradi.
+ */
+export async function notifyPharmacyStockAlert(
+  telegramId: number,
+  medName: string,
+  stock: number,
+  unit?: string | null,
+): Promise<void> {
+  if (!(await isAuthBotConfigured())) return;
+
+  const unitStr = unit?.trim() || "dona";
+  let text = "";
+  if (stock <= 0) {
+    text = [
+      "❌ <b>DIQQAT: DORI VOSITASI TUGADI!</b>",
+      "",
+      `💊 <b>${escapeHtml(medName)}</b> dori vositasi dorixonangizda butunlay tugadi!`,
+      `Holat: <b>Mavjud emas (yo'q)</b> ga o'zgartirildi.`,
+      "",
+      "Mijozlarga sayt va ilovada <i>\"Kelganda xabar berish\"</i> tugmasi ko'rinadi.",
+      "Dorixonangizga yangi partiya kelganda, botdagi <b>Dorilar</b> bo'limi orqali qoldiqni yangilang.",
+    ].join("\n");
+  } else {
+    text = [
+      "⚠️ <b>DIQQAT: DORI QOLDIG'I OZ QOLDI!</b>",
+      "",
+      `💊 <b>${escapeHtml(medName)}</b> dori vositasidan dorixonangizda atigi <b>${stock} ${escapeHtml(unitStr)}</b> qoldi!`,
+      "",
+      "Iltimos, zaxirangizni tekshirib, botdagi <b>Dorilar</b> menyusi orqali qoldiqni to'ldirib qo'yishingiz so'raladi.",
+    ].join("\n");
+  }
+
+  try {
+    await sendAuthMessage(telegramId, text);
+    console.log(`[orders-bot] Dorixona (#${telegramId}) uchun qoldiq ogohlantirishi (${medName}: ${stock}) yuborildi`);
+  } catch (err) {
+    console.error("[orders-bot] Stock alert yuborishda xato:", err);
+  }
+}
+

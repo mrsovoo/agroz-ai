@@ -101,6 +101,12 @@ router.post("/call", async (req, res) => {
       return res.status(404).json({ error: "Mutaxassis topilmadi" });
     }
 
+    if (spec.isBusy) {
+      return res.status(400).json({
+        error: "Mutaxassis ayni vaqtda boshqa buyurtma ustida ishlamoqda. Iltimos, boshqa mutaxassisni tanlang.",
+      });
+    }
+
     const [call] = await db
       .insert(specialistCalls)
       .values({

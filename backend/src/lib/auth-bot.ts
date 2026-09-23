@@ -129,18 +129,14 @@ export const ROLE_KEYBOARD: InlineKeyboard = {
 export const SPECIALTY_KEYBOARD: InlineKeyboard = {
   inline_keyboard: [
     [
-      { text: "🌱 Agronom (ekinlar)", callback_data: "sp:Agronom" },
-      { text: "🐄 Veterinar (chorva)", callback_data: "sp:Veterinar" },
+      { text: "🌱 O'simliklar / Ekinlar (Agronom)", callback_data: "sp:crop" },
     ],
     [
-      { text: "🐑 Zootexnik (naslchilik)", callback_data: "sp:Zootexnik" },
-      { text: "🌳 Bog'bon / Ko'chatchi", callback_data: "sp:Bog'bon" },
+      { text: "🐄 Veterinariya (Chorvachilik)", callback_data: "sp:animal" },
     ],
     [
-      { text: "🔬 Fitopatolog / Entomolog", callback_data: "sp:Fitopatolog" },
-      { text: "🌾 Issiqxona mutaxassisi", callback_data: "sp:Issiqxona mutaxassisi" },
+      { text: "🌿🐄 Ikkalasi ham (Ekin & Chorva)", callback_data: "sp:both" },
     ],
-    [{ text: "✍️ Boshqa soha (qo'lda yozish)", callback_data: "sp:__other__" }],
   ],
 };
 
@@ -413,10 +409,10 @@ export function askAddressConfirm(address: string): string {
 
 export function askSpecialty(): string {
   return [
-    "🧑‍🔬 <b>1. Mutaxassislik sohangizni tanlang:</b>",
+    "🧑‍🌾 <b>1. Faoliyat yo'nalishingizni tanlang:</b>",
     "",
-    "Agroz AI platformasida qaysi yo'nalish bo'yicha fermer va dehqonlarga yordam berasiz?",
-    "Pastdagi tayyor yo'nalishlardan birini tanlang yoki «Boshqa soha» tugmasini bosing.",
+    "Agroz AI platformasida qaysi soha bo'yicha fermer va dehqonlarga yordam berasiz?",
+    "Pastdagi 3 ta asosiy yo'nalishdan birini tanlang:",
   ].join("\n");
 }
 
@@ -992,6 +988,8 @@ export function medicineConfirmCaption(
   typeLabel?: string,
   usage?: string | null,
   price?: number | null,
+  stock?: number | null,
+  stockUnit?: string,
 ): string {
   return [
     "🧾 <b>Tasdiqlash</b>",
@@ -1000,6 +998,7 @@ export function medicineConfirmCaption(
     ...(typeLabel ? [`🧭 Turi: ${escapeHtml(typeLabel)}`] : []),
     ...(usage ? [`🩺 Nima uchun: ${escapeHtml(usage)}`] : []),
     ...(price ? [`💰 Narx: <b>${formatSum(price)}</b>`] : ["💰 Narx: kiritilmagan"]),
+    `📦 Qoldiq miqdori: <b>${stock ?? 10} ${stockUnit ?? "dona"}</b>`,
     ...(pharmacyName ? [`🏪 Dorixona: ${escapeHtml(pharmacyName)}`] : []),
     "",
     "Tasdiqlasangiz, dori platformaga chiqadi va dehqon/chorvadorlar",

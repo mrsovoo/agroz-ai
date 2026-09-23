@@ -83,6 +83,8 @@ export async function createOrder(input: CreateOrderInput) {
       name: specialistMedicines.name,
       price: specialistMedicines.price,
       status: specialistMedicines.status,
+      stock: specialistMedicines.stock,
+      stockUnit: specialistMedicines.stockUnit,
     })
     .from(specialistMedicines)
     .where(
@@ -91,18 +93,47 @@ export async function createOrder(input: CreateOrderInput) {
         inArray(specialistMedicines.id, ids),
       ),
     );
-  const medMap = new Map<number, { name: string; price: number | null; status: string }>();
+  const medMap = new Map<
+    number,
+    {
+      name: string;
+      price: number | null;
+      status: string;
+      stock: number | null;
+      stockUnit: string | null;
+    }
+  >();
   for (const row of medRows) {
-    medMap.set(row.id, { name: row.name, price: row.price, status: row.status });
+    medMap.set(row.id, {
+      name: row.name,
+      price: row.price,
+      status: row.status,
+      stock: row.stock,
+      stockUnit: row.stockUnit,
+    });
   }
 
-  const prepared: { medicineId: number; name: string; price: number | null; qty: number }[] = [];
+  const prepared: {
+    medicineId: number;
+    name: string;
+    price: number | null;
+    qty: number;
+    stock: number | null;
+    stockUnit: string | null;
+  }[] = [];
   for (const item of wanted) {
     const med = medMap.get(item.medicineId);
     if (!med) return { ok: false as const, error: "Dorilardan biri bu dorixonada yo'q" };
     if (med.status !== "bor") return { ok: false as const, error: `"${med.name}" hozircha yo'q` };
     const qty = Math.max(1, Math.min(99, Math.round(item.qty) || 1));
-    prepared.push({ medicineId: item.medicineId, name: med.name, price: med.price, qty });
+    prepared.push({
+      medicineId: item.medicineId,
+      name: med.name,
+      price: med.price,
+      qty,
+      stock: med.stock,
+      stockUnit: med.stockUnit,
+    });
   }
 
   const total = prepared.reduce((acc, p) => acc + (p.price ?? 0) * p.qty, 0);
@@ -133,6 +164,30 @@ export async function createOrder(input: CreateOrderInput) {
     })),
   );
 
+  // Dori qoldiqlarini (stock) yangilash va kam qolgan yoki tugaganlarni aniqlash
+  const stockAlerts: { medName: string; remainingStock: number; stockUnit: string | null }[] = [];
+  for (const p of prepared) {
+    if (p.stock !== null && p.stock !== undefined) {
+      const newStock = Math.max(0, p.stock - p.qty);
+      const newStatus = newStock === 0 ? "yoq" : "bor";
+      await db
+        .update(specialistMedicines)
+        .set({
+          stock: newStock,
+          status: newStatus,
+        })
+        .where(eq(specialistMedicines.id, p.medicineId));
+
+      if (newStock <= 3) {
+        stockAlerts.push({
+          medName: p.name,
+          remainingStock: newStock,
+          stockUnit: p.stockUnit,
+        });
+      }
+    }
+  }
+
   return {
     ok: true as const,
     orderId,
@@ -145,6 +200,7 @@ export async function createOrder(input: CreateOrderInput) {
       address: pharmacyRow.address,
     },
     items: prepared,
+    stockAlerts,
   };
 }
 
