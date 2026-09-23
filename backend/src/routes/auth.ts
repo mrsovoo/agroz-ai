@@ -218,15 +218,19 @@ router.post("/telegram", async (req, res) => {
 });
 
 // POST /api/auth/start-telegram-login
-router.post("/start-telegram-login", async (_req, res) => {
+router.post("/start-telegram-login", async (req, res) => {
   try {
+    const body = req.body || {};
+    const rawPhone = body.phone ? normalizePhone(body.phone) : null;
+    const rawName = typeof body.name === "string" ? body.name.trim() : null;
+
     const token = "auth_" + randomBytes(16).toString("hex");
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
     const botUser = (await getBotUsername()) || process.env.TELEGRAM_BOT_USERNAME?.replace(/^@/, "") || "agroz_ai_bot";
 
     await db.insert(otpCodes).values({
-      phone: "tg_auth",
-      code: "pending",
+      phone: rawPhone || "tg_auth",
+      code: rawName ? `name:${rawName}` : "pending",
       token,
       expiresAt,
     });

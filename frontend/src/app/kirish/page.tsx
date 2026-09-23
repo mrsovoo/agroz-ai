@@ -15,6 +15,7 @@ import {
   Zap,
   CheckCircle2,
   ExternalLink,
+  AlertCircle,
 } from "lucide-react";
 import { getTelegram, onTelegramReady, type TelegramUser } from "@/lib/telegram";
 import { OTP_LENGTH, OTP_TTL_MINUTES } from "@/lib/constants";
@@ -73,6 +74,13 @@ export default function LoginPage() {
 
   // Polling tozalash
   useEffect(() => {
+    try {
+      const savedName = localStorage.getItem("agroz_customer_name");
+      const savedPhone = localStorage.getItem("agroz_customer_phone");
+      if (savedName) setName(savedName);
+      if (savedPhone) setPhoneInput(savedPhone);
+    } catch {}
+
     return () => {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
     };
@@ -140,12 +148,31 @@ export default function LoginPage() {
 
   // Brauzerda: Telegram bot ochish va avtomatik kutish (polling)
   async function startTelegramOneClickLogin() {
+    if (!name.trim() || name.trim().length < 2) {
+      setError("Iltimos, ismingizni kiriting");
+      return;
+    }
+    const cleanDigits = normalize(phoneInput);
+    if (!cleanDigits || cleanDigits.length !== 9) {
+      setError("Iltimos, ishlayotgan 9 xonali telefon raqamingizni kiriting (namuna: 90 123 45 67)");
+      return;
+    }
+
+    try {
+      localStorage.setItem("agroz_customer_name", name.trim());
+      localStorage.setItem("agroz_customer_phone", cleanDigits);
+    } catch {}
+
     setBusy(true);
     setError(null);
     try {
       const res = await fetch("/api/auth/start-telegram-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          phone: `+998${cleanDigits}`,
+        }),
       });
       const data = await res.json();
       if (!res.ok || !data.ok) {
@@ -480,32 +507,66 @@ export default function LoginPage() {
                   </div>
                 </div>
               ) : (
-                /* Brauzerda bir bosishda Telegram login */
+                /* Brauzerda Telegram orqali ishlaydigan raqam bilan kirish */
                 <div className="space-y-4">
-                  <div className="rounded-2xl bg-sky-50 p-4 border border-sky-100">
-                    <div className="flex items-center gap-2 text-sky-800 font-bold text-[14px]">
-                      <Zap size={16} className="text-sky-500" />
-                      <span>Telegram orqali xavfsiz tasdiqlash</span>
+                  <div className="rounded-2xl bg-amber-50 p-4 border border-amber-200">
+                    <div className="flex items-center gap-2 text-amber-900 font-bold text-[13.5px]">
+                      <AlertCircle size={17} className="text-amber-600 shrink-0" />
+                      <span>Muhim eslatma: Faol telefon raqam</span>
                     </div>
-                    <p className="mt-1.5 text-[12.5px] leading-relaxed text-sky-900/80">
-                      Quyidagi tugmani bosing — botimiz ochiladi va <b>«Start»</b> hamda <b>«📱 Telefon raqamni yuborish»</b> tugmasini bosishingiz bilan
-                      profilingiz saytda avtomatik tasdiqlanib ochiladi.
+                    <p className="mt-1 text-[12px] leading-relaxed text-amber-900/80">
+                      Ko&apos;p foydalanuvchilarning Telegramga ulangan eski raqami ishlamasligi yoki kuygan bo&apos;lishi mumkin.
+                      Mutaxassis va dorixonalar siz bilan to&apos;g&apos;ridan-to&apos;g&apos;ri bog&apos;lana olishi uchun, iltimos, <b>hozirda ishlab turgan telefon raqamingizni</b> kiriting:
                     </p>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-widest text-[var(--brand-muted)]">
+                      <UserRound size={12} /> Ism va familiyangiz
+                    </label>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Ismingizni kiriting"
+                      className="ios-input !p-3 text-[14px]"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-widest text-[var(--brand-muted)]">
+                      <Phone size={12} /> Ishlayotgan telefon raqamingiz
+                    </label>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[14.5px] font-bold text-slate-400">
+                        +998
+                      </span>
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        value={phoneInput}
+                        onChange={(e) => setPhoneInput(normalize(e.target.value).slice(0, 9))}
+                        placeholder="90 123 45 67"
+                        className="ios-input pl-16 font-semibold !p-3"
+                        required
+                      />
+                    </div>
                   </div>
 
                   <button
                     type="button"
                     onClick={startTelegramOneClickLogin}
                     disabled={busy}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-[15px] font-extrabold text-white shadow-md hover:brightness-105 active:scale-[0.98] transition"
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-[15px] font-extrabold text-white shadow-md hover:brightness-105 active:scale-[0.98] transition"
                     style={{ background: "#2AABEE" }}
                   >
-                    {busy ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
-                    <span>Telegram orqali 1 bosishda kirish</span>
+                    {busy ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                    <span>Telegram orqali tasdiqlash va kirish</span>
                   </button>
 
                   <p className="text-center text-[11.5px] text-neutral-500 font-medium">
-                    Hech qanday telefon yoki username qidirish talab qilinmaydi.
+                    Tugmani bosishingiz bilan bot ochiladi va profilingiz shu raqamingiz bilan ochiladi.
                   </p>
                 </div>
               )}

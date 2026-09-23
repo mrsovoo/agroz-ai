@@ -380,13 +380,15 @@ export function askName(prefill?: string): string {
 
 export function askPhone(): string {
   return [
-    "📱 <b>Telefon raqamingizni yuboring.</b>",
+    "📱 <b>Hozirda ishlab turgan faol telefon raqamingizni kiriting.</b>",
     "",
-    "Pastdagi <b>«📱 Telefon raqamni yuborish»</b> tugmasini bosing yoki raqamni",
-    "qo'lda yozing (masalan: <code>+998901234567</code>).",
+    "⚠️ <b>DIQQAT:</b> Telegram hisobingizga ulangan raqam eskirgan yoki ishlamaydigan bo'lishi mumkin.",
+    "Shuning uchun, ayni vaqtda sizga qo'ng'iroq qilsa tushadigan <b>ishlayotgan raqamingizni yozib yuboring</b>",
+    "(masalan: <code>+998901234567</code> yoki <code>90 123 45 67</code>).",
     "",
-    "❗️ Raqam boshqa foydalanuvchilarga ko'rinadi — mijozlar siz bilan shu orqali",
-    "bog'lanadi.",
+    "<i>(Yoki agar Telegram hisobingizdagi raqam hozir ishlab turgan bo'lsa, pastdagi «📱 Telefon raqamni yuborish» tugmasini bosing)</i>",
+    "",
+    "❗️ Mijozlar va mutaxassislar siz bilan aynan shu raqam orqali bog'lanadi.",
   ].join("\n");
 }
 

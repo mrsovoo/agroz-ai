@@ -292,8 +292,39 @@ router.post("/webhook", async (req, res) => {
               .limit(1)
           )[0];
 
-          // Agar foydalanuvchida telefon raqami allaqachon bo'lsa - darhol login
-          if (user && user.phone) {
+          const prefillPhone = row.phone && row.phone !== "tg_auth" ? row.phone : null;
+          const prefillName = row.code && row.code.startsWith("name:") ? row.code.slice(5) : null;
+          const chosenName = prefillName || firstName || "Foydalanuvchi";
+
+          // Agar foydalanuvchida veb orqali kiritilgan ishlab turgan raqami bo'lsa yoki bazada bo'lsa
+          const targetPhone = prefillPhone || (user && user.phone ? user.phone : null);
+
+          if (targetPhone) {
+            if (user) {
+              await db
+                .update(users)
+                .set({ phone: targetPhone, name: user.name || chosenName })
+                .where(eq(users.id, user.id));
+              user.phone = targetPhone;
+            } else {
+              const byPhone = (
+                await db.select().from(users).where(eq(users.phone, targetPhone)).limit(1)
+              )[0];
+              if (byPhone) {
+                await db
+                  .update(users)
+                  .set({ telegramId: fromId, name: byPhone.name || chosenName })
+                  .where(eq(users.id, byPhone.id));
+                user = byPhone;
+              } else {
+                const [created] = await db
+                  .insert(users)
+                  .values({ telegramId: fromId, phone: targetPhone, name: chosenName })
+                  .returning();
+                user = created;
+              }
+            }
+
             const sessionId = randomBytes(32).toString("hex");
             await db.insert(sessions).values({ id: sessionId, userId: user.id });
 
@@ -307,12 +338,12 @@ router.post("/webhook", async (req, res) => {
               })
               .where(eq(otpCodes.id, row.id));
 
-            const welcomeName = escapeHtml(user.name || firstName || "Do'stim");
+            const welcomeName = escapeHtml(user.name || chosenName);
             const verifiedText = [
               `✅ <b>Salom, ${welcomeName}!</b>`,
               "",
-              "🎉 <b>Profilingiz muvaffaqiyatli tasdiqlandi!</b>",
-              `📞 Telefoningiz: <code>${escapeHtml(user.phone)}</code>`,
+              "🎉 <b>Profilingiz muvaffaqiyatli faollashtirildi!</b>",
+              `📞 Ishlayotgan telefoningiz: <code>${escapeHtml(user.phone || targetPhone)}</code>`,
               "",
               "Siz brauzerdagi sahifada avtomatik ravishda profilingizga kirdingiz.",
               "Yoki quyidagi tugma orqali ilovani to'g'ridan-to'g'ri ochishingiz mumkin 👇",
@@ -321,14 +352,21 @@ router.post("/webhook", async (req, res) => {
             await sendMessage(chatId, verifiedText, { keyboard: greetingKeyboard() });
             return res.json({ ok: true });
           } else {
-            // Telefon raqami yo'q bo'lsa, kontaktni yuborishni so'raymiz
-            const askContactText = [
+            // Telefon raqami yo'q bo'lsa: ishlab turgan raqamni kiritishni so'raymiz
+            const askActivePhoneText = [
               `👋 <b>Salom, ${escapeHtml(firstName || "Do'stim")}!</b>`,
               "",
-              "Agroz AI tizimiga kirish va profilingizni faollashtirish uchun, iltimos, pastdagi tugma orqali <b>telefon raqamingizni yuboring</b> 👇",
+              `🌱 <b>Agroz AI</b> tizimiga xush kelibsiz!`,
+              "",
+              `⚠️ <b>DIQQAT:</b> Ko'p foydalanuvchilarning Telegramga ulangan raqami ishlamasligi yoki kuyib ketgan bo'lishi mumkin.`,
+              `Mutaxassislar va dorixonalar siz bilan to'g'ridan-to'g'ri bog'lanishi uchun, iltimos, <b>hozirda ishlab turgan faol telefon raqamingizni</b> yozib yuboring!`,
+              "",
+              `✍️ <b>Masalan:</b> <code>90 123 45 67</code> yoki <code>+998901234567</code>`,
+              "",
+              `<i>(Yoki telegram hisobingizdagi raqam ishlab turgan bo'lsa, pastdagi tugmani bosing)</i> 👇`,
             ].join("\n");
 
-            await sendMessage(chatId, askContactText, {
+            await sendMessage(chatId, askActivePhoneText, {
               keyboard: contactRequestKeyboard(),
             });
             return res.json({ ok: true });
@@ -365,7 +403,7 @@ router.post("/webhook", async (req, res) => {
           `👋 <b>Assalomu alaykum, ${escapeHtml(existingUser.name || firstName || "Do'stim")}!</b>`,
           "",
           `🌱 <b>Agroz AI</b> — dehqon va chorvadorlar uchun aqlli yordamchi platforma.`,
-          `📞 Tasdiqlangan raqamingiz: <code>${escapeHtml(existingUser.phone)}</code>`,
+          `📞 Tasdiqlangan faol raqamingiz: <code>${escapeHtml(existingUser.phone)}</code>`,
           "",
           `Ilovadan foydalanish uchun quyidagi <b>«🚀 Agroz AI»</b> tugmasini bosing 👇`,
         ].join("\n");
@@ -373,18 +411,100 @@ router.post("/webhook", async (req, res) => {
         return res.json({ ok: true });
       }
 
-      // Agar hali telefon raqami kiritilmagan bo'lsa, kontakt so'raymiz!
+      // Agar hali telefon raqami kiritilmagan bo'lsa, ishlaydigan raqamni so'raymiz!
       const promptText = [
         `👋 <b>Assalomu alaykum, ${escapeHtml(firstName || "Do'stim")}!</b>`,
         "",
         `🌱 <b>Agroz AI</b> platformasiga xush kelibsiz!`,
         "",
-        `Dehqon va chorvadorlar uchun barcha xizmatlar, ekin tashxisi va dorixona buyurtmalaridan foydalanish uchun, iltimos, <b>telefon raqamingizni tasdiqlang</b>.`,
+        `⚠️ <b>MUHIM:</b> Ko'p odamlarning Telegram hisobiga ulangan raqami ishlamasligi yoki kuygan bo'lishi mumkin.`,
+        `Dehqon va chorvadorlar xizmati, ekin tashxisi va mutaxassis chaqiruvlari uchun, iltimos, <b>hozirda ishlab turgan faol telefon raqamingizni</b> yozib yuboring!`,
         "",
-        `👇 Pastdagi <b>«📱 Telefon raqamni yuborish»</b> tugmasini bosing:`,
+        `✍️ <b>Masalan:</b> <code>90 123 45 67</code> yoki <code>+998901234567</code>`,
+        "",
+        `<i>(Yoki telegram hisobingizdagi raqam ishlayotgan bo'lsa, pastdagi tugmani bosing)</i> 👇`,
       ].join("\n");
 
       await sendMessage(chatId, promptText, { keyboard: contactRequestKeyboard() });
+      return res.json({ ok: true });
+    }
+
+    // Foydalanuvchi matn yuborganda: Agar unda telefon raqami (kamida 9 ta raqam) bo'lsa
+    const digitsOnly = text.replace(/\D/g, "");
+    if (digitsOnly.length >= 9) {
+      const cleanNineDigits = digitsOnly.slice(-9);
+      const activePhone = `+998${cleanNineDigits}`;
+
+      // Ismni ajratib olish (agar raqam bilan birga ism yozgan bo'lsa)
+      const textWithoutDigits = text.replace(/[\d\+\s\-\(\)\/\:\,]/g, " ").trim();
+      const enteredName = textWithoutDigits.length >= 2 ? textWithoutDigits : (firstName || "Foydalanuvchi");
+
+      let user = (
+        await db.select().from(users).where(eq(users.telegramId, fromId)).limit(1)
+      )[0];
+
+      if (user) {
+        await db
+          .update(users)
+          .set({ phone: activePhone, name: user.name || enteredName })
+          .where(eq(users.id, user.id));
+        user.phone = activePhone;
+      } else {
+        const byPhone = (
+          await db.select().from(users).where(eq(users.phone, activePhone)).limit(1)
+        )[0];
+        if (byPhone) {
+          await db
+            .update(users)
+            .set({ telegramId: fromId, name: byPhone.name || enteredName })
+            .where(eq(users.id, byPhone.id));
+          user = byPhone;
+        } else {
+          const [created] = await db
+            .insert(users)
+            .values({
+              telegramId: fromId,
+              phone: activePhone,
+              name: enteredName,
+            })
+            .returning();
+          user = created;
+        }
+      }
+
+      // Agar veb-brauzer orqali auth_ token kutilayotgan bo'lsa, sessiyani avtomatik ochamiz
+      const pendingCodes = await db
+        .select()
+        .from(otpCodes)
+        .where(and(eq(otpCodes.telegramId, fromId), eq(otpCodes.used, false)))
+        .limit(1);
+
+      if (pendingCodes[0] && pendingCodes[0].expiresAt.getTime() > Date.now()) {
+        const sessionId = randomBytes(32).toString("hex");
+        await db.insert(sessions).values({ id: sessionId, userId: user.id });
+        await db
+          .update(otpCodes)
+          .set({
+            used: true,
+            code: sessionId,
+            deliveredAt: new Date(),
+          })
+          .where(eq(otpCodes.id, pendingCodes[0].id));
+      }
+
+      const successText = [
+        `✅ <b>Ishlayotgan telefon raqamingiz muvaffaqiyatli saqlandi!</b>`,
+        "",
+        `👤 <b>Ism:</b> ${escapeHtml(user.name || enteredName)}`,
+        `📞 <b>Faol telefon:</b> <code>${escapeHtml(activePhone)}</code>`,
+        "",
+        `🎉 <b>Agroz AI</b> platformasiga xush kelibsiz!`,
+        `Endi mutaxassislar siz bilan aynan shu raqam orqali bog'lanishadi.`,
+        "",
+        `Pastdagi <b>«🚀 Agroz AI»</b> tugmasi orqali ilovani oching 👇`,
+      ].join("\n");
+
+      await sendMessage(chatId, successText, { keyboard: greetingKeyboard() });
       return res.json({ ok: true });
     }
 
