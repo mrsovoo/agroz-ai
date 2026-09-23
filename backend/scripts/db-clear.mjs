@@ -29,6 +29,8 @@ const TABLES = [
   "diagnoses",
   "news",
   "advertisements",
+  "app_settings",
+  "admin_sessions",
   "otp_codes",
   "sessions",
   "users",

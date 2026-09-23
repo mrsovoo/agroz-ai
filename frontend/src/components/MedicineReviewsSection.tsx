@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Star,
   MessageSquare,
@@ -41,7 +41,7 @@ const ROLES = ["Fermer", "Bog'bon", "Polizchi dehqon", "Chorvador", "Issiqxonach
 
 export default function MedicineReviewsSection({ medicineId, medicineName }: { medicineId: number; medicineName: string }) {
   const [reviews, setReviews] = useState<MedicineReview[]>([]);
-  const [ratingStats, setRatingStats] = useState({ avg: 5.0, count: 1 });
+  const [ratingStats, setRatingStats] = useState({ avg: 0, count: 0 });
   const [showForm, setShowForm] = useState(false);
 
   // Form states
@@ -52,10 +52,10 @@ export default function MedicineReviewsSection({ medicineId, medicineName }: { m
   const [comment, setComment] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
-  const loadData = () => {
+  const loadData = useCallback(() => {
     setReviews(getAllMedicineReviews(medicineId));
     setRatingStats(calculateMedicineRating(medicineId));
-  };
+  }, [medicineId]);
 
   useEffect(() => {
     loadData();
@@ -65,7 +65,7 @@ export default function MedicineReviewsSection({ medicineId, medicineName }: { m
       window.removeEventListener(REVIEWS_EVENT, loadData);
       window.removeEventListener("storage", loadData);
     };
-  }, [medicineId]);
+  }, [loadData]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -112,7 +112,7 @@ export default function MedicineReviewsSection({ medicineId, medicineName }: { m
           <div className="text-right">
             <div className="flex items-center justify-end gap-1.5">
               <span className="text-[26px] font-black text-neutral-900 leading-none">
-                {ratingStats.avg}
+                {ratingStats.count > 0 ? ratingStats.avg : "0.0"}
               </span>
               <div className="flex text-amber-400">
                 {[1, 2, 3, 4, 5].map((s) => (
@@ -126,7 +126,9 @@ export default function MedicineReviewsSection({ medicineId, medicineName }: { m
               </div>
             </div>
             <p className="text-[12px] font-bold text-neutral-500 mt-0.5">
-              {ratingStats.count} ta baho · 97% tavsiya qiladi
+              {ratingStats.count > 0
+                ? `${ratingStats.count} ta baho`
+                : "Hali baho yo'q"}
             </p>
           </div>
 
@@ -253,7 +255,15 @@ export default function MedicineReviewsSection({ medicineId, medicineName }: { m
 
       {/* Sharhlar ro'yxati */}
       <div className="mt-5 space-y-3.5">
-        {reviews.map((rev) => (
+        {reviews.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50/70 p-5 text-center">
+            <MessageSquare size={22} className="mx-auto text-neutral-300" />
+            <p className="mt-2 text-[13px] font-bold text-neutral-600">Hali fikr bildirilmagan</p>
+            <p className="mt-1 text-[12px] text-neutral-500">
+              Birinchi real bahoni xariddan keyin foydalanuvchi qoldiradi.
+            </p>
+          </div>
+        ) : reviews.map((rev) => (
           <div
             key={rev.id}
             className="rounded-2xl border border-black/5 bg-neutral-50/70 p-4 transition hover:bg-neutral-50"
@@ -304,4 +314,3 @@ export default function MedicineReviewsSection({ medicineId, medicineName }: { m
     </section>
   );
 }
-
