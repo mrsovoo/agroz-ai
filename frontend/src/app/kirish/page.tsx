@@ -62,6 +62,7 @@ export default function LoginPage() {
     region?: string | null;
   } | null>(null);
   const [checkingBot, setCheckingBot] = useState(false);
+  const [autoLoginCountdown, setAutoLoginCountdown] = useState(60);
 
   // Tezkor kirish state'lari (Ism + Hudud)
   const [name, setName] = useState("");
@@ -136,6 +137,23 @@ export default function LoginPage() {
       }
     });
   }, []);
+
+  // Avtomatik tasdiqlash uchun (botUser topilsa, 60 soniyadan so'ng)
+  useEffect(() => {
+    if (botUser && !busy) {
+      const timer = setInterval(() => {
+        setAutoLoginCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            telegramMiniAppLogin();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [botUser, busy]);
 
   // Mini App ichida avtomatik yoki 1 bosishda kirish
   async function telegramMiniAppLogin() {
@@ -549,16 +567,28 @@ export default function LoginPage() {
                     </select>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={telegramMiniAppLogin}
-                    disabled={busy}
-                    className="ios-btn"
-                    style={{ background: "#028e11" }}
-                  >
-                    {busy ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
-                    <span>{busy ? "Kirilmoqda..." : "✅ Tasdiqlash va Kirish"}</span>
-                  </button>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={telegramMiniAppLogin}
+                      disabled={busy}
+                      className="ios-btn"
+                      style={{ background: "#028e11" }}
+                    >
+                      {busy ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
+                      <span>{busy ? "Kirilmoqda..." : "✅ Tasdiqlash va Kirish"}</span>
+                    </button>
+                    {botUser && (
+                      <button
+                        type="button"
+                        onClick={telegramMiniAppLogin}
+                        disabled={busy}
+                        className="w-full text-center text-[13px] font-semibold text-neutral-500 py-2 hover:text-neutral-800 transition"
+                      >
+                        O&apos;tkazib yuborish ({autoLoginCountdown}s)
+                      </button>
+                    )}
+                  </div>
                 </div>
               ) : waitingBot ? (
                 /* Botda Start bosilishini kutish ekrani */
