@@ -20,6 +20,7 @@ import {
   Lock,
 } from "lucide-react";
 import { RADIUS_OPTIONS } from "@/lib/constants";
+import { distanceKm, roundKm } from "@/lib/geo";
 
 type Stock = { medicine: string; status: string; price: number | null };
 type Medicine = { id: number; name: string; status: string; hasPhoto: boolean };
@@ -185,38 +186,63 @@ export default function MapClient() {
         // Ro'yxatdan o'tgan dorixona egalari ham "dorixona" bo'lib chiqadi —
         // ularning turi (agro/vet/umumiy) mutaxassislik maydonida saqlanadi.
         // Umumiy dorixonalar har ikkala filtrda (agro ham, vet ham) ko'rinadi.
-        const mapped: Place[] = specialists.map((s) => ({
-          id: -s.id,
-          name: s.organization ?? s.name,
-          // Botda turi matn sifatida saqlanadi: "Agro dorixona" | "Vet dorixona" |
-          // "Umumiy dorixona". Shunga qarab xarita turi aniqlanadi.
-          kind: s.role === "pharmacy"
-            ? s.specialty?.startsWith("Vet")
-              ? "vet"
-              : s.specialty?.startsWith("Umumiy")
-                ? "general"
-                : "agro"
-            : "specialist",
-          lat: s.lat,
-          lng: s.lng,
-          phone: s.phone,
-          address: s.address,
-          specialist:
-            s.role === "pharmacy"
-              ? `${s.specialty ?? "Dorixona"} · ${s.name}`
-              : (s.specialty ?? s.name),
-          workHours: s.workHours,
-          distanceKm: s.distanceKm,
-          locked: s.locked,
-          ratingAvg: s.ratingAvg,
-          ratingCount: s.ratingCount,
-          stock: [],
-          medicines: s.medicines ?? [],
-        }));
-        setPlaces([
-          ...pharmacies.map((p) => ({ ...p, medicines: p.medicines ?? [] })),
-          ...mapped,
-        ]);
+        const mapped: Place[] = specialists.map((s) => {
+          const dist = typeof s.distanceKm === "number" && Number.isFinite(s.distanceKm)
+            ? s.distanceKm
+            : (coords && typeof s.lat === "number" && typeof s.lng === "number"
+                ? roundKm(distanceKm(coords.lat, coords.lng, s.lat, s.lng))
+                : null);
+
+          return {
+            id: -s.id,
+            name: s.organization || s.name || "Mutaxassis",
+            kind: s.role === "pharmacy"
+              ? s.specialty?.startsWith("Vet")
+                ? "vet"
+                : s.specialty?.startsWith("Umumiy")
+                  ? "general"
+                  : "agro"
+              : "specialist",
+            lat: s.lat,
+            lng: s.lng,
+            phone: s.phone || "",
+            address: s.address || "",
+            specialist:
+              s.role === "pharmacy"
+                ? `${s.specialty ?? "Dorixona"} · ${s.name}`
+                : (s.specialty ?? s.name),
+            workHours: s.workHours || null,
+            distanceKm: dist,
+            locked: Boolean(s.locked),
+            ratingAvg: typeof s.ratingAvg === "number" ? s.ratingAvg : null,
+            ratingCount: s.ratingCount || 0,
+            stock: [],
+            medicines: Array.isArray(s.medicines) ? s.medicines : [],
+          };
+        });
+
+        const mappedPharmacies: Place[] = pharmacies.map((p) => {
+          const dist = typeof p.distanceKm === "number" && Number.isFinite(p.distanceKm)
+            ? p.distanceKm
+            : (coords && typeof p.lat === "number" && typeof p.lng === "number"
+                ? roundKm(distanceKm(coords.lat, coords.lng, p.lat, p.lng))
+                : null);
+
+          return {
+            ...p,
+            name: p.name || "Dorixona",
+            phone: p.phone || "",
+            address: p.address || "",
+            distanceKm: dist,
+            locked: Boolean(p.locked || (dist !== null && dist > radiusKm)),
+            ratingAvg: typeof p.ratingAvg === "number" ? p.ratingAvg : null,
+            ratingCount: p.ratingCount || 0,
+            stock: Array.isArray(p.stock) ? p.stock : [],
+            medicines: Array.isArray(p.medicines) ? p.medicines : [],
+          };
+        });
+
+        setPlaces([...mappedPharmacies, ...mapped]);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -579,7 +605,7 @@ export default function MapClient() {
                     )}
                   </div>
                 </div>
-                {p.distanceKm !== null && (
+                {typeof p.distanceKm === "number" && Number.isFinite(p.distanceKm) && (
                   <span
                     className="shrink-0 rounded-full px-2.5 py-1 text-[12px] font-bold text-white"
                     style={{ background: p.locked ? "var(--brand-muted)" : "var(--brand-green)" }}
@@ -661,7 +687,7 @@ export default function MapClient() {
 
               <div className="mt-3 flex gap-2">
                 <a
-                  href={`tel:${p.phone.replace(/\s/g, "")}`}
+                  href={`tel:${(p.phone || "").replace(/\s/g, "")}`}
                   onClick={(e) => e.stopPropagation()}
                   className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl py-3 text-[14px] font-bold text-white"
                   style={{ background: "var(--brand-green)" }}
@@ -794,7 +820,7 @@ export default function MapClient() {
                   <Clock size={13} /> {selected.workHours}
                 </p>
               </div>
-              {selected.distanceKm !== null && (
+              {typeof selected.distanceKm === "number" && Number.isFinite(selected.distanceKm) && (
                 <span
                   className="shrink-0 rounded-full px-2.5 py-1 text-[12px] font-bold text-white"
                   style={{ background: "var(--brand-green)" }}
@@ -804,7 +830,7 @@ export default function MapClient() {
               )}
             </div>
 
-            {selected.ratingAvg != null && (selected.ratingCount ?? 0) > 0 && (
+            {typeof selected.ratingAvg === "number" && Number.isFinite(selected.ratingAvg) && (selected.ratingCount ?? 0) > 0 && (
               <p className="mt-1 flex items-center gap-1 text-[12px] font-bold text-[#b8860b]">
                 ★ {selected.ratingAvg.toFixed(1)}
                 <span className="text-[var(--brand-muted)]">({selected.ratingCount ?? 0} ovoz)</span>
@@ -845,7 +871,7 @@ export default function MapClient() {
 
             <div className="mt-4 flex gap-2">
               <a
-                href={`tel:${selected.phone.replace(/\s/g, "")}`}
+                href={`tel:${(selected.phone || "").replace(/\s/g, "")}`}
                 className="flex flex-1 items-center justify-center gap-2 rounded-2xl py-4 text-[15px] font-bold text-white"
                 style={{ background: "var(--brand-green)" }}
               >

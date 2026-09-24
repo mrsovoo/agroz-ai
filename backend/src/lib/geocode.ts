@@ -63,16 +63,46 @@ export async function reverseGeocode(lat: number, lng: number): Promise<string |
       headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
       signal: AbortSignal.timeout(8000),
     });
-    if (!res.ok) {
-      console.error("[geocode] Nominatim javobi:", res.status);
-      return null;
-    }
     const json = (await res.json()) as NominatimResponse;
     const formatted = formatAddress(json.address, json.display_name);
     return formatted ? formatted.slice(0, 300) : null;
   } catch (err) {
-    // Tarmoq xatosi ro'yxatdan o'tishni to'xtatmasligi kerak — qo'lda so'raladi.
     console.error("[geocode] manzil aniqlanmadi:", err instanceof Error ? err.message : err);
     return null;
+  }
+}
+
+export async function reverseGeocodeDetails(lat: number, lng: number): Promise<{
+  formatted: string | null;
+  region: string | null;
+  district: string | null;
+}> {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return { formatted: null, region: null, district: null };
+  }
+  try {
+    const url = new URL(NOMINATIM_URL);
+    url.searchParams.set("format", "jsonv2");
+    url.searchParams.set("lat", String(lat));
+    url.searchParams.set("lon", String(lng));
+    url.searchParams.set("zoom", "18");
+    url.searchParams.set("addressdetails", "1");
+    url.searchParams.set("accept-language", "uz");
+
+    const res = await fetch(url.toString(), {
+      headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) {
+      return { formatted: null, region: null, district: null };
+    }
+    const json = (await res.json()) as NominatimResponse;
+    const formatted = formatAddress(json.address, json.display_name)?.slice(0, 300) || null;
+    const region = json.address?.state || json.address?.province || json.address?.region || null;
+    const district = json.address?.city_district || json.address?.county || json.address?.district || null;
+
+    return { formatted, region, district };
+  } catch (err) {
+    return { formatted: null, region: null, district: null };
   }
 }

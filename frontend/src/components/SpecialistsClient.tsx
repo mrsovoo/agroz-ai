@@ -512,7 +512,7 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
                         🏅 {s.experienceYears} yil
                       </span>
                     )}
-                    {s.distanceKm !== null && (
+                    {typeof s.distanceKm === "number" && Number.isFinite(s.distanceKm) && (
                       <span
                         className="rounded-full px-2.5 py-1 text-[12px] font-bold text-white"
                         style={{

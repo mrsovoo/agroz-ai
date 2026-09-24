@@ -20,6 +20,7 @@ import { BOT_OTP_TTL_MINUTES } from "../lib/constants.js";
 import { telegramAuthWebhookSecret, telegramWebhookSecret } from "../lib/settings.js";
 import { getNewsFeed } from "../lib/news.js";
 import { escapeHtml } from "../lib/tg-escape.js";
+import { reverseGeocodeDetails } from "../lib/geocode.js";
 import { db } from "../db/index.js";
 import { otpCodes, sessions, users } from "../db/schema.js";
 import { and, eq, sql } from "drizzle-orm";
@@ -39,6 +40,7 @@ type TelegramUpdate = {
     chat?: { id?: number; type?: string };
     from?: { id?: number; first_name?: string; last_name?: string; username?: string };
     contact?: { phone_number?: string; first_name?: string; last_name?: string; user_id?: number };
+    location?: { latitude: number; longitude: number };
   };
 };
 
@@ -49,10 +51,51 @@ function isStart(command: string | undefined): boolean {
 
 type DeliveryState = "sent" | "already" | "used" | "invalid";
 
+export const REGIONS_LIST = [
+  "Toshkent shahri",
+  "Toshkent viloyati",
+  "Samarqand viloyati",
+  "Farg'ona viloyati",
+  "Andijon viloyati",
+  "Namangan viloyati",
+  "Buxoro viloyati",
+  "Qashqadaryo viloyati",
+  "Surxondaryo viloyati",
+  "Xorazm viloyati",
+  "Navoiy viloyati",
+  "Jizzax viloyati",
+  "Sirdaryo viloyati",
+  "Qoraqalpog'iston",
+];
+
+export function regionsKeyboard() {
+  const rows: { text: string; callback_data: string }[][] = [];
+  for (let i = 0; i < REGIONS_LIST.length; i += 2) {
+    const row = [{ text: REGIONS_LIST[i], callback_data: `reg:reg:${i}` }];
+    if (REGIONS_LIST[i + 1]) {
+      row.push({ text: REGIONS_LIST[i + 1], callback_data: `reg:reg:${i + 1}` });
+    }
+    rows.push(row);
+  }
+  return { inline_keyboard: rows };
+}
+
+export function locationRequestKeyboard() {
+  return {
+    keyboard: [
+      [{ text: "📍 Joylashuvni yuborish (GPS)", request_location: true }],
+    ],
+    resize_keyboard: true,
+    one_time_keyboard: true,
+  };
+}
+
 interface UserRegState {
-  step: "ask_name" | "ask_phone" | "ask_second_phone";
+  step: "ask_name" | "ask_phone" | "ask_region" | "ask_second_phone";
   name?: string;
   phone?: string;
+  region?: string;
+  district?: string;
   secondPhone?: string;
   token?: string;
   promptMessageId?: number;
@@ -124,10 +167,12 @@ async function findUserByPhone(phone: string): Promise<typeof users.$inferSelect
 async function finalizeUserRegistration(
   telegramId: number,
   chatId: number,
-  data: { name: string; phone: string; secondPhone?: string; token?: string }
+  data: { name: string; phone: string; region?: string; district?: string; secondPhone?: string; token?: string }
 ): Promise<void> {
   let user: typeof users.$inferSelect | undefined;
   const trimmedSecond = data.secondPhone?.trim() || null;
+  const region = data.region?.trim() || null;
+  const district = data.district?.trim() || null;
 
   try {
     user = (await findUserByTelegramId(telegramId)) ?? undefined;
@@ -140,6 +185,8 @@ async function finalizeUserRegistration(
             name: data.name || user.name,
             phone: data.phone,
             secondPhone: trimmedSecond || user.secondPhone || null,
+            region: region || user.region || null,
+            district: district || user.district || null,
           })
           .where(eq(users.id, user.id));
       } catch {
@@ -150,12 +197,16 @@ async function finalizeUserRegistration(
             name: data.name || user.name,
             phone: data.phone,
             secondPhone: trimmedSecond || user.secondPhone || null,
+            region: region || user.region || null,
+            district: district || user.district || null,
           })
           .where(eq(users.id, user.id));
       }
       user.name = data.name || user.name;
       user.phone = data.phone;
       user.secondPhone = trimmedSecond || user.secondPhone || null;
+      if (region) user.region = region;
+      if (district) user.district = district;
     } else {
       const byPhone = (await findUserByPhone(data.phone)) ?? undefined;
       if (byPhone) {
@@ -166,6 +217,8 @@ async function finalizeUserRegistration(
               telegramId,
               name: data.name || byPhone.name,
               secondPhone: trimmedSecond || byPhone.secondPhone || null,
+              region: region || byPhone.region || null,
+              district: district || byPhone.district || null,
             })
             .where(eq(users.id, byPhone.id));
         } catch {
@@ -176,6 +229,8 @@ async function finalizeUserRegistration(
               telegramId,
               name: data.name || byPhone.name,
               secondPhone: trimmedSecond || byPhone.secondPhone || null,
+              region: region || byPhone.region || null,
+              district: district || byPhone.district || null,
             })
             .where(eq(users.id, byPhone.id));
         }
@@ -189,6 +244,8 @@ async function finalizeUserRegistration(
               name: data.name,
               phone: data.phone,
               secondPhone: trimmedSecond,
+              region,
+              district,
             })
             .returning();
           user = created;
@@ -201,6 +258,8 @@ async function finalizeUserRegistration(
               name: data.name,
               phone: data.phone,
               secondPhone: trimmedSecond,
+              region,
+              district,
             })
             .returning();
           user = created;
@@ -235,15 +294,21 @@ async function finalizeUserRegistration(
   }
 
   const welcomeName = escapeHtml(user?.name || data.name);
+  const userRegion = user?.region || region;
+  const userDistrict = user?.district || district;
+  const locationLabel = [userRegion, userDistrict].filter(Boolean).join(", ");
+
   const successText = [
     `🎉 <b>Tabriklaymiz, ${welcomeName}!</b>`,
-    `Siz muvaffaqiyatli ro'yxatdan o'tdingiz.`,
+    `Siz <b>Agroz AI</b> platformasidan muvaffaqiyatli ro'yxatdan o'tdingiz.`,
     "",
     `👤 <b>Ism:</b> ${welcomeName}`,
     `📞 <b>Telefon:</b> <code>${escapeHtml(user?.phone || data.phone)}</code>`,
     user?.secondPhone ? `📞 <b>Qo'shimcha:</b> <code>${escapeHtml(user.secondPhone)}</code>` : "",
+    locationLabel ? `📍 <b>Hudud:</b> ${escapeHtml(locationLabel)}` : "",
     "",
-    `Ilovani ochish uchun quyidagi tugmani bosing 👇`,
+    `📱 <b>Agroz AI ilovasini ochish:</b>`,
+    `Ilovaga kirish uchun pastdagi <b>«🚀 Agroz AI ilovasini ochish»</b> tugmasini bosing 👇`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -258,6 +323,31 @@ async function handleMainBotCallback(query: NonNullable<TelegramUpdate["callback
   const data = query.data ?? "";
 
   try {
+    if (data.startsWith("reg:reg:")) {
+      await answerCallbackQuery(query.id);
+      if (chatId && messageId) {
+        await editMessageReplyMarkup(chatId, messageId).catch(() => {});
+      }
+      if (!fromId || !chatId) return;
+
+      const idx = Number(data.split(":")[2]);
+      const selectedRegion = REGIONS_LIST[idx] || "Toshkent shahri";
+
+      const state = regStates.get(fromId) || { step: "ask_region", updatedAt: Date.now() };
+      state.region = selectedRegion;
+
+      await finalizeUserRegistration(fromId, chatId, {
+        name: state.name || query.from?.first_name || "Foydalanuvchi",
+        phone: state.phone || "+998900000000",
+        region: selectedRegion,
+        district: state.district,
+        secondPhone: state.secondPhone,
+        token: state.token,
+      });
+      regStates.delete(fromId);
+      return;
+    }
+
     if (data === "reg:confirm") {
       await answerCallbackQuery(query.id, "Tasdiqlandi!");
       // Amaliyot bajarilgach, ortiqcha qolib chalg'itmasligi uchun inline tugmani darhol olib tashlaymiz
@@ -271,6 +361,8 @@ async function handleMainBotCallback(query: NonNullable<TelegramUpdate["callback
         await finalizeUserRegistration(fromId, chatId, {
           name: state.name || query.from?.first_name || "Foydalanuvchi",
           phone: state.phone,
+          region: state.region,
+          district: state.district,
           secondPhone: state.secondPhone,
           token: state.token,
         });
@@ -400,6 +492,56 @@ router.post("/webhook", async (req, res) => {
   const firstName = message?.from?.first_name;
 
   try {
+    // Agar joylashuv (location) yuborilgan bo'lsa
+    if (message?.location) {
+      const { latitude, longitude } = message.location;
+      const { region, district } = await reverseGeocodeDetails(latitude, longitude);
+      const chosenRegion = region || "Toshkent shahri";
+      const chosenDistrict = district || null;
+
+      const state = regStates.get(fromId);
+      if (state && state.phone) {
+        state.region = chosenRegion;
+        state.district = chosenDistrict || undefined;
+        await finalizeUserRegistration(fromId, chatId, {
+          name: state.name || firstName || "Foydalanuvchi",
+          phone: state.phone,
+          region: chosenRegion,
+          district: chosenDistrict || undefined,
+          secondPhone: state.secondPhone,
+          token: state.token,
+        });
+        regStates.delete(fromId);
+      } else {
+        const existing = await findUserByTelegramId(fromId);
+        if (existing) {
+          await db.update(users).set({
+            region: chosenRegion,
+            district: chosenDistrict,
+          }).where(eq(users.id, existing.id));
+
+          await sendMessage(
+            chatId,
+            `📍 Hududingiz saqlandi: <b>${escapeHtml([chosenRegion, chosenDistrict].filter(Boolean).join(", "))}</b>\n\nIlovani ochish uchun pastdagi tugmani bosing 👇`,
+            { keyboard: greetingKeyboard() }
+          );
+        } else {
+          regStates.set(fromId, {
+            step: "ask_name",
+            region: chosenRegion,
+            district: chosenDistrict || undefined,
+            updatedAt: Date.now(),
+          });
+          await sendMessage(
+            chatId,
+            `📍 Joylashuv qabul qilindi: <b>${escapeHtml([chosenRegion, chosenDistrict].filter(Boolean).join(", "))}</b>\n\n1️⃣ <b>Ism va familiyangizni yozing:</b>`,
+            { keyboard: { remove_keyboard: true } }
+          );
+        }
+      }
+      return res.json({ ok: true });
+    }
+
     // Agar foydalanuvchi kontakt ulashgan bo'lsa (ixtiyoriy)
     if (message?.contact && message.contact.phone_number) {
       const rawPhone = message.contact.phone_number.trim();
@@ -423,22 +565,23 @@ router.post("/webhook", async (req, res) => {
       const regState = regStates.get(fromId);
       const chosenName = regState?.name || existingUser?.name || contactName;
 
-      const askSecondPhoneText = [
+      const askRegionText = [
         `📞 Raqamingiz: <code>${escapeHtml(phone)}</code>`,
         "",
-        `3️⃣ <b>Qo'shimcha ikkinchi telefon raqamingiz bormi?</b>`,
-        `Bo'lsa yozing, bo'lmasa pastdagi tugmani bosing 👇`,
+        `📍 <b>Qaysi viloyatdansiz?</b>`,
+        `Pastdagi tugma orqali GPS joylashuvingizni yuboring yoki o'z viloyatingizni tanlang:`,
       ].join("\n");
 
-      const sent = await sendMessageWithId(chatId, askSecondPhoneText, {
-        keyboard: {
-          inline_keyboard: [[{ text: "✅ Tasdiqlash", callback_data: "reg:confirm" }]],
-        },
+      const sent = await sendMessageWithId(chatId, askRegionText, {
+        keyboard: regionsKeyboard(),
+      });
+      await sendMessage(chatId, "Yoki pastdagi «📍 Joylashuvni yuborish (GPS)» tugmasini bosing 👇", {
+        keyboard: locationRequestKeyboard(),
       });
 
       regStates.set(fromId, {
         ...regState,
-        step: "ask_second_phone",
+        step: "ask_region",
         name: chosenName,
         phone,
         promptMessageId: sent.messageId,
@@ -679,7 +822,24 @@ router.post("/webhook", async (req, res) => {
     // RO'YXATDAN O'TMAGAN FOYDALANUVCHI BOSQICHLARI:
     const regState = regStates.get(fromId) || { step: "ask_name", updatedAt: Date.now() };
 
-    // A) Agar ikkinchi raqam kutilayotgan bo'lsa
+    // A) Agar viloyat kutilayotgan bo'lsa
+    if (regState.step === "ask_region") {
+      const clean = text.trim();
+      const matched = REGIONS_LIST.find((r) => r.toLowerCase().includes(clean.toLowerCase())) || clean.slice(0, 100);
+
+      await finalizeUserRegistration(fromId, chatId, {
+        name: regState.name || firstName || "Foydalanuvchi",
+        phone: regState.phone || "+998900000000",
+        region: matched,
+        district: regState.district,
+        secondPhone: regState.secondPhone,
+        token: regState.token,
+      });
+      regStates.delete(fromId);
+      return res.json({ ok: true });
+    }
+
+    // B) Agar ikkinchi raqam kutilayotgan bo'lsa
     if (regState.step === "ask_second_phone") {
       const digits = text.replace(/\D/g, "");
       let secondPhone: string | undefined;
@@ -708,6 +868,8 @@ router.post("/webhook", async (req, res) => {
       await finalizeUserRegistration(fromId, chatId, {
         name: regState.name || firstName || "Foydalanuvchi",
         phone: regState.phone || "+998900000000",
+        region: regState.region,
+        district: regState.district,
         secondPhone,
         token: regState.token,
       });
@@ -715,7 +877,7 @@ router.post("/webhook", async (req, res) => {
       return res.json({ ok: true });
     }
 
-    // B) Agar asosiy telefon raqam kutilayotgan bo'lsa
+    // C) Agar asosiy telefon raqam kutilayotgan bo'lsa
     if (regState.step === "ask_phone") {
       const digits = text.replace(/\D/g, "");
       if (digits.length < 9) {
@@ -729,22 +891,23 @@ router.post("/webhook", async (req, res) => {
 
       const primaryPhone = `+998${digits.slice(-9)}`;
 
-      const askSecond = [
+      const askRegion = [
         `📞 Raqamingiz: <code>${escapeHtml(primaryPhone)}</code>`,
         "",
-        `3️⃣ <b>Qo'shimcha ikkinchi telefon raqamingiz bormi?</b>`,
-        `Bo'lsa yozing, bo'lmasa pastdagi tugmani bosing 👇`,
+        `📍 <b>Qaysi viloyatdansiz?</b>`,
+        `Pastdagi tugma orqali GPS joylashuvingizni yuboring yoki o'z viloyatingizni tanlang:`,
       ].join("\n");
 
-      const sent = await sendMessageWithId(chatId, askSecond, {
-        keyboard: {
-          inline_keyboard: [[{ text: "✅ Tasdiqlash", callback_data: "reg:confirm" }]],
-        },
+      const sent = await sendMessageWithId(chatId, askRegion, {
+        keyboard: regionsKeyboard(),
+      });
+      await sendMessage(chatId, "Yoki pastdagi «📍 Joylashuvni yuborish (GPS)» tugmasini bosing 👇", {
+        keyboard: locationRequestKeyboard(),
       });
 
       regStates.set(fromId, {
         ...regState,
-        step: "ask_second_phone",
+        step: "ask_region",
         phone: primaryPhone,
         promptMessageId: sent.messageId,
         updatedAt: Date.now(),
@@ -752,7 +915,7 @@ router.post("/webhook", async (req, res) => {
       return res.json({ ok: true });
     }
 
-    // C) Agar ism kutilayotgan bo'lsa (yoki yangi kirgan bo'lsa)
+    // D) Agar ism kutilayotgan bo'lsa (yoki yangi kirgan bo'lsa)
     const digits = text.replace(/\D/g, "");
     const textWithoutDigits = text.replace(/[\d\+\s\-\(\)\/\:\,]/g, " ").trim();
 
@@ -761,23 +924,24 @@ router.post("/webhook", async (req, res) => {
       const primaryPhone = `+998${digits.slice(-9)}`;
       const chosenName = textWithoutDigits.length >= 2 ? textWithoutDigits : (firstName || "Foydalanuvchi");
 
-      const askSecond = [
+      const askRegion = [
         `👤 Ism: <b>${escapeHtml(chosenName)}</b>`,
         `📞 Telefon: <code>${escapeHtml(primaryPhone)}</code>`,
         "",
-        `<b>Qo'shimcha ikkinchi telefon raqamingiz bormi?</b>`,
-        `Bo'lsa yozing, bo'lmasa pastdagi tugmani bosing 👇`,
+        `📍 <b>Qaysi viloyatdansiz?</b>`,
+        `Pastdagi tugma orqali GPS joylashuvingizni yuboring yoki o'z viloyatingizni tanlang:`,
       ].join("\n");
 
-      const sent = await sendMessageWithId(chatId, askSecond, {
-        keyboard: {
-          inline_keyboard: [[{ text: "✅ Tasdiqlash", callback_data: "reg:confirm" }]],
-        },
+      const sent = await sendMessageWithId(chatId, askRegion, {
+        keyboard: regionsKeyboard(),
+      });
+      await sendMessage(chatId, "Yoki pastdagi «📍 Joylashuvni yuborish (GPS)» tugmasini bosing 👇", {
+        keyboard: locationRequestKeyboard(),
       });
 
       regStates.set(fromId, {
         ...regState,
-        step: "ask_second_phone",
+        step: "ask_region",
         name: chosenName,
         phone: primaryPhone,
         promptMessageId: sent.messageId,

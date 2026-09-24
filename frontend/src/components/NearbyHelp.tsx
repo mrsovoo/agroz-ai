@@ -319,7 +319,7 @@ export default function NearbyHelp({
                     </div>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
-                    {p.distanceKm !== null && (
+                    {typeof p.distanceKm === "number" && Number.isFinite(p.distanceKm) && (
                       <span
                         className="rounded-full px-2 py-0.5 text-[11px] font-bold text-white"
                         style={{ background: inRange ? "var(--brand-green)" : "var(--brand-muted)" }}
@@ -515,7 +515,7 @@ export default function NearbyHelp({
                             🏅 {s.experienceYears} yil
                           </span>
                         )}
-                        {s.distanceKm !== null && (
+                        {typeof s.distanceKm === "number" && Number.isFinite(s.distanceKm) && (
                           <span
                             className="rounded-full px-2 py-0.5 text-[11px] font-bold text-white"
                             style={{ background: inRange ? "var(--brand-green)" : "var(--brand-muted)" }}

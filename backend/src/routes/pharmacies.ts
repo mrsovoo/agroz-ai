@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
 import { specialists, specialistRatings } from "../db/schema.js";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
+import { parseCoords, distanceKm, roundKm } from "../lib/geo.js";
 
 const router = Router();
 
@@ -9,6 +10,9 @@ const router = Router();
 router.get("/", async (req, res) => {
   try {
     const kind = req.query.kind as string | undefined;
+    const latRaw = req.query.lat as string | undefined;
+    const lngRaw = req.query.lng as string | undefined;
+    const userCoords = parseCoords(latRaw, lngRaw);
 
     // Dorixonalar specialists jadvalida role = 'pharmacy' sifatida saqlanadi
     const query = db
@@ -30,7 +34,13 @@ router.get("/", async (req, res) => {
       })
       .from(specialists)
       .leftJoin(specialistRatings, eq(specialists.id, specialistRatings.specialistId))
-      .where(eq(specialists.role, "pharmacy"))
+      .where(
+        and(
+          eq(specialists.role, "pharmacy"),
+          eq(specialists.isActive, true),
+          eq(specialists.isApproved, true),
+        ),
+      )
       .groupBy(specialists.id);
 
     const rows = await query;
@@ -43,22 +53,32 @@ router.get("/", async (req, res) => {
         pharmacyKind = "general";
       }
 
+      let dist: number | null = null;
+      if (userCoords && typeof r.lat === "number" && typeof r.lng === "number") {
+        dist = roundKm(distanceKm(userCoords.lat, userCoords.lng, r.lat, r.lng));
+      }
+
       return {
         id: r.id,
         name: r.name || r.specialistName || "Agro Dorixona",
         kind: pharmacyKind,
         lat: r.lat,
         lng: r.lng,
-        phone: r.phone,
+        phone: r.phone || "",
         address: r.address || "",
         specialist: r.specialistName,
         workHours: r.workHours || "08:00 - 18:00",
+        distanceKm: dist,
         ratingAvg: Number(r.ratingAvg) || 5.0,
         ratingCount: Number(r.ratingCount) || 0,
         stock: [],
         medicines: [],
       };
     });
+
+    if (userCoords) {
+      items.sort((a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999));
+    }
 
     const filtered = kind && kind !== "all" 
       ? items.filter((i) => i.kind === kind || i.kind === "general")

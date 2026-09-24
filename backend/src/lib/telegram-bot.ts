@@ -113,10 +113,10 @@ export function greetingKeyboard(): InlineKeyboard | undefined {
   const url = appBaseUrl();
   if (!url) return undefined;
   const rows: InlineKeyboard["inline_keyboard"] = [];
-  if (url.startsWith("https://")) rows.push([{ text: "🚀 Agroz AI", web_app: { url } }]);
-  rows.push([{ text: "🌐 Saytni ochish", url }]);
+  if (url.startsWith("https://")) rows.push([{ text: "🚀 Agroz AI ilovasini ochish", web_app: { url } }]);
+  rows.push([{ text: "🌐 Sayt orqali kirish", url }]);
   rows.push([
-    { text: "📋 Mutaxassis bo'lib ro'yxatdan o'tish", url: `https://t.me/${authBotUsername()}` },
+    { text: "📋 Mutaxassis / Dorixona ro'yxati", url: `https://t.me/${authBotUsername()}` },
   ]);
   return { inline_keyboard: rows };
 }
