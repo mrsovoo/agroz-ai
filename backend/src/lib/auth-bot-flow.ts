@@ -279,14 +279,17 @@ export async function handleAuthBotUpdate(update: AuthBotUpdate): Promise<void> 
     }
 
     // 2c) Menyudagi doimiy tugmalar (Reply Keyboard) bosilganda
-    if (
+    const isMenuButton =
       text === "📦 Buyurtmalar" ||
+      text === "📋 Buyurtmalar" ||
+      text === "📋 Chaqiruvlarim" ||
       text === "💊 Dorilarim" ||
       text === "➕ Dori qo'shish" ||
       text === "👤 Ma'lumotlarim" ||
       text === "⏳ Ariza holati" ||
-      text === "✏️ Profilni tahrirlash"
-    ) {
+      text === "✏️ Profilni tahrirlash";
+
+    if (isMenuButton) {
       await handleMenuButton(chatId, telegramId, firstName, text);
       return;
     }
@@ -300,6 +303,17 @@ export async function handleAuthBotUpdate(update: AuthBotUpdate): Promise<void> 
     // 4) Bosqichga qarab matn kutiladi.
     const state = await getState(telegramId);
     if (!state) {
+      const profile = await getSpecialistByTelegramId(telegramId);
+      if (profile) {
+        const isPharmacy = profile.role === "pharmacy";
+        const keyboard = isPharmacy ? approvedPharmacyMenuKeyboard() : approvedSpecialistMenuKeyboard();
+        await sendAuthMessage(
+          chatId,
+          `Assalomu alaykum, <b>${escapeHtml(profile.name)}</b>!\n\nPastdagi menyu tugmalari orqali platforma xizmatlaridan foydalanishingiz mumkin:`,
+          { replyKeyboard: keyboard },
+        );
+        return;
+      }
       await sendAuthMessage(chatId, helpMessage(), { inline: NEXT_STEP_KEYBOARD });
       return;
     }
@@ -522,6 +536,19 @@ async function handleCommand(
     return;
   }
 
+  // Boshqaruv menyusi / panel
+  if (command === "/menu" || command === "/panel") {
+    const profile = await getSpecialistByTelegramId(telegramId);
+    if (!profile) {
+      await sendAuthMessage(chatId, needRegistrationMessage(), { inline: NEXT_STEP_KEYBOARD });
+      return;
+    }
+    const isPharmacy = profile.role === "pharmacy";
+    const keyboard = isPharmacy ? approvedPharmacyMenuKeyboard() : approvedSpecialistMenuKeyboard();
+    await sendAuthMessage(chatId, "👇 <b>Boshqaruv menyusi faollashtirildi:</b>", { replyKeyboard: keyboard });
+    return;
+  }
+
   // /buyurtmalar yoki /chaqiruvlar — dorixona va mutaxassis buyurtmalari/chaqiruvlari
   if (command === "/buyurtmalar" || command === "/chaqiruvlar") {
     const profile = await getSpecialistByTelegramId(telegramId);
@@ -556,7 +583,7 @@ async function handleCommand(
   }
 
   // Dorilar ro'yxati va o'chirish (faqat dorixona egasi).
-  if (command === "/dorilarim") {
+  if (command === "/dorilarim" || command === "/dorilar") {
     const data = await listMedicines(telegramId);
     if (!data) {
       await sendAuthMessage(chatId, needRegistrationMessage(), { inline: NEXT_STEP_KEYBOARD });
@@ -1945,14 +1972,9 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
 
       // Ro'yxatdan o'tishi bilan arizasi qabul qilinadi va darhol to'liq boshqaruv paneli beriladi:
       const isPharmacy = saved.role === "pharmacy";
+      const keyboard = isPharmacy ? approvedPharmacyMenuKeyboard() : approvedSpecialistMenuKeyboard();
       await sendAuthMessage(chatId, savedMessage(saved.name, saved.role), {
-        replyKeyboard: isPharmacy ? approvedPharmacyMenuKeyboard() : approvedSpecialistMenuKeyboard(),
-        inline: {
-          inline_keyboard: [
-            ...(isPharmacy ? [[{ text: "💊 Dorilar qo'shish", callback_data: "m:start" }]] : []),
-            [{ text: "👤 Mening profilim", callback_data: "m:profile" }],
-          ],
-        },
+        replyKeyboard: keyboard,
       });
       return;
     }
@@ -2826,6 +2848,8 @@ async function handleLocation(
   if (detected) {
     draft.address = detected;
     await setState(telegramId, "address_confirm", draft);
+    // Lokatsiya qabul qilinishi bilan pastdagi «Joylashuvni yuborish» tugmasini olib tashlaymiz
+    await clearReplyKeyboard(chatId, "📍 Joylashuv qabul qilindi!");
     await sendAuthMessage(chatId, askAddressConfirm(detected), {
       inline: ADDRESS_CONFIRM_KEYBOARD,
     });

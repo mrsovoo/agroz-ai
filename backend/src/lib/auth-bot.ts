@@ -64,18 +64,40 @@ export async function callAuthBot<T>(
 export async function sendAuthMessage(
   chatId: number,
   text: string,
-  options?: { inline?: InlineKeyboard; replyKeyboard?: ReplyKeyboard },
+  options?: { inline?: InlineKeyboard; replyKeyboard?: ReplyKeyboard; removeKeyboard?: boolean },
 ): Promise<boolean> {
-  if (options?.inline && options?.replyKeyboard) {
-    // Agar ikkalasi ham berilgan bo'lsa, asosiy xabarga inline_keyboard biriktiriladi
+  // 1. Klaviaturani butunlay olib tashlash (remove_keyboard: true)
+  if (options?.removeKeyboard) {
     const result = await callAuthBot<{ message_id?: number }>("sendMessage", {
+      chat_id: chatId,
+      text,
+      parse_mode: "HTML",
+      link_preview_options: { is_disabled: true },
+      reply_markup: { remove_keyboard: true },
+    });
+    return result !== null;
+  }
+
+  // 2. Agar ikkalasi ham berilgan bo'lsa (inline + replyKeyboard)
+  // Telegram bitta xabarda ikkala klaviaturani qabul qilmaydi.
+  // Shuning uchun: asosiy xabarni inline tugmalari bilan yuboramiz,
+  // va darhol doimiy klaviatura menyusini o'rnatamiz!
+  if (options?.inline && options?.replyKeyboard) {
+    await callAuthBot<{ message_id?: number }>("sendMessage", {
       chat_id: chatId,
       text,
       parse_mode: "HTML",
       link_preview_options: { is_disabled: true },
       reply_markup: options.inline,
     });
-    return result !== null;
+    const menuResult = await callAuthBot<{ message_id?: number }>("sendMessage", {
+      chat_id: chatId,
+      text: "👇 <i>Pastdagi boshqaruv menyusidan foydalanishingiz mumkin:</i>",
+      parse_mode: "HTML",
+      link_preview_options: { is_disabled: true },
+      reply_markup: options.replyKeyboard,
+    });
+    return menuResult !== null;
   }
 
   const replyMarkup = options?.inline ?? options?.replyKeyboard;
@@ -92,7 +114,7 @@ export async function sendAuthMessage(
 /** Pastdagi doimiy klaviaturani olib tashlab, xabar yuboradi. */
 export async function clearReplyKeyboard(chatId: number, text: string): Promise<boolean> {
   return sendAuthMessage(chatId, text, {
-    replyKeyboard: { keyboard: [], resize_keyboard: true, remove_keyboard: true },
+    removeKeyboard: true,
   });
 }
 
