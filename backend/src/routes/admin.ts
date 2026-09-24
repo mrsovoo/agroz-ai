@@ -152,7 +152,7 @@ router.post("/logout", async (req, res) => {
 // -------------------------------------------------------------
 
 // GET /api/admin/stats
-router.get("/stats", async (req, res) => {
+router.get("/stats", requireAdmin, async (req, res) => {
   try {
     const [u, uTg, specOnly, pharmOnly, m, o, oDone, oSum, oAvgRating, d, radius] =
       await Promise.all([
@@ -276,7 +276,7 @@ const UZBEKISTAN_REGIONS = [
 ];
 
 // GET /api/admin/regions
-router.get("/regions", async (_req, res) => {
+router.get("/regions", requireAdmin, async (_req, res) => {
   try {
     // 1. Foydalanuvchilar viloyatlar kesimida
     const userRows = await db
@@ -411,7 +411,7 @@ function findMatchingRegion(text: string): string {
 // -------------------------------------------------------------
 
 // GET /api/admin/reviews
-router.get("/reviews", async (_req, res) => {
+router.get("/reviews", requireAdmin, async (_req, res) => {
   try {
     // 1. Buyurtmalar bo'yicha baholashlar va izohlar
     const orderRatings = await db
@@ -513,7 +513,7 @@ router.delete("/reviews/:type/:id", requireAdmin, async (req, res) => {
 // -------------------------------------------------------------
 
 // GET /api/admin/settings
-router.get("/settings", async (_req, res) => {
+router.get("/settings", requireAdmin, async (_req, res) => {
   try {
     const rows = await db.select().from(appSettings);
     const settings: Record<string, string | null> = {};
@@ -563,7 +563,7 @@ router.post("/settings", requireAdmin, async (req, res) => {
 });
 
 // GET /api/admin/telegram
-router.get("/telegram", async (_req, res) => {
+router.get("/telegram", requireAdmin, async (_req, res) => {
   try {
     const botToken = await getSetting(SETTING_KEYS.telegramBotToken);
     const authBotToken = await getSetting(SETTING_KEYS.telegramAuthBotToken);
@@ -685,7 +685,7 @@ function getSettingLabel(key: string): string {
 // -------------------------------------------------------------
 
 // GET /api/admin/specialists
-router.get("/specialists", async (req, res) => {
+router.get("/specialists", requireAdmin, async (req, res) => {
   try {
     const role = typeof req.query.role === "string" ? req.query.role : undefined;
     const status = typeof req.query.status === "string" ? req.query.status : undefined;
@@ -1128,7 +1128,7 @@ router.post("/specialist-calls/:id/status", requireAdmin, async (req, res) => {
 // -------------------------------------------------------------
 // 12. SUPER ADMIN ANALYTICS & STATS (Foydalanuvchilar, Kasalliklar va Dorilar)
 // -------------------------------------------------------------
-router.get("/analytics", async (_req, res) => {
+router.get("/analytics", requireAdmin, async (_req, res) => {
   try {
     // 1. Foydalanuvchilar, agronomlar, veterinarlar va dorixonalar sonlari
     const [
