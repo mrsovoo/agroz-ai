@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import AdminWeatherAlertsBroadcast from "@/components/AdminWeatherAlertsBroadcast";
+import AdminBroadcastCenter from "@/components/AdminBroadcastCenter";
 import {
   Users,
   MapPin,
@@ -45,6 +45,9 @@ import {
   Phone,
   Eye,
   XCircle,
+  Send,
+  Loader2,
+  AlertTriangle,
 } from "lucide-react";
 
 type Me = { enabled: boolean; authenticated: boolean; username: string | null };
@@ -315,6 +318,21 @@ export default function AdminPanelPage() {
   const [loadingMedicines, setLoadingMedicines] = useState(false);
   const [medicineSearch, setMedicineSearch] = useState("");
 
+  // To'g'ridan-to'g'ri xabar yuborish modali (Dorixona yoki Mutaxassisga)
+  const [directMsgModal, setDirectMsgModal] = useState<{
+    open: boolean;
+    type: "pharmacy" | "specialist" | "user";
+    id: number;
+    name: string;
+    telegramId?: number | null;
+  } | null>(null);
+  const [directMsgTitle, setDirectMsgTitle] = useState("");
+  const [directMsgText, setDirectMsgText] = useState("");
+  const [directMsgBtnText, setDirectMsgBtnText] = useState("");
+  const [directMsgBtnUrl, setDirectMsgBtnUrl] = useState("");
+  const [directMsgSending, setDirectMsgSending] = useState(false);
+  const [directMsgResult, setDirectMsgResult] = useState<{ ok: boolean; message: string } | null>(null);
+
   const checkAuth = useCallback(async () => {
     try {
       const res = await adminFetch("/api/admin/me");
@@ -563,6 +581,48 @@ export default function AdminPanelPage() {
       setPharmacyMedicines([]);
     } finally {
       setLoadingMedicines(false);
+    }
+  }
+
+  async function handleSendDirectMessage(e: React.FormEvent) {
+    e.preventDefault();
+    if (!directMsgModal || !directMsgText.trim()) return;
+
+    setDirectMsgSending(true);
+    setDirectMsgResult(null);
+
+    try {
+      const res = await adminFetch("/api/admin/messages/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetType: "direct",
+          title: directMsgTitle.trim() || undefined,
+          message: directMsgText.trim(),
+          buttonText: directMsgBtnText.trim() || undefined,
+          buttonUrl: directMsgBtnUrl.trim() || undefined,
+          directRecipient: {
+            recipientType: directMsgModal.type,
+            id: directMsgModal.id,
+            telegramId: directMsgModal.telegramId || undefined,
+          },
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setDirectMsgResult({ ok: true, message: data.message || "Xabar muvaffaqiyatli yuborildi!" });
+        setDirectMsgText("");
+        setDirectMsgTitle("");
+        setDirectMsgBtnText("");
+        setDirectMsgBtnUrl("");
+      } else {
+        setDirectMsgResult({ ok: false, message: data.error || "Xabar yuborishda xatolik yuz berdi" });
+      }
+    } catch {
+      setDirectMsgResult({ ok: false, message: "Tarmoq xatosi tufayli xabar yuborilmadi" });
+    } finally {
+      setDirectMsgSending(false);
     }
   }
 
@@ -871,7 +931,7 @@ export default function AdminPanelPage() {
               { id: "reviews", label: "Mijozlar Fikrlari", icon: MessageSquare, count: reviews.length },
               { id: "ads", label: "Reklamalar", icon: Megaphone, count: ads.length },
               { id: "settings", label: "Tizim Sozlamalari", icon: Settings },
-              { id: "broadcast", label: "Ob-havo Xabarnomasi", icon: AlertCircle },
+              { id: "broadcast", label: "Xabarlar & Xabarnoma", icon: Send },
             ].map((tab) => {
               const Icon = tab.icon;
               const active = activeTab === tab.id;
@@ -1157,13 +1217,37 @@ export default function AdminPanelPage() {
 
                       {/* Harakatlar tugmalari */}
                       <div className="flex items-center justify-between gap-2 pt-2">
-                        <button
-                          onClick={() => handleViewPharmacyMedicines(p)}
-                          className="flex items-center gap-1.5 rounded-xl border border-teal-200 bg-teal-50 px-3.5 py-2 text-xs font-bold text-teal-800 hover:bg-teal-100 active:scale-95 transition"
-                        >
-                          <Package size={14} />
-                          Dorilar ro&apos;yxati ({p.medicinesCount})
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleViewPharmacyMedicines(p)}
+                            className="flex items-center gap-1.5 rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-xs font-bold text-teal-800 hover:bg-teal-100 active:scale-95 transition"
+                          >
+                            <Package size={14} />
+                            Dorilar ({p.medicinesCount})
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setDirectMsgTitle("");
+                              setDirectMsgText("");
+                              setDirectMsgBtnText("");
+                              setDirectMsgBtnUrl("");
+                              setDirectMsgResult(null);
+                              setDirectMsgModal({
+                                open: true,
+                                type: "pharmacy",
+                                id: p.id,
+                                name: p.organization || p.name,
+                                telegramId: p.telegramId,
+                              });
+                            }}
+                            className="flex items-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-bold text-sky-800 hover:bg-sky-100 active:scale-95 transition"
+                            title="Ushbu dorixona egasiga Telegram orqali xabar yuborish"
+                          >
+                            <Send size={13} />
+                            Xabar
+                          </button>
+                        </div>
 
                         <button
                           onClick={() => handleDeleteSpecialist(p.id, p.organization || p.name)}

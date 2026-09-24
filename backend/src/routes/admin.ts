@@ -38,6 +38,8 @@ import {
   applicationApprovedNotification,
   applicationRejectedNotification,
 } from "../lib/auth-bot.js";
+import { escapeHtml } from "../lib/tg-escape.js";
+import { sendMessage } from "../lib/telegram-bot.js";
 
 const router = Router();
 
@@ -1435,6 +1437,296 @@ router.post("/weather-alerts/broadcast", requireAdmin, async (req, res) => {
   } catch (err: any) {
     console.error("[weather-alerts broadcast error]:", err);
     res.status(500).json({ error: err.message || "Xabar tarqatishda xatolik yuz berdi" });
+  }
+});
+
+// -------------------------------------------------------------
+// 14. ADMIN CUSTOM MESSAGING & BROADCASTS (Dorixona, Mutaxassis, Foydalanuvchilar)
+// -------------------------------------------------------------
+
+router.get("/messages/recipients-count", requireAdmin, async (_req, res) => {
+  try {
+    const [pharmacyRows, specialistRows, userRows] = await Promise.all([
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(specialists)
+        .where(
+          and(
+            eq(specialists.role, "pharmacy"),
+            isNotNull(specialists.telegramId),
+            eq(specialists.isActive, true)
+          )
+        ),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(specialists)
+        .where(
+          and(
+            eq(specialists.role, "specialist"),
+            isNotNull(specialists.telegramId),
+            eq(specialists.isActive, true)
+          )
+        ),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(users)
+        .where(isNotNull(users.telegramId)),
+    ]);
+
+    const pharmaciesCount = Number(pharmacyRows[0]?.count || 0);
+    const specialistsCount = Number(specialistRows[0]?.count || 0);
+    const usersCount = Number(userRows[0]?.count || 0);
+
+    res.json({
+      ok: true,
+      pharmacies: pharmaciesCount,
+      specialists: specialistsCount,
+      users: usersCount,
+      total: pharmaciesCount + specialistsCount + usersCount,
+    });
+  } catch (err: any) {
+    console.error("[admin recipients count error]:", err);
+    res.status(500).json({ error: err.message || "Qabul qiluvchilar sonini hisoblashda xatolik" });
+  }
+});
+
+router.post("/messages/send", requireAdmin, async (req, res) => {
+  try {
+    const {
+      targetType, // "pharmacies" | "specialists" | "users" | "all" | "direct"
+      title,
+      message,
+      buttonText,
+      buttonUrl,
+      region,
+      directRecipient, // { recipientType: "pharmacy" | "specialist" | "user", id?: number, telegramId?: number }
+    } = req.body || {};
+
+    if (!message || typeof message !== "string" || !message.trim()) {
+      return res.status(400).json({ error: "Xabar matnini kiriting" });
+    }
+
+    const textLines: string[] = [];
+    if (title && title.trim()) {
+      textLines.push(`📢 <b>${escapeHtml(title.trim())}</b>`);
+      textLines.push("");
+    }
+    textLines.push(escapeHtml(message.trim()));
+    textLines.push("");
+    textLines.push("🌿 <i>Agroz AI ma'muriyati</i>");
+    const fullText = textLines.join("\n");
+
+    let inlineKeyboard: any = undefined;
+    if (buttonText && buttonText.trim() && buttonUrl && buttonUrl.trim()) {
+      let validUrl = buttonUrl.trim();
+      if (!/^https?:\/\//i.test(validUrl)) {
+        validUrl = `https://${validUrl}`;
+      }
+      inlineKeyboard = {
+        inline_keyboard: [
+          [
+            {
+              text: buttonText.trim(),
+              url: validUrl,
+            },
+          ],
+        ],
+      };
+    }
+
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    let sentCount = 0;
+    let failedCount = 0;
+
+    // DIRECT 1-to-1 MESSAGE
+    if (targetType === "direct") {
+      if (!directRecipient) {
+        return res.status(400).json({ error: "Qabul qiluvchi ko'rsatilmadi" });
+      }
+
+      let tgId = directRecipient.telegramId ? Number(directRecipient.telegramId) : null;
+      const recType = directRecipient.recipientType;
+
+      if (!tgId && directRecipient.id) {
+        if (recType === "pharmacy" || recType === "specialist") {
+          const [sp] = await db
+            .select({ telegramId: specialists.telegramId })
+            .from(specialists)
+            .where(eq(specialists.id, Number(directRecipient.id)))
+            .limit(1);
+          tgId = sp?.telegramId ? Number(sp.telegramId) : null;
+        } else {
+          const [u] = await db
+            .select({ telegramId: users.telegramId })
+            .from(users)
+            .where(eq(users.id, Number(directRecipient.id)))
+            .limit(1);
+          tgId = u?.telegramId ? Number(u.telegramId) : null;
+        }
+      }
+
+      if (!tgId) {
+        return res.status(400).json({
+          error: "Foydalanuvchining Telegram profili (@agroz_auth_bot yoki @agroz_bot) ulanmagan.",
+        });
+      }
+
+      try {
+        let ok = false;
+        if (recType === "pharmacy" || recType === "specialist") {
+          ok = await sendAuthMessage(
+            tgId,
+            fullText,
+            inlineKeyboard ? { inline: inlineKeyboard } : undefined
+          );
+        } else {
+          ok = await sendMessage(
+            tgId,
+            fullText,
+            inlineKeyboard ? { keyboard: inlineKeyboard } : undefined
+          );
+        }
+
+        if (ok) {
+          sentCount = 1;
+        } else {
+          failedCount = 1;
+        }
+      } catch (err) {
+        console.error(`Direct message to ${tgId} failed:`, err);
+        failedCount = 1;
+      }
+
+      return res.json({
+        ok: sentCount > 0,
+        sentCount,
+        failedCount,
+        totalTarget: 1,
+        message: sentCount > 0 ? "Xabar muvaffaqiyatli yetkazildi!" : "Xabarni yetkazib bo'lmadi",
+      });
+    }
+
+    // BROADCAST BY AUDIENCE
+    const targetPharmacies: number[] = [];
+    const targetSpecialists: number[] = [];
+    const targetUsers: number[] = [];
+
+    if (targetType === "pharmacies" || targetType === "all") {
+      const rows = await db
+        .select({ telegramId: specialists.telegramId })
+        .from(specialists)
+        .where(
+          and(
+            eq(specialists.role, "pharmacy"),
+            isNotNull(specialists.telegramId),
+            eq(specialists.isActive, true)
+          )
+        );
+      for (const r of rows) {
+        if (r.telegramId) targetPharmacies.push(Number(r.telegramId));
+      }
+    }
+
+    if (targetType === "specialists" || targetType === "all") {
+      const rows = await db
+        .select({ telegramId: specialists.telegramId })
+        .from(specialists)
+        .where(
+          and(
+            eq(specialists.role, "specialist"),
+            isNotNull(specialists.telegramId),
+            eq(specialists.isActive, true)
+          )
+        );
+      for (const r of rows) {
+        if (r.telegramId) targetSpecialists.push(Number(r.telegramId));
+      }
+    }
+
+    if (targetType === "users" || targetType === "all") {
+      const allTgUsers = await db
+        .select({ telegramId: users.telegramId, region: users.region })
+        .from(users)
+        .where(isNotNull(users.telegramId));
+
+      let matched = allTgUsers;
+      if (region && region !== "Barcha viloyatlar") {
+        matched = allTgUsers.filter(
+          (u) => u.region && u.region.toLowerCase().includes(region.toLowerCase())
+        );
+      }
+      for (const r of matched) {
+        if (r.telegramId) targetUsers.push(Number(r.telegramId));
+      }
+    }
+
+    const totalTarget = targetPharmacies.length + targetSpecialists.length + targetUsers.length;
+    if (totalTarget === 0) {
+      return res.status(400).json({
+        error: "Tanlangan guruhda Telegramga ulangan faol foydalanuvchilar topilmadi",
+      });
+    }
+
+    // Send to pharmacies (@agroz_auth_bot)
+    for (const tgId of targetPharmacies) {
+      try {
+        const ok = await sendAuthMessage(
+          tgId,
+          fullText,
+          inlineKeyboard ? { inline: inlineKeyboard } : undefined
+        );
+        if (ok) sentCount++;
+        else failedCount++;
+      } catch {
+        failedCount++;
+      }
+      if (totalTarget > 10) await sleep(35);
+    }
+
+    // Send to specialists (@agroz_auth_bot)
+    for (const tgId of targetSpecialists) {
+      try {
+        const ok = await sendAuthMessage(
+          tgId,
+          fullText,
+          inlineKeyboard ? { inline: inlineKeyboard } : undefined
+        );
+        if (ok) sentCount++;
+        else failedCount++;
+      } catch {
+        failedCount++;
+      }
+      if (totalTarget > 10) await sleep(35);
+    }
+
+    // Send to users (@agroz_bot)
+    for (const tgId of targetUsers) {
+      try {
+        const ok = await sendMessage(
+          tgId,
+          fullText,
+          inlineKeyboard ? { keyboard: inlineKeyboard } : undefined
+        );
+        if (ok) sentCount++;
+        else failedCount++;
+      } catch {
+        failedCount++;
+      }
+      if (totalTarget > 10) await sleep(35);
+    }
+
+    return res.json({
+      ok: true,
+      sentCount,
+      failedCount,
+      totalTarget,
+      message: `Xabar ${sentCount} ta qabul qiluvchiga muvaffaqiyatli yetkazildi!${
+        failedCount > 0 ? ` (${failedCount} ta xatolik)` : ""
+      }`,
+    });
+  } catch (err: any) {
+    console.error("[admin custom message broadcast error]:", err);
+    res.status(500).json({ error: err.message || "Xabar yuborishda xatolik yuz berdi" });
   }
 });
 
