@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import AdminWeatherAlertsBroadcast from "@/components/AdminWeatherAlertsBroadcast";
+import AdminBroadcastCenter from "@/components/AdminBroadcastCenter";
 import {
   Users,
   MapPin,
@@ -29,11 +29,12 @@ import {
   Lock,
   ArrowRight,
   LogOut,
-  AlertCircle,
-  Building,
   Phone,
-  Clock,
+  Menu,
+  AlertCircle,
   Truck,
+  Building,
+  Clock,
 } from "lucide-react";
 
 type Me = { enabled: boolean; authenticated: boolean; username: string | null };
@@ -834,107 +835,122 @@ export default function SuperAdminPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#fafafa] text-zinc-900 pb-12 font-sans">
-      {/* Top Header */}
-      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-zinc-200/80">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-zinc-900 text-white shadow-xs">
-                <span className="font-mono text-xs font-bold">A</span>
-              </div>
-              <div className="flex items-center">
-                <span className="text-sm font-bold tracking-tight text-zinc-900">Boshqaruv</span>
-                <span className="ml-2 rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-mono text-zinc-500 border border-zinc-200">markazi</span>
-              </div>
+    <div className="min-h-screen bg-[#fafafa] text-zinc-900 font-sans flex">
+      {/* Left Sidebar */}
+      <aside className="w-72 min-h-screen bg-white border-r border-zinc-200/80 flex flex-col hidden lg:flex">
+        <div className="flex h-16 items-center justify-between px-4 border-b border-zinc-200/80">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-zinc-900 text-white shadow-xs">
+              <span className="font-mono text-xs font-bold">A</span>
             </div>
-
-            <div className="flex items-center gap-2.5">
-              <button
-                onClick={loadData}
-                title="Ma'lumotlarni yangilash"
-                className="flex h-8.5 w-8.5 items-center justify-center rounded-xl bg-white text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 border border-zinc-200/80 shadow-2xs transition"
-              >
-                <RefreshCw size={14} />
-              </button>
-
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 border border-zinc-200/80 shadow-2xs transition"
-              >
-                <LogOut size={13} /> Chiquv ({me.username})
-              </button>
+            <div className="flex items-center">
+              <span className="text-sm font-bold tracking-tight text-zinc-900">Boshqaruv</span>
+              <span className="ml-2 rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-mono text-zinc-500 border border-zinc-200">markazi</span>
             </div>
-          </div>
-
-          {/* Navigatsiya Tablari */}
-          <div className="flex space-x-1.5 overflow-x-auto pb-2 scrollbar-none">
-            {[
-              { id: "dashboard", label: "Dashboard", icon: BarChart3 },
-              { id: "analytics", label: "Analitika & Tahlil", icon: TrendingUp },
-              {
-                id: "orders",
-                label: "Buyurtmalar",
-                icon: ShoppingCart,
-                badge: adminOrders.filter((o) => o.status === "yangi").length > 0 ? adminOrders.filter((o) => o.status === "yangi").length : undefined,
-              },
-              {
-                id: "specialist_calls",
-                label: "Chaqiruvlar",
-                icon: Phone,
-                badge: adminCalls.filter((c) => c.status === "yangi").length > 0 ? adminCalls.filter((c) => c.status === "yangi").length : undefined,
-              },
-              {
-                id: "pharmacies",
-                label: "Dorixona Arizalari (Panel)",
-                icon: Store,
-                badge: pendingPharmacies.length > 0 ? pendingPharmacies.length : undefined,
-              },
-              {
-                id: "specialists",
-                label: "Mutaxassislar (Agronom & Vet)",
-                icon: Users,
-                badge: pendingSpecialists.length > 0 ? pendingSpecialists.length : undefined,
-              },
-              {
-                id: "users",
-                label: "Foydalanuvchilar (Dehqonlar)",
-                icon: Users,
-                badge: usersList.length > 0 ? usersList.length : undefined,
-              },
-              { id: "regions", label: "Viloyatlar Tahlili", icon: Globe },
-              { id: "reviews", label: "Fikrlar & Sharhlar", icon: MessageSquare },
-              { id: "settings", label: "Radius & Yetkazib Berish Sozlamalari", icon: Settings },
-              { id: "broadcast", label: "Ob-havo Ogohlantirishlari", icon: AlertCircle },
-            ].map((tab) => {
-              const Icon = tab.icon;
-              const active = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-3 py-1.5 text-xs font-medium transition ${
-                    active
-                      ? "bg-zinc-900 text-white font-bold shadow-xs"
-                      : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 border border-transparent"
-                  }`}
-                >
-                  <Icon size={14} />
-                  <span>{tab.label}</span>
-                  {tab.badge !== undefined && (
-                    <span className="rounded-full bg-zinc-100 px-1.5 py-0.2 text-[10px] font-mono font-bold text-zinc-900 border border-zinc-200">
-                      {tab.badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
           </div>
         </div>
-      </header>
 
-      {/* Asosiy Kontent */}
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+          {[
+            { id: "dashboard", label: "Dashboard", icon: BarChart3 },
+            { id: "analytics", label: "Analitika & Tahlil", icon: TrendingUp },
+            {
+              id: "orders",
+              label: "Buyurtmalar",
+              icon: ShoppingCart,
+              badge: adminOrders.filter((o) => o.status === "yangi").length > 0 ? adminOrders.filter((o) => o.status === "yangi").length : undefined,
+            },
+            {
+              id: "specialist_calls",
+              label: "Chaqiruvlar",
+              icon: Phone,
+              badge: adminCalls.filter((c) => c.status === "yangi").length > 0 ? adminCalls.filter((c) => c.status === "yangi").length : undefined,
+            },
+            {
+              id: "pharmacies",
+              label: "Dorixona Arizalari (Panel)",
+              icon: Store,
+              badge: pendingPharmacies.length > 0 ? pendingPharmacies.length : undefined,
+            },
+            {
+              id: "specialists",
+              label: "Mutaxassislar (Agronom & Vet)",
+              icon: Users,
+              badge: pendingSpecialists.length > 0 ? pendingSpecialists.length : undefined,
+            },
+            {
+              id: "users",
+              label: "Foydalanuvchilar (Dehqonlar)",
+              icon: Users,
+              badge: usersList.length > 0 ? usersList.length : undefined,
+            },
+            { id: "regions", label: "Viloyatlar Tahlili", icon: Globe },
+            { id: "reviews", label: "Fikrlar & Sharhlar", icon: MessageSquare },
+            { id: "settings", label: "Radius & Yetkazib Berish Sozlamalari", icon: Settings },
+            { id: "broadcast", label: "Xabarlar & Xabarnomalar", icon: MessageSquare },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const active = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                  active
+                    ? "bg-zinc-900 text-white font-bold shadow-xs"
+                    : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100"
+                }`}
+              >
+                <Icon size={18} className="shrink-0" />
+                <span className="truncate">{tab.label}</span>
+                {tab.badge !== undefined && (
+                  <span className="ml-auto rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-mono font-bold text-zinc-900 border border-zinc-200">
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="p-4 border-t border-zinc-200/80">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 border border-zinc-200/80 shadow-2xs transition"
+          >
+            <LogOut size={15} /> Chiquv ({me.username})
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top Header (Mobile only sidebar toggle + actions) */}
+        <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-zinc-200/80 lg:py-3">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="flex h-16 items-center justify-between">
+              <div className="lg:hidden flex items-center gap-2">
+                <button className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-zinc-600 hover:bg-zinc-100 border border-zinc-200/80">
+                  <Menu size={20} />
+                </button>
+                <span className="text-sm font-bold tracking-tight text-zinc-900">Boshqaruv markazi</span>
+              </div>
+
+              <div className="flex items-center gap-2.5">
+                <button
+                  onClick={loadData}
+                  title="Ma'lumotlarni yangilash"
+                  className="flex h-8.5 w-8.5 items-center justify-center rounded-xl bg-white text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 border border-zinc-200/80 shadow-2xs transition"
+                >
+                  <RefreshCw size={14} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Asosiy Kontent */}
+        <main className="flex-1 mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-6">
         {notice && (
           <div
             className={`mb-6 rounded-2xl p-4 text-xs font-bold border ${
@@ -2867,7 +2883,7 @@ export default function SuperAdminPage() {
         )}
 
         {/* 5. BROADCAST TAB */}
-        {activeTab === "broadcast" && <AdminWeatherAlertsBroadcast />}
+        {activeTab === "broadcast" && <AdminBroadcastCenter />}
 
         {/* BUYURTMA BATAFSIL MODAL */}
         {selectedOrderDetail && (
@@ -3337,6 +3353,7 @@ export default function SuperAdminPage() {
           </div>
         )}
       </main>
+      </div>
     </div>
   );
 }

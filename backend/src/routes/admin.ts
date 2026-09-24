@@ -32,6 +32,7 @@ import {
 } from "../lib/settings.js";
 import {
   sendAuthMessage,
+  sendAuthPhoto,
   approvedPharmacyMenuKeyboard,
   approvedSpecialistMenuKeyboard,
   pendingApprovalMenuKeyboard,
@@ -39,7 +40,7 @@ import {
   applicationRejectedNotification,
 } from "../lib/auth-bot.js";
 import { escapeHtml } from "../lib/tg-escape.js";
-import { sendMessage } from "../lib/telegram-bot.js";
+import { sendMessage, sendPhoto } from "../lib/telegram-bot.js";
 
 const router = Router();
 
@@ -1499,11 +1500,14 @@ router.post("/messages/send", requireAdmin, async (req, res) => {
       buttonText,
       buttonUrl,
       region,
+      imageUrl,
       directRecipient, // { recipientType: "pharmacy" | "specialist" | "user", id?: number, telegramId?: number }
     } = req.body || {};
 
     if (!message || typeof message !== "string" || !message.trim()) {
-      return res.status(400).json({ error: "Xabar matnini kiriting" });
+      if (!imageUrl || typeof imageUrl !== "string" || !imageUrl.trim()) {
+        return res.status(400).json({ error: "Xabar matnini yoki rasm URL-ni kiriting" });
+      }
     }
 
     const textLines: string[] = [];
@@ -1532,6 +1536,42 @@ router.post("/messages/send", requireAdmin, async (req, res) => {
           ],
         ],
       };
+    }
+
+    const photoUrl: string | undefined =
+      imageUrl && typeof imageUrl === "string" && /^https?:\/\//i.test(imageUrl.trim())
+        ? imageUrl.trim()
+        : undefined;
+
+    async function sendToTg(tgId: number, useAuth: boolean): Promise<boolean> {
+      if (photoUrl) {
+        if (useAuth) {
+          return await sendAuthPhoto(
+            tgId,
+            photoUrl,
+            fullText,
+            inlineKeyboard ? { inline: inlineKeyboard } : undefined
+          );
+        }
+        return await sendPhoto(
+          tgId,
+          photoUrl,
+          fullText,
+          inlineKeyboard ? { keyboard: inlineKeyboard } : undefined
+        );
+      }
+      if (useAuth) {
+        return await sendAuthMessage(
+          tgId,
+          fullText,
+          inlineKeyboard ? { inline: inlineKeyboard } : undefined
+        );
+      }
+      return await sendMessage(
+        tgId,
+        fullText,
+        inlineKeyboard ? { keyboard: inlineKeyboard } : undefined
+      );
     }
 
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -1571,21 +1611,8 @@ router.post("/messages/send", requireAdmin, async (req, res) => {
         });
       }
 
-      try {
-        let ok = false;
-        if (recType === "pharmacy" || recType === "specialist") {
-          ok = await sendAuthMessage(
-            tgId,
-            fullText,
-            inlineKeyboard ? { inline: inlineKeyboard } : undefined
-          );
-        } else {
-          ok = await sendMessage(
-            tgId,
-            fullText,
-            inlineKeyboard ? { keyboard: inlineKeyboard } : undefined
-          );
-        }
+       try {
+        const ok = await sendToTg(tgId, recType === "pharmacy" || recType === "specialist");
 
         if (ok) {
           sentCount = 1;
@@ -1670,11 +1697,7 @@ router.post("/messages/send", requireAdmin, async (req, res) => {
     // Send to pharmacies (@agroz_auth_bot)
     for (const tgId of targetPharmacies) {
       try {
-        const ok = await sendAuthMessage(
-          tgId,
-          fullText,
-          inlineKeyboard ? { inline: inlineKeyboard } : undefined
-        );
+        const ok = await sendToTg(tgId, true);
         if (ok) sentCount++;
         else failedCount++;
       } catch {
@@ -1686,11 +1709,7 @@ router.post("/messages/send", requireAdmin, async (req, res) => {
     // Send to specialists (@agroz_auth_bot)
     for (const tgId of targetSpecialists) {
       try {
-        const ok = await sendAuthMessage(
-          tgId,
-          fullText,
-          inlineKeyboard ? { inline: inlineKeyboard } : undefined
-        );
+        const ok = await sendToTg(tgId, true);
         if (ok) sentCount++;
         else failedCount++;
       } catch {
@@ -1702,11 +1721,7 @@ router.post("/messages/send", requireAdmin, async (req, res) => {
     // Send to users (@agroz_bot)
     for (const tgId of targetUsers) {
       try {
-        const ok = await sendMessage(
-          tgId,
-          fullText,
-          inlineKeyboard ? { keyboard: inlineKeyboard } : undefined
-        );
+        const ok = await sendToTg(tgId, false);
         if (ok) sentCount++;
         else failedCount++;
       } catch {

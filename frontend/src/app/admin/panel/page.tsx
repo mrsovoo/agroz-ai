@@ -2703,13 +2703,11 @@ export default function AdminPanelPage() {
           </form>
         )}
 
-        {/* ------------------------------------------------------------- */}
-        {/* TAB 5: OB-HAVO VA AGRO OGOHLANTIRISHLAR */}
-        {/* ------------------------------------------------------------- */}
+        /* ------------------------------------------------------------- */
+        /* TAB 5: OQIM VA BILDIRLAR (broadcast + weather alerts) */
+        /* ------------------------------------------------------------- */
         {activeTab === "broadcast" && (
-          <div className="space-y-6">
-            <AdminWeatherAlertsBroadcast />
-          </div>
+          <AdminBroadcastCenter />
         )}
 
         {/* ------------------------------------------------------------- */}

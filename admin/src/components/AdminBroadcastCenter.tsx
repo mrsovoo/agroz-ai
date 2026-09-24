@@ -148,11 +148,11 @@ export default function AdminBroadcastCenter() {
           failedCount: data.failedCount,
           totalTarget: data.totalTarget,
         });
-        // Formani tozalash
         setTitle("");
         setMessage("");
         setButtonText("");
         setButtonUrl("");
+        setImageUrl("");
       } else {
         setResult({
           ok: false,
@@ -215,7 +215,7 @@ export default function AdminBroadcastCenter() {
             }`}
           >
             <ShieldAlert size={16} className={activeMode === "weather" ? "text-red-400" : "text-slate-400"} />
-            <span>Shoshilinch Ob-havo</span>
+            <span>Shoshilinch Ob-hava</span>
           </button>
         </div>
       </div>
@@ -247,7 +247,7 @@ export default function AdminBroadcastCenter() {
               </button>
             </div>
 
-            {/* Qabul qiluvchilar auditoriyasini tanlash */}
+            {/* Qabul qiluvchi auditoriyasini tanlash */}
             <div className="mt-6">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-3">
                 1. Xabar qabul qiluvchilar auditoriyasi:
@@ -461,7 +461,7 @@ export default function AdminBroadcastCenter() {
                       Tugma havolasi (URL)
                     </label>
                     <input
-                      type="text"
+                      type="url"
                       value={buttonUrl}
                       onChange={(e) => setButtonUrl(e.target.value)}
                       placeholder="https://agroz.uz..."
@@ -469,25 +469,25 @@ export default function AdminBroadcastCenter() {
                     />
                   </div>
                 </div>
-               </div>
+              </div>
 
-               {/* Rasm (ixtiyoriy) */}
-               <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-4 space-y-3">
-                 <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                   <ImageIcon size={14} className="text-emerald-600" />
-                   Xabar rasmi (ixtiyoriy)
-                 </span>
-                 <input
-                   type="url"
-                   value={imageUrl}
-                   onChange={(e) => setImageUrl(e.target.value)}
-                   placeholder="https://example.com/image-1450x1080.jpg"
-                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                 />
-                 <p className="text-[10px] text-slate-500">
-                   Rekomendatsiya: 1450×1080 px, .jpg/.png, HTTPS. Rasm berilsa matn caption sifatida ishlatiladi.
-                 </p>
-               </div>
+              {/* Rasm (ixtiyoriy) */}
+              <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-4 space-y-3">
+                <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <ImageIcon size={14} className="text-emerald-600" />
+                  Xabar rasmi (ixtiyoriy)
+                </span>
+                <input
+                  type="url"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="https://example.com/image-1450x1080.jpg"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <p className="text-[10px] text-slate-500">
+                  Rekomendatsiya: 1450x1080 px, .jpg/.png, HTTPS. Rasm berilsa matn caption sifatida ishlatiladi.
+                </p>
+              </div>
 
               {/* Natija xabari */}
               {result && (

@@ -236,6 +236,24 @@ export async function sendMessage(
   return res.ok;
 }
 
+export async function sendPhoto(
+  chatId: number,
+  photo: string,
+  caption: string,
+  options?: { keyboard?: InlineKeyboard | ReplyKeyboard | { remove_keyboard: true } },
+): Promise<boolean> {
+  const keyboard = options?.keyboard;
+  const result = await callBot<{ message_id?: number }>("sendPhoto", {
+    chat_id: chatId,
+    photo,
+    caption,
+    parse_mode: "HTML",
+    link_preview_options: { is_disabled: true },
+    ...(keyboard ? { reply_markup: keyboard } : {}),
+  });
+  return result !== null;
+}
+
 export async function editMessageReplyMarkup(
   chatId: number,
   messageId: number,
