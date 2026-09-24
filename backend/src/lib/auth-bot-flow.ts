@@ -1943,17 +1943,7 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
       }
       await clearState(telegramId);
 
-      // Agar arizasi hali admin tomonidan tasdiqlanmagan bo'lsa:
-      if (!saved.isApproved) {
-        await sendAuthMessage(
-          chatId,
-          applicationPendingMessage(saved.name, saved.role, draft.organization),
-          { replyKeyboard: pendingApprovalMenuKeyboard() },
-        );
-        return;
-      }
-
-      // Agar avvaldan tasdiqlangan bo'lsa:
+      // Ro'yxatdan o'tishi bilan arizasi qabul qilinadi va darhol to'liq boshqaruv paneli beriladi:
       const isPharmacy = saved.role === "pharmacy";
       await sendAuthMessage(chatId, savedMessage(saved.name, saved.role), {
         replyKeyboard: isPharmacy ? approvedPharmacyMenuKeyboard() : approvedSpecialistMenuKeyboard(),
@@ -3038,6 +3028,7 @@ async function saveDraft(
     lat: draft.lat as number,
     lng: draft.lng as number,
     workHours: draft.workHours ?? "09:00 - 18:00",
+    isApproved: true,
   });
   return saved
     ? {

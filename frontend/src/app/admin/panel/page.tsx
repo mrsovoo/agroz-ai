@@ -294,7 +294,7 @@ export default function AdminPanelPage() {
   const [pharmacySearch, setPharmacySearch] = useState("");
   const [pharmacyFilter, setPharmacyFilter] = useState<"all" | "pending" | "approved">("all");
   const [specialistSearch, setSpecialistSearch] = useState("");
-  const [specialistFilter, setSpecialistFilter] = useState<"all" | "pending" | "approved">("all");
+  const [specialistFilter, setSpecialistFilter] = useState<"all" | "agronom" | "veterinar">("all");
   const [specialistRoleFilter, setSpecialistRoleFilter] = useState<"all" | "crop" | "animal">("all");
 
   // Buyurtmalar va Chaqiruvlar
@@ -865,8 +865,8 @@ export default function AdminPanelPage() {
               { id: "analytics", label: "Analitika & Tahlil", icon: TrendingUp },
               { id: "orders", label: "Buyurtmalar", icon: ShoppingCart, count: ordersList.filter((o) => o.status === "yangi").length },
               { id: "calls", label: "Chaqiruvlar", icon: Activity, count: callsList.filter((c) => c.status === "yangi").length },
-              { id: "pharmacies", label: "Dorixona Arizalari", icon: Store, count: pharmacies.filter((p) => !p.isApproved).length },
-              { id: "specialists", label: "Mutaxassislar", icon: Users, count: specialistsList.filter((s) => !s.isApproved).length },
+              { id: "pharmacies", label: "Dorixonalar", icon: Store, count: pharmacies.length },
+              { id: "specialists", label: "Mutaxassislar", icon: Users, count: specialistsList.length },
               { id: "regions", label: "Viloyatlar Tahlili", icon: Globe },
               { id: "reviews", label: "Mijozlar Fikrlari", icon: MessageSquare, count: reviews.length },
               { id: "ads", label: "Reklamalar", icon: Megaphone, count: ads.length },
@@ -958,6 +958,8 @@ export default function AdminPanelPage() {
         {/* ------------------------------------------------------------- */}
         {/* TAB: DORIXONALAR VA HAMKORLIK ARIZALARI */}
         {/* ------------------------------------------------------------- */}
+        {/* TAB: DORIXONALAR */}
+        {/* ------------------------------------------------------------- */}
         {activeTab === "pharmacies" && (
           <div className="space-y-6">
             {/* Header va Metrikalar */}
@@ -966,10 +968,10 @@ export default function AdminPanelPage() {
                 <div>
                   <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                     <Store className="text-emerald-500" size={20} />
-                    Dorixonalar va Hamkorlik Arizalari
+                    Dorixonalar Boshqaruvi
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
-                    Yangi ro&apos;yxatdan o&apos;tgan dorixonalarni ko&apos;rib chiqish, arizalarni tasdiqlash va ularning dori vositalarini nazorat qilish
+                    Platformadagi barcha hamkor dorixonalar va ularning dori vositalari nazorati
                   </p>
                 </div>
                 <button
@@ -986,83 +988,45 @@ export default function AdminPanelPage() {
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
                   <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Jami Dorixonalar</p>
                   <p className="mt-1 text-2xl font-black text-slate-900">{pharmacies.length} ta</p>
-                  <p className="mt-1 text-[11px] text-slate-400">Baza bo&apos;yicha</p>
-                </div>
-                <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3.5">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-amber-700">⏳ Kutilayotgan Arizalar</p>
-                  <p className="mt-1 text-2xl font-black text-amber-800">
-                    {pharmacies.filter((p) => !p.isApproved).length} ta
-                  </p>
-                  <p className="mt-1 text-[11px] text-amber-600 font-semibold">Tasdiq talab etiladi</p>
+                  <p className="mt-1 text-[11px] text-slate-400">Ro&apos;yxatdan o&apos;tgan</p>
                 </div>
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3.5">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">✅ Tasdiqlangan</p>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">💊 Kiritilgan Dorilar</p>
                   <p className="mt-1 text-2xl font-black text-emerald-800">
-                    {pharmacies.filter((p) => p.isApproved).length} ta
-                  </p>
-                  <p className="mt-1 text-[11px] text-emerald-600 font-semibold">Faol dorixonalar</p>
-                </div>
-                <div className="rounded-xl border border-teal-200 bg-teal-50/60 p-3.5">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-teal-700">💊 Kiritilgan Dorilar</p>
-                  <p className="mt-1 text-2xl font-black text-teal-800">
                     {pharmacies.reduce((sum, p) => sum + (p.medicinesCount || 0), 0)} ta
                   </p>
-                  <p className="mt-1 text-[11px] text-teal-600 font-semibold">Barcha dorixonalarda</p>
+                  <p className="mt-1 text-[11px] text-emerald-600 font-semibold">Barcha dorixonalarda</p>
+                </div>
+                <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3.5">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-amber-700">📦 Jami Buyurtmalar</p>
+                  <p className="mt-1 text-2xl font-black text-amber-800">
+                    {pharmacies.reduce((sum, p) => sum + (p.ordersCount || 0), 0)} ta
+                  </p>
+                  <p className="mt-1 text-[11px] text-amber-600 font-semibold">Mijozlar buyurtmalari</p>
+                </div>
+                <div className="rounded-xl border border-teal-200 bg-teal-50/60 p-3.5">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-teal-700">📍 Faol Hamkorlar</p>
+                  <p className="mt-1 text-2xl font-black text-teal-800">
+                    {pharmacies.length} ta
+                  </p>
+                  <p className="mt-1 text-[11px] text-teal-600 font-semibold">Panel ochiq</p>
                 </div>
               </div>
 
-              {/* Filtrlash va Qidiruv */}
+              {/* Qidiruv */}
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-                  {[
-                    { id: "all", label: "Barchasi", count: pharmacies.length },
-                    {
-                      id: "pending",
-                      label: "⏳ Kutilmoqda",
-                      count: pharmacies.filter((p) => !p.isApproved).length,
-                      alert: pharmacies.filter((p) => !p.isApproved).length > 0,
-                    },
-                    {
-                      id: "approved",
-                      label: "✅ Tasdiqlangan",
-                      count: pharmacies.filter((p) => p.isApproved).length,
-                    },
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setPharmacyFilter(tab.id as any)}
-                      className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition ${
-                        pharmacyFilter === tab.id
-                          ? "bg-slate-900 text-white"
-                          : tab.alert
-                          ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
-                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                      }`}
-                    >
-                      <span>{tab.label}</span>
-                      <span
-                        className={`rounded-full px-1.5 py-0.2 text-[10px] font-black ${
-                          pharmacyFilter === tab.id
-                            ? "bg-slate-700 text-white"
-                            : tab.alert
-                            ? "bg-amber-200 text-amber-900"
-                            : "bg-slate-200 text-slate-700"
-                        }`}
-                      >
-                        {tab.count}
-                      </span>
-                    </button>
-                  ))}
-                </div>
+                <span className="text-xs font-semibold text-slate-500">
+                  Jami dorixonalar: <b>{pharmacies.length} ta</b>
+                </span>
 
-                <div className="relative min-w-[240px] flex-1 sm:max-w-xs">
+                <div className="relative min-w-[260px] flex-1 sm:max-w-md">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
-                    placeholder="Dorixona, shaxs yoki telefon..."
+                    placeholder="Dorixona nomi, mas'ul shaxs yoki telefon..."
                     value={pharmacySearch}
                     onChange={(e) => setPharmacySearch(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs text-slate-800 placeholder-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-xs text-slate-800 placeholder-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none"
                   />
                 </div>
               </div>
@@ -1071,8 +1035,6 @@ export default function AdminPanelPage() {
             {/* Dorixonalar Ro'yxati */}
             {(() => {
               const filtered = pharmacies.filter((p) => {
-                if (pharmacyFilter === "pending" && p.isApproved) return false;
-                if (pharmacyFilter === "approved" && !p.isApproved) return false;
                 if (pharmacySearch.trim()) {
                   const q = pharmacySearch.toLowerCase();
                   return (
@@ -1102,22 +1064,12 @@ export default function AdminPanelPage() {
                   {filtered.map((p) => (
                     <div
                       key={p.id}
-                      className={`relative rounded-2xl border p-5 transition shadow-xs ${
-                        !p.isApproved
-                          ? "border-amber-300 bg-amber-50/40"
-                          : "border-slate-200 bg-white hover:border-slate-300"
-                      }`}
+                      className="relative rounded-2xl border border-slate-200 bg-white p-5 transition shadow-xs hover:border-slate-300"
                     >
                       {/* Kartochka tepasi */}
                       <div className="flex items-start justify-between gap-3 mb-3">
                         <div className="flex items-start gap-3 min-w-0">
-                          <div
-                            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
-                              !p.isApproved
-                                ? "bg-amber-100 text-amber-700"
-                                : "bg-emerald-100 text-emerald-700"
-                            }`}
-                          >
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
                             <Store size={22} />
                           </div>
                           <div className="min-w-0">
@@ -1130,20 +1082,9 @@ export default function AdminPanelPage() {
                           </div>
                         </div>
 
-                        {/* Holat nishoni */}
-                        <div>
-                          {!p.isApproved ? (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2.5 py-1 text-[11px] font-black text-amber-800 animate-pulse">
-                              <Clock size={12} />
-                              Kutilmoqda
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-1 text-[11px] font-black text-emerald-800">
-                              <CheckCircle2 size={12} />
-                              Tasdiqlangan
-                            </span>
-                          )}
-                        </div>
+                        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">
+                          #{p.id} Dorixona
+                        </span>
                       </div>
 
                       {/* Ma'lumotlar bloki */}
@@ -1215,46 +1156,14 @@ export default function AdminPanelPage() {
                       </div>
 
                       {/* Harakatlar tugmalari */}
-                      <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
-                        <div className="flex items-center gap-2">
-                          {!p.isApproved ? (
-                            <>
-                              <button
-                                onClick={() => handleApproveSpecialist(p.id)}
-                                disabled={busy}
-                                className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-emerald-700 active:scale-95 transition shadow-sm"
-                              >
-                                <Check size={14} />
-                                Tasdiqlash & Panel Berish
-                              </button>
-                              <button
-                                onClick={() => handleRejectSpecialist(p.id)}
-                                disabled={busy}
-                                className="flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100 active:scale-95 transition"
-                              >
-                                <X size={14} />
-                                Rad etish
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() => handleViewPharmacyMedicines(p)}
-                                className="flex items-center gap-1.5 rounded-xl border border-teal-200 bg-teal-50 px-3.5 py-2 text-xs font-bold text-teal-800 hover:bg-teal-100 active:scale-95 transition"
-                              >
-                                <Package size={14} />
-                                Dorilar ro&apos;yxati ({p.medicinesCount})
-                              </button>
-                              <button
-                                onClick={() => handleRejectSpecialist(p.id)}
-                                title="Arizani bekor qilish"
-                                className="rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs font-bold text-amber-800 hover:bg-amber-100 transition"
-                              >
-                                To&apos;xtatish
-                              </button>
-                            </>
-                          )}
-                        </div>
+                      <div className="flex items-center justify-between gap-2 pt-2">
+                        <button
+                          onClick={() => handleViewPharmacyMedicines(p)}
+                          className="flex items-center gap-1.5 rounded-xl border border-teal-200 bg-teal-50 px-3.5 py-2 text-xs font-bold text-teal-800 hover:bg-teal-100 active:scale-95 transition"
+                        >
+                          <Package size={14} />
+                          Dorilar ro&apos;yxati ({p.medicinesCount})
+                        </button>
 
                         <button
                           onClick={() => handleDeleteSpecialist(p.id, p.organization || p.name)}
@@ -1305,13 +1214,6 @@ export default function AdminPanelPage() {
                   <p className="mt-1 text-2xl font-black text-slate-900">{specialistsList.length} ta</p>
                   <p className="mt-1 text-[11px] text-slate-400">Baza bo&apos;yicha</p>
                 </div>
-                <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3.5">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-amber-700">⏳ Kutilayotganlar</p>
-                  <p className="mt-1 text-2xl font-black text-amber-800">
-                    {specialistsList.filter((s) => !s.isApproved).length} ta
-                  </p>
-                  <p className="mt-1 text-[11px] text-amber-600 font-semibold">Tasdiq talab etiladi</p>
-                </div>
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3.5">
                   <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">🌾 Agronomlar</p>
                   <p className="mt-1 text-2xl font-black text-emerald-800">
@@ -1326,6 +1228,13 @@ export default function AdminPanelPage() {
                   </p>
                   <p className="mt-1 text-[11px] text-teal-600 font-semibold">Chorva sohasi</p>
                 </div>
+                <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-3.5">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-blue-700">📞 Jami Chaqiruvlar</p>
+                  <p className="mt-1 text-2xl font-black text-blue-800">
+                    {specialistsList.reduce((acc, s) => acc + (s.callsCount || 0), 0)} ta
+                  </p>
+                  <p className="mt-1 text-[11px] text-blue-600 font-semibold">Fermerlar chaqiruvi</p>
+                </div>
               </div>
 
               {/* Filtrlash */}
@@ -1334,15 +1243,14 @@ export default function AdminPanelPage() {
                   {[
                     { id: "all", label: "Barchasi", count: specialistsList.length },
                     {
-                      id: "pending",
-                      label: "⏳ Kutilmoqda",
-                      count: specialistsList.filter((s) => !s.isApproved).length,
-                      alert: specialistsList.filter((s) => !s.isApproved).length > 0,
+                      id: "agronom",
+                      label: "🌾 Agronomlar",
+                      count: specialistsList.filter((s) => (s.specialty || "").toLowerCase().includes("agronom") || (s.specialty || "").toLowerCase().includes("ekin")).length,
                     },
                     {
-                      id: "approved",
-                      label: "✅ Tasdiqlangan",
-                      count: specialistsList.filter((s) => s.isApproved).length,
+                      id: "veterinar",
+                      label: "🐄 Veterinarlar",
+                      count: specialistsList.filter((s) => (s.specialty || "").toLowerCase().includes("veterinar") || (s.specialty || "").toLowerCase().includes("chorva")).length,
                     },
                   ].map((tab) => (
                     <button
@@ -1351,8 +1259,6 @@ export default function AdminPanelPage() {
                       className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition ${
                         specialistFilter === tab.id
                           ? "bg-slate-900 text-white"
-                          : tab.alert
-                          ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
                           : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                       }`}
                     >
@@ -1361,8 +1267,6 @@ export default function AdminPanelPage() {
                         className={`rounded-full px-1.5 py-0.2 text-[10px] font-black ${
                           specialistFilter === tab.id
                             ? "bg-slate-700 text-white"
-                            : tab.alert
-                            ? "bg-amber-200 text-amber-900"
                             : "bg-slate-200 text-slate-700"
                         }`}
                       >
@@ -1388,8 +1292,16 @@ export default function AdminPanelPage() {
             {/* Mutaxassislar ro'yxati */}
             {(() => {
               const filtered = specialistsList.filter((s) => {
-                if (specialistFilter === "pending" && s.isApproved) return false;
-                if (specialistFilter === "approved" && !s.isApproved) return false;
+                if (
+                  specialistFilter === "agronom" &&
+                  !((s.specialty || "").toLowerCase().includes("agronom") || (s.specialty || "").toLowerCase().includes("ekin"))
+                )
+                  return false;
+                if (
+                  specialistFilter === "veterinar" &&
+                  !((s.specialty || "").toLowerCase().includes("veterinar") || (s.specialty || "").toLowerCase().includes("chorva"))
+                )
+                  return false;
                 if (specialistSearch.trim()) {
                   const q = specialistSearch.toLowerCase();
                   return (
@@ -1420,21 +1332,11 @@ export default function AdminPanelPage() {
                   {filtered.map((s) => (
                     <div
                       key={s.id}
-                      className={`relative rounded-2xl border p-5 transition shadow-xs ${
-                        !s.isApproved
-                          ? "border-amber-300 bg-amber-50/40"
-                          : "border-slate-200 bg-white hover:border-slate-300"
-                      }`}
+                      className="relative rounded-2xl border border-slate-200 bg-white p-5 transition shadow-xs hover:border-slate-300"
                     >
                       <div className="flex items-start justify-between gap-3 mb-3">
                         <div className="flex items-start gap-3 min-w-0">
-                          <div
-                            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
-                              !s.isApproved
-                                ? "bg-amber-100 text-amber-700"
-                                : "bg-emerald-100 text-emerald-700"
-                            }`}
-                          >
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
                             <Users size={22} />
                           </div>
                           <div className="min-w-0">
@@ -1449,17 +1351,9 @@ export default function AdminPanelPage() {
                         </div>
 
                         <div>
-                          {!s.isApproved ? (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2.5 py-1 text-[11px] font-black text-amber-800 animate-pulse">
-                              <Clock size={12} />
-                              Kutilmoqda
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-1 text-[11px] font-black text-emerald-800">
-                              <CheckCircle2 size={12} />
-                              Tasdiqlangan
-                            </span>
-                          )}
+                          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">
+                            ID: #{s.id}
+                          </span>
                         </div>
                       </div>
 
@@ -1533,37 +1427,10 @@ export default function AdminPanelPage() {
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
-                        <div className="flex items-center gap-2">
-                          {!s.isApproved ? (
-                            <>
-                              <button
-                                onClick={() => handleApproveSpecialist(s.id)}
-                                disabled={busy}
-                                className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-emerald-700 active:scale-95 transition shadow-sm"
-                              >
-                                <Check size={14} />
-                                Tasdiqlash & Bot Menyusi Berish
-                              </button>
-                              <button
-                                onClick={() => handleRejectSpecialist(s.id)}
-                                disabled={busy}
-                                className="flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100 active:scale-95 transition"
-                              >
-                                <X size={14} />
-                                Rad etish
-                              </button>
-                            </>
-                          ) : (
-                            <button
-                              onClick={() => handleRejectSpecialist(s.id)}
-                              title="Arizani bekor qilish"
-                              className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800 hover:bg-amber-100 transition"
-                            >
-                              To&apos;xtatish
-                            </button>
-                          )}
-                        </div>
+                      <div className="flex items-center justify-between gap-2 pt-2">
+                        <span className="text-[11px] text-slate-400">
+                          Ro&apos;yxatdan o&apos;tgan: {new Date(s.createdAt).toLocaleDateString("uz-UZ")}
+                        </span>
 
                         <button
                           onClick={() => handleDeleteSpecialist(s.id, s.name)}

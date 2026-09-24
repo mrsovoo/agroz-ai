@@ -108,7 +108,7 @@ export async function upsertSpecialist(input: SpecialistInput & { isApproved?: b
   const isApproved =
     input.isApproved !== undefined
       ? input.isApproved
-      : (existing?.isApproved ?? false);
+      : (existing?.isApproved ?? true);
 
   const values = {
     telegramId: input.telegramId,

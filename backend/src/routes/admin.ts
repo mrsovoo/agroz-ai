@@ -686,6 +686,9 @@ router.get("/specialists", async (req, res) => {
     const role = typeof req.query.role === "string" ? req.query.role : undefined;
     const status = typeof req.query.status === "string" ? req.query.status : undefined;
 
+    // Barcha mutaxassis va dorixonalar avtomatik tasdiqlangan
+    await db.update(specialists).set({ isApproved: true }).where(eq(specialists.isApproved, false)).catch(() => {});
+
     const allSpecs = await db
       .select({
         id: specialists.id,
