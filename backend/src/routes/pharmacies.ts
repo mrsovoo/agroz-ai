@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
-import { specialists, specialistRatings } from "../db/schema.js";
+import { specialists, specialistRatings, specialistMedicines } from "../db/schema.js";
 import { and, eq, sql } from "drizzle-orm";
 import { parseCoords, distanceKm, roundKm } from "../lib/geo.js";
 
@@ -43,20 +43,43 @@ router.get("/", async (req, res) => {
       )
       .groupBy(specialists.id);
 
-    const rows = await query;
+    const [rows, medRows] = await Promise.all([
+      query,
+      db.select().from(specialistMedicines),
+    ]);
+
+    const medsBySpecialist = new Map<number, any[]>();
+    for (const m of medRows) {
+      const list = medsBySpecialist.get(m.specialistId) ?? [];
+      list.push({
+        id: m.id,
+        name: m.name,
+        status: m.status,
+        hasPhoto: Boolean(m.photoFileId || m.photoData),
+        type: m.type,
+        usage: m.usage,
+        price: m.price ?? null,
+      });
+      medsBySpecialist.set(m.specialistId, list);
+    }
 
     const items = rows.map((r) => {
       let pharmacyKind = "agro";
-      if (r.specialty?.toLowerCase().includes("vet")) {
-        pharmacyKind = "vet";
-      } else if (r.specialty?.toLowerCase().includes("umumiy")) {
+      const spec = (r.specialty || "").toLowerCase();
+      if (spec.includes("umumiy") || (spec.includes("agro") && spec.includes("vet"))) {
         pharmacyKind = "general";
+      } else if (spec.includes("vet")) {
+        pharmacyKind = "vet";
+      } else {
+        pharmacyKind = "agro";
       }
 
       let dist: number | null = null;
       if (userCoords && typeof r.lat === "number" && typeof r.lng === "number") {
         dist = roundKm(distanceKm(userCoords.lat, userCoords.lng, r.lat, r.lng));
       }
+
+      const pMeds = medsBySpecialist.get(r.id) ?? [];
 
       return {
         id: r.id,
@@ -66,13 +89,13 @@ router.get("/", async (req, res) => {
         lng: r.lng,
         phone: r.phone || "",
         address: r.address || "",
-        specialist: r.specialistName,
+        specialist: r.specialistName ? `${r.specialty ?? "Dorixona"} · ${r.specialistName}` : r.specialty,
         workHours: r.workHours || "08:00 - 18:00",
         distanceKm: dist,
         ratingAvg: Number(r.ratingAvg) || 5.0,
         ratingCount: Number(r.ratingCount) || 0,
         stock: [],
-        medicines: [],
+        medicines: pMeds,
       };
     });
 

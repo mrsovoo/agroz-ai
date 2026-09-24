@@ -168,6 +168,9 @@ export default function MapClient() {
       }
     }
     meds.forEach((m) => pharmacyParams.append("med", m));
+    // Mutaxassislar so'roviga faqat specialist roliga egalarini so'raymiz (dorixonalar qayta tushmasligi uchun)
+    specialistParams.set("role", "specialist");
+
     // Eski so'rov javobi yangisini bosib ketmasligi uchun "cancelled" bayrog'i.
     let cancelled = false;
     setLoading(true);
@@ -183,44 +186,8 @@ export default function MapClient() {
     ])
       .then(([pharmacies, specialists]) => {
         if (cancelled) return;
-        // Ro'yxatdan o'tgan dorixona egalari ham "dorixona" bo'lib chiqadi —
-        // ularning turi (agro/vet/umumiy) mutaxassislik maydonida saqlanadi.
-        // Umumiy dorixonalar har ikkala filtrda (agro ham, vet ham) ko'rinadi.
-        const mapped: Place[] = specialists.map((s) => {
-          const dist = typeof s.distanceKm === "number" && Number.isFinite(s.distanceKm)
-            ? s.distanceKm
-            : (coords && typeof s.lat === "number" && typeof s.lng === "number"
-                ? roundKm(distanceKm(coords.lat, coords.lng, s.lat, s.lng))
-                : null);
 
-          return {
-            id: -s.id,
-            name: s.organization || s.name || "Mutaxassis",
-            kind: s.role === "pharmacy"
-              ? s.specialty?.startsWith("Vet")
-                ? "vet"
-                : s.specialty?.startsWith("Umumiy")
-                  ? "general"
-                  : "agro"
-              : "specialist",
-            lat: s.lat,
-            lng: s.lng,
-            phone: s.phone || "",
-            address: s.address || "",
-            specialist:
-              s.role === "pharmacy"
-                ? `${s.specialty ?? "Dorixona"} · ${s.name}`
-                : (s.specialty ?? s.name),
-            workHours: s.workHours || null,
-            distanceKm: dist,
-            locked: Boolean(s.locked),
-            ratingAvg: typeof s.ratingAvg === "number" ? s.ratingAvg : null,
-            ratingCount: s.ratingCount || 0,
-            stock: [],
-            medicines: Array.isArray(s.medicines) ? s.medicines : [],
-          };
-        });
-
+        // 1. Dorixonalar faqat /api/pharmacies dan olinadi (1 ta ro'yxatdan o'tgan dorixona faqat 1 marta chiqadi)
         const mappedPharmacies: Place[] = pharmacies.map((p) => {
           const dist = typeof p.distanceKm === "number" && Number.isFinite(p.distanceKm)
             ? p.distanceKm
@@ -242,7 +209,52 @@ export default function MapClient() {
           };
         });
 
-        setPlaces([...mappedPharmacies, ...mapped]);
+        // 2. Mutaxassislar faqat haqiqiy mutaxassislar (s.role !== "pharmacy") sifatida qo'shiladi
+        const mappedSpecialists: Place[] = specialists
+          .filter((s) => s.role !== "pharmacy")
+          .map((s) => {
+            const dist = typeof s.distanceKm === "number" && Number.isFinite(s.distanceKm)
+              ? s.distanceKm
+              : (coords && typeof s.lat === "number" && typeof s.lng === "number"
+                  ? roundKm(distanceKm(coords.lat, coords.lng, s.lat, s.lng))
+                  : null);
+
+            return {
+              id: -s.id,
+              name: s.organization || s.name || "Mutaxassis",
+              kind: "specialist",
+              lat: s.lat,
+              lng: s.lng,
+              phone: s.phone || "",
+              address: s.address || "",
+              specialist: s.specialty ?? s.name,
+              workHours: s.workHours || null,
+              distanceKm: dist,
+              locked: Boolean(s.locked),
+              ratingAvg: typeof s.ratingAvg === "number" ? s.ratingAvg : null,
+              ratingCount: s.ratingCount || 0,
+              stock: [],
+              medicines: Array.isArray(s.medicines) ? s.medicines : [],
+            };
+          });
+
+        // Dublikatlarni id bo'yicha to'liq oldini olish
+        const seenIds = new Set<number>();
+        const merged: Place[] = [];
+        for (const p of mappedPharmacies) {
+          if (!seenIds.has(p.id)) {
+            seenIds.add(p.id);
+            merged.push(p);
+          }
+        }
+        for (const s of mappedSpecialists) {
+          if (!seenIds.has(s.id)) {
+            seenIds.add(s.id);
+            merged.push(s);
+          }
+        }
+
+        setPlaces(merged);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -591,9 +603,26 @@ export default function MapClient() {
                     )}
                   </div>
                   <div>
-                    <p className="text-[16px] font-bold leading-tight text-[var(--brand-ink)]">
-                      {p.name}
-                    </p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="text-[16px] font-bold leading-tight text-[var(--brand-ink)]">
+                        {p.name}
+                      </p>
+                      {p.kind === "general" && (
+                        <span className="rounded-md bg-teal-100 px-1.5 py-0.5 text-[10px] font-bold text-teal-800">
+                          Agro & Vet
+                        </span>
+                      )}
+                      {p.kind === "vet" && (
+                        <span className="rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
+                          Veterinariya
+                        </span>
+                      )}
+                      {p.kind === "agro" && (
+                        <span className="rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">
+                          Agro
+                        </span>
+                      )}
+                    </div>
                     <p className="mt-1 flex items-start gap-1 text-[13px] text-[var(--brand-muted)]">
                       <MapPin size={13} className="mt-0.5 shrink-0" />
                       <span className="line-clamp-1">{p.address}</span>
@@ -805,9 +834,26 @@ export default function MapClient() {
                 )}
               </div>
               <div className="flex-1">
-                <p className="text-[18px] font-black leading-tight text-[var(--brand-ink)]">
-                  {selected.name}
-                </p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-[18px] font-black leading-tight text-[var(--brand-ink)]">
+                    {selected.name}
+                  </p>
+                  {selected.kind === "general" && (
+                    <span className="rounded-md bg-teal-100 px-2 py-0.5 text-[11px] font-bold text-teal-800">
+                      Agro & Vet
+                    </span>
+                  )}
+                  {selected.kind === "vet" && (
+                    <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800">
+                      Veterinariya
+                    </span>
+                  )}
+                  {selected.kind === "agro" && (
+                    <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800">
+                      Agro
+                    </span>
+                  )}
+                </div>
                 <p className="mt-1 flex items-start gap-1 text-[13px] text-[var(--brand-muted)]">
                   <MapPin size={13} className="mt-0.5 shrink-0" /> {selected.address}
                 </p>
