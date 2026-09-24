@@ -1950,35 +1950,6 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
           applicationPendingMessage(saved.name, saved.role, draft.organization),
           { replyKeyboard: pendingApprovalMenuKeyboard() },
         );
-
-        // Avtomatlashtirish: 30 soniyadan so'ng tasdiqlash
-        setTimeout(async () => {
-          try {
-            const { specialists } = await import("@/db/schema");
-            const { eq } = await import("drizzle-orm");
-            await db
-              .update(specialists)
-              .set({ isApproved: true, updatedAt: new Date() })
-              .where(eq(specialists.telegramId, telegramId));
-            
-            const { applicationApprovedNotification, approvedPharmacyMenuKeyboard, approvedSpecialistMenuKeyboard } = await import("@/lib/auth-bot");
-            const isPharmacy = saved.role === "pharmacy";
-            const keyboard = isPharmacy ? approvedPharmacyMenuKeyboard() : approvedSpecialistMenuKeyboard();
-            
-            await sendAuthMessage(chatId, applicationApprovedNotification(saved.name, saved.role), {
-              replyKeyboard: keyboard,
-              inline: {
-                inline_keyboard: [
-                  ...(isPharmacy ? [[{ text: "💊 Dorilar qo'shish", callback_data: "m:start" }]] : []),
-                  [{ text: "👤 Mening profilim", callback_data: "m:profile" }],
-                ],
-              },
-            });
-          } catch (e) {
-            console.error("[auto-approve] xatosi:", e);
-          }
-        }, 30000);
-
         return;
       }
 

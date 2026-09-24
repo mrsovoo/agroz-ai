@@ -40,6 +40,11 @@ import {
   ExternalLink,
   Menu,
   X,
+  Check,
+  Clock,
+  Phone,
+  Eye,
+  XCircle,
 } from "lucide-react";
 
 type Me = { enabled: boolean; authenticated: boolean; username: string | null };
@@ -111,6 +116,84 @@ type Ad = {
   startDate: string;
   endDate: string | null;
   createdAt: string;
+};
+
+type AdminSpecialist = {
+  id: number;
+  telegramId: number | null;
+  name: string;
+  phone: string;
+  role: "pharmacy" | "specialist";
+  specialty: string | null;
+  organization: string | null;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+  workHours: string | null;
+  isActive: boolean;
+  isApproved: boolean;
+  isBusy: boolean;
+  medicinesCount: number;
+  ordersCount: number;
+  callsCount: number;
+  ratingAvg: number | null;
+  ratingCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type PharmacyMedicine = {
+  id: number;
+  name: string;
+  type: string | null;
+  usage: string | null;
+  price: number | null;
+  stock: number | null;
+  status: string;
+  photoFileId: string | null;
+  createdAt: string;
+};
+
+type AdminOrder = {
+  id: number;
+  pharmacySpecialistId: number | null;
+  pharmacyName: string | null;
+  pharmacyOrg: string | null;
+  pharmacyPhone: string | null;
+  pharmacyAddress: string | null;
+  customerName: string;
+  customerPhone: string;
+  note: string | null;
+  deliveryType: string | null;
+  customerAddress: string | null;
+  totalSum: number | null;
+  status: string;
+  ratingStars: number | null;
+  ratingNote: string | null;
+  createdAt: string;
+  items: {
+    id: number;
+    name: string;
+    qty: number;
+    price: number | null;
+  }[];
+};
+
+type AdminCall = {
+  id: number;
+  specialistId: number;
+  specialistName: string;
+  specialistSpecialty: string | null;
+  specialistPhone: string;
+  specialistRole: string;
+  customerName: string;
+  customerPhone: string;
+  problem: string;
+  address: string | null;
+  status: string;
+  assignedOrderId: number | null;
+  createdAt: string;
+  updatedAt: string;
 };
 
 const AI_PRESETS: { label: string; baseUrl: string; model: string; hint: string }[] = [
@@ -205,6 +288,33 @@ export default function AdminPanelPage() {
   const [adEditing, setAdEditing] = useState(false);
   const [adFormOpen, setAdFormOpen] = useState(false);
 
+  // Dorixonalar va Mutaxassislar
+  const [pharmacies, setPharmacies] = useState<AdminSpecialist[]>([]);
+  const [specialistsList, setSpecialistsList] = useState<AdminSpecialist[]>([]);
+  const [pharmacySearch, setPharmacySearch] = useState("");
+  const [pharmacyFilter, setPharmacyFilter] = useState<"all" | "pending" | "approved">("all");
+  const [specialistSearch, setSpecialistSearch] = useState("");
+  const [specialistFilter, setSpecialistFilter] = useState<"all" | "pending" | "approved">("all");
+  const [specialistRoleFilter, setSpecialistRoleFilter] = useState<"all" | "crop" | "animal">("all");
+
+  // Buyurtmalar va Chaqiruvlar
+  const [ordersList, setOrdersList] = useState<AdminOrder[]>([]);
+  const [callsList, setCallsList] = useState<AdminCall[]>([]);
+  const [orderSearch, setOrderSearch] = useState("");
+  const [orderFilter, setOrderFilter] = useState<"all" | "yangi" | "tasdiqlandi" | "yetkazildi" | "bekor">("all");
+  const [callSearch, setCallSearch] = useState("");
+  const [callFilter, setCallFilter] = useState<"all" | "yangi" | "qabul_qilindi" | "bajarildi" | "bekor">("all");
+
+  // Dorixona dorilarini ko'rish modali
+  const [selectedPharmacyForMeds, setSelectedPharmacyForMeds] = useState<{
+    id: number;
+    name: string;
+    org: string | null;
+  } | null>(null);
+  const [pharmacyMedicines, setPharmacyMedicines] = useState<PharmacyMedicine[]>([]);
+  const [loadingMedicines, setLoadingMedicines] = useState(false);
+  const [medicineSearch, setMedicineSearch] = useState("");
+
   const checkAuth = useCallback(async () => {
     try {
       const res = await adminFetch("/api/admin/me");
@@ -223,13 +333,16 @@ export default function AdminPanelPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [statsRes, analyticsRes, regionsRes, reviewsRes, settingsRes, adsRes] = await Promise.all([
+      const [statsRes, analyticsRes, regionsRes, reviewsRes, settingsRes, adsRes, specialistsRes, ordersRes, callsRes] = await Promise.all([
         adminFetch("/api/admin/stats").then((r) => (r.ok ? r.json() : null)).catch(() => null),
         adminFetch("/api/admin/analytics").then((r) => (r.ok ? r.json() : null)).catch(() => null),
         adminFetch("/api/admin/regions").then((r) => (r.ok ? r.json() : null)).catch(() => null),
         adminFetch("/api/admin/reviews").then((r) => (r.ok ? r.json() : null)).catch(() => null),
         adminFetch("/api/admin/settings").then((r) => (r.ok ? r.json() : null)).catch(() => null),
         adminFetch("/api/advertisements/all").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        adminFetch("/api/admin/specialists").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        adminFetch("/api/admin/orders").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        adminFetch("/api/admin/specialist-calls").then((r) => (r.ok ? r.json() : null)).catch(() => null),
       ]);
 
       if (statsRes?.ok) {
@@ -259,6 +372,17 @@ export default function AdminPanelPage() {
       }
       if (adsRes?.ok) {
         setAds(adsRes.ads || []);
+      }
+      if (specialistsRes?.ok && Array.isArray(specialistsRes.specialists)) {
+        const allSpecs: AdminSpecialist[] = specialistsRes.specialists;
+        setPharmacies(allSpecs.filter((s) => s.role === "pharmacy"));
+        setSpecialistsList(allSpecs.filter((s) => s.role === "specialist"));
+      }
+      if (ordersRes?.ok && Array.isArray(ordersRes.orders)) {
+        setOrdersList(ordersRes.orders);
+      }
+      if (callsRes?.ok && Array.isArray(callsRes.calls)) {
+        setCallsList(callsRes.calls);
       }
     } catch (e) {
       console.error("Admin ma'lumotlarini yuklashda xatolik:", e);
@@ -355,6 +479,157 @@ export default function AdminPanelPage() {
 
   function formatSum(num: number): string {
     return new Intl.NumberFormat("uz-UZ").format(num) + " so'm";
+  }
+
+  // Mutaxassislar va Dorixonalar boshqaruvi
+  async function handleApproveSpecialist(id: number) {
+    if (!confirm("Ushbu arizani tasdiqlamoqchimisiz? Tasdiqlangach, Telegram orqali mutaxassis/dorixonaga boshqaruv paneli avtomatik yetkaziladi.")) return;
+    setBusy(true);
+    setNotice(null);
+    try {
+      const res = await adminFetch(`/api/admin/specialists/${id}/approve`, { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        setNotice({ kind: "ok", text: "Ariza tasdiqlandi va Telegram orqali bot boshqaruv paneli yuborildi!" });
+        await loadData();
+      } else {
+        setNotice({ kind: "err", text: data.error || "Tasdiqlashda xatolik yuz berdi" });
+      }
+    } catch {
+      setNotice({ kind: "err", text: "Serverga ulanishda xato" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleRejectSpecialist(id: number) {
+    const reason = prompt("Arizani rad etish sababini kiriting (foydalanuvchiga Telegram orqali yuboriladi):", "Hujjatlar yoki ma'lumotlar to'liq emas");
+    if (reason === null) return;
+    setBusy(true);
+    setNotice(null);
+    try {
+      const res = await adminFetch(`/api/admin/specialists/${id}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setNotice({ kind: "ok", text: "Ariza rad etildi va foydalanuvchiga xabar berildi" });
+        await loadData();
+      } else {
+        setNotice({ kind: "err", text: data.error || "Rad etishda xatolik" });
+      }
+    } catch {
+      setNotice({ kind: "err", text: "Serverga ulanishda xato" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDeleteSpecialist(id: number, name: string) {
+    if (!confirm(`Haqiqatan ham "${name}"ni butunlay o'chirmoqchimisiz? Unga tegishli barcha dorilar, reytinglar va ma'lumotlar o'chiriladi.`)) return;
+    setBusy(true);
+    setNotice(null);
+    try {
+      const res = await adminFetch(`/api/admin/specialists/${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (res.ok) {
+        setNotice({ kind: "ok", text: "Muvaffaqiyatli o'chirildi" });
+        await loadData();
+      } else {
+        setNotice({ kind: "err", text: data.error || "O'chirishda xatolik" });
+      }
+    } catch {
+      setNotice({ kind: "err", text: "Serverga ulanishda xato" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleViewPharmacyMedicines(pharmacy: AdminSpecialist) {
+    setSelectedPharmacyForMeds({ id: pharmacy.id, name: pharmacy.name, org: pharmacy.organization });
+    setLoadingMedicines(true);
+    setMedicineSearch("");
+    try {
+      const res = await adminFetch(`/api/admin/pharmacies/${pharmacy.id}/medicines`);
+      const data = await res.json();
+      if (res.ok && Array.isArray(data.items)) {
+        setPharmacyMedicines(data.items);
+      } else {
+        setPharmacyMedicines([]);
+      }
+    } catch {
+      setPharmacyMedicines([]);
+    } finally {
+      setLoadingMedicines(false);
+    }
+  }
+
+  async function handleUpdateOrderStatus(orderId: number, status: string) {
+    try {
+      const res = await adminFetch(`/api/admin/orders/${orderId}/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) {
+        setOrdersList((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)));
+        setNotice({ kind: "ok", text: `Buyurtma holati "${status}"ga o'zgartirildi` });
+      } else {
+        alert("Buyurtma holatini o'zgartirib bo'lmadi");
+      }
+    } catch {
+      alert("Server xatosi");
+    }
+  }
+
+  async function handleDeleteOrder(orderId: number) {
+    if (!confirm("Buyurtmani butunlay o'chirib tashlamoqchimisiz?")) return;
+    try {
+      const res = await adminFetch(`/api/admin/orders/${orderId}`, { method: "DELETE" });
+      if (res.ok) {
+        setOrdersList((prev) => prev.filter((o) => o.id !== orderId));
+        setNotice({ kind: "ok", text: "Buyurtma o'chirildi" });
+      } else {
+        alert("Buyurtmani o'chirishda xatolik");
+      }
+    } catch {
+      alert("Server xatosi");
+    }
+  }
+
+  async function handleUpdateCallStatus(callId: number, status: string) {
+    try {
+      const res = await adminFetch(`/api/admin/specialist-calls/${callId}/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) {
+        setCallsList((prev) => prev.map((c) => (c.id === callId ? { ...c, status } : c)));
+        setNotice({ kind: "ok", text: `Chaqiruv holati "${status}"ga o'zgartirildi` });
+      } else {
+        alert("Chaqiruv holatini o'zgartirib bo'lmadi");
+      }
+    } catch {
+      alert("Server xatosi");
+    }
+  }
+
+  async function handleDeleteCall(callId: number) {
+    if (!confirm("Chaqiruvni butunlay o'chirib tashlamoqchimisiz?")) return;
+    try {
+      const res = await adminFetch(`/api/admin/specialist-calls/${callId}`, { method: "DELETE" });
+      if (res.ok) {
+        setCallsList((prev) => prev.filter((c) => c.id !== callId));
+        setNotice({ kind: "ok", text: "Chaqiruv o'chirildi" });
+      } else {
+        alert("Chaqiruvni o'chirishda xatolik");
+      }
+    } catch {
+      alert("Server xatosi");
+    }
   }
 
   // Reklama CRUD
@@ -588,10 +863,10 @@ export default function AdminPanelPage() {
             {[
               { id: "dashboard", label: "Dashboard", icon: BarChart3 },
               { id: "analytics", label: "Analitika & Tahlil", icon: TrendingUp },
-              { id: "orders", label: "Buyurtmalar", icon: ShoppingCart },
-              { id: "calls", label: "Chaqiruvlar", icon: Activity },
-              { id: "pharmacies", label: "Dorixona Arizalari", icon: Store },
-              { id: "specialists", label: "Mutaxassislar", icon: Users },
+              { id: "orders", label: "Buyurtmalar", icon: ShoppingCart, count: ordersList.filter((o) => o.status === "yangi").length },
+              { id: "calls", label: "Chaqiruvlar", icon: Activity, count: callsList.filter((c) => c.status === "yangi").length },
+              { id: "pharmacies", label: "Dorixona Arizalari", icon: Store, count: pharmacies.filter((p) => !p.isApproved).length },
+              { id: "specialists", label: "Mutaxassislar", icon: Users, count: specialistsList.filter((s) => !s.isApproved).length },
               { id: "regions", label: "Viloyatlar Tahlili", icon: Globe },
               { id: "reviews", label: "Mijozlar Fikrlari", icon: MessageSquare, count: reviews.length },
               { id: "ads", label: "Reklamalar", icon: Megaphone, count: ads.length },
@@ -680,44 +955,1061 @@ export default function AdminPanelPage() {
         )}
 
         {/* ------------------------------------------------------------- */}
-        {/* Placeholder for new tabs */}
-        {activeTab === "orders" && (
-          <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 border-dashed">
-            <div className="text-center">
-              <ShoppingCart size={32} className="mx-auto mb-3 text-slate-400" />
-              <h3 className="text-lg font-bold text-slate-900">Buyurtmalar bo'limi</h3>
-              <p className="text-sm text-slate-400">Bu yerda barcha buyurtmalar ro'yxati va holati ko'rinadi (Tez orada ulashamiz).</p>
-            </div>
-          </div>
-        )}
-        
-        {activeTab === "calls" && (
-          <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 border-dashed">
-            <div className="text-center">
-              <Activity size={32} className="mx-auto mb-3 text-slate-400" />
-              <h3 className="text-lg font-bold text-slate-900">Chaqiruvlar bo'limi</h3>
-              <p className="text-sm text-slate-400">Mutaxassislar uchun kelib tushgan chaqiruvlar tarixi (Tez orada ulashamiz).</p>
-            </div>
-          </div>
-        )}
-
+        {/* ------------------------------------------------------------- */}
+        {/* TAB: DORIXONALAR VA HAMKORLIK ARIZALARI */}
+        {/* ------------------------------------------------------------- */}
         {activeTab === "pharmacies" && (
-          <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 border-dashed">
-            <div className="text-center">
-              <Store size={32} className="mx-auto mb-3 text-slate-400" />
-              <h3 className="text-lg font-bold text-slate-900">Dorixona Arizalari</h3>
-              <p className="text-sm text-slate-400">Yangi dorixonalarni tasdiqlash va ro'yxati (Tez orada ulashamiz).</p>
+          <div className="space-y-6">
+            {/* Header va Metrikalar */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <Store className="text-emerald-500" size={20} />
+                    Dorixonalar va Hamkorlik Arizalari
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Yangi ro&apos;yxatdan o&apos;tgan dorixonalarni ko&apos;rib chiqish, arizalarni tasdiqlash va ularning dori vositalarini nazorat qilish
+                  </p>
+                </div>
+                <button
+                  onClick={loadData}
+                  className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100 transition"
+                >
+                  <RefreshCw size={13} />
+                  Yangilash
+                </button>
+              </div>
+
+              {/* Metrika kartalari */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-6">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Jami Dorixonalar</p>
+                  <p className="mt-1 text-2xl font-black text-slate-900">{pharmacies.length} ta</p>
+                  <p className="mt-1 text-[11px] text-slate-400">Baza bo&apos;yicha</p>
+                </div>
+                <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3.5">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-amber-700">⏳ Kutilayotgan Arizalar</p>
+                  <p className="mt-1 text-2xl font-black text-amber-800">
+                    {pharmacies.filter((p) => !p.isApproved).length} ta
+                  </p>
+                  <p className="mt-1 text-[11px] text-amber-600 font-semibold">Tasdiq talab etiladi</p>
+                </div>
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3.5">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">✅ Tasdiqlangan</p>
+                  <p className="mt-1 text-2xl font-black text-emerald-800">
+                    {pharmacies.filter((p) => p.isApproved).length} ta
+                  </p>
+                  <p className="mt-1 text-[11px] text-emerald-600 font-semibold">Faol dorixonalar</p>
+                </div>
+                <div className="rounded-xl border border-teal-200 bg-teal-50/60 p-3.5">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-teal-700">💊 Kiritilgan Dorilar</p>
+                  <p className="mt-1 text-2xl font-black text-teal-800">
+                    {pharmacies.reduce((sum, p) => sum + (p.medicinesCount || 0), 0)} ta
+                  </p>
+                  <p className="mt-1 text-[11px] text-teal-600 font-semibold">Barcha dorixonalarda</p>
+                </div>
+              </div>
+
+              {/* Filtrlash va Qidiruv */}
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                  {[
+                    { id: "all", label: "Barchasi", count: pharmacies.length },
+                    {
+                      id: "pending",
+                      label: "⏳ Kutilmoqda",
+                      count: pharmacies.filter((p) => !p.isApproved).length,
+                      alert: pharmacies.filter((p) => !p.isApproved).length > 0,
+                    },
+                    {
+                      id: "approved",
+                      label: "✅ Tasdiqlangan",
+                      count: pharmacies.filter((p) => p.isApproved).length,
+                    },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setPharmacyFilter(tab.id as any)}
+                      className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+                        pharmacyFilter === tab.id
+                          ? "bg-slate-900 text-white"
+                          : tab.alert
+                          ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
+                    >
+                      <span>{tab.label}</span>
+                      <span
+                        className={`rounded-full px-1.5 py-0.2 text-[10px] font-black ${
+                          pharmacyFilter === tab.id
+                            ? "bg-slate-700 text-white"
+                            : tab.alert
+                            ? "bg-amber-200 text-amber-900"
+                            : "bg-slate-200 text-slate-700"
+                        }`}
+                      >
+                        {tab.count}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="relative min-w-[240px] flex-1 sm:max-w-xs">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Dorixona, shaxs yoki telefon..."
+                    value={pharmacySearch}
+                    onChange={(e) => setPharmacySearch(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs text-slate-800 placeholder-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none"
+                  />
+                </div>
+              </div>
             </div>
+
+            {/* Dorixonalar Ro'yxati */}
+            {(() => {
+              const filtered = pharmacies.filter((p) => {
+                if (pharmacyFilter === "pending" && p.isApproved) return false;
+                if (pharmacyFilter === "approved" && !p.isApproved) return false;
+                if (pharmacySearch.trim()) {
+                  const q = pharmacySearch.toLowerCase();
+                  return (
+                    p.organization?.toLowerCase().includes(q) ||
+                    p.name?.toLowerCase().includes(q) ||
+                    p.phone?.toLowerCase().includes(q) ||
+                    p.address?.toLowerCase().includes(q)
+                  );
+                }
+                return true;
+              });
+
+              if (filtered.length === 0) {
+                return (
+                  <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-12 text-center">
+                    <Store size={36} className="mx-auto mb-3 text-slate-300" />
+                    <h4 className="text-sm font-bold text-slate-800">Dorixonalar topilmadi</h4>
+                    <p className="mt-1 text-xs text-slate-400">
+                      {pharmacySearch ? "Qidiruv so'rovi bo'yicha hech narsa chiqmadi" : "Hozircha dorixonalar mavjud emas"}
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="grid gap-4 lg:grid-cols-2">
+                  {filtered.map((p) => (
+                    <div
+                      key={p.id}
+                      className={`relative rounded-2xl border p-5 transition shadow-xs ${
+                        !p.isApproved
+                          ? "border-amber-300 bg-amber-50/40"
+                          : "border-slate-200 bg-white hover:border-slate-300"
+                      }`}
+                    >
+                      {/* Kartochka tepasi */}
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div className="flex items-start gap-3 min-w-0">
+                          <div
+                            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
+                              !p.isApproved
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-emerald-100 text-emerald-700"
+                            }`}
+                          >
+                            <Store size={22} />
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="text-base font-black text-slate-900 truncate">
+                              {p.organization || p.name}
+                            </h4>
+                            <p className="text-xs text-slate-500 font-medium truncate">
+                              Mas&apos;ul: <b className="text-slate-700">{p.name}</b>
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Holat nishoni */}
+                        <div>
+                          {!p.isApproved ? (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2.5 py-1 text-[11px] font-black text-amber-800 animate-pulse">
+                              <Clock size={12} />
+                              Kutilmoqda
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-1 text-[11px] font-black text-emerald-800">
+                              <CheckCircle2 size={12} />
+                              Tasdiqlangan
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Ma'lumotlar bloki */}
+                      <div className="space-y-2 border-y border-slate-100 py-3 my-3 text-xs text-slate-600">
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400 flex items-center gap-1">
+                            <Phone size={13} /> Telefon:
+                          </span>
+                          <a href={`tel:${p.phone}`} className="font-bold text-slate-900 hover:text-emerald-600">
+                            {p.phone}
+                          </a>
+                        </div>
+
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="text-slate-400 flex items-center gap-1 shrink-0">
+                            <MapPin size={13} /> Manzil:
+                          </span>
+                          <span className="font-medium text-slate-800 text-right line-clamp-1">
+                            {p.address || "Manzil kiritilmagan"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400 flex items-center gap-1">
+                            <Clock size={13} /> Ish vaqti:
+                          </span>
+                          <span className="font-medium text-slate-800">{p.workHours || "24/7"}</span>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400 flex items-center gap-1">
+                            <Bot size={13} /> Telegram:
+                          </span>
+                          <span className="font-medium">
+                            {p.telegramId ? (
+                              <span className="text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                                Ulangan (ID: {p.telegramId})
+                              </span>
+                            ) : (
+                              <span className="text-slate-400">Ulanmagan</span>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Statistika ko'rsatkichlari */}
+                      <div className="grid grid-cols-3 gap-2 py-1 mb-3 text-center">
+                        <div className="rounded-xl bg-slate-50 p-2">
+                          <p className="text-[10px] uppercase font-bold text-slate-400">Dorilar</p>
+                          <p className="text-sm font-black text-teal-700">{p.medicinesCount} ta</p>
+                        </div>
+                        <div className="rounded-xl bg-slate-50 p-2">
+                          <p className="text-[10px] uppercase font-bold text-slate-400">Buyurtmalar</p>
+                          <p className="text-sm font-black text-amber-700">{p.ordersCount} ta</p>
+                        </div>
+                        <div className="rounded-xl bg-slate-50 p-2">
+                          <p className="text-[10px] uppercase font-bold text-slate-400">Reyting</p>
+                          <p className="text-sm font-black text-emerald-700 flex items-center justify-center gap-0.5">
+                            {p.ratingAvg ? (
+                              <>
+                                <Star size={11} className="fill-amber-400 text-amber-400" />
+                                {p.ratingAvg}
+                              </>
+                            ) : (
+                              "Yangi"
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Harakatlar tugmalari */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+                        <div className="flex items-center gap-2">
+                          {!p.isApproved ? (
+                            <>
+                              <button
+                                onClick={() => handleApproveSpecialist(p.id)}
+                                disabled={busy}
+                                className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-emerald-700 active:scale-95 transition shadow-sm"
+                              >
+                                <Check size={14} />
+                                Tasdiqlash & Panel Berish
+                              </button>
+                              <button
+                                onClick={() => handleRejectSpecialist(p.id)}
+                                disabled={busy}
+                                className="flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100 active:scale-95 transition"
+                              >
+                                <X size={14} />
+                                Rad etish
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => handleViewPharmacyMedicines(p)}
+                                className="flex items-center gap-1.5 rounded-xl border border-teal-200 bg-teal-50 px-3.5 py-2 text-xs font-bold text-teal-800 hover:bg-teal-100 active:scale-95 transition"
+                              >
+                                <Package size={14} />
+                                Dorilar ro&apos;yxati ({p.medicinesCount})
+                              </button>
+                              <button
+                                onClick={() => handleRejectSpecialist(p.id)}
+                                title="Arizani bekor qilish"
+                                className="rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs font-bold text-amber-800 hover:bg-amber-100 transition"
+                              >
+                                To&apos;xtatish
+                              </button>
+                            </>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => handleDeleteSpecialist(p.id, p.organization || p.name)}
+                          disabled={busy}
+                          title="Dorixonani butunlay o'chirish"
+                          className="flex items-center justify-center rounded-xl p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 transition"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         )}
 
+        {/* ------------------------------------------------------------- */}
+        {/* TAB: MUTAXASSISLAR (AGRONOM VA VETERINARLAR) */}
+        {/* ------------------------------------------------------------- */}
         {activeTab === "specialists" && (
-          <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 border-dashed">
-            <div className="text-center">
-              <Users size={32} className="mx-auto mb-3 text-slate-400" />
-              <h3 className="text-lg font-bold text-slate-900">Mutaxassislar</h3>
-              <p className="text-sm text-slate-400">Barcha agronom va veterinar mutaxassislar ro'yxati (Tez orada ulashamiz).</p>
+          <div className="space-y-6">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <Users className="text-emerald-500" size={20} />
+                    Mutaxassislar (Agronom va Veterinarlar)
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Dehqon va chorvadorlarga joyiga borib yordam beruvchi mutaxassislarni ko&apos;rib chiqish, tasdiqlash va boshqarish
+                  </p>
+                </div>
+                <button
+                  onClick={loadData}
+                  className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100 transition"
+                >
+                  <RefreshCw size={13} />
+                  Yangilash
+                </button>
+              </div>
+
+              {/* Metrikalar */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-6">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Jami Mutaxassislar</p>
+                  <p className="mt-1 text-2xl font-black text-slate-900">{specialistsList.length} ta</p>
+                  <p className="mt-1 text-[11px] text-slate-400">Baza bo&apos;yicha</p>
+                </div>
+                <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3.5">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-amber-700">⏳ Kutilayotganlar</p>
+                  <p className="mt-1 text-2xl font-black text-amber-800">
+                    {specialistsList.filter((s) => !s.isApproved).length} ta
+                  </p>
+                  <p className="mt-1 text-[11px] text-amber-600 font-semibold">Tasdiq talab etiladi</p>
+                </div>
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3.5">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">🌾 Agronomlar</p>
+                  <p className="mt-1 text-2xl font-black text-emerald-800">
+                    {specialistsList.filter((s) => (s.specialty || "").toLowerCase().includes("agronom") || (s.specialty || "").toLowerCase().includes("ekin")).length} ta
+                  </p>
+                  <p className="mt-1 text-[11px] text-emerald-600 font-semibold">O&apos;simlik sohasi</p>
+                </div>
+                <div className="rounded-xl border border-teal-200 bg-teal-50/60 p-3.5">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-teal-700">🐄 Veterinarlar</p>
+                  <p className="mt-1 text-2xl font-black text-teal-800">
+                    {specialistsList.filter((s) => (s.specialty || "").toLowerCase().includes("veterinar") || (s.specialty || "").toLowerCase().includes("chorva")).length} ta
+                  </p>
+                  <p className="mt-1 text-[11px] text-teal-600 font-semibold">Chorva sohasi</p>
+                </div>
+              </div>
+
+              {/* Filtrlash */}
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                  {[
+                    { id: "all", label: "Barchasi", count: specialistsList.length },
+                    {
+                      id: "pending",
+                      label: "⏳ Kutilmoqda",
+                      count: specialistsList.filter((s) => !s.isApproved).length,
+                      alert: specialistsList.filter((s) => !s.isApproved).length > 0,
+                    },
+                    {
+                      id: "approved",
+                      label: "✅ Tasdiqlangan",
+                      count: specialistsList.filter((s) => s.isApproved).length,
+                    },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setSpecialistFilter(tab.id as any)}
+                      className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+                        specialistFilter === tab.id
+                          ? "bg-slate-900 text-white"
+                          : tab.alert
+                          ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
+                    >
+                      <span>{tab.label}</span>
+                      <span
+                        className={`rounded-full px-1.5 py-0.2 text-[10px] font-black ${
+                          specialistFilter === tab.id
+                            ? "bg-slate-700 text-white"
+                            : tab.alert
+                            ? "bg-amber-200 text-amber-900"
+                            : "bg-slate-200 text-slate-700"
+                        }`}
+                      >
+                        {tab.count}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="relative min-w-[240px] flex-1 sm:max-w-xs">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Mutaxassis, soha yoki telefon..."
+                    value={specialistSearch}
+                    onChange={(e) => setSpecialistSearch(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs text-slate-800 placeholder-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none"
+                  />
+                </div>
+              </div>
             </div>
+
+            {/* Mutaxassislar ro'yxati */}
+            {(() => {
+              const filtered = specialistsList.filter((s) => {
+                if (specialistFilter === "pending" && s.isApproved) return false;
+                if (specialistFilter === "approved" && !s.isApproved) return false;
+                if (specialistSearch.trim()) {
+                  const q = specialistSearch.toLowerCase();
+                  return (
+                    s.name?.toLowerCase().includes(q) ||
+                    s.specialty?.toLowerCase().includes(q) ||
+                    s.organization?.toLowerCase().includes(q) ||
+                    s.phone?.toLowerCase().includes(q) ||
+                    s.address?.toLowerCase().includes(q)
+                  );
+                }
+                return true;
+              });
+
+              if (filtered.length === 0) {
+                return (
+                  <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-12 text-center">
+                    <Users size={36} className="mx-auto mb-3 text-slate-300" />
+                    <h4 className="text-sm font-bold text-slate-800">Mutaxassislar topilmadi</h4>
+                    <p className="mt-1 text-xs text-slate-400">
+                      {specialistSearch ? "Qidiruv so'rovi bo'yicha hech narsa chiqmadi" : "Hozircha mutaxassislar mavjud emas"}
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="grid gap-4 lg:grid-cols-2">
+                  {filtered.map((s) => (
+                    <div
+                      key={s.id}
+                      className={`relative rounded-2xl border p-5 transition shadow-xs ${
+                        !s.isApproved
+                          ? "border-amber-300 bg-amber-50/40"
+                          : "border-slate-200 bg-white hover:border-slate-300"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div className="flex items-start gap-3 min-w-0">
+                          <div
+                            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
+                              !s.isApproved
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-emerald-100 text-emerald-700"
+                            }`}
+                          >
+                            <Users size={22} />
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="text-base font-black text-slate-900 truncate">{s.name}</h4>
+                            <p className="text-xs text-emerald-700 font-bold truncate">
+                              {s.specialty || "Qishloq xo'jaligi mutaxassisi"}
+                            </p>
+                            {s.organization && (
+                              <p className="text-[11px] text-slate-400 truncate">{s.organization}</p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div>
+                          {!s.isApproved ? (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2.5 py-1 text-[11px] font-black text-amber-800 animate-pulse">
+                              <Clock size={12} />
+                              Kutilmoqda
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-1 text-[11px] font-black text-emerald-800">
+                              <CheckCircle2 size={12} />
+                              Tasdiqlangan
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 border-y border-slate-100 py-3 my-3 text-xs text-slate-600">
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400 flex items-center gap-1">
+                            <Phone size={13} /> Telefon:
+                          </span>
+                          <a href={`tel:${s.phone}`} className="font-bold text-slate-900 hover:text-emerald-600">
+                            {s.phone}
+                          </a>
+                        </div>
+
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="text-slate-400 flex items-center gap-1 shrink-0">
+                            <MapPin size={13} /> Manzil:
+                          </span>
+                          <span className="font-medium text-slate-800 text-right line-clamp-1">
+                            {s.address || "Manzil kiritilmagan"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400 flex items-center gap-1">
+                            <Bot size={13} /> Telegram:
+                          </span>
+                          <span className="font-medium">
+                            {s.telegramId ? (
+                              <span className="text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                                Ulangan (ID: {s.telegramId})
+                              </span>
+                            ) : (
+                              <span className="text-slate-400">Ulanmagan</span>
+                            )}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400">Holat (Bandlik):</span>
+                          <span>
+                            {s.isBusy ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">
+                                🔴 Chaqiruvda band
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                                🟢 Bo&apos;sh
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 py-1 mb-3 text-center">
+                        <div className="rounded-xl bg-slate-50 p-2">
+                          <p className="text-[10px] uppercase font-bold text-slate-400">Chaqiruvlar</p>
+                          <p className="text-sm font-black text-amber-700">{s.callsCount} ta</p>
+                        </div>
+                        <div className="rounded-xl bg-slate-50 p-2">
+                          <p className="text-[10px] uppercase font-bold text-slate-400">Reyting</p>
+                          <p className="text-sm font-black text-emerald-700 flex items-center justify-center gap-0.5">
+                            {s.ratingAvg ? (
+                              <>
+                                <Star size={11} className="fill-amber-400 text-amber-400" />
+                                {s.ratingAvg} ({s.ratingCount})
+                              </>
+                            ) : (
+                              "Yangi"
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+                        <div className="flex items-center gap-2">
+                          {!s.isApproved ? (
+                            <>
+                              <button
+                                onClick={() => handleApproveSpecialist(s.id)}
+                                disabled={busy}
+                                className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-emerald-700 active:scale-95 transition shadow-sm"
+                              >
+                                <Check size={14} />
+                                Tasdiqlash & Bot Menyusi Berish
+                              </button>
+                              <button
+                                onClick={() => handleRejectSpecialist(s.id)}
+                                disabled={busy}
+                                className="flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100 active:scale-95 transition"
+                              >
+                                <X size={14} />
+                                Rad etish
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => handleRejectSpecialist(s.id)}
+                              title="Arizani bekor qilish"
+                              className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800 hover:bg-amber-100 transition"
+                            >
+                              To&apos;xtatish
+                            </button>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => handleDeleteSpecialist(s.id, s.name)}
+                          disabled={busy}
+                          title="Mutaxassisni butunlay o'chirish"
+                          className="flex items-center justify-center rounded-xl p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 transition"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* ------------------------------------------------------------- */}
+        {/* TAB: BUYURTMALAR (ORDERS) */}
+        {/* ------------------------------------------------------------- */}
+        {activeTab === "orders" && (
+          <div className="space-y-6">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <ShoppingCart className="text-emerald-500" size={20} />
+                    Barcha Buyurtmalar Boshqaruvi
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Dorixonalarga tushgan dori buyurtmalari, buyurtma tarkibi va yetkazib berish holati
+                  </p>
+                </div>
+                <button
+                  onClick={loadData}
+                  className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100 transition"
+                >
+                  <RefreshCw size={13} />
+                  Yangilash
+                </button>
+              </div>
+
+              {/* Filtrlash */}
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                  {[
+                    { id: "all", label: "Barchasi", count: ordersList.length },
+                    {
+                      id: "yangi",
+                      label: "⏳ Yangi",
+                      count: ordersList.filter((o) => o.status === "yangi").length,
+                      alert: ordersList.filter((o) => o.status === "yangi").length > 0,
+                    },
+                    {
+                      id: "tasdiqlandi",
+                      label: "🔵 Tasdiqlandi",
+                      count: ordersList.filter((o) => o.status === "tasdiqlandi").length,
+                    },
+                    {
+                      id: "yetkazildi",
+                      label: "✅ Yetkazildi",
+                      count: ordersList.filter((o) => o.status === "yetkazildi").length,
+                    },
+                    {
+                      id: "bekor",
+                      label: "❌ Bekor",
+                      count: ordersList.filter((o) => o.status === "bekor").length,
+                    },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setOrderFilter(tab.id as any)}
+                      className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+                        orderFilter === tab.id
+                          ? "bg-slate-900 text-white"
+                          : tab.alert
+                          ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
+                    >
+                      <span>{tab.label}</span>
+                      <span
+                        className={`rounded-full px-1.5 py-0.2 text-[10px] font-black ${
+                          orderFilter === tab.id
+                            ? "bg-slate-700 text-white"
+                            : tab.alert
+                            ? "bg-amber-200 text-amber-900"
+                            : "bg-slate-200 text-slate-700"
+                        }`}
+                      >
+                        {tab.count}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="relative min-w-[240px] flex-1 sm:max-w-xs">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Mijoz, dorixona yoki ID..."
+                    value={orderSearch}
+                    onChange={(e) => setOrderSearch(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs text-slate-800 placeholder-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Buyurtmalar ro'yxati */}
+            {(() => {
+              const filtered = ordersList.filter((o) => {
+                if (orderFilter !== "all" && o.status !== orderFilter) return false;
+                if (orderSearch.trim()) {
+                  const q = orderSearch.toLowerCase();
+                  return (
+                    o.customerName?.toLowerCase().includes(q) ||
+                    o.customerPhone?.toLowerCase().includes(q) ||
+                    o.pharmacyName?.toLowerCase().includes(q) ||
+                    o.pharmacyOrg?.toLowerCase().includes(q) ||
+                    String(o.id).includes(q)
+                  );
+                }
+                return true;
+              });
+
+              if (filtered.length === 0) {
+                return (
+                  <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-12 text-center">
+                    <ShoppingCart size={36} className="mx-auto mb-3 text-slate-300" />
+                    <h4 className="text-sm font-bold text-slate-800">Buyurtmalar topilmadi</h4>
+                    <p className="mt-1 text-xs text-slate-400">
+                      {orderSearch ? "Qidiruv so'rovi bo'yicha hech narsa chiqmadi" : "Hozircha buyurtmalar yo'q"}
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-4">
+                  {filtered.map((o) => (
+                    <div
+                      key={o.id}
+                      className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs transition hover:border-slate-300"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3 mb-3">
+                        <div className="flex items-center gap-3">
+                          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-xs font-black text-slate-800">
+                            #{o.id}
+                          </span>
+                          <div>
+                            <h4 className="text-sm font-bold text-slate-900">{o.customerName}</h4>
+                            <p className="text-xs text-slate-400">{o.customerPhone}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={o.status}
+                            onChange={(e) => handleUpdateOrderStatus(o.id, e.target.value)}
+                            className={`rounded-xl px-3 py-1.5 text-xs font-black border transition ${
+                              o.status === "yetkazildi"
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : o.status === "tasdiqlandi"
+                                ? "bg-blue-50 text-blue-700 border-blue-200"
+                                : o.status === "bekor"
+                                ? "bg-red-50 text-red-700 border-red-200"
+                                : "bg-amber-50 text-amber-700 border-amber-200 animate-pulse"
+                            }`}
+                          >
+                            <option value="yangi">⏳ Yangi</option>
+                            <option value="tasdiqlandi">🔵 Tasdiqlandi</option>
+                            <option value="yetkazildi">✅ Yetkazildi</option>
+                            <option value="bekor">❌ Bekor</option>
+                          </select>
+
+                          <button
+                            onClick={() => handleDeleteOrder(o.id)}
+                            className="rounded-xl p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 transition"
+                            title="Buyurtmani o'chirish"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-3 sm:grid-cols-2 text-xs text-slate-600 mb-3">
+                        <div>
+                          <p className="text-slate-400 text-[11px]">Bajaruvchi dorixona:</p>
+                          <p className="font-bold text-slate-900">
+                            {o.pharmacyOrg || o.pharmacyName || "Dorixona belgilanmagan"}
+                          </p>
+                          {o.pharmacyPhone && <p className="text-slate-500">{o.pharmacyPhone}</p>}
+                        </div>
+                        <div>
+                          <p className="text-slate-400 text-[11px]">Yetkazish manzili:</p>
+                          <p className="font-medium text-slate-800">{o.customerAddress || "Olib ketish (Dorixonadan)"}</p>
+                          {o.deliveryType && (
+                            <span className="inline-block mt-1 rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700">
+                              {o.deliveryType}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Tovarlar ro'yxati */}
+                      {o.items && o.items.length > 0 && (
+                        <div className="rounded-xl bg-slate-50 p-3 mb-3">
+                          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                            Buyurtma tarkibi ({o.items.length} ta dori):
+                          </p>
+                          <div className="space-y-1.5">
+                            {o.items.map((it, idx) => (
+                              <div key={idx} className="flex items-center justify-between text-xs">
+                                <span className="font-semibold text-slate-800">
+                                  {it.name} <span className="text-slate-400">× {it.qty} dona</span>
+                                </span>
+                                <span className="font-bold text-slate-900">
+                                  {it.price ? formatSum(it.price * it.qty) : "-"}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-xs">
+                        <span className="text-slate-400">
+                          Sana: {new Date(o.createdAt).toLocaleDateString("uz-UZ")} {new Date(o.createdAt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                        <div className="text-right">
+                          <span className="text-slate-400 text-[11px] mr-2">Jami summa:</span>
+                          <span className="text-base font-black text-emerald-700">
+                            {o.totalSum ? formatSum(o.totalSum) : "0 so'm"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* ------------------------------------------------------------- */}
+        {/* TAB: CHAQIRUVLAR (SPECIALIST CALLS) */}
+        {/* ------------------------------------------------------------- */}
+        {activeTab === "calls" && (
+          <div className="space-y-6">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <Activity className="text-emerald-500" size={20} />
+                    Mutaxassis Chaqiruvlari Tarixi
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Dehqon va chorvadorlarning mutaxassislar uchun yuborgan muammoli so&apos;rovlari
+                  </p>
+                </div>
+                <button
+                  onClick={loadData}
+                  className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100 transition"
+                >
+                  <RefreshCw size={13} />
+                  Yangilash
+                </button>
+              </div>
+
+              {/* Filtrlash */}
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                  {[
+                    { id: "all", label: "Barchasi", count: callsList.length },
+                    {
+                      id: "yangi",
+                      label: "⏳ Yangi",
+                      count: callsList.filter((c) => c.status === "yangi").length,
+                      alert: callsList.filter((c) => c.status === "yangi").length > 0,
+                    },
+                    {
+                      id: "qabul_qilindi",
+                      label: "🔵 Qabul qilindi",
+                      count: callsList.filter((c) => c.status === "qabul_qilindi").length,
+                    },
+                    {
+                      id: "bajarildi",
+                      label: "✅ Bajarildi",
+                      count: callsList.filter((c) => c.status === "bajarildi").length,
+                    },
+                    {
+                      id: "bekor",
+                      label: "❌ Bekor",
+                      count: callsList.filter((c) => c.status === "bekor").length,
+                    },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setCallFilter(tab.id as any)}
+                      className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+                        callFilter === tab.id
+                          ? "bg-slate-900 text-white"
+                          : tab.alert
+                          ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
+                    >
+                      <span>{tab.label}</span>
+                      <span
+                        className={`rounded-full px-1.5 py-0.2 text-[10px] font-black ${
+                          callFilter === tab.id
+                            ? "bg-slate-700 text-white"
+                            : tab.alert
+                            ? "bg-amber-200 text-amber-900"
+                            : "bg-slate-200 text-slate-700"
+                        }`}
+                      >
+                        {tab.count}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="relative min-w-[240px] flex-1 sm:max-w-xs">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Mijoz, muammo yoki telefon..."
+                    value={callSearch}
+                    onChange={(e) => setCallSearch(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs text-slate-800 placeholder-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Chaqiruvlar ro'yxati */}
+            {(() => {
+              const filtered = callsList.filter((c) => {
+                if (callFilter !== "all" && c.status !== callFilter) return false;
+                if (callSearch.trim()) {
+                  const q = callSearch.toLowerCase();
+                  return (
+                    c.customerName?.toLowerCase().includes(q) ||
+                    c.customerPhone?.toLowerCase().includes(q) ||
+                    c.problem?.toLowerCase().includes(q) ||
+                    c.specialistName?.toLowerCase().includes(q)
+                  );
+                }
+                return true;
+              });
+
+              if (filtered.length === 0) {
+                return (
+                  <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-12 text-center">
+                    <Activity size={36} className="mx-auto mb-3 text-slate-300" />
+                    <h4 className="text-sm font-bold text-slate-800">Chaqiruvlar topilmadi</h4>
+                    <p className="mt-1 text-xs text-slate-400">
+                      {callSearch ? "Qidiruv so'rovi bo'yicha hech narsa chiqmadi" : "Hozircha chaqiruvlar yo'q"}
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-4">
+                  {filtered.map((c) => (
+                    <div
+                      key={c.id}
+                      className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs transition hover:border-slate-300"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3 mb-3">
+                        <div className="flex items-center gap-3">
+                          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-xs font-black text-slate-800">
+                            #{c.id}
+                          </span>
+                          <div>
+                            <h4 className="text-sm font-bold text-slate-900">{c.customerName}</h4>
+                            <p className="text-xs text-slate-400">{c.customerPhone}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={c.status}
+                            onChange={(e) => handleUpdateCallStatus(c.id, e.target.value)}
+                            className={`rounded-xl px-3 py-1.5 text-xs font-black border transition ${
+                              c.status === "bajarildi"
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : c.status === "qabul_qilindi"
+                                ? "bg-blue-50 text-blue-700 border-blue-200"
+                                : c.status === "bekor"
+                                ? "bg-red-50 text-red-700 border-red-200"
+                                : "bg-amber-50 text-amber-700 border-amber-200 animate-pulse"
+                            }`}
+                          >
+                            <option value="yangi">⏳ Yangi</option>
+                            <option value="qabul_qilindi">🔵 Qabul qilindi</option>
+                            <option value="bajarildi">✅ Bajarildi</option>
+                            <option value="bekor">❌ Bekor</option>
+                          </select>
+
+                          <button
+                            onClick={() => handleDeleteCall(c.id)}
+                            className="rounded-xl p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 transition"
+                            title="Chaqiruvni o'chirish"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl bg-amber-50/70 border border-amber-200/60 p-3 mb-3">
+                        <p className="text-[11px] font-bold text-amber-800 uppercase tracking-wider mb-1">
+                          Murojaat / Muammo tavsifi:
+                        </p>
+                        <p className="text-xs font-semibold text-slate-900">{c.problem}</p>
+                      </div>
+
+                      <div className="grid gap-3 sm:grid-cols-2 text-xs text-slate-600">
+                        <div>
+                          <p className="text-slate-400 text-[11px]">Biriktirilgan mutaxassis:</p>
+                          <p className="font-bold text-slate-900">{c.specialistName}</p>
+                          <p className="text-slate-500">{c.specialistPhone}</p>
+                          {c.specialistSpecialty && (
+                            <span className="inline-block mt-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold">
+                              {c.specialistSpecialty}
+                            </span>
+                          )}
+                        </div>
+
+                        <div>
+                          <p className="text-slate-400 text-[11px]">Chaqiruv manzili:</p>
+                          <p className="font-medium text-slate-800">{c.address || "Manzil ko'rsatilmagan"}</p>
+                          <p className="text-[11px] text-slate-400 mt-2">
+                            Yaratilgan vaqt: {new Date(c.createdAt).toLocaleDateString("uz-UZ")} {new Date(c.createdAt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -1706,6 +2998,136 @@ export default function AdminPanelPage() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* DORIXONA DORILARI MODALI */}
+        {selectedPharmacyForMeds && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
+            <div className="relative w-full max-w-3xl rounded-3xl bg-white p-6 shadow-2xl border border-slate-200 my-8">
+              {/* Modal header */}
+              <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4 mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-50 text-teal-600 border border-teal-200">
+                    <Store size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900">
+                      {selectedPharmacyForMeds.org || selectedPharmacyForMeds.name}
+                    </h3>
+                    <p className="text-xs text-slate-500 font-medium">
+                      Dorixona assortimenti va dori vositalari ro&apos;yxati ({pharmacyMedicines.length} ta dori)
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setSelectedPharmacyForMeds(null)}
+                  className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Ichki qidiruv */}
+              <div className="mb-4">
+                <div className="relative">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Dori nomi yoki qo'llanilishi bo'yicha izlash..."
+                    value={medicineSearch}
+                    onChange={(e) => setMedicineSearch(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-xs text-slate-800 placeholder-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Dorilar jadvali */}
+              {loadingMedicines ? (
+                <div className="py-16 text-center text-xs text-slate-400">
+                  <RefreshCw className="animate-spin mx-auto mb-2 text-emerald-500" size={24} />
+                  Dorilar yuklanmoqda...
+                </div>
+              ) : (() => {
+                const list = pharmacyMedicines.filter((m) => {
+                  if (!medicineSearch.trim()) return true;
+                  const q = medicineSearch.toLowerCase();
+                  return (
+                    m.name.toLowerCase().includes(q) ||
+                    m.type?.toLowerCase().includes(q) ||
+                    m.usage?.toLowerCase().includes(q)
+                  );
+                });
+
+                if (list.length === 0) {
+                  return (
+                    <div className="rounded-2xl border border-dashed border-slate-200 p-12 text-center text-xs text-slate-400">
+                      <Package size={32} className="mx-auto mb-2 text-slate-300" />
+                      {medicineSearch ? "Qidiruv bo'yicha dori topilmadi" : "Ushbu dorixona hali birorta ham dori kiritmagan"}
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="max-h-[60vh] overflow-y-auto rounded-2xl border border-slate-200">
+                    <table className="w-full text-left text-xs text-slate-700">
+                      <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase text-slate-500">
+                        <tr>
+                          <th className="py-3 px-4">Dori nomi</th>
+                          <th className="py-3 px-4">Turi / Guruhi</th>
+                          <th className="py-3 px-4">Qo&apos;llanishi</th>
+                          <th className="py-3 px-4">Narxi</th>
+                          <th className="py-3 px-4">Qoldiq</th>
+                          <th className="py-3 px-4">Holati</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-medium">
+                        {list.map((m) => (
+                          <tr key={m.id} className="hover:bg-slate-50/60 transition">
+                            <td className="py-3 px-4">
+                              <span className="font-bold text-slate-900">{m.name}</span>
+                            </td>
+                            <td className="py-3 px-4 text-slate-500">{m.type || "-"}</td>
+                            <td className="py-3 px-4 text-slate-600 max-w-xs truncate">{m.usage || "-"}</td>
+                            <td className="py-3 px-4 font-bold text-slate-900">
+                              {m.price ? formatSum(m.price) : "-"}
+                            </td>
+                            <td className="py-3 px-4 text-slate-700">
+                              {m.stock !== null ? `${m.stock} dona` : "-"}
+                            </td>
+                            <td className="py-3 px-4">
+                              <span
+                                className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-black ${
+                                  m.status === "bor"
+                                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                    : "bg-red-50 text-red-700 border border-red-200"
+                                }`}
+                              >
+                                {m.status === "bor" ? "Mavjud" : "Tugagan"}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+
+              {/* Modal pastki qismi */}
+              <div className="flex items-center justify-between border-t border-slate-100 pt-4 mt-4">
+                <span className="text-xs text-slate-400">
+                  Jami: <b>{pharmacyMedicines.length}</b> ta dori
+                </span>
+                <button
+                  onClick={() => setSelectedPharmacyForMeds(null)}
+                  className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800 transition"
+                >
+                  Yopish
+                </button>
+              </div>
             </div>
           </div>
         )}
