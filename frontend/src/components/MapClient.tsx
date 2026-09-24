@@ -246,7 +246,13 @@ export default function MapClient() {
     (async () => {
       const L = (await import("leaflet")).default;
       if (cancelled || !containerRef.current) return;
+      
+      // If Leaflet already initialized this container, don't re-initialize
+      if ((containerRef.current as any)._leaflet_id) {
+        return;
+      }
       if (mapRef.current) return;
+      
       const map = L.map(containerRef.current, {
         zoomControl: false,
         attributionControl: false,
@@ -258,6 +264,11 @@ export default function MapClient() {
     })();
     return () => {
       cancelled = true;
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+        setMapReady(false);
+      }
     };
   }, []);
 
@@ -281,7 +292,7 @@ export default function MapClient() {
       // user dot
       userMarkerRef.current?.remove();
       accuracyRef.current?.remove();
-      if (coords) {
+      if (coords && typeof coords.lat === "number" && typeof coords.lng === "number") {
         const icon = L.divIcon({
           className: "",
           html: '<div class="my-location-dot"><span class="pulse"></span><span class="core"></span></div>',
@@ -304,6 +315,8 @@ export default function MapClient() {
       markersRef.current.forEach((m) => m.remove());
       markersRef.current = [];
       items.forEach((p) => {
+        if (typeof p.lat !== "number" || typeof p.lng !== "number") return;
+        
         // Sariq "bor" belgisi: eski dorixona omborida ham, dorixona egasi bot orqali
         // qo'shgan va qidirilayotgan dorilarda ham ishlaydi.
         const hasWanted =
