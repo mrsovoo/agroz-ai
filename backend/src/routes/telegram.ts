@@ -25,6 +25,8 @@ import { db } from "../db/index.js";
 import { otpCodes, sessions, users } from "../db/schema.js";
 import { and, eq, sql } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
+import { createTokenPair, verifyJwt } from "../lib/jwt.js";
+import { hashToken } from "../lib/encryption.js";
 
 const router = Router();
 
@@ -279,13 +281,27 @@ async function finalizeUserRegistration(
       .limit(1);
     const row = rows[0];
     if (row && !row.used && row.expiresAt.getTime() > Date.now()) {
-      const sessionId = randomBytes(32).toString("hex");
-      await db.insert(sessions).values({ id: sessionId, userId: user.id });
+      const { accessToken, refreshToken } = createTokenPair(user.id);
+      const refreshTokenHash = hashToken(refreshToken);
+      const family = randomBytes(16).toString("hex");
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      const jti = verifyJwt(refreshToken)!.jti;
+
+      await db.insert(sessions).values({
+        id: jti,
+        userId: user.id,
+        refreshTokenHash,
+        family,
+        revoked: false,
+        userAgent: "telegram-bot",
+        ip: "telegram-bot",
+        expiresAt,
+      });
       await db
         .update(otpCodes)
         .set({
           used: true,
-          code: sessionId,
+          code: refreshToken,
           telegramId,
           deliveredAt: new Date(),
         })
@@ -676,13 +692,27 @@ router.post("/webhook", async (req, res) => {
 
           // Agar foydalanuvchi allaqachon to'liq ro'yxatdan o'tgan bo'lsa
           if (existingUser && existingUser.phone) {
-            const sessionId = randomBytes(32).toString("hex");
-            await db.insert(sessions).values({ id: sessionId, userId: existingUser.id });
+            const { accessToken, refreshToken } = createTokenPair(existingUser.id);
+            const refreshTokenHash = hashToken(refreshToken);
+            const family = randomBytes(16).toString("hex");
+            const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+            const jti = verifyJwt(refreshToken)!.jti;
+
+            await db.insert(sessions).values({
+              id: jti,
+              userId: existingUser.id,
+              refreshTokenHash,
+              family,
+              revoked: false,
+              userAgent: "telegram-bot",
+              ip: "telegram-bot",
+              expiresAt,
+            });
             await db
               .update(otpCodes)
               .set({
                 used: true,
-                code: sessionId,
+                code: refreshToken,
                 telegramId: fromId,
                 deliveredAt: new Date(),
               })

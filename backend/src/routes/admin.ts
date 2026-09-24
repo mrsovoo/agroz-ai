@@ -41,6 +41,7 @@ import {
 } from "../lib/auth-bot.js";
 import { escapeHtml } from "../lib/tg-escape.js";
 import { sendMessage, sendPhoto } from "../lib/telegram-bot.js";
+import { decryptFields, SENSITIVE_FIELDS } from "../lib/encryption.js";
 
 const router = Router();
 
@@ -1064,7 +1065,7 @@ router.post("/orders/:id/status", requireAdmin, async (req, res) => {
 // GET /api/admin/specialist-calls
 router.get("/specialist-calls", requireAdmin, async (req, res) => {
   try {
-    const calls = await db
+    const callsRaw = await db
       .select({
         id: specialistCalls.id,
         specialistId: specialistCalls.specialistId,
@@ -1084,6 +1085,23 @@ router.get("/specialist-calls", requireAdmin, async (req, res) => {
       .from(specialistCalls)
       .leftJoin(specialists, eq(specialists.id, specialistCalls.specialistId))
       .orderBy(desc(specialistCalls.id));
+
+    const calls = callsRaw.map((c) => {
+      const decryptedCall = decryptFields(c, SENSITIVE_FIELDS.specialistCalls);
+      const decryptedSpecialist = {
+        name: c.specialistName,
+        specialty: c.specialistSpecialty,
+        phone: c.specialistPhone,
+        role: c.specialistRole,
+      };
+      return {
+        ...decryptedCall,
+        specialistName: decryptedSpecialist.name,
+        specialistSpecialty: decryptedSpecialist.specialty,
+        specialistPhone: decryptedSpecialist.phone,
+        specialistRole: decryptedSpecialist.role,
+      };
+    });
 
     res.json({ ok: true, calls });
   } catch (err: any) {

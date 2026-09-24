@@ -17,6 +17,9 @@ import {
 import { verifyInitData } from "../lib/tg-auth.js";
 import { BOT_OTP_TTL_MINUTES, OTP_LENGTH, OTP_TTL_MINUTES } from "../lib/constants.js";
 import { telegramBotToken } from "../lib/settings.js";
+import { encryptFields, decryptFields, SENSITIVE_FIELDS, hashPhone, verifyPhoneHash, hashToken } from "../lib/encryption.js";
+import { rateLimit, RATE_LIMITS } from "../lib/rate-limit.js";
+import { createTokenPair, verifyJwt } from "../lib/jwt.js";
 
 const router = Router();
 
@@ -41,12 +44,12 @@ async function telegramIdFromInitData(initData: unknown): Promise<number | null>
 async function findUserByTelegramId(fromId: number): Promise<typeof users.$inferSelect | null> {
   try {
     const rows = await db.select().from(users).where(eq(users.telegramId, fromId)).limit(1);
-    return rows[0] || null;
+    return rows[0] ? decryptFields(rows[0], SENSITIVE_FIELDS.users) : null;
   } catch (err: any) {
     try {
       await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS second_phone varchar(32);`);
       const rows = await db.select().from(users).where(eq(users.telegramId, fromId)).limit(1);
-      return rows[0] || null;
+      return rows[0] ? decryptFields(rows[0], SENSITIVE_FIELDS.users) : null;
     } catch {
       return null;
     }
@@ -60,6 +63,15 @@ router.post("/request-code", async (req, res) => {
     const phone = normalizePhone(body.phone ?? "");
     if (!phone) {
       return res.status(400).json({ error: "Telefon raqami noto'g'ri (namuna: +998 90 123 45 67)" });
+    }
+
+    // Rate limit: 3 requests per minute per phone
+    const rl = await rateLimit(`auth:request-code:${phone}`, RATE_LIMITS.authRequestCode.limit, RATE_LIMITS.authRequestCode.windowMs);
+    if (!rl.allowed) {
+      return res.status(429).json({
+        error: "Juda ko'p so'rov. Biroz kuting.",
+        retryAfterMs: rl.resetMs - Date.now(),
+      });
     }
 
     const min = 10 ** (OTP_LENGTH - 1);
@@ -135,6 +147,15 @@ router.post("/verify", async (req, res) => {
       return res.status(400).json({ error: "Telefon va kod kiritilishi shart" });
     }
 
+    // Rate limit: 5 attempts per minute per phone
+    const rl = await rateLimit(`auth:verify:${phone}`, RATE_LIMITS.authVerifyCode.limit, RATE_LIMITS.authVerifyCode.windowMs);
+    if (!rl.allowed) {
+      return res.status(429).json({
+        error: "Juda ko'p urinish. Biroz kuting.",
+        retryAfterMs: rl.resetMs - Date.now(),
+      });
+    }
+
     const rows = await db
       .select()
       .from(otpCodes)
@@ -148,19 +169,45 @@ router.post("/verify", async (req, res) => {
 
     await db.update(otpCodes).set({ used: true }).where(eq(otpCodes.id, match.id));
 
-    let user = (await db.select().from(users).where(eq(users.phone, phone)).limit(1))[0];
+    const phoneHash = hashPhone(phone);
+    let user = (await db.select().from(users).where(eq(users.phoneHash, phoneHash)).limit(1))[0];
     if (!user) {
+      const encrypted = encryptFields({ phone, phoneHash, name: body.name || null, region: body.region || null }, SENSITIVE_FIELDS.users);
       const created = await db
         .insert(users)
-        .values({ phone, name: body.name || null, region: body.region || null })
+        .values(encrypted)
         .returning();
       user = created[0];
     }
+    user = decryptFields(user, SENSITIVE_FIELDS.users);
 
-    const sessionId = randomBytes(32).toString("hex");
-    await db.insert(sessions).values({ id: sessionId, userId: user.id });
+    // Create JWT token pair
+    const { accessToken, refreshToken } = createTokenPair(user.id);
+    const refreshTokenHash = hashToken(refreshToken);
+    const family = randomBytes(16).toString("hex");
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
 
-    res.json({ ok: true, sessionId, user });
+    await db.insert(sessions).values({
+      id: verifyJwt(refreshToken)!.jti,
+      userId: user.id,
+      refreshTokenHash,
+      family,
+      revoked: false,
+      userAgent: req.headers["user-agent"] || null,
+      ip: req.ip || null,
+      expiresAt,
+    });
+
+    // Set HttpOnly cookie for refresh token
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      path: "/",
+    });
+
+    res.json({ ok: true, accessToken, user });
   } catch (err: any) {
     console.error("[verify error]:", err);
     res.status(500).json({ error: err.message || "Server xatosi" });
@@ -221,6 +268,15 @@ router.post("/telegram/check", async (req, res) => {
 // POST /api/auth/telegram
 router.post("/telegram", async (req, res) => {
   try {
+    const ip = req.ip || req.socket.remoteAddress || "unknown";
+    const rl = await rateLimit(`auth:telegram:${ip}`, RATE_LIMITS.authTelegram.limit, RATE_LIMITS.authTelegram.windowMs);
+    if (!rl.allowed) {
+      return res.status(429).json({
+        error: "Juda ko'p so'rov. Biroz kuting.",
+        retryAfterMs: rl.resetMs - Date.now(),
+      });
+    }
+
     const body = req.body || {};
     const initData = body.initData;
     const botToken = await telegramBotToken();
@@ -246,26 +302,25 @@ router.post("/telegram", async (req, res) => {
 
     if (!user) {
       if (phone) {
-        const byPhone = (await db.select().from(users).where(eq(users.phone, phone)).limit(1))[0];
+        const phoneHash = hashPhone(phone);
+        const byPhoneRaw = (await db.select().from(users).where(eq(users.phoneHash, phoneHash)).limit(1))[0];
+        const byPhone = byPhoneRaw ? decryptFields(byPhoneRaw, SENSITIVE_FIELDS.users) : null;
         if (byPhone) {
           const finalName = rawName || byPhone.name || [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ");
+          const encryptedUpdate = encryptFields({ telegramId, name: finalName, secondPhone: secondPhone || byPhone.secondPhone, region: region || byPhone.region }, SENSITIVE_FIELDS.users);
           await db
             .update(users)
-            .set({
-              telegramId,
-              name: finalName,
-              secondPhone: secondPhone || byPhone.secondPhone,
-              region: region || byPhone.region,
-            })
+            .set(encryptedUpdate)
             .where(eq(users.id, byPhone.id));
           user = { ...byPhone, telegramId, name: finalName, secondPhone: secondPhone || byPhone.secondPhone, region: region || byPhone.region };
         } else {
           const finalName = rawName || [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ") || "Foydalanuvchi";
+          const encryptedInsert = encryptFields({ telegramId, name: finalName, phone, phoneHash, secondPhone, region }, SENSITIVE_FIELDS.users);
           const created = await db
             .insert(users)
-            .values({ telegramId, name: finalName, phone, secondPhone, region })
+            .values(encryptedInsert)
             .returning();
-          user = created[0];
+          user = decryptFields(created[0], SENSITIVE_FIELDS.users);
         }
       } else {
         return res.status(400).json({
@@ -278,12 +333,16 @@ router.post("/telegram", async (req, res) => {
       const updateData: any = {};
       if (rawName && rawName !== user.name) updateData.name = rawName;
       if (region && region !== user.region) updateData.region = region;
-      if (phone && (!user.phone || phone !== user.phone)) updateData.phone = phone;
+      if (phone && (!user.phone || phone !== user.phone)) {
+        updateData.phone = phone;
+        updateData.phoneHash = hashPhone(phone);
+      }
       if (secondPhone && (!user.secondPhone || secondPhone !== user.secondPhone)) {
         updateData.secondPhone = secondPhone;
       }
       if (Object.keys(updateData).length > 0) {
-        await db.update(users).set(updateData).where(eq(users.id, user.id));
+        const encryptedUpdate = encryptFields(updateData, SENSITIVE_FIELDS.users);
+        await db.update(users).set(encryptedUpdate).where(eq(users.id, user.id));
         user = { ...user, ...updateData };
       }
     }
@@ -292,16 +351,33 @@ router.post("/telegram", async (req, res) => {
       return res.status(400).json({ error: "Foydalanuvchi ma'lumotlari topilmadi", registered: false });
     }
 
-    const sessionId = randomBytes(32).toString("hex");
-    await db.insert(sessions).values({ id: sessionId, userId: user.id });
+    // Create JWT token pair
+    const { accessToken, refreshToken } = createTokenPair(user.id);
+    const refreshTokenHash = hashToken(refreshToken);
+    const family = randomBytes(16).toString("hex");
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
 
-    res.cookie("agroai_session", sessionId, {
-      path: "/",
-      maxAge: 30 * 24 * 60 * 60 * 1000,
-      sameSite: "lax",
+    await db.insert(sessions).values({
+      id: verifyJwt(refreshToken)!.jti,
+      userId: user.id,
+      refreshTokenHash,
+      family,
+      revoked: false,
+      userAgent: req.headers["user-agent"] || null,
+      ip: req.ip || null,
+      expiresAt,
     });
 
-    res.json({ ok: true, sessionId, user, registered: Boolean(user.phone) });
+    // Set HttpOnly cookie for refresh token
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      path: "/",
+    });
+
+    res.json({ ok: true, accessToken, user, registered: Boolean(user.phone) });
   } catch (err: any) {
     console.error("[auth telegram error]:", err);
     res.status(500).json({ error: err.message || "Server xatosi" });
@@ -430,12 +506,100 @@ router.post("/quick-login", async (req, res) => {
         .where(eq(users.id, user.id));
     }
 
-    const sessionId = randomBytes(32).toString("hex");
-    await db.insert(sessions).values({ id: sessionId, userId: user.id });
+    // Create JWT token pair
+    const { accessToken, refreshToken } = createTokenPair(user.id);
+    const refreshTokenHash = hashToken(refreshToken);
+    const family = randomBytes(16).toString("hex");
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const jti = verifyJwt(refreshToken)!.jti;
 
-    res.json({ ok: true, sessionId, user });
+    await db.insert(sessions).values({
+      id: jti,
+      userId: user.id,
+      refreshTokenHash,
+      family,
+      revoked: false,
+      userAgent: req.headers["user-agent"] || null,
+      ip: req.ip || null,
+      expiresAt,
+    });
+
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      path: "/",
+    });
+
+    res.json({ ok: true, accessToken, user });
   } catch (err: any) {
     console.error("[quick-login error]:", err);
+    res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
+
+// POST /api/auth/refresh — Refresh token rotation
+router.post("/refresh", async (req, res) => {
+  try {
+    const refreshToken = req.cookies?.refreshToken;
+    if (!refreshToken) {
+      return res.status(401).json({ error: "Refresh token yo'q" });
+    }
+
+    const payload = verifyJwt(refreshToken);
+    if (!payload || payload.type !== "refresh") {
+      return res.status(401).json({ error: "Noto'g'ri refresh token" });
+    }
+
+    // Check if session exists and not revoked
+    const session = (await db.select().from(sessions).where(eq(sessions.id, payload.jti)).limit(1))[0];
+    if (!session || session.revoked || session.refreshTokenHash !== hashToken(refreshToken)) {
+      // Token reuse detected - revoke entire family
+      if (session && !session.revoked) {
+        await db.update(sessions).set({ revoked: true }).where(eq(sessions.family, session.family));
+      }
+      res.clearCookie("refreshToken", { path: "/" });
+      return res.status(401).json({ error: "Token yo'q yoki amal qilish muddati o'tgan" });
+    }
+
+    // Check expiration
+    if (session.expiresAt < new Date()) {
+      await db.update(sessions).set({ revoked: true }).where(eq(sessions.id, session.id));
+      res.clearCookie("refreshToken", { path: "/" });
+      return res.status(401).json({ error: "Token amal qilish muddati o'tgan" });
+    }
+
+    // Rotate: revoke old, create new
+    await db.update(sessions).set({ revoked: true }).where(eq(sessions.id, session.id));
+
+    const { accessToken: newAccessToken, refreshToken: newRefreshToken } = createTokenPair(session.userId);
+    const newRefreshTokenHash = hashToken(newRefreshToken);
+    const newFamily = randomBytes(16).toString("hex");
+    const newExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+    await db.insert(sessions).values({
+      id: verifyJwt(newRefreshToken)!.jti,
+      userId: session.userId,
+      refreshTokenHash: newRefreshTokenHash,
+      family: newFamily,
+      revoked: false,
+      userAgent: req.headers["user-agent"] || null,
+      ip: req.ip || null,
+      expiresAt: newExpiresAt,
+    });
+
+    res.cookie("refreshToken", newRefreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      path: "/",
+    });
+
+    res.json({ ok: true, accessToken: newAccessToken });
+  } catch (err: any) {
+    console.error("[refresh error]:", err);
     res.status(500).json({ error: err.message || "Server xatosi" });
   }
 });
@@ -443,11 +607,14 @@ router.post("/quick-login", async (req, res) => {
 // POST /api/auth/logout
 router.post("/logout", async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    const sessionId = authHeader?.replace("Bearer ", "") || req.cookies?.agroz_session;
-    if (sessionId) {
-      await db.delete(sessions).where(eq(sessions.id, sessionId));
+    const refreshToken = req.cookies?.refreshToken;
+    if (refreshToken) {
+      const payload = verifyJwt(refreshToken);
+      if (payload?.jti) {
+        await db.update(sessions).set({ revoked: true }).where(eq(sessions.id, payload.jti));
+      }
     }
+    res.clearCookie("refreshToken", { path: "/" });
     res.json({ ok: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Server xatosi" });

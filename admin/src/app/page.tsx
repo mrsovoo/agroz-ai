@@ -35,6 +35,7 @@ import {
   Truck,
   Building,
   Clock,
+  UserCheck,
 } from "lucide-react";
 
 type Me = { enabled: boolean; authenticated: boolean; username: string | null };
@@ -836,9 +837,9 @@ export default function SuperAdminPage() {
 
   return (
     <div className="min-h-screen bg-[#fafafa] text-zinc-900 font-sans flex">
-      {/* Left Sidebar */}
-      <aside className="w-72 min-h-screen bg-white border-r border-zinc-200/80 flex flex-col hidden lg:flex">
-        <div className="flex h-16 items-center justify-between px-4 border-b border-zinc-200/80">
+      {/* Left Sidebar - Sticky/Pinned */}
+      <aside className="w-72 min-h-screen bg-white border-r border-zinc-200/80 flex flex-col hidden lg:flex sticky top-0 h-screen">
+        <div className="flex h-16 items-center justify-between px-4 border-b border-zinc-200/80 flex-shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-zinc-900 text-white shadow-xs">
               <span className="font-mono text-xs font-bold">A</span>
@@ -850,70 +851,185 @@ export default function SuperAdminPage() {
           </div>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          {[
-            { id: "dashboard", label: "Dashboard", icon: BarChart3 },
-            { id: "analytics", label: "Analitika & Tahlil", icon: TrendingUp },
-            {
-              id: "orders",
-              label: "Buyurtmalar",
-              icon: ShoppingCart,
-              badge: adminOrders.filter((o) => o.status === "yangi").length > 0 ? adminOrders.filter((o) => o.status === "yangi").length : undefined,
-            },
-            {
-              id: "specialist_calls",
-              label: "Chaqiruvlar",
-              icon: Phone,
-              badge: adminCalls.filter((c) => c.status === "yangi").length > 0 ? adminCalls.filter((c) => c.status === "yangi").length : undefined,
-            },
-            {
-              id: "pharmacies",
-              label: "Dorixona Arizalari (Panel)",
-              icon: Store,
-              badge: pendingPharmacies.length > 0 ? pendingPharmacies.length : undefined,
-            },
-            {
-              id: "specialists",
-              label: "Mutaxassislar (Agronom & Vet)",
-              icon: Users,
-              badge: pendingSpecialists.length > 0 ? pendingSpecialists.length : undefined,
-            },
-            {
-              id: "users",
-              label: "Foydalanuvchilar (Dehqonlar)",
-              icon: Users,
-              badge: usersList.length > 0 ? usersList.length : undefined,
-            },
-            { id: "regions", label: "Viloyatlar Tahlili", icon: Globe },
-            { id: "reviews", label: "Fikrlar & Sharhlar", icon: MessageSquare },
-            { id: "settings", label: "Radius & Yetkazib Berish Sozlamalari", icon: Settings },
-            { id: "broadcast", label: "Xabarlar & Xabarnomalar", icon: MessageSquare },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const active = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-                  active
-                    ? "bg-zinc-900 text-white font-bold shadow-xs"
-                    : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100"
-                }`}
-              >
-                <Icon size={18} className="shrink-0" />
-                <span className="truncate">{tab.label}</span>
-                {tab.badge !== undefined && (
-                  <span className="ml-auto rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-mono font-bold text-zinc-900 border border-zinc-200">
-                    {tab.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+        <nav className="flex-1 p-4 space-y-6 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 4rem)' }}>
+          {/* Guruh 1: Asosiy Statistika */}
+          <div>
+            <h3 className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Asosiy</h3>
+            <div className="space-y-1 mt-1">
+              {[
+                { id: "dashboard", label: "Dashboard", icon: BarChart3 },
+                { id: "analytics", label: "Analitika & Tahlil", icon: TrendingUp },
+              ].map((tab) => {
+                const Icon = tab.icon;
+                const active = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                      active
+                        ? "bg-zinc-900 text-white font-bold shadow-xs"
+                        : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100"
+                    }`}
+                  >
+                    <Icon size={18} className="shrink-0" />
+                    <span className="truncate">{tab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Guruh 2: Operatsion (Buyurtmalar va Chaqiruvlar) */}
+          <div>
+            <h3 className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Operatsion</h3>
+            <div className="space-y-1 mt-1">
+              {[
+                {
+                  id: "orders",
+                  label: "Buyurtmalar",
+                  icon: ShoppingCart,
+                  badge: adminOrders.filter((o) => o.status === "yangi").length > 0 ? adminOrders.filter((o) => o.status === "yangi").length : undefined,
+                },
+                {
+                  id: "specialist_calls",
+                  label: "Chaqiruvlar",
+                  icon: Phone,
+                  badge: adminCalls.filter((c) => c.status === "yangi").length > 0 ? adminCalls.filter((c) => c.status === "yangi").length : undefined,
+                },
+              ].map((tab) => {
+                const Icon = tab.icon;
+                const active = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                      active
+                        ? "bg-zinc-900 text-white font-bold shadow-xs"
+                        : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100"
+                    }`}
+                  >
+                    <Icon size={18} className="shrink-0" />
+                    <span className="truncate">{tab.label}</span>
+                    {tab.badge !== undefined && (
+                      <span className="ml-auto rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-mono font-bold text-red-700 border border-red-200">
+                        {tab.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Guruh 3: Arizalar va Tasdiqlash */}
+          <div>
+            <h3 className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Arizalar & Tasdiqlash</h3>
+            <div className="space-y-1 mt-1">
+              {[
+                {
+                  id: "pharmacies",
+                  label: "Dorixona Arizalari",
+                  icon: Store,
+                  badge: pendingPharmacies.length > 0 ? pendingPharmacies.length : undefined,
+                },
+                {
+                  id: "specialists",
+                  label: "Mutaxassis Arizalari",
+                  icon: UserCheck,
+                  badge: pendingSpecialists.length > 0 ? pendingSpecialists.length : undefined,
+                },
+              ].map((tab) => {
+                const Icon = tab.icon;
+                const active = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                      active
+                        ? "bg-zinc-900 text-white font-bold shadow-xs"
+                        : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100"
+                    }`}
+                  >
+                    <Icon size={18} className="shrink-0" />
+                    <span className="truncate">{tab.label}</span>
+                    {tab.badge !== undefined && (
+                      <span className="ml-auto rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-mono font-bold text-amber-700 border border-amber-200">
+                        {tab.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Guruh 4: Foydalanuvchilar va Ma'lumotlar */}
+          <div>
+            <h3 className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Ma'lumotlar</h3>
+            <div className="space-y-1 mt-1">
+              {[
+                { id: "users", label: "Foydalanuvchilar", icon: Users, badge: usersList.length > 0 ? usersList.length : undefined },
+                { id: "regions", label: "Viloyatlar Tahlili", icon: Globe },
+                { id: "reviews", label: "Fikrlar & Sharhlar", icon: MessageSquare },
+              ].map((tab) => {
+                const Icon = tab.icon;
+                const active = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                      active
+                        ? "bg-zinc-900 text-white font-bold shadow-xs"
+                        : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100"
+                    }`}
+                  >
+                    <Icon size={18} className="shrink-0" />
+                    <span className="truncate">{tab.label}</span>
+                    {tab.badge !== undefined && (
+                      <span className="ml-auto rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-mono font-bold text-zinc-900 border border-zinc-200">
+                        {tab.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Guruh 5: Sozlamalar va Xabarnomalar */}
+          <div>
+            <h3 className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Sozlamalar</h3>
+            <div className="space-y-1 mt-1">
+              {[
+                { id: "settings", label: "Radius & Yetkazib Berish", icon: Settings },
+                { id: "broadcast", label: "Xabarlar & Xabarnomalar", icon: MessageSquare },
+              ].map((tab) => {
+                const Icon = tab.icon;
+                const active = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                      active
+                        ? "bg-zinc-900 text-white font-bold shadow-xs"
+                        : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100"
+                    }`}
+                  >
+                    <Icon size={18} className="shrink-0" />
+                    <span className="truncate">{tab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </nav>
 
-        <div className="p-4 border-t border-zinc-200/80">
+        <div className="p-4 border-t border-zinc-200/80 flex-shrink-0">
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 border border-zinc-200/80 shadow-2xs transition"

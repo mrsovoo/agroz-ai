@@ -14,6 +14,7 @@ import {
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   phone: varchar("phone", { length: 32 }).unique(),
+  phoneHash: varchar("phone_hash", { length: 88 }).unique(), // base64(salt+hmac)
   secondPhone: varchar("second_phone", { length: 32 }),
   telegramId: bigint("telegram_id", { mode: "number" }).unique(),
   name: varchar("name", { length: 120 }),
@@ -25,6 +26,7 @@ export const users = pgTable("users", {
 export const otpCodes = pgTable("otp_codes", {
   id: serial("id").primaryKey(),
   phone: varchar("phone", { length: 32 }).notNull(),
+  phoneHash: varchar("phone_hash", { length: 88 }), // base64(salt+hmac)
   code: varchar("code", { length: 8 }).notNull(),
   used: boolean("used").default(false).notNull(),
   attempts: integer("attempts").default(0).notNull(),
@@ -39,9 +41,15 @@ export const otpCodes = pgTable("otp_codes", {
 });
 
 export const sessions = pgTable("sessions", {
-  id: varchar("id", { length: 64 }).primaryKey(),
+  id: varchar("id", { length: 64 }).primaryKey(), // refresh token jti
   userId: integer("user_id").notNull(),
+  refreshTokenHash: varchar("refresh_token_hash", { length: 64 }).notNull(), // SHA-256 of refresh token
+  family: varchar("family", { length: 32 }).notNull(), // token family for rotation detection
+  revoked: boolean("revoked").default(false).notNull(),
+  userAgent: varchar("user_agent", { length: 500 }),
+  ip: varchar("ip", { length: 45 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
 });
 
 export const pharmacies = pgTable("pharmacies", {
@@ -51,6 +59,7 @@ export const pharmacies = pgTable("pharmacies", {
   lat: doublePrecision("lat").notNull(),
   lng: doublePrecision("lng").notNull(),
   phone: varchar("phone", { length: 32 }).notNull(),
+  phoneHash: varchar("phone_hash", { length: 88 }).unique(), // base64(salt+hmac)
   address: text("address").notNull(),
   specialist: varchar("specialist", { length: 120 }),
   workHours: varchar("work_hours", { length: 60 }).default("09:00 - 18:00"),
@@ -111,6 +120,7 @@ export const specialists = pgTable("specialists", {
   telegramId: bigint("telegram_id", { mode: "number" }).unique().notNull(),
   name: varchar("name", { length: 120 }).notNull(),
   phone: varchar("phone", { length: 32 }).notNull(),
+  phoneHash: varchar("phone_hash", { length: 88 }).unique(), // base64(salt+hmac)
   /** specialist — alohida mutaxassis, pharmacy — dorixona egasi. */
   role: varchar("role", { length: 20 }).notNull().default("specialist"),
   /** Mutaxassislik (agronom, veterinar...) yoki dorixona turi (agro, vet, umumiy). */
@@ -204,6 +214,7 @@ export const orders = pgTable("orders", {
   pharmacySpecialistId: integer("pharmacy_specialist_id").notNull(),
   customerName: varchar("customer_name", { length: 120 }).notNull(),
   customerPhone: varchar("customer_phone", { length: 32 }).notNull(),
+  customerPhoneHash: varchar("customer_phone_hash", { length: 88 }), // base64(salt+hmac)
   /** Mijoz izohi (masalan: "ertalab kerak bo'ladi"). */
   note: text("note"),
   /** pickup — dorixonadan olib ketish, delivery — yetkazib berish. */
@@ -272,6 +283,7 @@ export const specialistCalls = pgTable("specialist_calls", {
   specialistId: integer("specialist_id").notNull(),
   customerName: varchar("customer_name", { length: 120 }).notNull(),
   customerPhone: varchar("customer_phone", { length: 32 }).notNull(),
+  customerPhoneHash: varchar("customer_phone_hash", { length: 88 }), // base64(salt+hmac)
   problem: text("problem").notNull(),
   address: text("address"),
   /** yangi | qabul_qilindi | bajarildi | bekor */

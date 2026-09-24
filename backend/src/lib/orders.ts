@@ -12,6 +12,7 @@ import {
   specialists,
 } from "@/db/schema";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { encryptFields, decryptFields, SENSITIVE_FIELDS, hashPhone } from "@/lib/encryption";
 
 export type OrderStatus = "yangi" | "tasdiqlandi" | "yetkazildi" | "bekor";
 
@@ -138,19 +139,21 @@ export async function createOrder(input: CreateOrderInput) {
 
   const total = prepared.reduce((acc, p) => acc + (p.price ?? 0) * p.qty, 0);
 
+  const orderData = {
+    userId: input.userId,
+    pharmacySpecialistId: input.pharmacySpecialistId,
+    customerName: input.customerName,
+    customerPhone: input.customerPhone,
+    customerPhoneHash: hashPhone(input.customerPhone),
+    note: input.note ?? null,
+    deliveryType: input.deliveryType === "delivery" ? "delivery" : "pickup",
+    customerAddress: input.deliveryType === "delivery" ? input.customerAddress ?? null : null,
+    totalSum: total,
+    status: "yangi",
+  };
   const inserted = await db
     .insert(orders)
-    .values({
-      userId: input.userId,
-      pharmacySpecialistId: input.pharmacySpecialistId,
-      customerName: input.customerName,
-      customerPhone: input.customerPhone,
-      note: input.note ?? null,
-      deliveryType: input.deliveryType === "delivery" ? "delivery" : "pickup",
-      customerAddress: input.deliveryType === "delivery" ? input.customerAddress ?? null : null,
-      totalSum: total,
-      status: "yangi",
-    })
+    .values(encryptFields(orderData, SENSITIVE_FIELDS.orders))
     .returning({ id: orders.id });
   const orderId = inserted[0].id;
 
@@ -218,7 +221,8 @@ export async function listOrders(opts: {
       : undefined;
   if (!where) return [];
 
-  const rows = await db.select().from(orders).where(where).orderBy(desc(orders.id)).limit(limit);
+  const rowsRaw = await db.select().from(orders).where(where).orderBy(desc(orders.id)).limit(limit);
+  const rows = rowsRaw.map((r) => decryptFields(r, SENSITIVE_FIELDS.orders));
   if (rows.length === 0) return [];
 
   const items = await db
@@ -367,8 +371,9 @@ export async function rateOrder(
     .from(orders)
     .where(eq(orders.id, orderId))
     .limit(1);
-  const order = rows[0];
-  if (!order) return { ok: false, error: "Buyurtma topilmadi" };
+  const orderRaw = rows[0];
+  if (!orderRaw) return { ok: false, error: "Buyurtma topilmadi" };
+  const order = decryptFields(orderRaw, ["customerPhone"] as const);
   if (order.customerPhone !== customerPhone) {
     return { ok: false, error: "Buyurtma bu telefon raqamiga tegishli emas" };
   }
