@@ -54,6 +54,7 @@ export default function AdminBroadcastCenter() {
   const [buttonText, setButtonText] = useState("");
   const [buttonUrl, setButtonUrl] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [signature, setSignature] = useState("AgrozAI");
 
   const [counts, setCounts] = useState<RecipientCounts>({
     pharmacies: 0,
@@ -136,6 +137,7 @@ export default function AdminBroadcastCenter() {
           buttonUrl: buttonUrl.trim() || undefined,
           imageUrl: imageUrl.trim() || undefined,
           region: targetAudience === "users" ? region : undefined,
+          signature: signature.trim(),
         }),
       });
 
@@ -489,6 +491,43 @@ export default function AdminBroadcastCenter() {
                 </p>
               </div>
 
+              {/* Imzo / Pastki yozuv (ixtiyoriy) */}
+              <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                    <Sparkles size={14} className="text-emerald-600" />
+                    Xabar imzosi / Pastki yozuv (ixtiyoriy)
+                  </span>
+                  {signature.trim() ? (
+                    <button
+                      type="button"
+                      onClick={() => setSignature("")}
+                      className="text-[10px] font-semibold text-red-500 hover:underline"
+                    >
+                      Imzoni olib tashlash
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setSignature("AgrozAI")}
+                      className="text-[10px] font-semibold text-emerald-600 hover:underline"
+                    >
+                      Standart: AgrozAI
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  value={signature}
+                  onChange={(e) => setSignature(e.target.value)}
+                  placeholder="Masalan: AgrozAI (bo'sh qoldirilsa imzo qo'yilmaydi)"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <p className="text-[10px] text-slate-500">
+                  Standart qiymat: <b>AgrozAI</b>. O&apos;zingiz xohlagancha o&apos;zgartirishingiz yoki xabarni imzosiz yuborish uchun tozalab qo&apos;yishingiz mumkin.
+                </p>
+              </div>
+
               {/* Natija xabari */}
               {result && (
                 <div
@@ -585,12 +624,20 @@ export default function AdminBroadcastCenter() {
                       )}
                     </div>
 
-                    <div className="mt-3 pt-2 border-t border-slate-700/50 flex items-center justify-between text-[10px] text-slate-400">
-                      <span>🌿 Agroz AI ma&apos;muriyati</span>
-                      <span>
-                        {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                      </span>
-                    </div>
+                    {signature.trim() ? (
+                      <div className="mt-3 pt-2 border-t border-slate-700/50 flex items-center justify-between text-[10px] text-slate-400">
+                        <span className="italic">{signature.trim()}</span>
+                        <span>
+                          {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="mt-3 pt-2 border-t border-slate-700/50 flex items-center justify-end text-[10px] text-slate-400">
+                        <span>
+                          {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Inline Button Preview */}

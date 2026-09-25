@@ -1491,6 +1491,7 @@ router.post("/messages/send", requireAdmin, async (req, res) => {
       buttonUrl,
       region,
       imageUrl,
+      signature,
       directRecipient, // { recipientType: "pharmacy" | "specialist" | "user", id?: number, telegramId?: number }
     } = req.body || {};
 
@@ -1505,9 +1506,17 @@ router.post("/messages/send", requireAdmin, async (req, res) => {
       textLines.push(`📢 <b>${escapeHtml(title.trim())}</b>`);
       textLines.push("");
     }
-    textLines.push(escapeHtml(message.trim()));
-    textLines.push("");
-    textLines.push("🌿 <i>Agroz AI ma'muriyati</i>");
+    if (message && message.trim()) {
+      textLines.push(escapeHtml(message.trim()));
+    }
+
+    // Pastki imzo (signature): agar berilgan bo'lsa, trim qilingan matn qo'yiladi. Bo'sh bo'lsa imzo qo'yilmaydi.
+    // Agar umuman yuborilmagan bo'lsa, standart "AgrozAI" qo'yiladi.
+    const customSig = signature !== undefined ? String(signature).trim() : "AgrozAI";
+    if (customSig) {
+      textLines.push("");
+      textLines.push(`<i>${escapeHtml(customSig)}</i>`);
+    }
     const fullText = textLines.join("\n");
 
     let inlineKeyboard: any = undefined;
