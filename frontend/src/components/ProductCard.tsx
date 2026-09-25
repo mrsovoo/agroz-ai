@@ -15,6 +15,7 @@ import {
 } from "@/lib/cart-store";
 import { isFavorite, toggleFavorite, FAV_EVENT } from "@/lib/favorites-store";
 import { calculateMedicineRating } from "@/lib/medicine-reviews";
+import { apiUrl } from "@/lib/api-config";
 
 export type ProductCardMedicine = CartStoreMedicine & {
   usage?: string | null;
@@ -158,7 +159,7 @@ export default function ProductCard({
         <Link href={href} aria-label={medicine.name} className="block h-full w-full">
           {medicine.hasPhoto ? (
             <FadeImage
-              src={medicine.photoVersion ? `/api/medicines/${medicine.id}/photo?v=${medicine.photoVersion}` : `/api/medicines/${medicine.id}/photo`}
+              src={apiUrl(medicine.photoVersion ? `/api/medicines/${medicine.id}/photo?v=${medicine.photoVersion}` : `/api/medicines/${medicine.id}/photo`)}
               alt={medicine.name}
               className="h-full w-full bg-white transition-transform duration-300 group-hover:scale-105"
               fit="contain"
