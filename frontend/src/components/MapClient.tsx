@@ -23,7 +23,7 @@ import { RADIUS_OPTIONS } from "@/lib/constants";
 import { distanceKm, roundKm } from "@/lib/geo";
 
 type Stock = { medicine: string; status: string; price: number | null };
-type Medicine = { id: number; name: string; status: string; hasPhoto: boolean };
+type Medicine = { id: number; name: string; status: string; hasPhoto: boolean; photoVersion?: string | null };
 
 type Place = {
   /** Dorixona id'lari bilan to'qnashmasligi uchun mutaxassislar manfiy id oladi. */
@@ -688,7 +688,7 @@ export default function MapClient() {
                       {m.hasPhoto ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
-                          src={`/api/medicines/${m.id}/photo`}
+                          src={m.photoVersion ? `/api/medicines/${m.id}/photo?v=${m.photoVersion}` : `/api/medicines/${m.id}/photo`}
                           alt={m.name}
                           className="h-[64px] w-[64px] rounded-xl object-cover"
                           loading="lazy"

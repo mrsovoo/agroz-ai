@@ -129,3 +129,126 @@ export function toggleCart(): void {
   window.dispatchEvent(new Event(TOGGLE_CART_EVENT));
 }
 
+// ---------------------------------------------------------------------------
+// Buyurtma turlari bo'yicha tavsiya va oxirgi buyurtma holati
+// ---------------------------------------------------------------------------
+
+const ORDER_PREFS_KEY = "agroz:order_prefs:v1";
+const LAST_ORDER_KEY = "agroz:last_order:v1";
+
+export type OrderPrefs = {
+  crop: number;
+  animal: number;
+  total: number;
+};
+
+export function recordOrderItems(items: { type?: string }[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    const prefs = getUserOrderPrefs();
+    for (const item of items) {
+      if (item.type === "crop") prefs.crop += 1;
+      else if (item.type === "animal") prefs.animal += 1;
+      prefs.total += 1;
+    }
+    window.localStorage.setItem(ORDER_PREFS_KEY, JSON.stringify(prefs));
+  } catch {}
+}
+
+export function getUserOrderPrefs(): OrderPrefs {
+  if (typeof window === "undefined") return { crop: 0, animal: 0, total: 0 };
+  try {
+    const raw = window.localStorage.getItem(ORDER_PREFS_KEY);
+    if (!raw) return { crop: 0, animal: 0, total: 0 };
+    const p = JSON.parse(raw);
+    return {
+      crop: Number(p.crop) || 0,
+      animal: Number(p.animal) || 0,
+      total: Number(p.total) || 0,
+    };
+  } catch {
+    return { crop: 0, animal: 0, total: 0 };
+  }
+}
+
+export type LastOrderInfo = {
+  id: number;
+  total: number;
+  deliveryType: string;
+  pharmacyName: string;
+  timestamp: number;
+};
+
+export function saveLastOrder(order: Omit<LastOrderInfo, "timestamp">): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      LAST_ORDER_KEY,
+      JSON.stringify({ ...order, timestamp: Date.now() }),
+    );
+  } catch {}
+}
+
+export function loadLastOrder(): LastOrderInfo | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(LAST_ORDER_KEY);
+    if (!raw) return null;
+    const p = JSON.parse(raw);
+    if (Date.now() - (p.timestamp || 0) < 24 * 60 * 60 * 1000) {
+      return p;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearLastOrder(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(LAST_ORDER_KEY);
+  } catch {}
+}
+
+export function addItemToCart(
+  medicine: CartStoreMedicine,
+  pharmacy: CartStorePharmacy,
+  qty = 1,
+): boolean {
+  const current = loadCart();
+  if (current && current.pharmacy.id !== pharmacy.id) {
+    if (
+      !confirm(
+        `Savatda boshqa dorixona (${current.pharmacy.name}) dorilari bor. Yangi dorixona dorilari savatni almashtiradi. Davom etamizmi?`,
+      )
+    ) {
+      return false;
+    }
+    const nextState: CartStoreState = {
+      pharmacy,
+      lines: [{ medicine, pharmacy, qty }],
+    };
+    saveCart(nextState);
+    notifyCartChanged();
+    return true;
+  }
+
+  const lines = current ? [...current.lines] : [];
+  const idx = lines.findIndex((l) => l.medicine.id === medicine.id);
+  if (idx >= 0) {
+    lines[idx] = { ...lines[idx], qty: lines[idx].qty + qty };
+  } else {
+    lines.push({ medicine, pharmacy, qty });
+  }
+
+  const nextState: CartStoreState = {
+    pharmacy: current?.pharmacy || pharmacy,
+    lines,
+  };
+  saveCart(nextState);
+  notifyCartChanged();
+  return true;
+}
+
+

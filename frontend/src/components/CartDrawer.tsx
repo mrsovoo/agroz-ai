@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   X,
@@ -17,6 +18,8 @@ import {
   Syringe,
   Check,
   Navigation,
+  Sparkles,
+  ArrowRight,
 } from "lucide-react";
 import {
   loadCart,
@@ -27,10 +30,17 @@ import {
   CLOSE_CART_EVENT,
   TOGGLE_CART_EVENT,
   type CartStoreState,
+  recordOrderItems,
+  getUserOrderPrefs,
+  saveLastOrder,
+  loadLastOrder,
+  clearLastOrder,
+  addItemToCart,
 } from "@/lib/cart-store";
 import FadeImage from "@/components/FadeImage";
 import { onTelegramReady, getTelegramUser, requestDeviceLocation } from "@/lib/telegram";
 import { apiUrl } from "@/lib/api-config";
+import { formatOrderNumber } from "@/lib/format";
 
 function shortSum(value: number): string {
   return new Intl.NumberFormat("ru-RU").format(value).replace(/\u00a0/g, " ");
@@ -77,6 +87,73 @@ export default function CartDrawer() {
     deliveryType: string;
     pharmacyName: string;
   } | null>(null);
+
+  // Tavsiya etilgan dorilar va xaridor buyurtma statistikasi
+  const [recommendedMeds, setRecommendedMeds] = useState<any[]>([]);
+  const [recLoading, setRecLoading] = useState(false);
+  const [recFilter, setRecFilter] = useState<"all" | "crop" | "animal">("all");
+  const [orderPrefs, setOrderPrefs] = useState<{ crop: number; animal: number; total: number }>({ crop: 0, animal: 0, total: 0 });
+
+  useEffect(() => {
+    if (!open) return;
+    setOrderPrefs(getUserOrderPrefs());
+    if (recommendedMeds.length === 0) {
+      setRecLoading(true);
+      fetch(apiUrl("/api/medicines?limit=30"))
+        .then((r) => (r.ok ? r.json() : []))
+        .then((data) => {
+          if (Array.isArray(data)) {
+            setRecommendedMeds(data);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setRecLoading(false));
+    }
+  }, [open, recommendedMeds.length]);
+
+  const sortedRecommendations = useMemo(() => {
+    let list = [...recommendedMeds];
+    if (recFilter === "crop") {
+      list = list.filter((m) => m.type === "crop");
+    } else if (recFilter === "animal") {
+      list = list.filter((m) => m.type === "animal");
+    } else {
+      // Foydalanuvchi qaysi turga ko'proq buyurtma bergan bo'lsa, o'shani birinchi ko'rsatish
+      if (orderPrefs.crop > orderPrefs.animal) {
+        list.sort((a, b) => {
+          if (a.type === "crop" && b.type !== "crop") return -1;
+          if (a.type !== "crop" && b.type === "crop") return 1;
+          return 0;
+        });
+      } else if (orderPrefs.animal > orderPrefs.crop) {
+        list.sort((a, b) => {
+          if (a.type === "animal" && b.type !== "animal") return -1;
+          if (a.type !== "animal" && b.type === "animal") return 1;
+          return 0;
+        });
+      }
+    }
+    return list;
+  }, [recommendedMeds, recFilter, orderPrefs]);
+
+  const recTitle = useMemo(() => {
+    if (orderPrefs.crop > orderPrefs.animal) {
+      return {
+        title: "🌱 Siz uchun tavsiya: Ekin parvarishi vositalari",
+        desc: "Oldingi buyurtmalaringizga asosan saralangan",
+      };
+    }
+    if (orderPrefs.animal > orderPrefs.crop) {
+      return {
+        title: "🐄 Siz uchun tavsiya: Veterinariya va chorva vositalari",
+        desc: "Oldingi buyurtmalaringizga asosan saralangan",
+      };
+    }
+    return {
+      title: "✨ Tavsiya etilgan dori vositalari",
+      desc: "Platformadagi mavjud va mashhur dori vositalari",
+    };
+  }, [orderPrefs]);
 
   useEffect(() => {
     fetch("/api/orders/delivery-config")
@@ -125,7 +202,7 @@ export default function CartDrawer() {
       sync();
       setOpen(true);
       setError(null);
-      setSuccessOrder(null);
+      setSuccessOrder((prev) => prev || loadLastOrder());
     };
 
     const handleClose = () => setOpen(false);
@@ -294,12 +371,16 @@ export default function CartDrawer() {
         throw new Error(data.error || "Buyurtma qabul qilinmadi");
       }
 
-      setSuccessOrder({
+      const orderInfo = {
         id: Number(data.orderId ?? 0),
         total: selectedTotal,
         deliveryType,
         pharmacyName: data.pharmacy?.name || cart.pharmacy.name,
-      });
+      };
+      setSuccessOrder(orderInfo);
+      saveLastOrder(orderInfo);
+      recordOrderItems(selectedLines.map((l) => ({ type: l.medicine.type })));
+      setOrderPrefs(getUserOrderPrefs());
 
       // Faqat buyurtma qilingan dorilarni savatdan o'chiramiz
       const remaining = cart.lines.filter((l) => !selectedIds.has(l.medicine.id));
@@ -375,59 +456,218 @@ export default function CartDrawer() {
           </div>
         </div>
 
-        {/* Muvaffaqiyat xabari */}
-        {successOrder ? (
-          <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mb-4 animate-bounce">
-              <CheckCircle2 size={36} />
-            </div>
-            <h3 className="text-xl font-extrabold text-neutral-900">
-              Buyurtmangiz muvaffaqiyatli qabul qilindi!
-            </h3>
-            <p className="mt-2 text-[14px] text-neutral-600 max-w-sm">
-              Buyurtma raqami: <strong className="text-neutral-900 font-mono">#{successOrder.id}</strong>
-            </p>
-            <div className="mt-4 rounded-2xl bg-neutral-50 p-4 border border-black/5 text-left w-full max-w-sm space-y-1.5 text-[13px]">
-              <p className="text-neutral-700">
-                🏪 <b>Dorixona:</b> {successOrder.pharmacyName}
-              </p>
-              <p className="text-neutral-700">
-                {successOrder.deliveryType === "delivery" ? "🚚 Yetkazib berish (Kuryer)" : "🏬 Olib ketish (Dorixonadan)"}
-              </p>
-              {successOrder.total > 0 && (
-                <p className="font-extrabold text-[var(--brand-green)] pt-1 text-[15px]">
-                  Jami: {shortSum(successOrder.total)} so&apos;m
+        {/* Agar savat bo'sh bo'lsa (yoki buyurtma qabul qilingan bo'lsa) */}
+        {!cart || cart.lines.length === 0 ? (
+          <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4">
+            {/* 1. Buyurtma qabul qilingan bo'lsa kartochkasi */}
+            {successOrder ? (
+              <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-emerald-50/40 p-4 shadow-2xs space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-xs">
+                      <CheckCircle2 size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-[15px] font-black text-neutral-900 leading-snug">
+                        Buyurtmangiz qabul qilindi!
+                      </h3>
+                      <p className="text-[12px] font-semibold text-neutral-600">
+                        Buyurtma raqami:{" "}
+                        <strong className="font-mono text-emerald-800 font-black text-[13px]">
+                          {formatOrderNumber(successOrder.id)}
+                        </strong>
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSuccessOrder(null);
+                      clearLastOrder();
+                    }}
+                    className="rounded-lg bg-black/5 px-2 py-1 text-[11px] font-bold text-neutral-600 hover:bg-black/10 transition"
+                  >
+                    Yopish
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[12px]">
+                  <div className="rounded-xl bg-white p-2.5 border border-black/5">
+                    <span className="text-[10px] font-semibold text-neutral-400 block uppercase tracking-wider">
+                      Dorixona
+                    </span>
+                    <span className="font-bold text-neutral-800 truncate block mt-0.5">
+                      {successOrder.pharmacyName}
+                    </span>
+                  </div>
+                  <div className="rounded-xl bg-white p-2.5 border border-black/5">
+                    <span className="text-[10.5px] font-semibold text-neutral-400 block uppercase tracking-wider">
+                      {successOrder.deliveryType === "delivery" ? "Yetkazish" : "Olib ketish"}
+                    </span>
+                    <span className="font-extrabold text-[var(--brand-green)] block mt-0.5">
+                      {successOrder.total > 0 ? `${shortSum(successOrder.total)} so'm` : "Kelishiladi"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 rounded-xl bg-emerald-50/80 px-3 py-2 text-[11.5px] text-emerald-900 border border-emerald-100">
+                  <span className="shrink-0 text-emerald-600">📲</span>
+                  <span>Dorixona egasiga Telegram orqali xabarnoma yuborildi. Tez orada bog&apos;lanishadi.</span>
+                </div>
+              </div>
+            ) : (
+              /* Bo'sh savat xabari */
+              <div className="flex flex-col items-center justify-center rounded-2xl bg-neutral-50/80 border border-neutral-200/80 p-5 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-200/60 text-neutral-500 mb-2">
+                  <ShoppingCart size={24} />
+                </div>
+                <h3 className="text-[15px] font-bold text-neutral-800">
+                  Savatingiz hozircha bo&apos;sh
+                </h3>
+                <p className="mt-0.5 text-[12px] text-neutral-500 max-w-xs">
+                  Pastdagi tavsiya etilgan dori vositalaridan tanlab, xaridingizni boshlang.
                 </p>
+              </div>
+            )}
+
+            {/* 2. PASTIDA DORI VOSITALARI RO'YXATI (BUYURTMA TURLARI ASOSIDA TAVSIYA) */}
+            <div className="pt-2 space-y-3">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h4 className="text-[14px] font-black text-neutral-900 flex items-center gap-1.5">
+                    <Sparkles size={15} className="text-amber-500 shrink-0" />
+                    <span>{recTitle.title}</span>
+                  </h4>
+                  <p className="text-[11px] text-neutral-500 mt-0.5">
+                    {recTitle.desc}
+                  </p>
+                </div>
+              </div>
+
+              {/* Filtr tablari */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                {(
+                  [
+                    { id: "all", label: "Barchasi" },
+                    { id: "crop", label: "🌱 Ekinlar" },
+                    { id: "animal", label: "🐄 Hayvonlar" },
+                  ] as const
+                ).map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setRecFilter(tab.id)}
+                    className={`rounded-full px-3 py-1 text-[11.5px] font-bold transition ${
+                      recFilter === tab.id
+                        ? "bg-[var(--brand-green)] text-white shadow-2xs"
+                        : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Tavsiya dorilar ro'yxati */}
+              {recLoading ? (
+                <div className="flex items-center justify-center py-8 text-neutral-400">
+                  <Loader2 size={24} className="animate-spin" />
+                </div>
+              ) : sortedRecommendations.length === 0 ? (
+                <p className="text-center py-6 text-xs text-neutral-400">
+                  Bu toifada dori vositalari topilmadi.
+                </p>
+              ) : (
+                <div className="space-y-2.5">
+                  {sortedRecommendations.slice(0, 12).map((m) => (
+                    <div
+                      key={m.id}
+                      className="flex items-center gap-3 rounded-2xl border border-neutral-200/80 bg-white p-3 shadow-2xs transition hover:border-emerald-300"
+                    >
+                      <Link
+                        href={`/dori/${m.id}`}
+                        onClick={close}
+                        className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-neutral-100 border border-black/5"
+                      >
+                        {m.hasPhoto ? (
+                          <FadeImage
+                            src={apiUrl(`/api/medicines/${m.id}/photo${m.photoVersion ? `?v=${m.photoVersion}` : ""}`)}
+                            alt={m.name}
+                            className="h-full w-full object-cover"
+                            fallback={
+                              <span className="flex h-full w-full items-center justify-center text-[var(--brand-green)]">
+                                <TypeIcon type={m.type} size={22} />
+                              </span>
+                            }
+                          />
+                        ) : (
+                          <span className="flex h-full w-full items-center justify-center text-[var(--brand-green)]">
+                            <TypeIcon type={m.type} size={22} />
+                          </span>
+                        )}
+                      </Link>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[9.5px] font-bold ${
+                              m.type === "crop"
+                                ? "bg-emerald-50 text-emerald-700"
+                                : m.type === "animal"
+                                ? "bg-amber-50 text-amber-800"
+                                : "bg-slate-100 text-slate-700"
+                            }`}
+                          >
+                            {m.type === "crop" ? "🌱 Ekin" : m.type === "animal" ? "🐄 Hayvon" : "📦 Umumiy"}
+                          </span>
+                        </div>
+                        <Link href={`/dori/${m.id}`} onClick={close} className="block mt-0.5">
+                          <h5 className="text-[13px] font-bold text-neutral-900 leading-snug line-clamp-1 hover:text-[var(--brand-green)]">
+                            {m.name}
+                          </h5>
+                        </Link>
+                        <p className="text-[11px] text-neutral-500 truncate mt-0.5">
+                          🏪 {m.pharmacyName}
+                        </p>
+                        <div className="mt-1 flex items-center justify-between">
+                          <span className="text-[12.5px] font-black text-[var(--brand-green)]">
+                            {m.price ? `${shortSum(m.price)} so'm` : "Kelishiladi"}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              addItemToCart(
+                                {
+                                  id: m.id,
+                                  name: m.name,
+                                  price: m.price,
+                                  type: m.type,
+                                  hasPhoto: m.hasPhoto,
+                                  photoVersion: m.photoVersion,
+                                  usage: m.usage,
+                                  status: "bor",
+                                },
+                                {
+                                  id: m.pharmacyId,
+                                  name: m.pharmacyName,
+                                  phone: m.pharmacyPhone,
+                                  address: m.pharmacyAddress,
+                                },
+                                1,
+                              );
+                              setSuccessOrder(null);
+                            }}
+                            className="inline-flex items-center gap-1 rounded-xl bg-[var(--brand-green)] hover:brightness-105 active:scale-95 px-2.5 py-1 text-[11px] font-bold text-white shadow-2xs transition"
+                          >
+                            <Plus size={13} strokeWidth={2.5} /> Savatga
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
-            <p className="mt-3 text-[12.5px] text-neutral-500 max-w-xs">
-              Dorixona egasiga Telegram orqali xabarnoma yuborildi. Tez orada siz bilan bog&apos;lanishadi.
-            </p>
-            <button
-              onClick={() => setOpen(false)}
-              className="mt-6 rounded-2xl bg-[var(--brand-green)] px-8 py-3 text-[14px] font-bold text-white shadow-sm hover:brightness-105 active:scale-95 transition"
-            >
-              Tushunarli
-            </button>
-          </div>
-        ) : !cart || cart.lines.length === 0 ? (
-          /* Bo'sh savat */
-          <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-neutral-100 text-neutral-400 mb-3">
-              <ShoppingCart size={32} />
-            </div>
-            <h3 className="text-[17px] font-bold text-neutral-800">
-              Savatingiz hozircha bo&apos;sh
-            </h3>
-            <p className="mt-1 text-[13px] text-neutral-500 max-w-xs">
-              Dorilar bozoridan kerakli dori vositalarini savatga qo&apos;shing.
-            </p>
-            <button
-              onClick={() => setOpen(false)}
-              className="mt-6 rounded-xl bg-neutral-900 px-6 py-2.5 text-[13px] font-bold text-white hover:bg-neutral-800 active:scale-95 transition"
-            >
-              Dorilarni ko&apos;rish
-            </button>
           </div>
         ) : (
           /* Mahsulotlar va Buyurtma Formasi */

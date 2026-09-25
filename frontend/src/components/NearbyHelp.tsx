@@ -19,7 +19,7 @@ import {
 import { CONFIDENCE_THRESHOLD } from "@/lib/constants";
 
 type Stock = { medicine: string; status: string; price: number | null };
-type Medicine = { id: number; name: string; status: string; hasPhoto: boolean; price?: number | null };
+type Medicine = { id: number; name: string; status: string; hasPhoto: boolean; photoVersion?: string | null; price?: number | null };
 
 /** Narxni qisqa ko'rinishda: 45000 → "45 000". */
 function shortSum(value: number): string {
@@ -346,7 +346,7 @@ export default function NearbyHelp({
                         {m.hasPhoto ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            src={`/api/medicines/${m.id}/photo`}
+                            src={m.photoVersion ? `/api/medicines/${m.id}/photo?v=${m.photoVersion}` : `/api/medicines/${m.id}/photo`}
                             alt={m.name}
                             className={`h-[68px] w-[68px] rounded-xl object-cover ${m.status !== "bor" ? "opacity-40 grayscale" : ""}`}
                             loading="lazy"

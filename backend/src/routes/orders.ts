@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { createOrder, rateOrder, type OrderInputItem } from "../lib/orders.js";
 import { normalizePhone, cleanText } from "../lib/validate.js";
-import { notifyPharmacyNewOrder, notifyPharmacyStockAlert } from "../lib/orders-bot.js";
+import { notifyPharmacyNewOrder, notifyPharmacyStockAlert, formatOrderNumber } from "../lib/orders-bot.js";
 import { db } from "../db/index.js";
 import { orders, orderItems, specialists, sessions, users } from "../db/schema.js";
 import { eq, desc, and, or, sql } from "drizzle-orm";
@@ -176,7 +176,7 @@ router.post("/", async (req, res) => {
             .join("\n");
 
           const msgLines = [
-            `🧾 <b>BUYURTMANGIZ QABUL QILINDI! (#${result.orderId})</b>`,
+            `🧾 <b>BUYURTMANGIZ QABUL QILINDI! (${formatOrderNumber(result.orderId)})</b>`,
             "",
             `🏪 <b>Dorixona:</b> ${result.pharmacy.name}`,
             `📞 <b>Dorixona aloqa:</b> ${result.pharmacy.phone}`,

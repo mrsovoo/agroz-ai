@@ -57,6 +57,7 @@ import {
   FAV_EVENT,
   type FavKey,
 } from "@/lib/favorites-store";
+import { formatOrderNumber } from "@/lib/format";
 
 type Medicine = {
   id: number;
@@ -886,7 +887,7 @@ export default function MarketClient() {
                     Buyurtma qabul qilindi!
                   </p>
                   <p className="text-[13px] leading-relaxed text-[var(--brand-muted)]">
-                    Buyurtmangiz <b>#{orderDone.orderId}</b> raqami bilan dorixona egasiga Telegram orqali yetkazildi.
+                    Buyurtmangiz <b>{formatOrderNumber(orderDone.orderId)}</b> raqami bilan dorixona egasiga Telegram orqali yetkazildi.
                   </p>
                 </div>
 
@@ -894,7 +895,7 @@ export default function MarketClient() {
                 <div className="space-y-3 rounded-2xl border border-[var(--brand-sep)] bg-[var(--brand-bg)] p-4">
                   <div className="flex items-center justify-between border-b border-[var(--brand-sep)] pb-2.5">
                     <span className="text-[12px] font-bold text-[var(--brand-muted)]">Buyurtma raqami</span>
-                    <span className="text-[15px] font-black text-[var(--brand-ink)]">#{orderDone.orderId}</span>
+                    <span className="text-[15px] font-black text-[var(--brand-ink)] font-mono">{formatOrderNumber(orderDone.orderId)}</span>
                   </div>
 
                   <div className="flex items-center justify-between border-b border-[var(--brand-sep)] pb-2.5">

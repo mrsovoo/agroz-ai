@@ -50,6 +50,7 @@ import {
   Loader2,
   AlertTriangle,
 } from "lucide-react";
+import { formatOrderNumber } from "@/lib/format";
 
 type Me = { enabled: boolean; authenticated: boolean; username: string | null };
 
@@ -2003,8 +2004,8 @@ export default function AdminPanelPage() {
                     >
                       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3 mb-3">
                         <div className="flex items-center gap-3">
-                          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-xs font-black text-slate-800">
-                            #{o.id}
+                          <span className="flex h-9 px-2 items-center justify-center rounded-xl bg-slate-100 text-xs font-mono font-black text-slate-800">
+                            {formatOrderNumber(o.id)}
                           </span>
                           <div>
                             <h4 className="text-sm font-bold text-slate-900">{o.customerName}</h4>
@@ -3516,7 +3517,7 @@ export default function AdminPanelPage() {
                         <div key={ord.id} className="rounded-xl bg-slate-50/80 p-4 border border-slate-200/80 space-y-3">
                           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
                             <div className="flex items-center gap-2">
-                              <span className="font-mono text-xs font-bold text-slate-900">Buyurtma #{ord.id}</span>
+                              <span className="font-mono text-xs font-bold text-slate-900">Buyurtma {formatOrderNumber(ord.id)}</span>
                               <span
                                 className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
                                   ord.status === "yetkazildi"

@@ -31,6 +31,20 @@ export function shortSum(value: number): string {
   return new Intl.NumberFormat("ru-RU").format(value).replace(/\u00a0/g, " ");
 }
 
+/**
+ * Buyurtma raqamini #000000 formatida ko'rsatadi.
+ * Agar 999 999 dan oshsa, #000000-1, #000000-2 shaklida davom etadi.
+ */
+export function formatOrderNumber(orderId: number | string): string {
+  const num = typeof orderId === "string" ? parseInt(orderId, 10) : orderId;
+  if (!Number.isFinite(num) || num <= 0) return "#000001";
+  if (num <= 999999) {
+    return `#${String(num).padStart(6, "0")}`;
+  }
+  const overflow = num - 999999;
+  return `#000000-${overflow}`;
+}
+
 /** Bitta buyurtma matni (dorixona egasi ko'radi). */
 export function orderMessage(order: OrderWithItems): string {
   const st = orderStatusLabel(order.status);
@@ -63,7 +77,7 @@ export function orderMessage(order: OrderWithItems): string {
     : [];
 
   return [
-    `🔔 <b>YANGI BUYURTMA KELIB TUSHDI! (#${order.id})</b>`,
+    `🔔 <b>YANGI BUYURTMA KELIB TUSHDI! (${formatOrderNumber(order.id)})</b>`,
     "",
     `Holati: ${st.emoji} <b>${st.label}</b>`,
     `👤 <b>Mijoz:</b> ${escapeHtml(order.customerName)}`,
@@ -122,7 +136,7 @@ export function ordersListKeyboard(orders: OrderWithItems[]): InlineKeyboard {
     const deliveryIcon = o.deliveryType === "delivery" ? "🚚" : "🏪";
     return [
       {
-        text: `${st.emoji} #${o.id} · ${o.customerName} ${deliveryIcon}${itemsLabel} · ${o.totalSum !== null ? shortSum(o.totalSum) + " so'm" : "narxsiz"}${stars}`,
+        text: `${st.emoji} ${formatOrderNumber(o.id)} · ${o.customerName} ${deliveryIcon}${itemsLabel} · ${o.totalSum !== null ? shortSum(o.totalSum) + " so'm" : "narxsiz"}${stars}`,
         callback_data: `o:view:${o.id}`,
       },
     ];
@@ -171,7 +185,7 @@ export function ordersHintMessage(ordersOrCount: OrderWithItems[] | number): str
         : `🏪 <b>Olib ketish:</b> Mijoz dorixonadan o'zi olib ketadi`;
 
     return [
-      `<b>${idx + 1}. Buyurtma #${o.id}</b> [${st.emoji} ${st.label}]`,
+      `<b>${idx + 1}. Buyurtma ${formatOrderNumber(o.id)}</b> [${st.emoji} ${st.label}]`,
       `👤 <b>Mijoz:</b> ${escapeHtml(o.customerName)} (<code>${escapeHtml(o.customerPhone)}</code>)`,
       addressText,
       `📦 <b>Buyurtma qilingan mahsulotlar:</b>\n${itemsText}`,
