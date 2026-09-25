@@ -63,6 +63,7 @@ type Medicine = {
   name: string;
   status: string;
   hasPhoto: boolean;
+  photoVersion?: string | null;
   type: string;
   usage: string | null;
   price: number | null;
@@ -795,7 +796,7 @@ export default function MarketClient() {
                     <li key={`${c.pharmacy.id}:${c.medicine.id}`} className="flex items-center gap-3 rounded-2xl bg-[var(--brand-bg)] p-2.5">
                       {c.medicine.hasPhoto ? (
                         <FadeImage
-                          src={`/api/medicines/${c.medicine.id}/photo`}
+                          src={c.medicine.photoVersion ? `/api/medicines/${c.medicine.id}/photo?v=${c.medicine.photoVersion}` : `/api/medicines/${c.medicine.id}/photo`}
                           alt={c.medicine.name}
                           className="h-14 w-14 shrink-0 rounded-xl bg-white"
                           fit="contain"
@@ -1035,7 +1036,7 @@ export default function MarketClient() {
                     <li key={l.medicine.id} className="flex items-center gap-2 rounded-2xl bg-[var(--brand-bg)] p-2.5">
                       {l.medicine.hasPhoto ? (
                         <FadeImage
-                          src={`/api/medicines/${l.medicine.id}/photo`}
+                          src={l.medicine.photoVersion ? `/api/medicines/${l.medicine.id}/photo?v=${l.medicine.photoVersion}` : `/api/medicines/${l.medicine.id}/photo`}
                           alt={l.medicine.name}
                           className="h-11 w-11 shrink-0 rounded-xl bg-white"
                           fit="contain"

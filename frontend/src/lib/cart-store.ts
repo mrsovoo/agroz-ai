@@ -9,6 +9,7 @@ export type CartStoreMedicine = {
   price: number | null;
   type: string;
   hasPhoto: boolean;
+  photoVersion?: string | null;
   usage: string | null;
   status: string;
   stock?: number | null;

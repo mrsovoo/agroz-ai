@@ -56,6 +56,11 @@ router.get("/", async (req, res) => {
         name: m.name,
         status: m.status,
         hasPhoto: Boolean(m.photoFileId || m.photoData),
+        photoVersion: m.photoData
+          ? `${m.photoData.length}_${m.photoData.slice(-10)}`
+          : m.photoFileId
+          ? m.photoFileId.slice(-10)
+          : "1",
         type: m.type,
         usage: m.usage,
         price: m.price ?? null,

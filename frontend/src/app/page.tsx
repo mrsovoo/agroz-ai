@@ -26,7 +26,7 @@ export default async function HomePage() {
   let medicines: ShowcaseMedicine[] = [];
   try {
     const res = await fetch(apiUrl("/api/medicines?limit=16"), {
-      next: { revalidate: 60 },
+      next: { revalidate: 10 },
     });
     if (res.ok) {
       medicines = await res.json();

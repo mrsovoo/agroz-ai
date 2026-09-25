@@ -16,6 +16,7 @@ export type MedicineDetailData = {
   usage: string | null;
   price: number | null;
   hasPhoto: boolean;
+  photoVersion?: string | null;
   status: string;
   pharmacyId: number;
   pharmacyOrg: string | null;
@@ -31,7 +32,7 @@ export async function getMedicineDetail(id: number): Promise<MedicineDetailData 
   if (!Number.isSafeInteger(id) || id <= 0) return null;
   try {
     const res = await fetch(apiUrl(`/api/medicines/${id}`), {
-      next: { revalidate: 60 },
+      next: { revalidate: 10 },
     });
     if (!res.ok) return null;
     const data = (await res.json()) as { medicine?: MedicineDetailData };
@@ -77,7 +78,7 @@ export default async function MedicineDetail({ medicine }: { medicine: MedicineD
         <div className="overflow-hidden rounded-[24px] bg-white shadow-sm">
           {medicine.hasPhoto ? (
             <FadeImage
-              src={`/api/medicines/${medicine.id}/photo`}
+              src={medicine.photoVersion ? `/api/medicines/${medicine.id}/photo?v=${medicine.photoVersion}` : `/api/medicines/${medicine.id}/photo`}
               alt={medicine.name}
               className="aspect-[5/7] w-full bg-white"
               fit="contain"

@@ -38,6 +38,7 @@ router.get("/", async (req, res) => {
         usage: specialistMedicines.usage,
         price: specialistMedicines.price,
         hasPhoto: sql<boolean>`(${specialistMedicines.photoFileId} is not null or ${specialistMedicines.photoData} is not null)`,
+        photoVersion: sql<string>`coalesce(length(${specialistMedicines.photoData})::text, right(${specialistMedicines.photoFileId}, 12), ${specialistMedicines.id}::text)`,
         pharmacyId: specialists.id,
         pharmacyName: sql<string>`coalesce(${specialists.organization}, ${specialists.name})`,
         pharmacyPhone: specialists.phone,
@@ -62,6 +63,7 @@ router.get("/", async (req, res) => {
       usage: r.usage,
       price: r.price,
       hasPhoto: Boolean(r.hasPhoto),
+      photoVersion: r.photoVersion,
       pharmacyId: r.pharmacyId,
       pharmacyName: r.pharmacyName,
       pharmacyPhone: r.pharmacyPhone,
@@ -147,6 +149,11 @@ router.get("/:id", async (req, res) => {
       usage: r.usage,
       price: r.price,
       hasPhoto: Boolean(r.photoFileId || r.photoData),
+      photoVersion: r.photoData
+        ? `${r.photoData.length}_${r.photoData.slice(-10)}`
+        : r.photoFileId
+        ? r.photoFileId.slice(-10)
+        : "1",
       status: r.status,
       pharmacyId: r.pharmacyId,
       pharmacyOrg: r.pharmacyOrg,
@@ -202,6 +209,11 @@ router.get("/:id", async (req, res) => {
       usage: s.usage,
       price: s.price,
       hasPhoto: Boolean(s.photoFileId || s.photoData),
+      photoVersion: s.photoData
+        ? `${s.photoData.length}_${s.photoData.slice(-10)}`
+        : s.photoFileId
+        ? s.photoFileId.slice(-10)
+        : "1",
       pharmacyId: s.pharmacyId,
       pharmacyName: s.pharmacyOrg ?? s.pharmacyName,
       pharmacyPhone: s.pharmacyPhone,
@@ -236,8 +248,14 @@ router.get("/:id/photo", async (req, res) => {
       const comma = medicine.photoData.indexOf(",");
       const b64 = comma >= 0 ? medicine.photoData.slice(comma + 1) : medicine.photoData;
       const buf = Buffer.from(b64, "base64");
+      const etag = `"${medicine.id}-${buf.length}"`;
+      if (req.headers["if-none-match"] === etag) {
+        return res.status(304).end();
+      }
+
       res.setHeader("Content-Type", "image/jpeg");
-      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      res.setHeader("ETag", etag);
+      res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
       return res.send(buf);
     }
 
@@ -249,9 +267,16 @@ router.get("/:id/photo", async (req, res) => {
       const tgRes = await fetch(`https://api.telegram.org/file/bot${token}/${filePath}`);
       if (!tgRes.ok) return res.status(404).send("Not found");
       const ab = await tgRes.arrayBuffer();
+      const buf = Buffer.from(ab);
+      const etag = `"${medicine.id}-${buf.length}"`;
+      if (req.headers["if-none-match"] === etag) {
+        return res.status(304).end();
+      }
+
       res.setHeader("Content-Type", tgRes.headers.get("content-type") || "image/jpeg");
-      res.setHeader("Cache-Control", "public, max-age=86400");
-      return res.send(Buffer.from(ab));
+      res.setHeader("ETag", etag);
+      res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
+      return res.send(buf);
     }
 
     return res.status(404).send("Not found");

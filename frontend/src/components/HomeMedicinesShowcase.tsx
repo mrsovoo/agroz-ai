@@ -13,6 +13,7 @@ export type ShowcaseMedicine = {
   price: number | null;
   usage: string | null;
   hasPhoto: boolean;
+  photoVersion?: string | null;
   pharmacyId: number;
   pharmacyName: string;
   pharmacyPhone: string;

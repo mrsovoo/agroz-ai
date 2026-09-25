@@ -249,14 +249,8 @@ export async function getSettingsStatus(): Promise<SettingsStatus[]> {
 export async function telegramBotToken(): Promise<string | null> {
   return getSetting(SETTING_KEYS.telegramBotToken);
 }
-export async function telegramBotUsername(): Promise<string | null> {
-  return getSetting(SETTING_KEYS.telegramBotUsername);
-}
 export async function telegramAuthBotToken(): Promise<string | null> {
   return getSetting(SETTING_KEYS.telegramAuthBotToken);
-}
-export async function telegramAuthBotUsername(): Promise<string | null> {
-  return getSetting(SETTING_KEYS.telegramAuthBotUsername);
 }
 export async function telegramWebhookSecret(): Promise<string | null> {
   return getSetting(SETTING_KEYS.telegramWebhookSecret);

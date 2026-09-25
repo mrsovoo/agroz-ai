@@ -113,27 +113,16 @@ import {
 } from "@/lib/auth-bot";
 import { reverseGeocode } from "@/lib/geocode";
 import { getNewsFeed } from "@/lib/news";
-import { sendAuthBotGroupWelcome } from "./group-welcome.js";
-import { authBotUsername } from "./telegram-bot.js";
 
 export type AuthBotUpdate = {
-  my_chat_member?: {
-    chat?: { id?: number; type?: string; title?: string };
-    from?: { id?: number; first_name?: string };
-    old_chat_member?: { status?: string };
-    new_chat_member?: { status?: string; user?: { id?: number; is_bot?: boolean; username?: string } };
-  };
   message?: {
     message_id?: number;
     text?: string;
-    chat?: { id?: number; type?: string; title?: string };
+    chat?: { id?: number; type?: string };
     from?: { id?: number; first_name?: string; last_name?: string; username?: string };
     contact?: { phone_number?: string; user_id?: number; first_name?: string };
     location?: { latitude?: number; longitude?: number };
     photo?: { file_id?: string; width?: number; height?: number }[];
-    new_chat_members?: { id?: number; is_bot?: boolean; first_name?: string; username?: string }[];
-    group_chat_created?: boolean;
-    supergroup_chat_created?: boolean;
   };
   callback_query?: {
     id: string;
@@ -258,19 +247,6 @@ async function clearState(telegramId: number): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function handleAuthBotUpdate(update: AuthBotUpdate): Promise<void> {
-  // 1. my_chat_member: Guruhga bot qo'shilganda yoki administrator bo'lganda
-  if (update.my_chat_member) {
-    const mcm = update.my_chat_member;
-    const chatType = mcm.chat?.type;
-    const isGroup = chatType === "group" || chatType === "supergroup";
-    const newStatus = mcm.new_chat_member?.status;
-    if (isGroup && (newStatus === "member" || newStatus === "administrator") && mcm.chat?.id) {
-      await sendAuthBotGroupWelcome(mcm.chat.id);
-      return;
-    }
-    return;
-  }
-
   if (update.callback_query) {
     await handleCallback(update.callback_query);
     return;
@@ -278,48 +254,6 @@ export async function handleAuthBotUpdate(update: AuthBotUpdate): Promise<void> 
   const message = update.message;
   const chatId = message?.chat?.id;
   if (!chatId) return;
-
-  const chatType = message?.chat?.type;
-  const isGroup = chatType === "group" || chatType === "supergroup";
-
-  // Guruh xabarlari (Auth bot)
-  if (isGroup) {
-    // a) Yangi a'zolar qo'shilganda (shu jumladan botning o'zi)
-    if (message?.new_chat_members && message.new_chat_members.length > 0) {
-      const authUser = authBotUsername().toLowerCase();
-      const isBotAdded = message.new_chat_members.some(
-        (m) =>
-          m.is_bot &&
-          (m.username?.toLowerCase() === authUser ||
-            m.username?.toLowerCase() === "agroz_auth_bot")
-      );
-      if (isBotAdded || message?.group_chat_created || message?.supergroup_chat_created) {
-        await sendAuthBotGroupWelcome(chatId);
-        return;
-      }
-    }
-
-    // b) Guruh yaratilganda
-    if (message?.group_chat_created || message?.supergroup_chat_created) {
-      await sendAuthBotGroupWelcome(chatId);
-      return;
-    }
-
-    // c) Guruhda botga murojaat yoki komanda berilganda
-    const text = (message?.text || "").trim();
-    if (
-      text.startsWith("/start") ||
-      text.startsWith("/help") ||
-      text.startsWith("/agroz") ||
-      text.toLowerCase().includes("@agroz_auth_bot")
-    ) {
-      await sendAuthBotGroupWelcome(chatId);
-      return;
-    }
-
-    // Guruhdagi boshqa oddiy suhbatlarni e'tiborsiz qoldiramiz
-    return;
-  }
 
   const telegramId = message?.from?.id ?? chatId;
   const firstName = message?.from?.first_name;

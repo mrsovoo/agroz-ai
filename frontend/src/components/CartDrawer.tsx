@@ -501,7 +501,7 @@ export default function CartDrawer() {
                       <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-neutral-100 overflow-hidden border border-black/5">
                         {line.medicine.hasPhoto ? (
                           <FadeImage
-                            src={apiUrl(`/api/medicines/${line.medicine.id}/photo`)}
+                            src={apiUrl(`/api/medicines/${line.medicine.id}/photo${line.medicine.photoVersion ? `?v=${line.medicine.photoVersion}` : ""}`)}
                             alt={line.medicine.name}
                             className="h-full w-full object-cover"
                             fallback={
