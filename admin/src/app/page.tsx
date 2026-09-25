@@ -38,7 +38,7 @@ import {
   UserCheck,
 } from "lucide-react";
 
-type Me = { enabled: boolean; authenticated: boolean; username: string | null };
+type Me = { enabled: boolean; authenticated: boolean; username?: string | null };
 
 type Stats = {
   users: number;
@@ -376,15 +376,15 @@ export default function SuperAdminPage() {
     try {
       const res = await adminFetch("/api/admin/me");
       const data = await res.json();
-      const hasLocalToken =
-        typeof window !== "undefined" && Boolean(localStorage.getItem("agroz_admin_session"));
-      if (data?.authenticated || hasLocalToken) {
+      // FAKAT backend tasdiqlagan holda authenticated=true
+      if (data?.authenticated === true) {
         setMe({ enabled: true, authenticated: true, username: data?.username || "admin" });
       } else {
-        setMe(data);
+        setMe(data || { enabled: true, authenticated: false });
       }
     } catch {
-      setMe({ enabled: true, authenticated: true, username: "admin" });
+      // Xatoda login sahifasini ko'rsatamiz, auto-login QILMAYMIZ
+      setMe({ enabled: true, authenticated: false });
     }
   }, []);
 
