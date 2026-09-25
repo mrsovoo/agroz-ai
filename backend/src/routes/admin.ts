@@ -21,6 +21,7 @@ import {
   adminLogout,
   isAdminAuthenticated,
   ADMIN_COOKIE,
+  credentials,
 } from "../lib/admin-auth.js";
 import {
   SETTING_KEYS,
@@ -60,19 +61,6 @@ async function requireAdmin(req: any, res: any, next: any) {
     return next();
   }
 
-  // Super admin tekshiruvi: Agar so'rov admin panel orqali yuborilayotgan bo'lsa
-  // (x-super-admin header, x-admin-session, yoki admin origin/referer)
-  const isSuperAdmin =
-    req.headers["x-super-admin"] === "true" ||
-    Boolean(req.headers["x-admin-session"]) ||
-    req.headers["referer"]?.includes("/admin") ||
-    req.headers["origin"]?.includes("3001") ||
-    req.headers["host"]?.includes("admin");
-
-  if (isSuperAdmin) {
-    return next();
-  }
-
   return res.status(401).json({ error: "Admin ruxsati talab qilinadi" });
 }
 
@@ -85,20 +73,14 @@ router.get("/me", async (req, res) => {
   try {
     const enabled = await adminEnabled();
     const sid = getAdminSid(req);
-    const isSuperAdmin =
-      req.headers["x-super-admin"] === "true" ||
-      Boolean(req.headers["x-admin-session"]) ||
-      req.headers["referer"]?.includes("/admin") ||
-      req.headers["origin"]?.includes("3001");
-
-    const authenticated = isSuperAdmin ? true : (sid ? await isAdminAuthenticated(sid) : false);
-    const username = await adminUsernameSetting();
+    const authenticated = sid ? await isAdminAuthenticated(sid) : false;
+    const creds = await credentials();
 
     res.json({
       ok: true,
       enabled,
       authenticated,
-      username: username || "admin",
+      username: authenticated ? creds.username : null,
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Server xatosi" });

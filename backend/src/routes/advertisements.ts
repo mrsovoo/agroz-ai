@@ -6,9 +6,7 @@ import { eq, desc } from "drizzle-orm";
 const router = Router();
 
 async function requireAdmin(req: any, res: any, next: any) {
-  const sid = req.cookies?.["agroz_admin_sid"] || req.headers["x-admin-session"] || (req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.slice(7) : null);
-  const superBypass = req.headers["x-super-admin"] === "true";
-  if (superBypass) return next();
+  const sid = req.cookies?.["agroai_admin"] || req.cookies?.["agroz_admin_sid"] || req.headers["x-admin-session"] || (req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.slice(7) : null);
   if (!sid) return res.status(401).json({ error: "Admin ruxsati talab qilinadi" });
   
   const rows = await db.select().from(adminSessions).where(eq(adminSessions.id, sid as string));

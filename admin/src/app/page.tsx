@@ -279,10 +279,11 @@ async function adminFetch(url: string, options: RequestInit = {}) {
   const headers = new Headers(options.headers || {});
   const token =
     typeof window !== "undefined"
-      ? localStorage.getItem("agroz_admin_session") || "super-admin-session"
-      : "super-admin-session";
-  headers.set("x-admin-session", token);
-  headers.set("x-super-admin", "true");
+      ? localStorage.getItem("agroz_admin_session")
+      : null;
+  if (token) {
+    headers.set("x-admin-session", token);
+  }
   if (!headers.has("Content-Type") && options.body && typeof options.body === "string") {
     headers.set("Content-Type", "application/json");
   }
@@ -539,9 +540,9 @@ export default function SuperAdminPage() {
         body: JSON.stringify({ username, password }),
       });
       const data = await res.json();
-      if (data.ok) {
+      if (data.ok && data.sessionId) {
         if (typeof window !== "undefined") {
-          localStorage.setItem("agroz_admin_session", data.sessionId || "super-admin-session");
+          localStorage.setItem("agroz_admin_session", data.sessionId);
         }
         setMe({ enabled: true, authenticated: true, username: data.username || username || "admin" });
         setUsername("");

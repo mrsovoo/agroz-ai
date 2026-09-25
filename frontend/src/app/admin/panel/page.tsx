@@ -272,10 +272,11 @@ async function adminFetch(url: string, options: RequestInit = {}) {
   const headers = new Headers(options.headers || {});
   const token =
     typeof window !== "undefined"
-      ? localStorage.getItem("agroz_admin_session") || "super-admin-session"
-      : "super-admin-session";
-  headers.set("x-admin-session", token);
-  headers.set("x-super-admin", "true");
+      ? localStorage.getItem("agroz_admin_session")
+      : null;
+  if (token) {
+    headers.set("x-admin-session", token);
+  }
   if (!headers.has("Content-Type") && options.body && typeof options.body === "string") {
     headers.set("Content-Type", "application/json");
   }
@@ -406,15 +407,13 @@ export default function AdminPanelPage() {
     try {
       const res = await adminFetch("/api/admin/me");
       const data = await res.json();
-      const hasLocalToken =
-        typeof window !== "undefined" && Boolean(localStorage.getItem("agroz_admin_session"));
-      if (data?.authenticated || hasLocalToken) {
+      if (data?.authenticated === true) {
         setMe({ enabled: true, authenticated: true, username: data?.username || "admin" });
       } else {
-        setMe(data);
+        setMe({ enabled: data?.enabled ?? true, authenticated: false, username: null });
       }
     } catch {
-      setMe({ enabled: true, authenticated: true, username: "admin" });
+      setMe({ enabled: true, authenticated: false, username: null });
     }
   }, []);
 
@@ -541,13 +540,13 @@ export default function AdminPanelPage() {
       });
       const data = await res.json();
       if (!res.ok || !data.ok) {
-        setLoginError(data.error || "Login yoki parol noto'g'ri");
+        setLoginError(data?.error || "Login yoki parol noto'g'ri");
       } else {
-        if (typeof window !== "undefined") {
-          localStorage.setItem("agroz_admin_session", data.sessionId || "super-admin-session");
+        if (data.sessionId && typeof window !== "undefined") {
+          localStorage.setItem("agroz_admin_session", data.sessionId);
         }
         setMe({ enabled: true, authenticated: true, username: data.username || username || "admin" });
-        await checkAuth();
+        loadData();
       }
     } catch {
       setLoginError("Server bilan bog'lanishda xatolik");

@@ -100,8 +100,25 @@ export function envFallback(key: SettingKey): string | null {
     [SETTING_KEYS.eskizEmail]: process.env.ESKIZ_EMAIL,
     [SETTING_KEYS.eskizPassword]: process.env.ESKIZ_PASSWORD,
     [SETTING_KEYS.eskizFrom]: process.env.ESKIZ_FROM,
-    [SETTING_KEYS.adminUsername]: process.env.ADMIN_USERNAME,
-    [SETTING_KEYS.adminPassword]: process.env.ADMIN_PASSWORD,
+    [SETTING_KEYS.adminUsername]:
+      process.env.ADMIN_USERNAME ||
+      process.env.admin_username ||
+      process.env["admin username"] ||
+      process.env.ADMIN_USER ||
+      process.env.admin_user ||
+      process.env.ADMIN_LOGIN ||
+      process.env.admin_login ||
+      "admin",
+    [SETTING_KEYS.adminPassword]:
+      process.env.ADMIN_PASSWOR ||
+      process.env.admin_passwor ||
+      process.env["admin passwor"] ||
+      process.env.ADMIN_PASS ||
+      process.env.admin_pass ||
+      process.env.ADMIN_PASSWORD ||
+      process.env.admin_password ||
+      process.env["admin password"] ||
+      undefined,
     [SETTING_KEYS.defaultRadiusKm]: process.env.DEFAULT_RADIUS_KM || "15",
     [SETTING_KEYS.pharmacyRadiusKm]: process.env.PHARMACY_RADIUS_KM || "15",
     [SETTING_KEYS.specialistRadiusKm]: process.env.SPECIALIST_RADIUS_KM || "25",

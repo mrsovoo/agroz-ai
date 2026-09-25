@@ -3,30 +3,63 @@
  *
  * Login/parol env orqali sozlanadi:
  *   ADMIN_USERNAME (standart: `admin`)
- *   ADMIN_PASSWORD — majburiy! Bo'sh bo'lsa admin panel o'chirilgan bo'ladi.
+ *   ADMIN_PASSWORD (yoki ADMIN_PASSWOR)
  *
- * Parol hech qachon bazada saqlanmaydi; sessiyalar `admin_sessions` jadvalida
- * turadi (random token, httpOnly cookie).
+ * Parol hech qachon bazada ochiq saqlanmaydi; sessiyalar `admin_sessions` jadvalida
+ * turadi (random 48 belgili token, cookie va x-admin-session header).
  */
 
 import { createHash, randomBytes, timingSafeEqual } from "crypto";
-import { db } from "@/db";
-import { adminSessions } from "@/db/schema";
+import { db } from "../db/index.js";
+import { adminSessions } from "../db/schema.js";
 import { and, eq, lt } from "drizzle-orm";
-import { adminPasswordSetting, adminUsernameSetting } from "@/lib/settings";
+import { adminPasswordSetting, adminUsernameSetting } from "./settings.js";
 
 export const ADMIN_COOKIE = "agroai_admin";
-const ADMIN_TTL_MS = 12 * 60 * 60 * 1000; // 12 soat
+const ADMIN_TTL_MS = 24 * 60 * 60 * 1000; // 24 soat
+
+export function getEnvAdminUsername(): string {
+  const custom =
+    process.env.ADMIN_USER ||
+    process.env.admin_user ||
+    process.env.ADMIN_LOGIN ||
+    process.env.admin_login ||
+    process.env["admin username"];
+  if (custom && custom.trim()) return custom.trim();
+
+  const standard =
+    process.env.ADMIN_USERNAME ||
+    process.env.admin_username;
+  if (standard && standard.trim()) return standard.trim();
+
+  return "admin";
+}
+
+export function getEnvAdminPassword(): string {
+  const custom =
+    process.env.ADMIN_PASSWOR ||
+    process.env.admin_passwor ||
+    process.env["admin passwor"] ||
+    process.env.ADMIN_PASS ||
+    process.env.admin_pass;
+  if (custom && custom.trim()) return custom.trim();
+
+  const standard =
+    process.env.ADMIN_PASSWORD ||
+    process.env.admin_password ||
+    process.env["admin password"];
+  if (standard && standard.trim()) return standard.trim();
+
+  return "admin123";
+}
 
 /**
- * Login/parol ustuvorligi: DB (admin panel "Admin hisobi" bo'limida yozilgan) > env.
- * Parol hech qachon clientga chiqmaydi. Bazada faqat SHA-256 hash saqlanadi
- * (`setAdminPassword` bilan yoziladi); env'dagi parol esa ochiq matn bo'lishi mumkin.
+ * Login/parol ustuvorligi: DB (admin panel sozlamalarida kiritilgan) > Railway / .env.
  */
-async function credentials(): Promise<{ username: string; password: string | null }> {
+export async function credentials(): Promise<{ username: string; password: string | null }> {
   const [dbUser, dbPass] = await Promise.all([adminUsernameSetting(), adminPasswordSetting()]);
-  const username = dbUser || process.env.ADMIN_USERNAME?.trim() || "admin";
-  const password = dbPass || process.env.ADMIN_PASSWORD?.trim() || "admin123";
+  const username = dbUser || getEnvAdminUsername();
+  const password = dbPass || getEnvAdminPassword();
   return { username, password };
 }
 
@@ -36,7 +69,7 @@ function sha256(value: string): string {
 
 /** Admin parolini bazaga SHA-256 hash ko'rinishida yozadi. */
 export async function setAdminPassword(password: string): Promise<void> {
-  const { setSetting, SETTING_KEYS } = await import("@/lib/settings");
+  const { setSetting, SETTING_KEYS } = await import("./settings.js");
   await setSetting(SETTING_KEYS.adminPassword, sha256(password.trim()));
 }
 
@@ -88,14 +121,13 @@ export async function adminLogin(
 
 export async function adminLogout(sid?: string): Promise<void> {
   if (sid) {
-    await db.delete(adminSessions).where(eq(adminSessions.id, sid));
+    await db.delete(adminSessions).where(eq(adminSessions.id, sid)).catch(() => undefined);
   }
 }
 
-/** Admin so'rovni tekshiradi — sessiya tokeni yaroqli bo'lsa `true`. */
+/** Admin so'rovni tekshiradi — sessiya tokeni bazada mavjud va yaroqli bo'lsa `true`. */
 export async function isAdminAuthenticated(sid?: string): Promise<boolean> {
   if (!sid) return false;
-  if (sid === "super-admin-session" || sid.startsWith("agroz-super-admin")) return true;
 
   try {
     const rows = await db
@@ -110,7 +142,8 @@ export async function isAdminAuthenticated(sid?: string): Promise<boolean> {
       return false;
     }
     return true;
-  } catch {
-    return sid === "super-admin-session";
+  } catch (err) {
+    console.error("[admin-auth] sessiya tekshirishda xato:", err);
+    return false;
   }
 }
