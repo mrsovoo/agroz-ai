@@ -11,6 +11,7 @@ import {
   greetingKeyboard,
   greetingMessage,
   isBotConfigured,
+  getBotUsername,
   miniAppKeyboard,
   sendMessage,
   sendMessageWithId,
@@ -23,6 +24,7 @@ import { escapeHtml } from "../lib/tg-escape.js";
 import { reverseGeocodeDetails } from "../lib/geocode.js";
 import { db } from "../db/index.js";
 import { otpCodes, sessions, users } from "../db/schema.js";
+import { sendMainBotGroupWelcome } from "../lib/group-welcome.js";
 import { and, eq, sql } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
 
@@ -35,12 +37,22 @@ type TelegramUpdate = {
     from?: { id?: number; first_name?: string };
     message?: { chat?: { id?: number }; message_id?: number };
   };
+  my_chat_member?: {
+    chat?: { id?: number; type?: string; title?: string };
+    from?: { id?: number; first_name?: string };
+    old_chat_member?: { status?: string };
+    new_chat_member?: { status?: string; user?: { id?: number; is_bot?: boolean; username?: string } };
+  };
   message?: {
+    message_id?: number;
     text?: string;
-    chat?: { id?: number; type?: string };
+    chat?: { id?: number; type?: string; title?: string };
     from?: { id?: number; first_name?: string; last_name?: string; username?: string };
     contact?: { phone_number?: string; first_name?: string; last_name?: string; user_id?: number };
     location?: { latitude: number; longitude: number };
+    new_chat_members?: { id?: number; is_bot?: boolean; first_name?: string; username?: string }[];
+    group_chat_created?: boolean;
+    supergroup_chat_created?: boolean;
   };
 };
 
@@ -479,6 +491,20 @@ router.post("/webhook", async (req, res) => {
   }
 
   const update = (req.body ?? null) as TelegramUpdate | null;
+
+  // 1. my_chat_member: Guruhga bot qo'shilganda yoki administrator bo'lganda
+  if (update?.my_chat_member) {
+    const mcm = update.my_chat_member;
+    const chatType = mcm.chat?.type;
+    const isGroup = chatType === "group" || chatType === "supergroup";
+    const newStatus = mcm.new_chat_member?.status;
+    if (isGroup && (newStatus === "member" || newStatus === "administrator") && mcm.chat?.id) {
+      await sendMainBotGroupWelcome(mcm.chat.id);
+      return res.json({ ok: true });
+    }
+    return res.json({ ok: true });
+  }
+
   if (update?.callback_query) {
     await handleMainBotCallback(update.callback_query);
     return res.json({ ok: true });
@@ -487,6 +513,50 @@ router.post("/webhook", async (req, res) => {
   const message = update?.message;
   const chatId = message?.chat?.id;
   if (!chatId) return res.json({ ok: true });
+
+  const chatType = message?.chat?.type;
+  const isGroup = chatType === "group" || chatType === "supergroup";
+
+  // Guruh xabarlari (Asosiy bot)
+  if (isGroup) {
+    // 1. Yangi a'zolar qo'shilganda (shu jumladan botning o'zi)
+    if (message?.new_chat_members && message.new_chat_members.length > 0) {
+      const botUser = (await getBotUsername())?.toLowerCase() || "agrozai_bot";
+      const isBotAdded = message.new_chat_members.some(
+        (m) =>
+          m.is_bot &&
+          (m.username?.toLowerCase() === botUser ||
+            m.username?.toLowerCase() === "agrozai_bot" ||
+            m.username?.toLowerCase() === "agroz_bot")
+      );
+      if (isBotAdded || message?.group_chat_created || message?.supergroup_chat_created) {
+        await sendMainBotGroupWelcome(chatId);
+        return res.json({ ok: true });
+      }
+    }
+
+    // 2. Guruh yaratilganda
+    if (message?.group_chat_created || message?.supergroup_chat_created) {
+      await sendMainBotGroupWelcome(chatId);
+      return res.json({ ok: true });
+    }
+
+    // 3. Guruhda botga murojaat yoki komanda berilganda
+    const text = (message?.text || "").trim();
+    if (
+      text.startsWith("/start") ||
+      text.startsWith("/help") ||
+      text.startsWith("/agroz") ||
+      text.toLowerCase().includes("@agrozai_bot") ||
+      text.toLowerCase().includes("@agroz_bot")
+    ) {
+      await sendMainBotGroupWelcome(chatId);
+      return res.json({ ok: true });
+    }
+
+    // Guruhdagi boshqa oddiy yozishmalarni e'tiborsiz qoldiramiz
+    return res.json({ ok: true });
+  }
 
   const fromId = message?.from?.id ?? chatId;
   const firstName = message?.from?.first_name;
@@ -752,7 +822,7 @@ router.post("/webhook", async (req, res) => {
       }
 
       // Agar start tokeni OTP bo'lsa (veb sahifadan telefon orqali so'ralgan)
-      if (payload && !payload.startsWith("auth_")) {
+      if (payload && !payload.startsWith("auth_") && payload !== "from_group" && payload !== "group") {
         const state = await deliverCode(chatId, payload, fromId);
         if (state === "sent") return res.json({ ok: true });
 
