@@ -1771,17 +1771,20 @@ router.get("/users", requireAdmin, async (req, res) => {
   try {
     const { search, filter } = req.query as { search?: string; filter?: string };
 
-    // 1. Foydalanuvchilarni olish
-    const allUsers = await db.select().from(users).orderBy(desc(users.createdAt));
+    // 1. Foydalanuvchilarni olish va decrypt qilish
+    const allUsersRaw = await db.select().from(users).orderBy(desc(users.createdAt));
+    const allUsers = allUsersRaw.map((u) => decryptFields(u, SENSITIVE_FIELDS.users));
 
-    // 2. Buyurtmalarni va ularning tovarlarini olish
-    const allOrders = await db.select().from(orders).orderBy(desc(orders.createdAt));
+    // 2. Buyurtmalarni va ularning tovarlarini olish va decrypt qilish
+    const allOrdersRaw = await db.select().from(orders).orderBy(desc(orders.createdAt));
+    const allOrders = allOrdersRaw.map((o) => decryptFields(o, SENSITIVE_FIELDS.orders));
     const allItems = await db.select().from(orderItems);
     const allSpecialists = await db.select().from(specialists);
 
     // Dorixonalar xaritasi
     const specMap = new Map<number, (typeof allSpecialists)[0]>();
-    for (const s of allSpecialists) {
+    const allSpecialistsDecrypted = allSpecialists.map((s) => decryptFields(s, SENSITIVE_FIELDS.specialists));
+    for (const s of allSpecialistsDecrypted) {
       specMap.set(s.id, s);
     }
 
@@ -1793,8 +1796,9 @@ router.get("/users", requireAdmin, async (req, res) => {
       itemsMap.set(item.orderId, arr);
     }
 
-    // 3. Mutaxassis chaqiruvlarini olish
-    const allCalls = await db.select().from(specialistCalls).orderBy(desc(specialistCalls.createdAt));
+    // 3. Mutaxassis chaqiruvlarini olish va decrypt qilish
+    const allCallsRaw = await db.select().from(specialistCalls).orderBy(desc(specialistCalls.createdAt));
+    const allCalls = allCallsRaw.map((c) => decryptFields(c, SENSITIVE_FIELDS.specialistCalls));
 
     // Telefon raqamlarni tozalash (solishtirish uchun: faqat raqamlar)
     const cleanPhone = (p?: string | null) => (p || "").replace(/\D/g, "");
