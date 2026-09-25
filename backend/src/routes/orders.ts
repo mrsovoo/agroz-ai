@@ -233,6 +233,7 @@ router.get("/track", async (req, res) => {
       .select({
         id: orders.id,
         status: orders.status,
+        deliveryType: orders.deliveryType,
         totalSum: orders.totalSum,
         createdAt: orders.createdAt,
         pharmacySpecialistId: orders.pharmacySpecialistId,
@@ -273,6 +274,7 @@ router.get("/track", async (req, res) => {
     const result = orderRows.map((o) => ({
       id: o.id,
       status: o.status,
+      deliveryType: o.deliveryType,
       totalSum: o.totalSum,
       pharmacyName: o.pharmacyName || o.pharmacyContact || "Dorixona",
       pharmacyPhone: o.pharmacyPhone,

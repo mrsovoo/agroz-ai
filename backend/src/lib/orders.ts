@@ -327,7 +327,12 @@ export async function rateOrderDirectly(
     .limit(1);
   const order = rows[0];
   if (!order) return { ok: false, error: "Buyurtma topilmadi" };
-  if (order.status !== "yetkazildi") return { ok: false, error: "Buyurtma hali yetkazilmagan" };
+  if (order.status !== "yetkazildi") {
+    return {
+      ok: false,
+      error: order.deliveryType === "pickup" ? "Buyurtma hali olib ketilmagan" : "Buyurtma hali yetkazilmagan",
+    };
+  }
   if (order.ratingStars !== null) return { ok: false, error: "Bu buyurtma allaqachon baholangan" };
 
   await db

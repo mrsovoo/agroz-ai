@@ -75,6 +75,7 @@ type RecentOrder = {
   customerPhone: string;
   totalSum: number | null;
   status: string;
+  deliveryType?: string | null;
   ratingStars: number | null;
   createdAt: string;
 };
@@ -1917,7 +1918,7 @@ export default function AdminPanelPage() {
                     },
                     {
                       id: "yetkazildi",
-                      label: "✅ Yetkazildi",
+                      label: "✅ Yetkazildi / Olib ketildi",
                       count: ordersList.filter((o) => o.status === "yetkazildi").length,
                     },
                     {
@@ -2029,7 +2030,7 @@ export default function AdminPanelPage() {
                           >
                             <option value="yangi">⏳ Yangi</option>
                             <option value="tasdiqlandi">🔵 Tasdiqlandi</option>
-                            <option value="yetkazildi">✅ Yetkazildi</option>
+                            <option value="yetkazildi">{o.deliveryType === "pickup" ? "🏪 Olib ketildi" : "✅ Yetkazildi"}</option>
                             <option value="bekor">❌ Bekor</option>
                           </select>
 
@@ -2052,11 +2053,11 @@ export default function AdminPanelPage() {
                           {o.pharmacyPhone && <p className="text-slate-500">{o.pharmacyPhone}</p>}
                         </div>
                         <div>
-                          <p className="text-slate-400 text-[11px]">Yetkazish manzili:</p>
-                          <p className="font-medium text-slate-800">{o.customerAddress || "Olib ketish (Dorixonadan)"}</p>
+                          <p className="text-slate-400 text-[11px]">{o.deliveryType === "pickup" ? "Qabul qilish usuli:" : "Yetkazish manzili:"}</p>
+                          <p className="font-medium text-slate-800">{o.deliveryType === "pickup" ? "Dorixonadan olib ketish" : (o.customerAddress || "Ko'rsatilmagan")}</p>
                           {o.deliveryType && (
                             <span className="inline-block mt-1 rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700">
-                              {o.deliveryType}
+                              {o.deliveryType === "pickup" ? "🏪 Dorixonadan olib ketish" : "🚚 Yetkazib berish"}
                             </span>
                           )}
                         </div>
@@ -2422,7 +2423,7 @@ export default function AdminPanelPage() {
                     <tbody className="divide-y divide-slate-800/60 font-medium">
                       {recentOrders.map((o) => (
                         <tr key={o.id} className="hover:bg-slate-100/30">
-                          <td className="py-3 font-bold text-slate-900">#{o.id}</td>
+                          <td className="py-3 font-bold text-slate-900">{formatOrderNumber(o.id)}</td>
                           <td className="py-3 font-semibold text-slate-800">{o.customerName}</td>
                           <td className="py-3 text-slate-400">{o.customerPhone}</td>
                           <td className="py-3 font-bold text-emerald-400">
@@ -2440,7 +2441,7 @@ export default function AdminPanelPage() {
                                   : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
                               }`}
                             >
-                              {o.status}
+                              {o.status === "yetkazildi" ? (o.deliveryType === "pickup" ? "Olib ketildi" : "Yetkazildi") : o.status}
                             </span>
                           </td>
                           <td className="py-3">
@@ -3527,7 +3528,7 @@ export default function AdminPanelPage() {
                                     : "bg-amber-100 text-amber-800"
                                 }`}
                               >
-                                {ord.status}
+                                {ord.status === "yetkazildi" ? (ord.deliveryType === "pickup" ? "Olib ketildi" : "Yetkazildi") : ord.status}
                               </span>
                             </div>
                             <span className="text-[11px] text-slate-500 font-mono">
@@ -3537,16 +3538,16 @@ export default function AdminPanelPage() {
 
                           <div className="grid gap-2 sm:grid-cols-2 text-xs">
                             <div>
-                              <p className="text-slate-500 text-[11px]">Yetkazuvchi dorixona:</p>
+                              <p className="text-slate-500 text-[11px]">{ord.deliveryType === "pickup" ? "Dorixona:" : "Yetkazuvchi dorixona:"}</p>
                               <p className="font-semibold text-slate-900">{ord.pharmacyName}</p>
                               {ord.pharmacyPhone && (
                                 <p className="font-mono text-slate-600 text-[11px]">{ord.pharmacyPhone}</p>
                               )}
                             </div>
                             <div>
-                              <p className="text-slate-500 text-[11px]">Yetkazish manzili:</p>
-                              <p className="font-medium text-slate-800">{ord.customerAddress || "Ko'rsatilmagan"}</p>
-                              <p className="text-slate-500 text-[11px] mt-0.5">Turi: {ord.deliveryType}</p>
+                              <p className="text-slate-500 text-[11px]">{ord.deliveryType === "pickup" ? "Qabul qilish usuli:" : "Yetkazish manzili:"}</p>
+                              <p className="font-medium text-slate-800">{ord.deliveryType === "pickup" ? "Dorixonadan olib ketish" : (ord.customerAddress || "Ko'rsatilmagan")}</p>
+                              <p className="text-slate-500 text-[11px] mt-0.5">Turi: {ord.deliveryType === "pickup" ? "🏪 Olib ketish" : "🚚 Yetkazib berish"}</p>
                             </div>
                           </div>
 

@@ -13,14 +13,16 @@ import {
 import type { OrderStatus, OrderWithItems } from "@/lib/orders";
 
 /** Buyurtma holati uchun emoji va yorliq. */
-export function orderStatusLabel(status: OrderStatus): { emoji: string; label: string } {
+export function orderStatusLabel(status: OrderStatus, deliveryType?: string): { emoji: string; label: string } {
   switch (status) {
     case "yangi":
       return { emoji: "🆕", label: "Yangi" };
     case "tasdiqlandi":
       return { emoji: "✅", label: "Tasdiqlandi" };
     case "yetkazildi":
-      return { emoji: "📦", label: "Yetkazildi" };
+      return deliveryType === "pickup"
+        ? { emoji: "🏪", label: "Olib ketildi" }
+        : { emoji: "📦", label: "Yetkazildi" };
     case "bekor":
       return { emoji: "❌", label: "Bekor qilindi" };
   }
@@ -47,11 +49,11 @@ export function formatOrderNumber(orderId: number | string): string {
 
 /** Bitta buyurtma matni (dorixona egasi ko'radi). */
 export function orderMessage(order: OrderWithItems): string {
-  const st = orderStatusLabel(order.status);
+  const st = orderStatusLabel(order.status, order.deliveryType);
   const isDelivery = order.deliveryType === "delivery";
   const delivery = isDelivery
     ? [
-        "🚚 <b>Yetkazib berish usuli:</b> <b>Yetkazib berish (Kuryer orqali)</b>",
+        "🚚 <b>Qabul qilish usuli:</b> <b>Yetkazib berish (Kuryer orqali)</b>",
         `📍 <b>Yetkazish manzili:</b> <code>${escapeHtml(order.customerAddress ?? "Ko'rsatilmadi")}</code>`,
         order.customerAddress
           ? `🗺 <a href="https://maps.google.com/?q=${encodeURIComponent(order.customerAddress)}">Xaritada manzilni ochish</a>`
@@ -59,7 +61,7 @@ export function orderMessage(order: OrderWithItems): string {
       ]
         .filter(Boolean)
         .join("\n")
-    : "🏪 <b>Yetkazib berish usuli:</b> <b>Olib ketish (mijoz dorixonadan o'zi olib ketadi)</b>";
+    : "🏪 <b>Qabul qilish usuli:</b> <b>Dorixonadan olib ketish (Mijoz o'zi borib oladi)</b>";
 
   const items = order.items
     .map(
@@ -129,7 +131,7 @@ export function orderActionsKeyboard(order: OrderWithItems): InlineKeyboard {
 /** /buyurtmalar ro'yxati klaviaturasi — har bir buyurtma alohida tugma (bahosi bilan). */
 export function ordersListKeyboard(orders: OrderWithItems[]): InlineKeyboard {
   const rows = orders.slice(0, 20).map((o) => {
-    const st = orderStatusLabel(o.status);
+    const st = orderStatusLabel(o.status, o.deliveryType);
     const stars = o.ratingStars ? ` · ${"★".repeat(o.ratingStars)}` : "";
     const itemsCount = o.items ? o.items.reduce((s, it) => s + it.qty, 0) : 0;
     const itemsLabel = itemsCount > 0 ? ` · (${itemsCount} ta)` : "";
@@ -168,7 +170,7 @@ export function ordersHintMessage(ordersOrCount: OrderWithItems[] | number): str
   const count = orders.length;
 
   const orderCards = orders.slice(0, 8).map((o, idx) => {
-    const st = orderStatusLabel(o.status);
+    const st = orderStatusLabel(o.status, o.deliveryType);
     const itemsText =
       o.items && o.items.length > 0
         ? o.items
@@ -182,7 +184,7 @@ export function ordersHintMessage(ordersOrCount: OrderWithItems[] | number): str
     const addressText =
       o.deliveryType === "delivery"
         ? `📍 <b>Yetkazish manzili:</b> <code>${escapeHtml(o.customerAddress || "Manzil kiritilmagan")}</code>`
-        : `🏪 <b>Olib ketish:</b> Mijoz dorixonadan o'zi olib ketadi`;
+        : `🏪 <b>Qabul qilish:</b> Mijoz dorixonadan o'zi olib ketadi`;
 
     return [
       `<b>${idx + 1}. Buyurtma ${formatOrderNumber(o.id)}</b> [${st.emoji} ${st.label}]`,
@@ -296,6 +298,7 @@ export async function notifyCustomerOrderDelivered(orderId: number): Promise<voi
       id: orders.id,
       customerName: orders.customerName,
       customerPhone: orders.customerPhone,
+      deliveryType: orders.deliveryType,
       pharmacyName: specialists.organization,
       pharmacyContact: specialists.name,
       ratingStars: orders.ratingStars,
@@ -336,16 +339,21 @@ export async function notifyCustomerOrderDelivered(orderId: number): Promise<voi
   const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL?.trim()?.replace(/\/+$/, "");
   const pharmacyName = order.pharmacyName || order.pharmacyContact || "Dorixona";
 
+  const isPickup = order.deliveryType === "pickup";
   const msg = [
-    "📦 <b>Buyurtmangiz yetkazildi!</b>",
+    isPickup ? "🏪 <b>Buyurtmangiz qabul qilindi / olib ketildi!</b>" : "📦 <b>Buyurtmangiz yetkazildi!</b>",
     "",
-    `Hurmatli <b>${escapeHtml(order.customerName)}</b>, siz <b>${escapeHtml(pharmacyName)}</b> dan buyurtma qilgan dori vositalaringiz muvaffaqiyatli yetkazildi!`,
+    isPickup
+      ? `Hurmatli <b>${escapeHtml(order.customerName)}</b>, siz <b>${escapeHtml(pharmacyName)}</b> dan buyurtma qilgan dori vositalaringizni muvaffaqiyatli qabul qilib oldingiz!`
+      : `Hurmatli <b>${escapeHtml(order.customerName)}</b>, siz <b>${escapeHtml(pharmacyName)}</b> dan buyurtma qilgan dori vositalaringiz muvaffaqiyatli yetkazildi!`,
     "",
-    "<b>Yetkazilgan dorilar:</b>",
+    isPickup ? "<b>Qabul qilingan dorilar:</b>" : "<b>Yetkazilgan dorilar:</b>",
     items.map((i) => `• ${escapeHtml(i.name)} × ${i.qty}`).join("\n"),
     "",
     "⭐️ <b>Dorilar va xizmat sifatini baholang:</b>",
-    "Yetkazib berish xizmati va dorilar sifatiga qanday baho berasiz? O'z bahoyingizni belgilang va fikringizni qoldiring:",
+    isPickup
+      ? "Dorixona xizmati va dorilar sifatiga qanday baho berasiz? O'z bahoyingizni belgilang va fikringizni qoldiring:"
+      : "Yetkazib berish xizmati va dorilar sifatiga qanday baho berasiz? O'z bahoyingizni belgilang va fikringizni qoldiring:",
   ].join("\n");
 
   const firstItem = items[0];

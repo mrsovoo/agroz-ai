@@ -150,6 +150,7 @@ export default function MarketClient() {
     {
       id: number;
       status: string;
+      deliveryType?: string;
       totalSum: number | null;
       pharmacyName: string | null;
       ratingStars: number | null;
@@ -640,7 +641,7 @@ export default function MarketClient() {
         <p className="ios-section-title">Buyurtmamni kuzatish</p>
         <div className="ios-card p-4">
           <p className="text-[13px] leading-relaxed text-[var(--brand-muted)]">
-            Buyurtma bergan telefon raqamingizni yozing — holati va yetkazilgan buyurtmalarni
+            Buyurtma bergan telefon raqamingizni yozing — holati va yakunlangan buyurtmalarni
             yulduzcha bilan baholaysiz.
           </p>
           <div className="mt-3 flex gap-2">
@@ -689,7 +690,7 @@ export default function MarketClient() {
                             : { background: "var(--brand-yellow-soft)", color: "var(--brand-ink)" }
                       }
                     >
-                      {o.status === "yangi" ? "🆕 Yangi" : o.status === "tasdiqlandi" ? "✅ Tasdiqlandi" : o.status === "yetkazildi" ? "📦 Yetkazildi" : "❌ Bekor"}
+                      {o.status === "yangi" ? "🆕 Yangi" : o.status === "tasdiqlandi" ? "✅ Tasdiqlandi" : o.status === "yetkazildi" ? (o.deliveryType === "pickup" ? "🏪 Olib ketildi" : "📦 Yetkazildi") : "❌ Bekor"}
                     </span>
                   </div>
                   <div className="mt-2 space-y-1.5 border-t border-[var(--brand-sep)]/60 pt-2">
@@ -887,7 +888,7 @@ export default function MarketClient() {
                     Buyurtma qabul qilindi!
                   </p>
                   <p className="text-[13px] leading-relaxed text-[var(--brand-muted)]">
-                    Buyurtmangiz <b>{formatOrderNumber(orderDone.orderId)}</b> raqami bilan dorixona egasiga Telegram orqali yetkazildi.
+                    Buyurtmangiz <b>{formatOrderNumber(orderDone.orderId)}</b> raqami bilan dorixona egasiga Telegram orqali yuborildi.
                   </p>
                 </div>
 

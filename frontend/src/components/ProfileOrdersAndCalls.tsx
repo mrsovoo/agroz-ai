@@ -17,6 +17,7 @@ import {
   ShoppingBag,
 } from "lucide-react";
 import { apiUrl } from "@/lib/api-config";
+import { formatOrderNumber } from "@/lib/format";
 
 type OrderItem = {
   name: string;
@@ -78,7 +79,7 @@ export default function ProfileOrdersAndCalls({ userPhone }: { userPhone?: strin
     fetchData();
   }, [userPhone]);
 
-  const getOrderStatusBadge = (status: string) => {
+  const getOrderStatusBadge = (status: string, deliveryType?: string) => {
     switch (status) {
       case "yangi":
         return (
@@ -95,7 +96,7 @@ export default function ProfileOrdersAndCalls({ userPhone }: { userPhone?: strin
       case "yetkazildi":
         return (
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-200">
-            <CheckCircle2 size={11} /> Yetkazildi
+            <CheckCircle2 size={11} /> {deliveryType === "pickup" ? "Olib ketildi" : "Yetkazildi"}
           </span>
         );
       case "bekor":
@@ -223,9 +224,9 @@ export default function ProfileOrdersAndCalls({ userPhone }: { userPhone?: strin
                 <div className="flex items-center justify-between border-b border-neutral-100 pb-2.5 mb-2.5">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-xs font-extrabold text-neutral-900">
-                      Buyurtma #{ord.id}
+                      Buyurtma {formatOrderNumber(ord.id)}
                     </span>
-                    {getOrderStatusBadge(ord.status)}
+                    {getOrderStatusBadge(ord.status, ord.deliveryType)}
                   </div>
                   <span className="text-[11px] font-mono text-neutral-400">
                     {new Date(ord.createdAt).toLocaleDateString("uz-UZ")}
