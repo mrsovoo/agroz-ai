@@ -17,6 +17,7 @@ import telegramRouter from "./routes/telegram.js";
 import adminRouter from "./routes/admin.js";
 import advertisementsRouter from "./routes/advertisements.js";
 import pharmaciesRouter from "./routes/pharmacies.js";
+import geoRouter from "./routes/geo.js";
 
 import { ensureSeed } from "./lib/seed.js";
 import { ensureSchema } from "./db/migrate.js";
@@ -76,6 +77,7 @@ app.use("/api/telegram", telegramRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/advertisements", advertisementsRouter);
 app.use("/api/pharmacies", pharmaciesRouter);
+app.use("/api/geo", geoRouter);
 
 // 404 Handler
 app.use((_req, res) => {
