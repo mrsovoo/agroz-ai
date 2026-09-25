@@ -8,9 +8,10 @@ import { sql } from "drizzle-orm";
  */
 export async function ensureSchema(): Promise<void> {
   try {
-    // 1. Users jadvali uchun qo'shimcha telefon raqami
+    // 1. Users jadvali uchun qo'shimcha maydonlar
     await db.execute(sql`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS second_phone varchar(32);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS district varchar(120);
     `);
 
     // 2. Specialists jadvalidagi maydonlar

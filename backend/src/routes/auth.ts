@@ -17,9 +17,7 @@ import {
 import { verifyInitData } from "../lib/tg-auth.js";
 import { BOT_OTP_TTL_MINUTES, OTP_LENGTH, OTP_TTL_MINUTES } from "../lib/constants.js";
 import { telegramBotToken } from "../lib/settings.js";
-import { encryptFields, decryptFields, SENSITIVE_FIELDS, hashPhone, verifyPhoneHash, hashToken } from "../lib/encryption.js";
 import { rateLimit, RATE_LIMITS } from "../lib/rate-limit.js";
-import { createTokenPair, verifyJwt } from "../lib/jwt.js";
 
 const router = Router();
 
@@ -44,12 +42,12 @@ async function telegramIdFromInitData(initData: unknown): Promise<number | null>
 async function findUserByTelegramId(fromId: number): Promise<typeof users.$inferSelect | null> {
   try {
     const rows = await db.select().from(users).where(eq(users.telegramId, fromId)).limit(1);
-    return rows[0] ? decryptFields(rows[0], SENSITIVE_FIELDS.users) : null;
+    return rows[0] || null;
   } catch (err: any) {
     try {
       await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS second_phone varchar(32);`);
       const rows = await db.select().from(users).where(eq(users.telegramId, fromId)).limit(1);
-      return rows[0] ? decryptFields(rows[0], SENSITIVE_FIELDS.users) : null;
+      return rows[0] || null;
     } catch {
       return null;
     }
@@ -169,45 +167,34 @@ router.post("/verify", async (req, res) => {
 
     await db.update(otpCodes).set({ used: true }).where(eq(otpCodes.id, match.id));
 
-    const phoneHash = hashPhone(phone);
-    let user = (await db.select().from(users).where(eq(users.phoneHash, phoneHash)).limit(1))[0];
+    let user = (await db.select().from(users).where(eq(users.phone, phone)).limit(1))[0];
     if (!user) {
-      const encrypted = encryptFields({ phone, phoneHash, name: body.name || null, region: body.region || null }, SENSITIVE_FIELDS.users);
       const created = await db
         .insert(users)
-        .values(encrypted)
+        .values({
+          phone,
+          name: body.name || null,
+          region: body.region || null,
+        })
         .returning();
       user = created[0];
     }
-    user = decryptFields(user, SENSITIVE_FIELDS.users);
 
-    // Create JWT token pair
-    const { accessToken, refreshToken } = createTokenPair(user.id);
-    const refreshTokenHash = hashToken(refreshToken);
-    const family = randomBytes(16).toString("hex");
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
-
+    const sessionId = randomBytes(32).toString("hex");
     await db.insert(sessions).values({
-      id: verifyJwt(refreshToken)!.jti,
+      id: sessionId,
       userId: user.id,
-      refreshTokenHash,
-      family,
-      revoked: false,
-      userAgent: req.headers["user-agent"] || null,
-      ip: req.ip || null,
-      expiresAt,
     });
 
-    // Set HttpOnly cookie for refresh token
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
+    res.cookie("agroai_session", sessionId, {
+      httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 30 * 24 * 60 * 60 * 1000,
       path: "/",
     });
 
-    res.json({ ok: true, accessToken, user });
+    res.json({ ok: true, sessionId, user });
   } catch (err: any) {
     console.error("[verify error]:", err);
     res.status(500).json({ error: err.message || "Server xatosi" });
@@ -302,25 +289,21 @@ router.post("/telegram", async (req, res) => {
 
     if (!user) {
       if (phone) {
-        const phoneHash = hashPhone(phone);
-        const byPhoneRaw = (await db.select().from(users).where(eq(users.phoneHash, phoneHash)).limit(1))[0];
-        const byPhone = byPhoneRaw ? decryptFields(byPhoneRaw, SENSITIVE_FIELDS.users) : null;
+        const byPhone = (await db.select().from(users).where(eq(users.phone, phone)).limit(1))[0];
         if (byPhone) {
           const finalName = rawName || byPhone.name || [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ");
-          const encryptedUpdate = encryptFields({ telegramId, name: finalName, secondPhone: secondPhone || byPhone.secondPhone, region: region || byPhone.region }, SENSITIVE_FIELDS.users);
           await db
             .update(users)
-            .set(encryptedUpdate)
+            .set({ telegramId, name: finalName, secondPhone: secondPhone || byPhone.secondPhone, region: region || byPhone.region })
             .where(eq(users.id, byPhone.id));
           user = { ...byPhone, telegramId, name: finalName, secondPhone: secondPhone || byPhone.secondPhone, region: region || byPhone.region };
         } else {
           const finalName = rawName || [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ") || "Foydalanuvchi";
-          const encryptedInsert = encryptFields({ telegramId, name: finalName, phone, phoneHash, secondPhone, region }, SENSITIVE_FIELDS.users);
           const created = await db
             .insert(users)
-            .values(encryptedInsert)
+            .values({ telegramId, name: finalName, phone, secondPhone, region })
             .returning();
-          user = decryptFields(created[0], SENSITIVE_FIELDS.users);
+          user = created[0];
         }
       } else {
         return res.status(400).json({
@@ -335,14 +318,12 @@ router.post("/telegram", async (req, res) => {
       if (region && region !== user.region) updateData.region = region;
       if (phone && (!user.phone || phone !== user.phone)) {
         updateData.phone = phone;
-        updateData.phoneHash = hashPhone(phone);
       }
       if (secondPhone && (!user.secondPhone || secondPhone !== user.secondPhone)) {
         updateData.secondPhone = secondPhone;
       }
       if (Object.keys(updateData).length > 0) {
-        const encryptedUpdate = encryptFields(updateData, SENSITIVE_FIELDS.users);
-        await db.update(users).set(encryptedUpdate).where(eq(users.id, user.id));
+        await db.update(users).set(updateData).where(eq(users.id, user.id));
         user = { ...user, ...updateData };
       }
     }
@@ -351,33 +332,21 @@ router.post("/telegram", async (req, res) => {
       return res.status(400).json({ error: "Foydalanuvchi ma'lumotlari topilmadi", registered: false });
     }
 
-    // Create JWT token pair
-    const { accessToken, refreshToken } = createTokenPair(user.id);
-    const refreshTokenHash = hashToken(refreshToken);
-    const family = randomBytes(16).toString("hex");
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
-
+    const sessionId = randomBytes(32).toString("hex");
     await db.insert(sessions).values({
-      id: verifyJwt(refreshToken)!.jti,
+      id: sessionId,
       userId: user.id,
-      refreshTokenHash,
-      family,
-      revoked: false,
-      userAgent: req.headers["user-agent"] || null,
-      ip: req.ip || null,
-      expiresAt,
     });
 
-    // Set HttpOnly cookie for refresh token
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
+    res.cookie("agroai_session", sessionId, {
+      httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 30 * 24 * 60 * 60 * 1000,
       path: "/",
     });
 
-    res.json({ ok: true, accessToken, user, registered: Boolean(user.phone) });
+    res.json({ ok: true, sessionId, user, registered: Boolean(user.phone) });
   } catch (err: any) {
     console.error("[auth telegram error]:", err);
     res.status(500).json({ error: err.message || "Server xatosi" });
@@ -506,100 +475,23 @@ router.post("/quick-login", async (req, res) => {
         .where(eq(users.id, user.id));
     }
 
-    // Create JWT token pair
-    const { accessToken, refreshToken } = createTokenPair(user.id);
-    const refreshTokenHash = hashToken(refreshToken);
-    const family = randomBytes(16).toString("hex");
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    const jti = verifyJwt(refreshToken)!.jti;
-
+    const sessionId = randomBytes(32).toString("hex");
     await db.insert(sessions).values({
-      id: jti,
+      id: sessionId,
       userId: user.id,
-      refreshTokenHash,
-      family,
-      revoked: false,
-      userAgent: req.headers["user-agent"] || null,
-      ip: req.ip || null,
-      expiresAt,
     });
 
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
+    res.cookie("agroai_session", sessionId, {
+      httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 30 * 24 * 60 * 60 * 1000,
       path: "/",
     });
 
-    res.json({ ok: true, accessToken, user });
+    res.json({ ok: true, sessionId, user });
   } catch (err: any) {
     console.error("[quick-login error]:", err);
-    res.status(500).json({ error: err.message || "Server xatosi" });
-  }
-});
-
-// POST /api/auth/refresh — Refresh token rotation
-router.post("/refresh", async (req, res) => {
-  try {
-    const refreshToken = req.cookies?.refreshToken;
-    if (!refreshToken) {
-      return res.status(401).json({ error: "Refresh token yo'q" });
-    }
-
-    const payload = verifyJwt(refreshToken);
-    if (!payload || payload.type !== "refresh") {
-      return res.status(401).json({ error: "Noto'g'ri refresh token" });
-    }
-
-    // Check if session exists and not revoked
-    const session = (await db.select().from(sessions).where(eq(sessions.id, payload.jti)).limit(1))[0];
-    if (!session || session.revoked || session.refreshTokenHash !== hashToken(refreshToken)) {
-      // Token reuse detected - revoke entire family
-      if (session && !session.revoked) {
-        await db.update(sessions).set({ revoked: true }).where(eq(sessions.family, session.family));
-      }
-      res.clearCookie("refreshToken", { path: "/" });
-      return res.status(401).json({ error: "Token yo'q yoki amal qilish muddati o'tgan" });
-    }
-
-    // Check expiration
-    if (session.expiresAt < new Date()) {
-      await db.update(sessions).set({ revoked: true }).where(eq(sessions.id, session.id));
-      res.clearCookie("refreshToken", { path: "/" });
-      return res.status(401).json({ error: "Token amal qilish muddati o'tgan" });
-    }
-
-    // Rotate: revoke old, create new
-    await db.update(sessions).set({ revoked: true }).where(eq(sessions.id, session.id));
-
-    const { accessToken: newAccessToken, refreshToken: newRefreshToken } = createTokenPair(session.userId);
-    const newRefreshTokenHash = hashToken(newRefreshToken);
-    const newFamily = randomBytes(16).toString("hex");
-    const newExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-
-    await db.insert(sessions).values({
-      id: verifyJwt(newRefreshToken)!.jti,
-      userId: session.userId,
-      refreshTokenHash: newRefreshTokenHash,
-      family: newFamily,
-      revoked: false,
-      userAgent: req.headers["user-agent"] || null,
-      ip: req.ip || null,
-      expiresAt: newExpiresAt,
-    });
-
-    res.cookie("refreshToken", newRefreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 30 * 24 * 60 * 60 * 1000,
-      path: "/",
-    });
-
-    res.json({ ok: true, accessToken: newAccessToken });
-  } catch (err: any) {
-    console.error("[refresh error]:", err);
     res.status(500).json({ error: err.message || "Server xatosi" });
   }
 });
@@ -607,14 +499,11 @@ router.post("/refresh", async (req, res) => {
 // POST /api/auth/logout
 router.post("/logout", async (req, res) => {
   try {
-    const refreshToken = req.cookies?.refreshToken;
-    if (refreshToken) {
-      const payload = verifyJwt(refreshToken);
-      if (payload?.jti) {
-        await db.update(sessions).set({ revoked: true }).where(eq(sessions.id, payload.jti));
-      }
+    const sessionId = req.cookies?.["agroai_session"] || req.headers["x-session-id"];
+    if (sessionId && typeof sessionId === "string") {
+      await db.delete(sessions).where(eq(sessions.id, sessionId));
     }
-    res.clearCookie("refreshToken", { path: "/" });
+    res.clearCookie("agroai_session", { path: "/" });
     res.json({ ok: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Server xatosi" });

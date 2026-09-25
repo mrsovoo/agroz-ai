@@ -41,7 +41,6 @@ import {
 } from "../lib/auth-bot.js";
 import { escapeHtml } from "../lib/tg-escape.js";
 import { sendMessage, sendPhoto } from "../lib/telegram-bot.js";
-import { decryptFields, SENSITIVE_FIELDS } from "../lib/encryption.js";
 
 const router = Router();
 
@@ -1086,22 +1085,13 @@ router.get("/specialist-calls", requireAdmin, async (req, res) => {
       .leftJoin(specialists, eq(specialists.id, specialistCalls.specialistId))
       .orderBy(desc(specialistCalls.id));
 
-    const calls = callsRaw.map((c) => {
-      const decryptedCall = decryptFields(c, SENSITIVE_FIELDS.specialistCalls);
-      const decryptedSpecialist = {
-        name: c.specialistName,
-        specialty: c.specialistSpecialty,
-        phone: c.specialistPhone,
-        role: c.specialistRole,
-      };
-      return {
-        ...decryptedCall,
-        specialistName: decryptedSpecialist.name,
-        specialistSpecialty: decryptedSpecialist.specialty,
-        specialistPhone: decryptedSpecialist.phone,
-        specialistRole: decryptedSpecialist.role,
-      };
-    });
+    const calls = callsRaw.map((c) => ({
+      ...c,
+      specialistName: c.specialistName,
+      specialistSpecialty: c.specialistSpecialty,
+      specialistPhone: c.specialistPhone,
+      specialistRole: c.specialistRole,
+    }));
 
     res.json({ ok: true, calls });
   } catch (err: any) {
@@ -1771,20 +1761,17 @@ router.get("/users", requireAdmin, async (req, res) => {
   try {
     const { search, filter } = req.query as { search?: string; filter?: string };
 
-    // 1. Foydalanuvchilarni olish va decrypt qilish
-    const allUsersRaw = await db.select().from(users).orderBy(desc(users.createdAt));
-    const allUsers = allUsersRaw.map((u) => decryptFields(u, SENSITIVE_FIELDS.users));
+    // 1. Foydalanuvchilarni olish
+    const allUsers = await db.select().from(users).orderBy(desc(users.createdAt));
 
-    // 2. Buyurtmalarni va ularning tovarlarini olish va decrypt qilish
-    const allOrdersRaw = await db.select().from(orders).orderBy(desc(orders.createdAt));
-    const allOrders = allOrdersRaw.map((o) => decryptFields(o, SENSITIVE_FIELDS.orders));
+    // 2. Buyurtmalarni va ularning tovarlarini olish
+    const allOrders = await db.select().from(orders).orderBy(desc(orders.createdAt));
     const allItems = await db.select().from(orderItems);
     const allSpecialists = await db.select().from(specialists);
 
     // Dorixonalar xaritasi
     const specMap = new Map<number, (typeof allSpecialists)[0]>();
-    const allSpecialistsDecrypted = allSpecialists.map((s) => decryptFields(s, SENSITIVE_FIELDS.specialists));
-    for (const s of allSpecialistsDecrypted) {
+    for (const s of allSpecialists) {
       specMap.set(s.id, s);
     }
 
@@ -1796,9 +1783,8 @@ router.get("/users", requireAdmin, async (req, res) => {
       itemsMap.set(item.orderId, arr);
     }
 
-    // 3. Mutaxassis chaqiruvlarini olish va decrypt qilish
-    const allCallsRaw = await db.select().from(specialistCalls).orderBy(desc(specialistCalls.createdAt));
-    const allCalls = allCallsRaw.map((c) => decryptFields(c, SENSITIVE_FIELDS.specialistCalls));
+    // 3. Mutaxassis chaqiruvlarini olish
+    const allCalls = await db.select().from(specialistCalls).orderBy(desc(specialistCalls.createdAt));
 
     // Telefon raqamlarni tozalash (solishtirish uchun: faqat raqamlar)
     const cleanPhone = (p?: string | null) => (p || "").replace(/\D/g, "");

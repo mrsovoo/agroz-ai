@@ -8,7 +8,6 @@ import { db } from "@/db";
 import { specialistMedicines, specialistRatings, specialists } from "@/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import { clampRadiusKm, distanceKm, roundKm } from "@/lib/geo";
-import { decryptFields, encryptFields, SENSITIVE_FIELDS, hashPhone } from "@/lib/encryption";
 
 /**
  * Tajriba va reytingga qarab tavsiya radiusi: asos 5 km, yuqori ishonchda
@@ -115,7 +114,6 @@ export async function upsertSpecialist(input: SpecialistInput & { isApproved?: b
     telegramId: input.telegramId,
     name: input.name,
     phone: input.phone,
-    phoneHash: hashPhone(input.phone),
     role: input.role,
     specialty: input.specialty,
     education: input.education ?? null,
@@ -131,13 +129,12 @@ export async function upsertSpecialist(input: SpecialistInput & { isApproved?: b
     isApproved,
     updatedAt: new Date(),
   };
-  const encryptedValues = encryptFields(values, SENSITIVE_FIELDS.specialists);
   const rows = await db
     .insert(specialists)
-    .values(encryptedValues)
-    .onConflictDoUpdate({ target: specialists.telegramId, set: encryptedValues })
+    .values(values)
+    .onConflictDoUpdate({ target: specialists.telegramId, set: values })
     .returning();
-  return decryptFields(rows[0], SENSITIVE_FIELDS.specialists);
+  return rows[0];
 }
 
 /** Mutaxassis yoki dorixona profilining ma'lum maydonlarini qisman yangilash. */
@@ -149,16 +146,12 @@ export async function updateSpecialistFields(
     ...fields,
     updatedAt: new Date(),
   };
-  if (fields.phone) {
-    values.phoneHash = hashPhone(fields.phone);
-  }
-  const encryptedValues = encryptFields(values, SENSITIVE_FIELDS.specialists);
   const rows = await db
     .update(specialists)
-    .set(encryptedValues)
+    .set(values)
     .where(eq(specialists.telegramId, telegramId))
     .returning();
-  return rows[0] ? decryptFields(rows[0], SENSITIVE_FIELDS.specialists) : null;
+  return rows[0] ?? null;
 }
 
 /**
@@ -262,7 +255,7 @@ export async function getSpecialistByTelegramId(telegramId: number) {
     .from(specialists)
     .where(eq(specialists.telegramId, telegramId))
     .limit(1);
-  return rows[0] ? decryptFields(rows[0], SENSITIVE_FIELDS.specialists) : null;
+  return rows[0] ?? null;
 }
 
 // ---------------------------------------------------------------------------
@@ -383,11 +376,10 @@ export async function listSpecialists(opts: {
   role?: string | null;
   meds?: string[];
 }): Promise<SpecialistDto[]> {
-  const rowsRaw = await db
+  const rows = await db
     .select()
     .from(specialists)
     .where(and(eq(specialists.isActive, true), eq(specialists.isApproved, true)));
-  const rows = rowsRaw.map((r) => decryptFields(r, SENSITIVE_FIELDS.specialists));
   const [medicineRows, ratingRows] = await Promise.all([
     db.select().from(specialistMedicines),
     db

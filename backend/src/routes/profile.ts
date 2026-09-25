@@ -3,7 +3,6 @@ import { db } from "../db/index.js";
 import { sessions, users, diagnoses, orders, specialistCalls, specialists, orderItems } from "../db/schema.js";
 import { eq, desc, or, sql } from "drizzle-orm";
 import { cleanText } from "../lib/validate.js";
-import { hashPhone, decryptFields, SENSITIVE_FIELDS } from "../lib/encryption.js";
 
 const router = Router();
 
@@ -159,8 +158,7 @@ router.get("/activity", async (req, res) => {
     const orderConditions = [];
     if (user?.id) orderConditions.push(eq(orders.userId, user.id));
     if (cleanDigits) {
-      const phoneHash = hashPhone("+998" + cleanDigits);
-      orderConditions.push(eq(orders.customerPhoneHash, phoneHash));
+      orderConditions.push(sql`RIGHT(REPLACE(${orders.customerPhone}, ' ', ''), 9) = ${cleanDigits}`);
     }
 
     if (orderConditions.length > 0) {
@@ -170,8 +168,6 @@ router.get("/activity", async (req, res) => {
         .where(or(...orderConditions))
         .orderBy(desc(orders.createdAt))
         .limit(30);
-
-      const decryptedOrders = rawOrders.map((o) => decryptFields(o, SENSITIVE_FIELDS.orders));
 
       const allItems = await db.select().from(orderItems);
       const allSpecialists = await db.select().from(specialists);
@@ -185,7 +181,7 @@ router.get("/activity", async (req, res) => {
         itemsMap.set(it.orderId, arr);
       }
 
-      userOrders = decryptedOrders.map((o) => {
+      userOrders = rawOrders.map((o) => {
         const pharmacy = specMap.get(o.pharmacySpecialistId);
         return {
           id: o.id,
@@ -208,21 +204,18 @@ router.get("/activity", async (req, res) => {
     // 2. Mutaxassis chaqiruvlarini olish
     let userCalls: any[] = [];
     if (cleanDigits) {
-      const phoneHash = hashPhone("+998" + cleanDigits);
       const rawCalls = await db
         .select()
         .from(specialistCalls)
-        .where(eq(specialistCalls.customerPhoneHash, phoneHash))
+        .where(sql`RIGHT(REPLACE(${specialistCalls.customerPhone}, ' ', ''), 9) = ${cleanDigits}`)
         .orderBy(desc(specialistCalls.createdAt))
         .limit(30);
-
-      const decryptedCalls = rawCalls.map((c) => decryptFields(c, SENSITIVE_FIELDS.specialistCalls));
 
       const allSpecialists = await db.select().from(specialists);
       const specMap = new Map<number, (typeof allSpecialists)[0]>();
       for (const s of allSpecialists) specMap.set(s.id, s);
 
-      userCalls = decryptedCalls.map((c) => {
+      userCalls = rawCalls.map((c) => {
         const spec = specMap.get(c.specialistId);
         return {
           id: c.id,
