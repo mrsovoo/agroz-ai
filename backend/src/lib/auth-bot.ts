@@ -60,12 +60,34 @@ export async function callAuthBot<T>(
   }
 }
 
+export async function deleteAuthMessage(chatId: number, messageId: number): Promise<boolean> {
+  const result = await callAuthBot("deleteMessage", {
+    chat_id: chatId,
+    message_id: messageId,
+  });
+  return result !== null;
+}
+
+export async function leaveAuthChat(chatId: number): Promise<boolean> {
+  const result = await callAuthBot("leaveChat", {
+    chat_id: chatId,
+  });
+  return result !== null;
+}
+
 /** Xabar yuborish. `replyKeyboard` berilsa klaviatura pastda doimiy turadi. */
 export async function sendAuthMessage(
   chatId: number,
   text: string,
   options?: { inline?: InlineKeyboard; replyKeyboard?: ReplyKeyboard; removeKeyboard?: boolean },
 ): Promise<boolean> {
+  // Guruh yoki kanallarga xabar yuborish taqiqlangan
+  if (chatId < 0) {
+    console.warn(`[auth-bot] Guruhga xabar yuborish taqiqlangan (chatId: ${chatId}). Bot guruhdan chiqmoqda...`);
+    await leaveAuthChat(chatId).catch(() => {});
+    return false;
+  }
+
   // 1. Klaviaturani butunlay olib tashlash (remove_keyboard: true)
   if (options?.removeKeyboard) {
     const result = await callAuthBot<{ message_id?: number }>("sendMessage", {
@@ -125,6 +147,12 @@ export async function sendAuthPhoto(
   caption: string,
   options?: { inline?: InlineKeyboard },
 ): Promise<boolean> {
+  if (chatId < 0) {
+    console.warn(`[auth-bot] Guruhga rasm yuborish taqiqlangan (chatId: ${chatId}). Bot guruhdan chiqmoqda...`);
+    await leaveAuthChat(chatId).catch(() => {});
+    return false;
+  }
+
   const result = await callAuthBot<{ message_id?: number }>("sendPhoto", {
     chat_id: chatId,
     photo: fileId,
@@ -147,6 +175,7 @@ export async function editAuthMessageReplyMarkup(
   messageId: number,
   replyMarkup?: InlineKeyboard,
 ): Promise<boolean> {
+  if (chatId < 0) return false;
   const result = await callAuthBot("editMessageReplyMarkup", {
     chat_id: chatId,
     message_id: messageId,
@@ -161,6 +190,7 @@ export async function editAuthMessageText(
   text: string,
   options?: { inline?: InlineKeyboard },
 ): Promise<boolean> {
+  if (chatId < 0) return false;
   const result = await callAuthBot("editMessageText", {
     chat_id: chatId,
     message_id: messageId,

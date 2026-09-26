@@ -106,6 +106,8 @@ import {
   profileMessage,
   roleQuestion,
   savedMessage,
+  deleteAuthMessage,
+  leaveAuthChat,
   sendAuthMessage,
   sendAuthPhoto,
   welcomeMessage,
@@ -247,13 +249,40 @@ async function clearState(telegramId: number): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function handleAuthBotUpdate(update: AuthBotUpdate): Promise<void> {
+  // 1. Agar bot guruh yoki kanalga qo'shilsa (my_chat_member)
+  const myChatMember = (update as any)?.my_chat_member;
+  if (myChatMember?.chat && (myChatMember.chat.type !== "private" || myChatMember.chat.id < 0)) {
+    console.warn(`[auth-bot] Bot guruhga qo'shildi (${myChatMember.chat.id}). Darhol chiqib ketilmoqda...`);
+    await leaveAuthChat(myChatMember.chat.id).catch(() => {});
+    return;
+  }
+
+  // 2. Agar callback_query guruhdan bo'lsa
   if (update.callback_query) {
+    const cbChat = update.callback_query.message?.chat as { id?: number; type?: string } | undefined;
+    if (cbChat && (cbChat.type !== "private" || (cbChat.id ?? 0) < 0)) {
+      console.warn(`[auth-bot] Guruhdan callback keldi (${cbChat.id}). Chiqib ketilmoqda...`);
+      if (cbChat.id) await leaveAuthChat(cbChat.id).catch(() => {});
+      return;
+    }
     await handleCallback(update.callback_query);
     return;
   }
+
   const message = update.message;
   const chatId = message?.chat?.id;
   if (!chatId) return;
+
+  // 3. Agar xabar guruh yoki kanaldan kelgan bo'lsa:
+  // Xabarni o'chirish va bot darhol guruhdan chiqib ketishi kerak!
+  if (message.chat?.type !== "private" || chatId < 0) {
+    console.warn(`[auth-bot] Guruhdan xabar keldi (${chatId}). Xabar o'chirilmoqda va bot guruhdan chiqmoqda...`);
+    if (message.message_id) {
+      await deleteAuthMessage(chatId, message.message_id).catch(() => {});
+    }
+    await leaveAuthChat(chatId).catch(() => {});
+    return;
+  }
 
   const telegramId = message?.from?.id ?? chatId;
   const firstName = message?.from?.first_name;

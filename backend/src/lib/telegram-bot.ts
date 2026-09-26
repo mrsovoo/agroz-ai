@@ -211,11 +211,33 @@ export function contactRequestKeyboard(): ReplyKeyboard {
   };
 }
 
+export async function deleteMessage(chatId: number, messageId: number): Promise<boolean> {
+  const result = await callBot("deleteMessage", {
+    chat_id: chatId,
+    message_id: messageId,
+  });
+  return result !== null;
+}
+
+export async function leaveChat(chatId: number): Promise<boolean> {
+  const result = await callBot("leaveChat", {
+    chat_id: chatId,
+  });
+  return result !== null;
+}
+
 export async function sendMessageWithId(
   chatId: number,
   text: string,
   options?: { keyboard?: InlineKeyboard | ReplyKeyboard | { remove_keyboard: true } },
 ): Promise<{ ok: boolean; messageId?: number }> {
+  // Guruh yoki kanallarga xabar yuborilmaydi (faqat shaxsiy chatlarga ruxsat berilgan)
+  if (chatId < 0) {
+    console.warn(`[bot] Guruhga xabar yuborish taqiqlangan (chatId: ${chatId}). Bot guruhdan chiqmoqda...`);
+    await leaveChat(chatId).catch(() => {});
+    return { ok: false };
+  }
+
   const keyboard = options?.keyboard;
   const result = await callBot<{ message_id?: number }>("sendMessage", {
     chat_id: chatId,
@@ -242,6 +264,12 @@ export async function sendPhoto(
   caption: string,
   options?: { keyboard?: InlineKeyboard | ReplyKeyboard | { remove_keyboard: true } },
 ): Promise<boolean> {
+  if (chatId < 0) {
+    console.warn(`[bot] Guruhga rasm yuborish taqiqlangan (chatId: ${chatId}). Bot guruhdan chiqmoqda...`);
+    await leaveChat(chatId).catch(() => {});
+    return false;
+  }
+
   const keyboard = options?.keyboard;
   const result = await callBot<{ message_id?: number }>("sendPhoto", {
     chat_id: chatId,
@@ -259,6 +287,7 @@ export async function editMessageReplyMarkup(
   messageId: number,
   replyMarkup?: InlineKeyboard,
 ): Promise<boolean> {
+  if (chatId < 0) return false;
   const result = await callBot("editMessageReplyMarkup", {
     chat_id: chatId,
     message_id: messageId,
@@ -273,6 +302,7 @@ export async function editMessageText(
   text: string,
   options?: { keyboard?: InlineKeyboard },
 ): Promise<boolean> {
+  if (chatId < 0) return false;
   const result = await callBot("editMessageText", {
     chat_id: chatId,
     message_id: messageId,

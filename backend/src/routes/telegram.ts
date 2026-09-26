@@ -7,10 +7,12 @@ import {
   codeMessage,
   editMessageReplyMarkup,
   errorMessage,
+  deleteMessage,
   expiredLinkMessage,
   greetingKeyboard,
   greetingMessage,
   isBotConfigured,
+  leaveChat,
   miniAppKeyboard,
   sendMessage,
   sendMessageWithId,
@@ -33,9 +35,10 @@ type TelegramUpdate = {
     id: string;
     data?: string;
     from?: { id?: number; first_name?: string };
-    message?: { chat?: { id?: number }; message_id?: number };
+    message?: { chat?: { id?: number; type?: string }; message_id?: number };
   };
   message?: {
+    message_id?: number;
     text?: string;
     chat?: { id?: number; type?: string };
     from?: { id?: number; first_name?: string; last_name?: string; username?: string };
@@ -479,7 +482,23 @@ router.post("/webhook", async (req, res) => {
   }
 
   const update = (req.body ?? null) as TelegramUpdate | null;
+
+  // 1. Agar bot guruh yoki kanalga qo'shilsa (my_chat_member)
+  const myChatMember = (update as any)?.my_chat_member;
+  if (myChatMember?.chat && (myChatMember.chat.type !== "private" || myChatMember.chat.id < 0)) {
+    console.warn(`[bot] Bot guruhga qo'shildi (${myChatMember.chat.id}). Darhol chiqib ketilmoqda...`);
+    await leaveChat(myChatMember.chat.id).catch(() => {});
+    return res.json({ ok: true });
+  }
+
+  // 2. Agar callback_query guruhdan bo'lsa
   if (update?.callback_query) {
+    const cbChat = update.callback_query.message?.chat;
+    if (cbChat && (cbChat.type !== "private" || (cbChat.id ?? 0) < 0)) {
+      console.warn(`[bot] Guruhdan callback keldi (${cbChat.id}). Chiqib ketilmoqda...`);
+      if (cbChat.id) await leaveChat(cbChat.id).catch(() => {});
+      return res.json({ ok: true });
+    }
     await handleMainBotCallback(update.callback_query);
     return res.json({ ok: true });
   }
@@ -487,6 +506,17 @@ router.post("/webhook", async (req, res) => {
   const message = update?.message;
   const chatId = message?.chat?.id;
   if (!chatId) return res.json({ ok: true });
+
+  // 3. Agar xabar guruh yoki kanaldan kelgan bo'lsa:
+  // Xabarni o'chirish va bot darhol guruhdan chiqib ketishi kerak!
+  if (message.chat?.type !== "private" || chatId < 0) {
+    console.warn(`[bot] Guruhdan xabar keldi (${chatId}). Xabar o'chirilmoqda va bot guruhdan chiqmoqda...`);
+    if (message.message_id) {
+      await deleteMessage(chatId, message.message_id).catch(() => {});
+    }
+    await leaveChat(chatId).catch(() => {});
+    return res.json({ ok: true });
+  }
 
   const fromId = message?.from?.id ?? chatId;
   const firstName = message?.from?.first_name;
