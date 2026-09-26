@@ -3,19 +3,19 @@ set -e
 
 # Clean frontend
 echo "Cleaning frontend..."
-cd frontend && npm run clean && cd ..
+cd apps/frontend && npm run clean && cd ../..
 
 # Clean admin panel
 echo "Cleaning admin..."
-cd admin && npm run clean && cd ..
+cd apps/admin && npm run clean && cd ../..
 
 # Clean backend
 echo "Cleaning backend..."
-cd backend && npm run clean && cd ..
+cd apps/backend && npm run clean && cd ../..
 
 # Optional: reset database (uncomment if needed)
 # echo "Resetting database..."
-# cd backend && npm run db:clear -- --yes && npm run db:seed && cd ..
+# cd apps/backend && npm run db:clear -- --yes && npm run db:seed && cd ../..
 
 # Git add, commit and push
 echo "Committing and pushing to GitHub..."
@@ -26,4 +26,3 @@ git commit -m "chore: clean project artifacts and prepare for fresh deployment"
 git push origin main
 
 echo "All done!"
-

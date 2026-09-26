@@ -255,9 +255,7 @@ router.get("/:id/photo", async (req, res) => {
 
       res.setHeader("Content-Type", "image/jpeg");
       res.setHeader("ETag", etag);
-      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-      res.setHeader("Pragma", "no-cache");
-      res.setHeader("Expires", "0");
+      res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
       return res.send(buf);
     }
 
@@ -277,9 +275,7 @@ router.get("/:id/photo", async (req, res) => {
 
       res.setHeader("Content-Type", tgRes.headers.get("content-type") || "image/jpeg");
       res.setHeader("ETag", etag);
-      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-      res.setHeader("Pragma", "no-cache");
-      res.setHeader("Expires", "0");
+      res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
       return res.send(buf);
     }
 

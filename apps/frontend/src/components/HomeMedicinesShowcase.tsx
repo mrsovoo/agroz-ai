@@ -1,11 +1,10 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Pill, Search, Sprout, Syringe, Sparkles, Store, Filter } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
 import { AUTH_BOT_URL } from "@/lib/constants";
-import { apiUrl } from "@/lib/api-config";
 
 export type ShowcaseMedicine = {
   id: number;
@@ -30,24 +29,9 @@ export default function HomeMedicinesShowcase({
 }) {
   const [filter, setFilter] = useState<"all" | "crop" | "animal">("all");
   const [query, setQuery] = useState("");
-  const [items, setItems] = useState<ShowcaseMedicine[]>(initialMedicines);
-  const [loading, setLoading] = useState(false);
-
-  // Client-side re-fetch: Mini App ochilinishida har doim yangi data olish
-  useEffect(() => {
-    setLoading(true);
-    fetch(apiUrl("/api/medicines?limit=32"))
-      .then((r) => r.json())
-      .then((data: ShowcaseMedicine[]) => {
-        if (Array.isArray(data) && data.length > 0) setItems(data);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
 
   // Faqat real API dan kelgan ma'lumotlar — hardcode yo'q
-  const allItems = items;
-
+  const allItems = initialMedicines;
 
   const filtered = useMemo(() => {
     return allItems.filter((m) => {
