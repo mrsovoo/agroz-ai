@@ -18,7 +18,7 @@ services:
   # 2. Express Backend API (api.agroz.uz)
   backend:
     build:
-      context: ./apps/backend
+      context: ./backend
       dockerfile: Dockerfile
     container_name: agroz-backend
     restart: unless-stopped
@@ -40,7 +40,7 @@ services:
   # 3. Next.js Frontend — Mijozlar va Telegram Mini App (agroz.uz)
   frontend:
     build:
-      context: ./apps/frontend
+      context: ./frontend
       dockerfile: Dockerfile
     container_name: agroz-frontend
     restart: unless-stopped
@@ -57,7 +57,7 @@ services:
   # 4. Next.js Admin Panel — Super Admin Boshqaruv Markazi (admin.agroz.uz)
   admin:
     build:
-      context: ./apps/admin
+      context: ./admin
       dockerfile: Dockerfile
     container_name: agroz-admin
     restart: unless-stopped
