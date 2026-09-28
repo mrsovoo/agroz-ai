@@ -1688,14 +1688,13 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
       return;
     }
 
-    // Rasmsiz dori qo'shishni davom etish
+    // Rasmsiz dori qo'shish taqiqlangan — rasm majburiy
     if (data === "m:skip_photo") {
-      await answerCallbackQuery(query.id);
-      await setState(telegramId, "med_name", draft);
+      await answerCallbackQuery(query.id, "Mahsulot rasmini yuklash majburiy!");
       await sendAuthMessage(
         chatId,
-        `${medicineStepIndicator("name")}\n\n✍️ Dorining <b>nomini yozing</b>:\n\nMasalan: <i>Ridomil Gold</i>, <i>Ivermektin 1%</i>`,
-        { inline: MEDICINE_CANCEL_KEYBOARD },
+        `⚠️ <b>Mahsulot rasmini yuklash majburiy!</b>\n\nIltimos, dorining aniq rasmini yuboring 📸.\nRasm mahsulotlar kartochkasiga to'liq (fill/cover) moslashtiriladi.`,
+        { inline: MEDICINE_PHOTO_KEYBOARD },
       );
       return;
     }
@@ -2611,30 +2610,12 @@ async function handleText(
       return;
 
     case "med_photo": {
-      const skip = text === "/skip" || text === "/otkaz";
-      if (skip) {
-        await setState(telegramId, "med_name", draft);
-        await sendAuthMessage(
-          chatId,
-          `${medicineStepIndicator("name")}\n\n📸 Rasm o'tkazib yuborildi.\n✍️ Endi dorining <b>nomini yozing</b>:\n\nMasalan: <i>Ridomil Gold</i>, <i>Ivermektin 1%</i>`,
-          { inline: MEDICINE_CANCEL_KEYBOARD },
-        );
-        return;
-      }
-      const name = cleanText(text, 160);
-      if (name && name.length >= 2) {
-        draft.medName = name;
-        await setState(telegramId, "med_type", draft);
-        await sendAuthMessage(
-          chatId,
-          `✅ Dori nomi: <b>${escapeHtml(name)}</b>\n\n${medicineStepIndicator("type")}\n\n${askMedicineType()}`,
-          { inline: MEDICINE_TYPE_KEYBOARD },
-        );
-        return;
-      }
-      await sendAuthMessage(chatId, `${medicineStepIndicator("photo")}\n\n${askMedicinePhoto()}`, {
-        inline: MEDICINE_PHOTO_KEYBOARD,
-      });
+      // Rasm majburiy! Agar foydalanuvchi rasm yubormay, matn yuborsa yoki skip qilmoqchi bo'lsa:
+      await sendAuthMessage(
+        chatId,
+        `⚠️ <b>Mahsulot rasmini yuklash majburiy!</b>\n\nIltimos, dorining aniq rasmini yuboring (telefon kamerasi orqali yoki galereyadan 📸).\nRasm qabul qilingandan so'ng dorining nomini kiritish bosqichiga o'tiladi.`,
+        { inline: MEDICINE_PHOTO_KEYBOARD },
+      );
       return;
     }
 
@@ -2919,7 +2900,7 @@ async function handleMedicinePhoto(
       draft.medPhotoBase64 = processed.base64;
       await sendAuthMessage(
         chatId,
-        "🖼 Rasm 1080×1450 formatga moslandi (nisbat saqlanadi, oq fon bilan to'ldiriladi).",
+        "🖼 Rasm qabul qilindi va mahsulotlar kartochkasiga to'liq (fill/cover) moslashtirildi.",
       );
     }
   } catch (err) {

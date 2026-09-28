@@ -152,22 +152,26 @@ export default function ProductCard({
     medicine.stock <= 3;
 
   return (
-    <div className="group flex w-full flex-col justify-between rounded-[24px] bg-[#f8f9fa] border border-neutral-100 p-3 shadow-2xs transition-all duration-200 active:scale-[0.98]">
-      {/* Rasm maydoni — toza oq, yumaloq burchakli blok */}
-      <div className="relative mb-2.5 flex h-[135px] w-full items-center justify-center overflow-hidden rounded-[18px] bg-white border border-neutral-100/80">
+    <div className="group flex h-full w-full flex-col justify-between rounded-[22px] bg-[#f8f9fa] border border-neutral-100 p-2.5 sm:p-3 shadow-2xs transition-all duration-200 hover:shadow-xs active:scale-[0.98]">
+      {/* Rasm maydoni — to'liq moslashuvchan, w va h razmerga to'liq (fill/cover) sig'adigan kvadrat blok */}
+      <div className="relative mb-2.5 flex aspect-square w-full items-center justify-center overflow-hidden rounded-[16px] bg-neutral-100/80 border border-neutral-200/60">
         <Link href={href} aria-label={medicine.name} className="block h-full w-full">
           {medicine.hasPhoto ? (
             <FadeImage
               src={medicine.photoVersion ? `/api/medicines/${medicine.id}/photo?v=${medicine.photoVersion}` : `/api/medicines/${medicine.id}/photo`}
               alt={medicine.name}
-              className="h-full w-full bg-white transition-transform duration-300 group-hover:scale-105"
-              fit="contain"
+              className="h-full w-full transition-transform duration-300 group-hover:scale-105"
+              fit="cover"
               fallback={
-                <div className="flex h-full w-full items-center justify-center bg-white" />
+                <div className="flex h-full w-full items-center justify-center bg-neutral-100 text-neutral-400">
+                  <Pill size={26} />
+                </div>
               }
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-white" />
+            <div className="flex h-full w-full items-center justify-center bg-neutral-100 text-neutral-400">
+              <Pill size={26} />
+            </div>
           )}
         </Link>
       </div>
@@ -178,7 +182,7 @@ export default function ProductCard({
           {/* Nomi */}
           <Link href={href} className="block">
             <h3
-              className="text-[15px] font-black leading-tight text-neutral-900 line-clamp-1 hover:text-[#039e1e] transition-colors"
+              className="text-[13.5px] sm:text-[14.5px] font-black leading-snug text-neutral-900 line-clamp-1 hover:text-[#039e1e] transition-colors"
               title={medicine.name}
             >
               {medicine.name}
@@ -186,14 +190,14 @@ export default function ProductCard({
           </Link>
 
           {/* Tavsifi */}
-          <p className="mt-1 text-[11.5px] leading-tight text-neutral-500 line-clamp-2">
+          <p className="mt-1 text-[11px] sm:text-[11.5px] leading-tight text-neutral-500 line-clamp-2 min-h-[26px]">
             {medicine.usage || "Tabiiy minerallarga boy ozuqa"}
           </p>
         </div>
 
-        <div className="mt-3">
+        <div className="mt-2.5">
           {/* Narxi */}
-          <p className="text-[15px] font-black text-neutral-900">
+          <p className="text-[14px] sm:text-[15px] font-black text-neutral-900 tracking-tight">
             {medicine.price
               ? new Intl.NumberFormat("uz-UZ").format(medicine.price).replace(/\s/g, ".") + " so'm"
               : "35.000 so'm"}
@@ -202,7 +206,7 @@ export default function ProductCard({
           {/* + Savatga tugmasi */}
           <div className="mt-2">
             {qty > 0 ? (
-              <div className="flex h-10 w-full items-center justify-between rounded-full bg-[#eaf5e1] border border-[#039e1e]/30 px-1 text-[#039e1e]">
+              <div className="flex h-9 sm:h-10 w-full items-center justify-between rounded-full bg-[#eaf5e1] border border-[#039e1e]/30 px-1 text-[#039e1e]">
                 <button
                   type="button"
                   onClick={(e) => {
@@ -210,13 +214,13 @@ export default function ProductCard({
                     e.stopPropagation();
                     changeQty(-1);
                   }}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#039e1e] shadow-xs active:scale-90 transition font-black"
+                  className="flex h-7.5 w-7.5 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white text-[#039e1e] shadow-xs active:scale-90 transition font-black"
                   aria-label="Kamaytirish"
                 >
-                  <Minus size={14} strokeWidth={3} />
+                  <Minus size={13} strokeWidth={3} />
                 </button>
 
-                <span className="text-[13px] font-black tracking-tight select-none">
+                <span className="text-[12.5px] sm:text-[13px] font-black tracking-tight select-none">
                   {qty} ta
                 </span>
 
@@ -227,10 +231,10 @@ export default function ProductCard({
                     e.stopPropagation();
                     changeQty(1);
                   }}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-[#039e1e] text-white shadow-xs active:scale-90 transition font-black"
+                  className="flex h-7.5 w-7.5 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-[#039e1e] text-white shadow-xs active:scale-90 transition font-black"
                   aria-label="Ko'paytirish"
                 >
-                  <Plus size={14} strokeWidth={3} />
+                  <Plus size={13} strokeWidth={3} />
                 </button>
               </div>
             ) : (
@@ -241,7 +245,7 @@ export default function ProductCard({
                   e.stopPropagation();
                   add();
                 }}
-                className="flex w-full items-center justify-center rounded-full bg-[#039e1e] hover:bg-[#028518] py-2.5 text-[13px] font-bold text-white shadow-2xs active:scale-95 transition-all"
+                className="flex w-full items-center justify-center rounded-full bg-[#039e1e] hover:bg-[#028518] py-2 sm:py-2.5 text-[12px] sm:text-[13px] font-bold text-white shadow-2xs active:scale-95 transition-all"
               >
                 + Savatga
               </button>

@@ -282,10 +282,9 @@ export const MEDICINE_CONFIRM_KEYBOARD: InlineKeyboard = {
   ],
 };
 
-/** Dori qo'shish boshida rasm yoki rasmsiz davom etish. */
+/** Dori qo'shish boshida rasm yuklash MAJBURiY. */
 export const MEDICINE_PHOTO_KEYBOARD: InlineKeyboard = {
   inline_keyboard: [
-    [{ text: "⏩ Rasmsiz davom etish (nomini yozish)", callback_data: "m:skip_photo" }],
     [{ text: "❌ Bekor qilish", callback_data: "m:no" }],
   ],
 };
@@ -960,15 +959,16 @@ export function onlyPharmacyMessage(role?: string): string {
 /** /dori_qoshish boshlanganda — dorixona ma'lumoti va bosqichlar bilan. */
 export function medicineIntroMessage(pharmacyName: string, total: number): string {
   return [
-    "💊 <b>Dori qo'shish</b>",
+    "💊 <b>Yangi dori qo'shish</b>",
     "",
     `🏪 Dorixona: <b>${escapeHtml(pharmacyName)}</b>`,
     `📦 Hozirgi dorilar: <b>${total}</b> ta`,
     "",
-    "<b>6 ta bosqich:</b>",
-    "1️⃣ Rasm → 2️⃣ Nomi → 3️⃣ Turi → 4️⃣ Nima uchun → 5️⃣ Narx → 6️⃣ Tasdiqlash",
+    "<b>Bosqichlar:</b>",
+    "1️⃣ <b>Rasm (Majburiy)</b> → 2️⃣ Nomi → 3️⃣ Turi → 4️⃣ Nima uchun → 5️⃣ Narx → 6️⃣ Tasdiqlash",
     "",
-    "📸 Endi dorining rasmini yuboring.",
+    "📸 <b>Dorining aniq rasmini yuboring (Majburiy):</b>",
+    "<i>Qutisi yoki idishi aniq ko'rinadigan qilib rasmga oling yoki galereyadan yuboring. Rasm mahsulotlar kartochkasiga to'liq (fill/cover) moslashtiriladi.</i>",
   ].join("\n");
 }
 
@@ -985,10 +985,10 @@ export function photoReceivedMessage(): string {
 
 export function askMedicinePhoto(): string {
   return [
-    "💊 <b>Dorining rasmini yuboring.</b>",
+    "📸 <b>Dorining rasmini yuboring (Majburiy):</b>",
     "",
-    "Dorining qutisi yoki flakoni aniq ko'rinadigan qilib rasmga oling.",
-    "Keyin nomini, turini va qo'llanishini kiritasiz.",
+    "Dorining qutisi yoki flakoni aniq ko'rinadigan qilib rasmga oling yoki galereyadan yuboring.",
+    "Rasm mahsulotlar kartochkasida to'liq va sifatli moslashib (fill/cover) ko'rsatiladi.",
   ].join("\n");
 }
 

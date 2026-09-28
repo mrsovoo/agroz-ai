@@ -626,7 +626,7 @@ export default function MarketClient() {
           )}
         </div>
       ) : (
-        <div className="mt-4 grid grid-cols-2 gap-3.5">
+        <div className="mt-4 grid grid-cols-2 gap-2.5 sm:gap-3.5 sm:grid-cols-3 md:grid-cols-3 web:grid-cols-4">
           {displayCards.map((c) => (
             <ProductCard
               key={`${c.pharmacy.id}:${c.medicine.id}`}

@@ -7,44 +7,46 @@ import sharp from "sharp";
  * keltiriladi: nisbati saqlanadi, yetmay qolgan joy **oq fon** bilan to'ldiriladi,
  * JPEG qilib siqiladi — natijada odatda 100–300 KB atrofida.
  */
-export const MEDICINE_PHOTO_WIDTH = 1080;
-export const MEDICINE_PHOTO_HEIGHT = 1450;
-export const MEDICINE_PHOTO_QUALITY = 82;
+export const MEDICINE_PHOTO_WIDTH = 1200;
+export const MEDICINE_PHOTO_HEIGHT = 1200;
+export const MEDICINE_PHOTO_QUALITY = 85;
 
 /** Maksimal rasm hajmi (bayt) — bazaga yozishdan oldin. */
 const MAX_PROCESSED_BYTES = 900 * 1024;
 
 /**
- * Rasimni 1080×1450 o'lchamga keltiradi:
- * • nisbati saqlanadi (contain), yetmay qolgan joyga oq fon;
- * • JPEG sifat 82 bilan siqiladi, 900 KB dan kattarsa sifat pasaytiriladi;
- * • ulanish ma'lumotlari (EXIF) olib tashlanadi.
- *
- * Xatolik bo'lsa `null` qaytaradi — chaqiruvchi tomonda eski usulda davom etiladi.
+ * Rasmni moslashtiradi:
+ * • EXIF bo'yicha to'g'ri buriladi (.rotate()) — telefon orqali tik/yotiq olingan rasmlar uchun;
+ * • Sun'iy oq fon (letterbox white bars) qo'shilmaydi (fit: 'inside') — haqiqiy mahsulot tasviri toza saqlanadi;
+ * • Katta rasmlar 1200x1200px ichiga mutanosib ravishda keltiriladi;
+ * • JPEG sifatida siqiladi.
  */
 export async function normalizeMedicinePhoto(
   input: ArrayBuffer | Uint8Array,
 ): Promise<{ base64: string; sizeBytes: number } | null> {
   try {
-    const resize = {
-      width: MEDICINE_PHOTO_WIDTH,
-      height: MEDICINE_PHOTO_HEIGHT,
-      fit: "contain" as const,
-      // Mayda rasmlar sifatini saqlash uchun kattalashtirmaymiz — oq canvas markazida qoladi.
-      withoutEnlargement: true,
-      background: "#ffffff",
-    };
-
     let output = await sharp(input, { failOn: "none" })
-      .resize(resize)
+      .rotate()
+      .resize({
+        width: MEDICINE_PHOTO_WIDTH,
+        height: MEDICINE_PHOTO_HEIGHT,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
       .jpeg({ quality: MEDICINE_PHOTO_QUALITY, mozjpeg: true })
       .toBuffer();
 
     // Hali ham 900 KB dan katta bo'lsa — sifatni bosqichma-bosqich pasaytirish.
-    for (const quality of [70, 60, 50, 40]) {
+    for (const quality of [75, 65, 55, 45]) {
       if (output.byteLength <= MAX_PROCESSED_BYTES) break;
       output = await sharp(input, { failOn: "none" })
-        .resize(resize)
+        .rotate()
+        .resize({
+          width: MEDICINE_PHOTO_WIDTH,
+          height: MEDICINE_PHOTO_HEIGHT,
+          fit: "inside",
+          withoutEnlargement: true,
+        })
         .jpeg({ quality, mozjpeg: true })
         .toBuffer();
     }
