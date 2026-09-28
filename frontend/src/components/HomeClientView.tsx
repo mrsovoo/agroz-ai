@@ -6,6 +6,7 @@ import AgrozLogo from "@/components/AgrozLogo";
 import NotificationBell from "@/components/NotificationBell";
 import WeatherCard from "@/components/WeatherCard";
 import SpecialistCallModal from "@/components/SpecialistCallModal";
+import ProductCard from "@/components/ProductCard";
 import {
   loadCart,
   saveCart,
@@ -20,10 +21,13 @@ import { Sparkles, Minus, Plus } from "lucide-react";
 export type HomeMedicine = {
   id: number;
   name: string;
+  type?: string;
   usage?: string | null;
   price: number | null;
+  stockUnit?: string | null;
   hasPhoto?: boolean;
   photoUrl?: string | null;
+  photoVersion?: string | null;
   pharmacyId?: number;
   pharmacyName?: string;
   pharmacyPhone?: string;
@@ -148,94 +152,28 @@ export default function HomeClientView({
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3.5">
-            {medicines.map((med, idx) => {
-              const qty = quantities[med.id] || 0;
-              return (
-                <div
-                  key={med.id || idx}
-                  className="flex flex-col justify-between rounded-[24px] bg-[#f8f9fa] border border-neutral-100 p-3 shadow-2xs transition active:scale-[0.98]"
-                >
-                  <div>
-                    {/* Rasm joyi — rasmda toza oq blok */}
-                    <div className="relative mb-2.5 flex h-[135px] w-full items-center justify-center overflow-hidden rounded-[18px] bg-white border border-neutral-100/80">
-                      {med.photoUrl ? (
-                        <img
-                          src={med.photoUrl}
-                          alt={med.name}
-                          className="h-full w-full object-contain p-2"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-white" />
-                      )}
-                    </div>
-
-                    {/* Nomi */}
-                    <h3 className="text-[15px] font-black leading-tight text-neutral-900 line-clamp-1">
-                      {med.name}
-                    </h3>
-
-                    {/* Tavsifi */}
-                    {med.usage && (
-                      <p className="mt-1 text-[11.5px] leading-tight text-neutral-500 line-clamp-2">
-                        {med.usage}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="mt-3">
-                    {/* Narxi */}
-                    <p className="text-[15px] font-black text-neutral-900">
-                      {formatPrice(med.price)}
-                    </p>
-
-                    {/* + Savatga yoki - 1 + tugmasi */}
-                    <div className="mt-2">
-                      {qty > 0 ? (
-                        <div className="flex h-10 w-full items-center justify-between rounded-full bg-[#eaf5e1] border border-[#039e1e]/30 px-1 text-[#039e1e]">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              changeQty(med, -1);
-                            }}
-                            className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#039e1e] shadow-xs active:scale-90 transition font-black"
-                            aria-label="Kamaytirish"
-                          >
-                            <Minus size={14} strokeWidth={3} />
-                          </button>
-
-                          <span className="text-[13px] font-black tracking-tight select-none">
-                            {qty} ta
-                          </span>
-
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              changeQty(med, 1);
-                            }}
-                            className="flex h-8 w-8 items-center justify-center rounded-full bg-[#039e1e] text-white shadow-xs active:scale-90 transition font-black"
-                            aria-label="Ko'paytirish"
-                          >
-                            <Plus size={14} strokeWidth={3} />
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => changeQty(med, 1)}
-                          className="flex w-full items-center justify-center rounded-full bg-[#039e1e] hover:bg-[#028518] py-2.5 text-[13px] font-bold text-white shadow-2xs active:scale-95 transition-all"
-                        >
-                          + Savatga
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {medicines.map((med, idx) => (
+              <ProductCard
+                key={med.id || idx}
+                medicine={{
+                  id: med.id,
+                  name: med.name,
+                  price: med.price,
+                  type: med.type || "general",
+                  hasPhoto: Boolean(med.hasPhoto || med.photoUrl),
+                  photoVersion: med.photoVersion,
+                  usage: med.usage ?? null,
+                  stockUnit: med.stockUnit,
+                  status: "bor",
+                }}
+                pharmacy={{
+                  id: med.pharmacyId || 1,
+                  name: med.pharmacyName || "Agroz Dorixona",
+                  phone: med.pharmacyPhone || "",
+                  address: med.pharmacyAddress || null,
+                }}
+              />
+            ))}
           </div>
         )}
       </section>

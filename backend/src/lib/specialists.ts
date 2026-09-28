@@ -380,7 +380,7 @@ export async function listSpecialists(opts: {
   const rows = await db
     .select()
     .from(specialists)
-    .where(and(eq(specialists.isActive, true), eq(specialists.isApproved, true)));
+    .where(eq(specialists.isActive, true));
   const [medicineRows, ratingRows] = await Promise.all([
     db.select().from(specialistMedicines),
     db
@@ -395,7 +395,7 @@ export async function listSpecialists(opts: {
 
   const bySpecialist = new Map<number, MedicineDto[]>();
   for (const m of medicineRows) {
-    if (m.status !== "bor") {
+    if (m.status === "yoq") {
       continue;
     }
     const hasPhoto = Boolean(m.photoFileId || m.photoData);

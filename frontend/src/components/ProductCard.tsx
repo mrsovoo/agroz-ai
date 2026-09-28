@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Plus, Minus, Heart, Pill, Sprout, Syringe, MapPin, Star, Bell } from "lucide-react";
 import FadeImage from "@/components/FadeImage";
 import {
@@ -65,7 +66,6 @@ export default function ProductCard({
 }) {
   const [liked, setLiked] = useState(false);
   const [qty, setQty] = useState(0);
-  const [notified, setNotified] = useState(false);
 
   useEffect(() => {
     const sync = () => {
@@ -140,22 +140,72 @@ export default function ProductCard({
     notifyCartChanged();
   }
 
+  const router = useRouter();
   const href = linkHref ?? `/dori/${medicine.id}`;
-  const shortCity = getShortCity(pharmacy.address, pharmacy.name);
-  const medRating = calculateMedicineRating(medicine.id);
-  const isOutOfStock =
-    (medicine.stock !== null && medicine.stock !== undefined && medicine.stock <= 0) ||
-    medicine.status === "yoq";
-  const isLowStock =
-    medicine.stock !== null &&
-    medicine.stock !== undefined &&
-    medicine.stock > 0 &&
-    medicine.stock <= 3;
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Agar foydalanuvchi tugmani (savatga qo'shish, ayirish va h.k.) bosgan bo'lsa, sahifaga o'tmaydi
+    if ((e.target as HTMLElement).closest("button")) {
+      return;
+    }
+    router.push(href);
+  };
+
+  const renderPlaceholder = () => {
+    if (medicine.type === "crop") {
+      return (
+        <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-emerald-50 via-[#f0fae8] to-green-100/60 p-3 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-xs border border-emerald-100/80">
+            <Sprout size={28} className="text-[#039e1e]" />
+          </div>
+          <span className="text-[11px] font-bold text-emerald-900/80 tracking-tight">Ekin dorisi</span>
+        </div>
+      );
+    }
+    if (medicine.type === "animal") {
+      return (
+        <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-amber-50 via-[#fff8eb] to-yellow-100/60 p-3 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-xs border border-amber-100/80">
+            <Syringe size={28} className="text-amber-600" />
+          </div>
+          <span className="text-[11px] font-bold text-amber-900/80 tracking-tight">Veterinariya</span>
+        </div>
+      );
+    }
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-neutral-50 via-neutral-100 to-neutral-200/50 p-3 text-center">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-xs border border-neutral-200/60">
+          <Pill size={28} className="text-neutral-500" />
+        </div>
+        <span className="text-[11px] font-bold text-neutral-600 tracking-tight">Agro dori</span>
+      </div>
+    );
+  };
 
   return (
-    <div className="group flex h-full w-full flex-col justify-between rounded-[22px] bg-[#f8f9fa] border border-neutral-100 p-2.5 sm:p-3 shadow-2xs transition-all duration-200 hover:shadow-xs active:scale-[0.98]">
-      {/* Rasm maydoni — to'liq moslashuvchan, w va h razmerga to'liq (fill/cover) sig'adigan kvadrat blok */}
-      <div className="relative mb-2.5 flex aspect-square w-full items-center justify-center overflow-hidden rounded-[16px] bg-neutral-100/80 border border-neutral-200/60">
+    <div
+      onClick={handleCardClick}
+      className="group relative flex h-full w-full cursor-pointer flex-col justify-between rounded-[22px] bg-[#f8f9fa] border border-neutral-100 p-2.5 sm:p-3 shadow-2xs transition-all duration-200 hover:shadow-xs hover:border-neutral-200/80 active:scale-[0.99]"
+    >
+      {/* Rasm maydoni — balandligi oshirilgan (aspect-[3/4]), rasm va tur ikonkasi aniq va katta ko'rinadi */}
+      <div className="relative mb-2.5 flex aspect-[3/4] w-full items-center justify-center overflow-hidden rounded-[16px] bg-neutral-100/80 border border-neutral-200/60">
+        {/* Tur ikonkasi va belgisi */}
+        <div className="absolute top-2 left-2 z-10 pointer-events-none">
+          {medicine.type === "crop" ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-bold text-emerald-800 shadow-2xs border border-emerald-200/60">
+              <Sprout size={11} className="text-[#039e1e]" /> Ekin
+            </span>
+          ) : medicine.type === "animal" ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-bold text-amber-900 shadow-2xs border border-amber-200/60">
+              <Syringe size={11} className="text-amber-600" /> Hayvon
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-bold text-neutral-700 shadow-2xs border border-neutral-200/60">
+              <Pill size={11} className="text-neutral-500" /> Umumiy
+            </span>
+          )}
+        </div>
+
         <Link href={href} aria-label={medicine.name} className="block h-full w-full">
           {medicine.hasPhoto ? (
             <FadeImage
@@ -163,16 +213,10 @@ export default function ProductCard({
               alt={medicine.name}
               className="h-full w-full transition-transform duration-300 group-hover:scale-105"
               fit="cover"
-              fallback={
-                <div className="flex h-full w-full items-center justify-center bg-neutral-100 text-neutral-400">
-                  <Pill size={26} />
-                </div>
-              }
+              fallback={renderPlaceholder()}
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-neutral-100 text-neutral-400">
-              <Pill size={26} />
-            </div>
+            renderPlaceholder()
           )}
         </Link>
       </div>
@@ -199,11 +243,17 @@ export default function ProductCard({
         </div>
 
         <div className="mt-2.5">
-          {/* Narxi */}
-          <div className="flex items-baseline justify-between">
-            <p className="text-[14px] sm:text-[15px] font-black text-neutral-900 tracking-tight">
-              {new Intl.NumberFormat("uz-UZ").format(medicine.price || 0).replace(/\s/g, ".")} so&apos;m
-            </p>
+          {/* Narxi (agar narxi kiritilmagan bo'lsa "Kelishiladi") */}
+          <div className="flex items-baseline justify-between gap-1">
+            {medicine.price && medicine.price > 0 ? (
+              <p className="text-[14px] sm:text-[15px] font-black text-neutral-900 tracking-tight">
+                {new Intl.NumberFormat("uz-UZ").format(medicine.price).replace(/\s/g, ".")} so&apos;m
+              </p>
+            ) : (
+              <span className="inline-flex items-center rounded-lg bg-neutral-200/70 px-2 py-0.5 text-[11.5px] sm:text-[12px] font-extrabold text-neutral-700 tracking-tight">
+                Kelishiladi
+              </span>
+            )}
             {medicine.stockUnit && (
               <span className="text-[11px] text-neutral-400 font-medium">
                 / {medicine.stockUnit}
@@ -259,8 +309,9 @@ export default function ProductCard({
               </button>
             )}
           </div>
+        </div>
       </div>
-    </div>
     </div>
   );
 }
+

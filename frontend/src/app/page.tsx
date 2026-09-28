@@ -9,7 +9,7 @@ export default async function HomePage() {
 
   try {
     const [medRes, specRes] = await Promise.all([
-      fetch(apiUrl("/api/medicines?limit=4"), { next: { revalidate: 10 } }),
+      fetch(apiUrl("/api/medicines?limit=24"), { next: { revalidate: 10 } }),
       fetch(apiUrl("/api/specialists"), { next: { revalidate: 10 } }),
     ]);
 
@@ -19,9 +19,12 @@ export default async function HomePage() {
         initialMedicines = data.map((m: any) => ({
           id: m.id,
           name: m.name,
+          type: m.type,
           usage: m.usage,
           price: m.price,
+          stockUnit: m.stockUnit,
           hasPhoto: m.hasPhoto,
+          photoVersion: m.photoVersion,
           photoUrl: m.hasPhoto ? apiUrl(`/api/medicines/${m.id}/photo`) : null,
           pharmacyId: m.pharmacyId,
           pharmacyName: m.pharmacyName,
