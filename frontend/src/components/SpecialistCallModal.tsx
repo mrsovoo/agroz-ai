@@ -14,11 +14,15 @@ export default function SpecialistCallModal({
 }: {
   specialist: {
     id: number;
+    callId?: number | string | null;
+    status?: string | null;
     name: string;
     organization?: string | null;
     specialty?: string | null;
     phone: string;
     role?: string | null;
+    customerName?: string | null;
+    customerAddress?: string | null;
   } | null;
   isOpen: boolean;
   onClose: () => void;
@@ -40,7 +44,27 @@ export default function SpecialistCallModal({
   useEffect(() => {
     if (!isOpen || !specialist) return;
 
-    // Yangi ID generatsiya qilish (501 dan boshlab)
+    // Agar mavjud chaqiruv tarixidan ochilgan bo'lsa (callId allaqachon mavjud)
+    if (specialist.callId) {
+      const numId = Number(specialist.callId) || 501;
+      setCallId(numId);
+      const st = specialist.status;
+      if (st === "completed" || st === "bajarildi") {
+        setCallProgress(3);
+      } else if (st === "tasdiqlandi" || st === "qabul_qilindi") {
+        setCallProgress(2);
+      } else {
+        setCallProgress(1);
+      }
+      if (specialist.customerName) setName(specialist.customerName);
+      if (specialist.customerAddress) setAddress(specialist.customerAddress);
+      setRatingSubmitted(false);
+      setReviewComment("");
+      setRatingStars(5);
+      return;
+    }
+
+    // Yangi chaqiruv yaratish:
     const storedLastId = localStorage.getItem("agroz_last_call_id");
     const nextId = storedLastId ? Math.max(501, Number(storedLastId) + 1) : 501;
     setCallId(nextId);
@@ -142,10 +166,6 @@ export default function SpecialistCallModal({
       clearInterval(interval);
     };
   }, [isOpen, callId]);
-
-  const handleNextStep = () => {
-    setCallProgress((prev) => (prev === 1 ? 2 : prev === 2 ? 3 : 1));
-  };
 
   const handleBack = useCallback(() => {
     onClose();
@@ -325,17 +345,6 @@ export default function SpecialistCallModal({
               </p>
             </div>
           </div>
-        </div>
-
-        {/* 6. Mutaxassis sifatida: keyingi holat tugmasi (faqat test/demo uchun) */}
-        <div className="mt-8 pt-4">
-          <button
-            type="button"
-            onClick={handleNextStep}
-            className="w-full rounded-2xl border border-[#039e1e] bg-white py-3.5 text-center text-[15px] font-bold text-[#039e1e] hover:bg-[#039e1e]/10 active:scale-[0.98] transition shadow-2xs"
-          >
-            Mutaxassis sifatida: keyingi holat
-          </button>
         </div>
       </div>
     </div>
