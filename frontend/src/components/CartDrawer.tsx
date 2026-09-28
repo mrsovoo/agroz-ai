@@ -20,6 +20,7 @@ import {
   Navigation,
   Sparkles,
   ArrowRight,
+  ChevronRight,
   User,
 } from "lucide-react";
 import {
@@ -99,6 +100,44 @@ export default function CartDrawer() {
     items?: { name: string; qty: number }[];
     customerAddress?: string | null;
   } | null>(null);
+
+  // Foydalanuvchining avvalgi va joriy buyurtmalari
+  const [userOrders, setUserOrders] = useState<any[]>([]);
+  const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
+
+  const fetchUserOrders = useCallback(async (phone?: string | null) => {
+    try {
+      const url = phone
+        ? apiUrl(`/api/profile/activity?phone=${encodeURIComponent(phone)}`)
+        : apiUrl("/api/profile/activity");
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.ok && Array.isArray(data.orders)) {
+          setUserOrders(data.orders);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const allOrders = useMemo(() => {
+    const list = [...userOrders];
+    if (successOrder && !list.some((o) => o.id === successOrder.id)) {
+      list.unshift({
+        id: successOrder.id,
+        totalSum: successOrder.total,
+        status: "yangi",
+        deliveryType: successOrder.deliveryType,
+        pharmacyName: successOrder.pharmacyName,
+        customerAddress: successOrder.customerAddress,
+        items: successOrder.items || [],
+        createdAt: new Date().toISOString(),
+      });
+    }
+    return list;
+  }, [userOrders, successOrder]);
 
   // Tavsiya etilgan dorilar va xaridor buyurtma statistikasi
   const [recommendedMeds, setRecommendedMeds] = useState<any[]>([]);
@@ -252,6 +291,7 @@ export default function CartDrawer() {
       .then((data) => {
         if (data?.ok && data.user) {
           setCurrentUser(data.user);
+          fetchUserOrders(data.user.phone);
         } else {
           const tgUser = getTelegramUser();
           if (tgUser) {
@@ -264,11 +304,15 @@ export default function CartDrawer() {
           } else {
             setCurrentUser(null);
           }
+          fetchUserOrders(null);
         }
       })
-      .catch(() => setCurrentUser(null))
+      .catch(() => {
+        setCurrentUser(null);
+        fetchUserOrders(null);
+      })
       .finally(() => setUserLoading(false));
-  }, [open]);
+  }, [open, fetchUserOrders]);
 
   // Telegram Mini App orqaga qaytish tugmasi
   useEffect(() => {
@@ -410,6 +454,8 @@ export default function CartDrawer() {
       };
       setSuccessOrder(orderInfo);
       saveLastOrder(orderInfo);
+      setExpandedOrderId(orderInfo.id);
+      fetchUserOrders(currentUser?.phone || `+998${cleanPhoneDigits}`);
       recordOrderItems(selectedLines.map((l) => ({ type: l.medicine.type })));
       setOrderPrefs(getUserOrderPrefs());
 
@@ -489,61 +535,100 @@ export default function CartDrawer() {
 
         {/* Agar savat bo'sh bo'lsa (yoki buyurtma qabul qilingan bo'lsa) */}
         {!cart || cart.lines.length === 0 ? (
-          <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4">
-            {/* 1. Buyurtma qabul qilingan bo'lsa kartochkasi */}
-            {successOrder ? (
-              <div className="space-y-4">
-                <div className="rounded-[24px] border border-neutral-200/90 bg-white p-4 shadow-sm">
-                  <div className="flex justify-end mb-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSuccessOrder(null);
-                        clearLastOrder();
-                      }}
-                      className="rounded-full bg-neutral-100 px-3 py-1 text-[11.5px] font-bold text-neutral-600 hover:bg-neutral-200 transition"
-                    >
-                      Yopish
-                    </button>
-                  </div>
+          <div className="flex-1 min-h-0 overflow-y-auto px-5 py-6 space-y-6">
+            {/* 1. Savat bo'sh holati va "Dorilarni ko'rish" tugmasi (Foydalanuvchi yuborgan rasmga 1:1) */}
+            <div className="flex flex-col items-center justify-center py-4 text-center">
+              <h3 className="text-[20px] font-black text-neutral-900 tracking-tight">
+                Savatingiz bo&apos;sh
+              </h3>
+              <p className="mt-1 text-[13.5px] text-neutral-500 font-medium">
+                Dorilarni tanlab, buyurtma bering.
+              </p>
+              <Link
+                href="/dorilar"
+                onClick={close}
+                className="mt-4 inline-flex items-center justify-center rounded-full border border-[#22c55e] px-7 py-2 text-[14px] font-bold text-[#22c55e] hover:bg-[#22c55e]/10 active:scale-95 transition shadow-2xs"
+              >
+                Dorilarni ko&apos;rish
+              </Link>
+            </div>
 
-                  <OrderTrackingStatusCard
-                    orderId={successOrder.id}
-                    status="yangi"
-                    totalSum={successOrder.total}
-                    items={successOrder.items || []}
-                    deliveryType={successOrder.deliveryType}
-                    customerAddress={successOrder.customerAddress}
-                    pharmacyName={successOrder.pharmacyName}
-                  />
+            {/* 2. Buyurtmalarim bo'limi (Mockupdagi #1001 · 85 000 so'm / Yuborildi kartochkasi) */}
+            {allOrders.length > 0 && (
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between px-0.5">
+                  <h4 className="text-[18px] font-black text-neutral-900 tracking-tight">
+                    Buyurtmalarim
+                  </h4>
+                  <span className="text-[12px] font-semibold text-neutral-400">
+                    {allOrders.length} ta
+                  </span>
+                </div>
 
-                  <div className="mt-4 pt-3 border-t border-neutral-100 flex gap-2">
-                    <Link
-                      href="/profil"
-                      onClick={() => {
-                        setSuccessOrder(null);
-                        clearLastOrder();
-                        setOpen(false);
-                      }}
-                      className="flex-1 flex items-center justify-center gap-1.5 rounded-2xl bg-[#039e1e] py-3 text-[13.5px] font-bold text-white shadow-xs hover:bg-[#028519] transition"
-                    >
-                      Profilga o&apos;tish va kuzatish
-                    </Link>
-                  </div>
+                <div className="space-y-2.5">
+                  {allOrders.map((order) => {
+                    const isExpanded = expandedOrderId === order.id;
+                    const statusLabel =
+                      order.status === "yangi"
+                        ? "Yuborildi"
+                        : order.status === "tasdiqlandi"
+                        ? "Qabul qilindi"
+                        : order.status === "yolda"
+                        ? "Yo'lda"
+                        : order.status === "yetkazildi"
+                        ? (order.deliveryType === "pickup" ? "Olib ketildi" : "Yetkazildi")
+                        : order.status === "bekor"
+                        ? "Bekor qilingan"
+                        : "Yuborildi";
+
+                    const formattedTotal = Number(order.totalSum || order.total || 0)
+                      .toLocaleString("ru-RU")
+                      .replace(/\u00a0/g, " ");
+
+                    return (
+                      <div
+                        key={order.id}
+                        className="overflow-hidden rounded-2xl bg-[#1c1c1e] text-white shadow-md transition-all border border-neutral-800"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
+                          className="flex w-full items-center justify-between p-4 text-left hover:bg-[#252528] active:scale-[0.99] transition"
+                        >
+                          <div>
+                            <p className="text-[16px] font-bold text-white tracking-tight">
+                              #{order.id} · {formattedTotal} so&apos;m
+                            </p>
+                            <p className="text-[13px] text-neutral-400 font-medium mt-0.5">
+                              {statusLabel}
+                            </p>
+                          </div>
+                          <ChevronRight
+                            size={20}
+                            className={`text-neutral-400 transition-transform duration-200 ${
+                              isExpanded ? "rotate-90 text-[#22c55e]" : ""
+                            }`}
+                          />
+                        </button>
+
+                        {/* Bosilganda 4 bosqichli to'liq kuzatuv paneli ochiladi */}
+                        {isExpanded && (
+                          <div className="border-t border-white/10 bg-[#252528] p-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                            <OrderTrackingStatusCard
+                              orderId={order.id}
+                              status={order.status || "yangi"}
+                              totalSum={Number(order.totalSum || order.total || 0)}
+                              items={order.items || []}
+                              deliveryType={order.deliveryType}
+                              customerAddress={order.customerAddress}
+                              pharmacyName={order.pharmacyName}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
-            ) : (
-              /* Bo'sh savat xabari */
-              <div className="flex flex-col items-center justify-center rounded-2xl bg-neutral-50/80 border border-neutral-200/80 p-5 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-200/60 text-neutral-500 mb-2">
-                  <ShoppingCart size={24} />
-                </div>
-                <h3 className="text-[15px] font-bold text-neutral-800">
-                  Savatingiz hozircha bo&apos;sh
-                </h3>
-                <p className="mt-0.5 text-[12px] text-neutral-500 max-w-xs">
-                  Pastdagi tavsiya etilgan dori vositalaridan tanlab, xaridingizni boshlang.
-                </p>
               </div>
             )}
 
