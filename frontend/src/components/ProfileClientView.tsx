@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronRight, LogOut, Check } from "lucide-react";
 import OrderTrackingStatusCard from "@/components/OrderTrackingStatusCard";
-import SpecialistCallModal from "@/components/SpecialistCallModal";
 import { getTelegramUser } from "@/lib/telegram";
 import { apiUrl } from "@/lib/api-config";
 import { loadLastOrder } from "@/lib/cart-store";
@@ -54,7 +53,7 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
   const [orders, setOrders] = useState<any[]>([]);
   const [calls, setCalls] = useState<any[]>([]);
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
-  const [selectedCallForModal, setSelectedCallForModal] = useState<any | null>(null);
+  const [expandedCallId, setExpandedCallId] = useState<string | number | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -282,12 +281,16 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
 
         <div className="space-y-2.5">
           {displayCalls.map((call) => {
+            const isExpanded = expandedCallId === call.id;
+            const isDone = call.status === "completed" || call.status === "bajarildi";
+            const isAccepted = call.status === "tasdiqlandi" || call.status === "qabul_qilindi" || isDone;
+
             const statusLabel =
               call.status === "pending" || call.status === "yangi"
                 ? "So'rov yuborildi"
                 : call.status === "tasdiqlandi" || call.status === "qabul_qilindi"
                 ? "Qabul qilindi"
-                : call.status === "completed" || call.status === "bajarildi"
+                : isDone
                 ? "Yakunlandi"
                 : "So'rov yuborildi";
 
@@ -298,26 +301,107 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
               >
                 <button
                   type="button"
-                  onClick={() => {
-                    setSelectedCallForModal({
-                      id: Number(call.specialistId || 1),
-                      name: call.specialistName || "B. Rahmonov",
-                      specialty: call.specialistSpecialty || "Agronom",
-                      phone: call.phone || "+998 90 123 45 67",
-                    });
-                  }}
+                  onClick={() => setExpandedCallId(isExpanded ? null : call.id)}
                   className="flex w-full items-center justify-between p-4 text-left hover:bg-neutral-50 active:scale-[0.99] transition"
                 >
                   <div>
                     <p className="text-[16px] font-bold text-neutral-900 tracking-tight">
-                      {call.specialistSpecialty ? `${call.specialistSpecialty} ` : ""}{call.specialistName || "Agronom B. Rahmonov"}
+                      #{call.id} · {call.specialistSpecialty ? `${call.specialistSpecialty} ` : ""}{call.specialistName || "Agronom B. Rahmonov"}
                     </p>
                     <p className="text-[13px] text-neutral-500 font-medium mt-0.5">
                       {statusLabel}
                     </p>
                   </div>
-                  <ChevronRight size={20} className="text-neutral-400" />
+                  <ChevronRight
+                    size={20}
+                    className={`text-neutral-400 transition-transform duration-200 ${
+                      isExpanded ? "rotate-90 text-[#039e1e]" : ""
+                    }`}
+                  />
                 </button>
+
+                {/* Bosilganda faqat tarix va 3 bosqichli status ma'lumotlari ochiladi (qayta chaqiruv so'rovi yuborilmaydi) */}
+                {isExpanded && (
+                  <div className="border-t border-neutral-100 bg-neutral-50/70 p-4 animate-in fade-in duration-200 space-y-4">
+                    {/* 3 ta bosqich (faqat tarixni ko'rish uchun) */}
+                    <div className="rounded-2xl bg-white border border-neutral-200/90 p-4 space-y-3.5 shadow-2xs">
+                      {/* 1-bosqich: So'rov yuborildi */}
+                      <div className="relative flex items-center gap-3">
+                        <div className="absolute left-[13px] top-[26px] h-4 w-[2px] bg-[#039e1e]" />
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#039e1e] text-white shadow-xs">
+                          <Check size={16} strokeWidth={3} />
+                        </div>
+                        <span className="text-[14.5px] font-bold text-neutral-900">
+                          So&apos;rov yuborildi
+                        </span>
+                      </div>
+
+                      {/* 2-bosqich: Qabul qilindi */}
+                      <div className="relative flex items-center gap-3">
+                        <div
+                          className={`absolute left-[13px] top-[26px] h-4 w-[2px] ${
+                            isDone ? "bg-[#039e1e]" : "bg-neutral-200"
+                          }`}
+                        />
+                        {isAccepted ? (
+                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#039e1e] text-white shadow-xs">
+                            <Check size={16} strokeWidth={3} />
+                          </div>
+                        ) : (
+                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-neutral-300 bg-neutral-100" />
+                        )}
+                        <span
+                          className={`text-[14.5px] ${
+                            isAccepted ? "font-bold text-neutral-900" : "font-medium text-neutral-400"
+                          }`}
+                        >
+                          Qabul qilindi
+                        </span>
+                      </div>
+
+                      {/* 3-bosqich: Yakunlandi */}
+                      <div className="relative flex items-center gap-3">
+                        {isDone ? (
+                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#039e1e] text-white shadow-xs">
+                            <Check size={16} strokeWidth={3} />
+                          </div>
+                        ) : (
+                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-neutral-300 bg-neutral-100" />
+                        )}
+                        <span
+                          className={`text-[14.5px] ${
+                            isDone ? "font-bold text-neutral-900" : "font-medium text-neutral-400"
+                          }`}
+                        >
+                          Yakunlandi
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Qo'shimcha ma'lumotlar bloki */}
+                    <div className="rounded-2xl bg-white border border-neutral-200/90 p-3.5 text-[13.5px] text-neutral-600 space-y-1.5 shadow-2xs">
+                      {call.phone && (
+                        <p className="flex items-center justify-between">
+                          <span className="text-neutral-500">Mutaxassis telefoni:</span>
+                          <a href={`tel:${call.phone.replace(/[^\d+]/g, "")}`} className="font-bold text-[#039e1e] hover:underline">
+                            {call.phone}
+                          </a>
+                        </p>
+                      )}
+                      {call.address && (
+                        <p className="flex items-center justify-between">
+                          <span className="text-neutral-500">Manzil:</span>
+                          <span className="font-semibold text-neutral-800 text-right">{call.address}</span>
+                        </p>
+                      )}
+                      {call.problem && (
+                        <p className="pt-1 text-[12.5px] text-neutral-500 border-t border-neutral-100">
+                          Masala: <span className="text-neutral-700 font-medium">{call.problem}</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -384,16 +468,6 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
             </div>
           </div>
         </div>
-      )}
-
-      {/* Agar chaqiruv bosilsa, 3-bosqichli chaqiruv status ekranini ochish */}
-      {selectedCallForModal && (
-        <SpecialistCallModal
-          specialist={selectedCallForModal}
-          isOpen={!!selectedCallForModal}
-          onClose={() => setSelectedCallForModal(null)}
-          onSuccess={() => setSelectedCallForModal(null)}
-        />
       )}
     </div>
   );
