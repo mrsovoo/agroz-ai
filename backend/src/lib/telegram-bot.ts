@@ -17,7 +17,7 @@ export type InlineKeyboard = {
 };
 
 export type ReplyKeyboard = {
-  keyboard: { text: string; request_contact?: boolean; request_location?: boolean }[][];
+  keyboard: { text: string; request_contact?: boolean; request_location?: boolean; web_app?: { url: string } }[][];
   resize_keyboard?: boolean;
   one_time_keyboard?: boolean;
   remove_keyboard?: boolean;
@@ -112,6 +112,23 @@ export function agrozGoKeyboard(): InlineKeyboard | undefined {
   }
   return {
     inline_keyboard: [[{ text: "🌿 AgrozGo ga kirish", web_app: { url } }]],
+  };
+}
+
+/** Ro'yxatdan to'liq o'tgan foydalanuvchi uchun asosiy doimiy Reply menyu */
+export function registeredUserMenuKeyboard(): ReplyKeyboard {
+  const url = appBaseUrl() || "https://agroz-ai.vercel.app";
+  const webAppBtn = url.startsWith("https://")
+    ? { text: "🌿 AgrozGo ga kirish", web_app: { url } }
+    : { text: "🌿 AgrozGo ga kirish" };
+
+  return {
+    keyboard: [
+      [webAppBtn],
+      [{ text: "📦 Buyurtmalarim" }, { text: "👨‍⚕️ Chaqiruvlarim" }],
+      [{ text: "👤 Ma'lumotlarim" }, { text: "🗑 Profilni o'chirish" }],
+    ],
+    resize_keyboard: true,
   };
 }
 
@@ -241,6 +258,7 @@ export function contactRequestKeyboard(): ReplyKeyboard {
     one_time_keyboard: true,
   };
 }
+
 
 export async function deleteMessage(chatId: number, messageId: number): Promise<boolean> {
   const result = await callBot("deleteMessage", {

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { ChevronRight, LogOut, Check } from "lucide-react";
 import OrderTrackingStatusCard from "@/components/OrderTrackingStatusCard";
 import { getTelegramUser } from "@/lib/telegram";
-import { apiUrl } from "@/lib/api-config";
+import { apiUrl, apiFetch } from "@/lib/api-config";
 import { loadLastOrder } from "@/lib/cart-store";
 import { getSpecialistCalls } from "@/lib/specialist-calls";
 
@@ -20,33 +20,6 @@ type UserProfile = {
   telegramId?: number | null;
 };
 
-const DEFAULT_ORDERS = [
-  {
-    id: 1001,
-    totalSum: 85000,
-    status: "yangi",
-    deliveryType: "delivery",
-    pharmacyName: "Agro Dorixona",
-    customerAddress: "Toshkent viloyati, Zangiota tumani",
-    items: [{ name: "Bioglobin", qty: 2 }],
-    createdAt: new Date().toISOString(),
-  },
-];
-
-const DEFAULT_CALLS = [
-  {
-    id: "501",
-    specialistId: 1,
-    specialistName: "Agronom B. Rahmonov",
-    specialistSpecialty: "Agronom",
-    phone: "+998 90 123 45 67",
-    status: "pending",
-    problem: "Ekin kasalliklari bo'yicha ko'rik",
-    address: "Toshkent viloyati, Zangiota tumani",
-    createdAt: new Date().toISOString(),
-  },
-];
-
 export default function ProfileClientView({ initialUser }: { initialUser?: UserProfile | null }) {
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(initialUser ?? null);
@@ -59,8 +32,8 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
 
   // Profil va real aktivliklarni (buyurtmalar, chaqiruvlar) yuklash
   useEffect(() => {
-    // 1. Profil ma'lumotlarini yuklash
-    fetch(apiUrl("/api/profile"))
+    // 1. Profil ma'lumotlarini yuklash (Telegram ID avtomatik uzatiladi)
+    apiFetch("/api/profile")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.ok && data.user) {
@@ -81,7 +54,7 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
       .catch(() => {});
 
     // 2. Buyurtma va chaqiruvlarni yuklash
-    fetch(apiUrl("/api/profile/activity"))
+    apiFetch("/api/profile/activity")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.ok) {
@@ -92,7 +65,7 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
       .catch(() => {});
   }, []);
 
-  // Mahaliy (local) buyurtma va chaqiruvlarni birlashtirish
+  // Mahaliy (local) buyurtma va chaqiruvlarni birlashtirish (faqat real ma'lumotlar)
   const displayOrders = useMemo(() => {
     const list = [...orders];
     const last = loadLastOrder();
@@ -108,7 +81,7 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
         createdAt: new Date().toISOString(),
       });
     }
-    return list.length > 0 ? list : DEFAULT_ORDERS;
+    return list;
   }, [orders]);
 
   const displayCalls = useMemo(() => {
@@ -119,11 +92,11 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
         list.unshift(lc);
       }
     }
-    return list.length > 0 ? list : DEFAULT_CALLS;
+    return list;
   }, [calls]);
 
   const displayName = user?.name?.trim() || "Sizning ismingiz";
-  const displayPhone = user?.phone || "+998 90 123 45 67";
+  const displayPhone = user?.phone || "Telefon raqam kiritilmagan";
   const authSource = user?.telegramId ? "· Telegramdan" : "· Saytdan";
 
   const displayAddress = useMemo(() => {
@@ -134,7 +107,7 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
       const saved = localStorage.getItem("agroz_customer_address");
       if (saved) return saved;
     } catch {}
-    return "Toshkent viloyati, Zangiota tumani";
+    return "Manzil kiritilmagan";
   }, [user]);
 
   // Ism bosh harflari (SI, SS ...)
@@ -150,9 +123,8 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
   const handleConfirmLogout = async () => {
     setIsLoggingOut(true);
     try {
-      await fetch(apiUrl("/api/auth/logout"), {
-        method: "POST",
-        credentials: "include",
+      await apiFetch("/api/profile", {
+        method: "DELETE",
       });
     } catch {}
 
@@ -172,7 +144,15 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
       }
     } catch {}
 
-    // 3. Ilovani bosh holatga to'liq yangilab ochish
+    // 3. Telegram Mini App oynasini darhol yopish
+    try {
+      const tg = (window as any).Telegram?.WebApp;
+      if (tg && typeof tg.close === "function") {
+        tg.close();
+      }
+    } catch {}
+
+    // 4. Ilovani bosh holatga to'liq yangilab ochish
     window.location.href = "/";
   };
 
@@ -207,70 +187,76 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
           Buyurtmalarim
         </h2>
 
-        <div className="space-y-2.5">
-          {displayOrders.map((order) => {
-            const isExpanded = expandedOrderId === order.id;
-            const formattedTotal = Number(order.totalSum || order.total || 0)
-              .toLocaleString("ru-RU")
-              .replace(/\u00a0/g, " ");
+        {displayOrders.length === 0 ? (
+          <div className="rounded-2xl bg-white border border-neutral-200/90 p-5 text-center text-neutral-500 shadow-2xs">
+            <p className="text-[14.5px] font-medium">Hozircha buyurtmalar mavjud emas</p>
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {displayOrders.map((order) => {
+              const isExpanded = expandedOrderId === order.id;
+              const formattedTotal = Number(order.totalSum || order.total || 0)
+                .toLocaleString("ru-RU")
+                .replace(/\u00a0/g, " ");
 
-            const statusLabel =
-              order.status === "yangi"
-                ? "Yuborildi"
-                : order.status === "tasdiqlandi"
-                ? "Qabul qilindi"
-                : order.status === "yolda"
-                ? "Yo'lda"
-                : order.status === "yetkazildi"
-                ? (order.deliveryType === "pickup" ? "Olib ketildi" : "Yetkazildi")
-                : order.status === "bekor"
-                ? "Bekor qilingan"
-                : "Yuborildi";
+              const statusLabel =
+                order.status === "yangi"
+                  ? "Yuborildi"
+                  : order.status === "tasdiqlandi"
+                  ? "Qabul qilindi"
+                  : order.status === "yolda"
+                  ? "Yo'lda"
+                  : order.status === "yetkazildi"
+                  ? (order.deliveryType === "pickup" ? "Olib ketildi" : "Yetkazildi")
+                  : order.status === "bekor"
+                  ? "Bekor qilingan"
+                  : "Yuborildi";
 
-            return (
-              <div
-                key={order.id}
-                className="overflow-hidden rounded-2xl bg-white border border-neutral-200/90 transition-all shadow-2xs"
-              >
-                <button
-                  type="button"
-                  onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
-                  className="flex w-full items-center justify-between p-4 text-left hover:bg-neutral-50 active:scale-[0.99] transition"
+              return (
+                <div
+                  key={order.id}
+                  className="overflow-hidden rounded-2xl bg-white border border-neutral-200/90 transition-all shadow-2xs"
                 >
-                  <div>
-                    <p className="text-[16px] font-bold text-neutral-900 tracking-tight">
-                      #{order.id} · {formattedTotal} so&apos;m
-                    </p>
-                    <p className="text-[13px] text-neutral-500 font-medium mt-0.5">
-                      {statusLabel}
-                    </p>
-                  </div>
-                  <ChevronRight
-                    size={20}
-                    className={`text-neutral-400 transition-transform duration-200 ${
-                      isExpanded ? "rotate-90 text-[#039e1e]" : ""
-                    }`}
-                  />
-                </button>
-
-                {/* Bosilganda to'liq 4 bosqichli kuzatuv paneli ochiladi */}
-                {isExpanded && (
-                  <div className="border-t border-neutral-100 bg-neutral-50/70 p-4 animate-in fade-in duration-200">
-                    <OrderTrackingStatusCard
-                      orderId={order.id}
-                      status={order.status || "yangi"}
-                      totalSum={Number(order.totalSum || order.total || 0)}
-                      items={order.items || []}
-                      deliveryType={order.deliveryType}
-                      customerAddress={order.customerAddress}
-                      pharmacyName={order.pharmacyName}
+                  <button
+                    type="button"
+                    onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
+                    className="flex w-full items-center justify-between p-4 text-left hover:bg-neutral-50 active:scale-[0.99] transition"
+                  >
+                    <div>
+                      <p className="text-[16px] font-bold text-neutral-900 tracking-tight">
+                        #{order.id} · {formattedTotal} so&apos;m
+                      </p>
+                      <p className="text-[13px] text-neutral-500 font-medium mt-0.5">
+                        {statusLabel}
+                      </p>
+                    </div>
+                    <ChevronRight
+                      size={20}
+                      className={`text-neutral-400 transition-transform duration-200 ${
+                        isExpanded ? "rotate-90 text-[#039e1e]" : ""
+                      }`}
                     />
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                  </button>
+
+                  {/* Bosilganda to'liq 4 bosqichli kuzatuv paneli ochiladi */}
+                  {isExpanded && (
+                    <div className="border-t border-neutral-100 bg-neutral-50/70 p-4 animate-in fade-in duration-200">
+                      <OrderTrackingStatusCard
+                        orderId={order.id}
+                        status={order.status || "yangi"}
+                        totalSum={Number(order.totalSum || order.total || 0)}
+                        items={order.items || []}
+                        deliveryType={order.deliveryType}
+                        customerAddress={order.customerAddress}
+                        pharmacyName={order.pharmacyName}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* 4. Chaqiruvlarim bo'limi */}
@@ -279,133 +265,139 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
           Chaqiruvlarim
         </h2>
 
-        <div className="space-y-2.5">
-          {displayCalls.map((call) => {
-            const isExpanded = expandedCallId === call.id;
-            const isDone = call.status === "completed" || call.status === "bajarildi";
-            const isAccepted = call.status === "tasdiqlandi" || call.status === "qabul_qilindi" || isDone;
+        {displayCalls.length === 0 ? (
+          <div className="rounded-2xl bg-white border border-neutral-200/90 p-5 text-center text-neutral-500 shadow-2xs">
+            <p className="text-[14.5px] font-medium">Hozircha mutaxassis chaqiruvlari mavjud emas</p>
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {displayCalls.map((call) => {
+              const isExpanded = expandedCallId === call.id;
+              const isDone = call.status === "completed" || call.status === "bajarildi";
+              const isAccepted = call.status === "tasdiqlandi" || call.status === "qabul_qilindi" || isDone;
 
-            const statusLabel =
-              call.status === "pending" || call.status === "yangi"
-                ? "So'rov yuborildi"
-                : call.status === "tasdiqlandi" || call.status === "qabul_qilindi"
-                ? "Qabul qilindi"
-                : isDone
-                ? "Yakunlandi"
-                : "So'rov yuborildi";
+              const statusLabel =
+                call.status === "pending" || call.status === "yangi"
+                  ? "So'rov yuborildi"
+                  : call.status === "tasdiqlandi" || call.status === "qabul_qilindi"
+                  ? "Qabul qilindi"
+                  : isDone
+                  ? "Yakunlandi"
+                  : "So'rov yuborildi";
 
-            return (
-              <div
-                key={call.id}
-                className="overflow-hidden rounded-2xl bg-white border border-neutral-200/90 transition-all shadow-2xs"
-              >
-                <button
-                  type="button"
-                  onClick={() => setExpandedCallId(isExpanded ? null : call.id)}
-                  className="flex w-full items-center justify-between p-4 text-left hover:bg-neutral-50 active:scale-[0.99] transition"
+              return (
+                <div
+                  key={call.id}
+                  className="overflow-hidden rounded-2xl bg-white border border-neutral-200/90 transition-all shadow-2xs"
                 >
-                  <div>
-                    <p className="text-[16px] font-bold text-neutral-900 tracking-tight">
-                      #{call.id} · {call.specialistSpecialty ? `${call.specialistSpecialty} ` : ""}{call.specialistName || "Agronom B. Rahmonov"}
-                    </p>
-                    <p className="text-[13px] text-neutral-500 font-medium mt-0.5">
-                      {statusLabel}
-                    </p>
-                  </div>
-                  <ChevronRight
-                    size={20}
-                    className={`text-neutral-400 transition-transform duration-200 ${
-                      isExpanded ? "rotate-90 text-[#039e1e]" : ""
-                    }`}
-                  />
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setExpandedCallId(isExpanded ? null : call.id)}
+                    className="flex w-full items-center justify-between p-4 text-left hover:bg-neutral-50 active:scale-[0.99] transition"
+                  >
+                    <div>
+                      <p className="text-[16px] font-bold text-neutral-900 tracking-tight">
+                        #{call.id} · {call.specialistSpecialty ? `${call.specialistSpecialty} ` : ""}{call.specialistName || "Agronom B. Rahmonov"}
+                      </p>
+                      <p className="text-[13px] text-neutral-500 font-medium mt-0.5">
+                        {statusLabel}
+                      </p>
+                    </div>
+                    <ChevronRight
+                      size={20}
+                      className={`text-neutral-400 transition-transform duration-200 ${
+                        isExpanded ? "rotate-90 text-[#039e1e]" : ""
+                      }`}
+                    />
+                  </button>
 
-                {/* Bosilganda faqat tarix va 3 bosqichli status ma'lumotlari ochiladi (qayta chaqiruv so'rovi yuborilmaydi) */}
-                {isExpanded && (
-                  <div className="border-t border-neutral-100 bg-neutral-50/70 p-4 animate-in fade-in duration-200 space-y-4">
-                    {/* 3 ta bosqich (faqat tarixni ko'rish uchun) */}
-                    <div className="rounded-2xl bg-white border border-neutral-200/90 p-4 space-y-3.5 shadow-2xs">
-                      {/* 1-bosqich: So'rov yuborildi */}
-                      <div className="relative flex items-center gap-3">
-                        <div className="absolute left-[13px] top-[26px] h-4 w-[2px] bg-[#039e1e]" />
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#039e1e] text-white shadow-xs">
-                          <Check size={16} strokeWidth={3} />
+                  {/* Bosilganda faqat tarix va 3 bosqichli status ma'lumotlari ochiladi (qayta chaqiruv so'rovi yuborilmaydi) */}
+                  {isExpanded && (
+                    <div className="border-t border-neutral-100 bg-neutral-50/70 p-4 animate-in fade-in duration-200 space-y-4">
+                      {/* 3 ta bosqich (faqat tarixni ko'rish uchun) */}
+                      <div className="rounded-2xl bg-white border border-neutral-200/90 p-4 space-y-3.5 shadow-2xs">
+                        {/* 1-bosqich: So'rov yuborildi */}
+                        <div className="relative flex items-center gap-3">
+                          <div className="absolute left-[13px] top-[26px] h-4 w-[2px] bg-[#039e1e]" />
+                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#039e1e] text-white shadow-xs">
+                            <Check size={16} strokeWidth={3} />
+                          </div>
+                          <span className="text-[14.5px] font-bold text-neutral-900">
+                            So&apos;rov yuborildi
+                          </span>
                         </div>
-                        <span className="text-[14.5px] font-bold text-neutral-900">
-                          So&apos;rov yuborildi
-                        </span>
+
+                        {/* 2-bosqich: Qabul qilindi */}
+                        <div className="relative flex items-center gap-3">
+                          <div
+                            className={`absolute left-[13px] top-[26px] h-4 w-[2px] ${
+                              isDone ? "bg-[#039e1e]" : "bg-neutral-200"
+                            }`}
+                          />
+                          {isAccepted ? (
+                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#039e1e] text-white shadow-xs">
+                              <Check size={16} strokeWidth={3} />
+                            </div>
+                          ) : (
+                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-neutral-300 bg-neutral-100" />
+                          )}
+                          <span
+                            className={`text-[14.5px] ${
+                              isAccepted ? "font-bold text-neutral-900" : "font-medium text-neutral-400"
+                            }`}
+                          >
+                            Qabul qilindi
+                          </span>
+                        </div>
+
+                        {/* 3-bosqich: Yakunlandi */}
+                        <div className="relative flex items-center gap-3">
+                          {isDone ? (
+                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#039e1e] text-white shadow-xs">
+                              <Check size={16} strokeWidth={3} />
+                            </div>
+                          ) : (
+                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-neutral-300 bg-neutral-100" />
+                          )}
+                          <span
+                            className={`text-[14.5px] ${
+                              isDone ? "font-bold text-neutral-900" : "font-medium text-neutral-400"
+                            }`}
+                          >
+                            Yakunlandi
+                          </span>
+                        </div>
                       </div>
 
-                      {/* 2-bosqich: Qabul qilindi */}
-                      <div className="relative flex items-center gap-3">
-                        <div
-                          className={`absolute left-[13px] top-[26px] h-4 w-[2px] ${
-                            isDone ? "bg-[#039e1e]" : "bg-neutral-200"
-                          }`}
-                        />
-                        {isAccepted ? (
-                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#039e1e] text-white shadow-xs">
-                            <Check size={16} strokeWidth={3} />
-                          </div>
-                        ) : (
-                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-neutral-300 bg-neutral-100" />
+                      {/* Qo'shimcha ma'lumotlar bloki */}
+                      <div className="rounded-2xl bg-white border border-neutral-200/90 p-3.5 text-[13.5px] text-neutral-600 space-y-1.5 shadow-2xs">
+                        {call.phone && (
+                          <p className="flex items-center justify-between">
+                            <span className="text-neutral-500">Mutaxassis telefoni:</span>
+                            <a href={`tel:${call.phone.replace(/[^\d+]/g, "")}`} className="font-bold text-[#039e1e] hover:underline">
+                              {call.phone}
+                            </a>
+                          </p>
                         )}
-                        <span
-                          className={`text-[14.5px] ${
-                            isAccepted ? "font-bold text-neutral-900" : "font-medium text-neutral-400"
-                          }`}
-                        >
-                          Qabul qilindi
-                        </span>
-                      </div>
-
-                      {/* 3-bosqich: Yakunlandi */}
-                      <div className="relative flex items-center gap-3">
-                        {isDone ? (
-                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#039e1e] text-white shadow-xs">
-                            <Check size={16} strokeWidth={3} />
-                          </div>
-                        ) : (
-                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-neutral-300 bg-neutral-100" />
+                        {call.address && (
+                          <p className="flex items-center justify-between">
+                            <span className="text-neutral-500">Manzil:</span>
+                            <span className="font-semibold text-neutral-800 text-right">{call.address}</span>
+                          </p>
                         )}
-                        <span
-                          className={`text-[14.5px] ${
-                            isDone ? "font-bold text-neutral-900" : "font-medium text-neutral-400"
-                          }`}
-                        >
-                          Yakunlandi
-                        </span>
+                        {call.problem && (
+                          <p className="pt-1 text-[12.5px] text-neutral-500 border-t border-neutral-100">
+                            Masala: <span className="text-neutral-700 font-medium">{call.problem}</span>
+                          </p>
+                        )}
                       </div>
                     </div>
-
-                    {/* Qo'shimcha ma'lumotlar bloki */}
-                    <div className="rounded-2xl bg-white border border-neutral-200/90 p-3.5 text-[13.5px] text-neutral-600 space-y-1.5 shadow-2xs">
-                      {call.phone && (
-                        <p className="flex items-center justify-between">
-                          <span className="text-neutral-500">Mutaxassis telefoni:</span>
-                          <a href={`tel:${call.phone.replace(/[^\d+]/g, "")}`} className="font-bold text-[#039e1e] hover:underline">
-                            {call.phone}
-                          </a>
-                        </p>
-                      )}
-                      {call.address && (
-                        <p className="flex items-center justify-between">
-                          <span className="text-neutral-500">Manzil:</span>
-                          <span className="font-semibold text-neutral-800 text-right">{call.address}</span>
-                        </p>
-                      )}
-                      {call.problem && (
-                        <p className="pt-1 text-[12.5px] text-neutral-500 border-t border-neutral-100">
-                          Masala: <span className="text-neutral-700 font-medium">{call.problem}</span>
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* 5. Pastki qo'shimcha amallar (Chiqish) */}

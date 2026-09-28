@@ -15,6 +15,7 @@ import {
   isBotConfigured,
   leaveChat,
   miniAppKeyboard,
+  registeredUserMenuKeyboard,
   sendMessage,
   sendMessageWithId,
   setAgrozGoMenuButton,
@@ -26,8 +27,8 @@ import { getNewsFeed } from "../lib/news.js";
 import { escapeHtml } from "../lib/tg-escape.js";
 import { reverseGeocodeDetails } from "../lib/geocode.js";
 import { db } from "../db/index.js";
-import { otpCodes, sessions, users } from "../db/schema.js";
-import { and, eq, sql } from "drizzle-orm";
+import { otpCodes, sessions, users, orders, specialistCalls, specialists } from "../db/schema.js";
+import { and, desc, eq, or, sql } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
 
 const router = Router();
@@ -96,7 +97,7 @@ export function locationRequestKeyboard() {
 }
 
 interface UserRegState {
-  step: "ask_name" | "ask_phone" | "ask_region" | "ask_second_phone";
+  step: "ask_name" | "ask_phone" | "ask_location" | "ask_region" | "ask_second_phone";
   name?: string;
   phone?: string;
   region?: string;
@@ -318,7 +319,7 @@ async function finalizeUserRegistration(
 
   await setAgrozGoMenuButton(chatId).catch(() => {});
   await setAgrozGoMenuButton().catch(() => {});
-  await sendMessage(chatId, successText, { keyboard: agrozGoKeyboard() });
+  await sendMessage(chatId, successText, { keyboard: registeredUserMenuKeyboard() });
 }
 
 async function handleMainBotCallback(query: NonNullable<TelegramUpdate["callback_query"]>): Promise<void> {
@@ -328,6 +329,43 @@ async function handleMainBotCallback(query: NonNullable<TelegramUpdate["callback
   const data = query.data ?? "";
 
   try {
+    if (data === "user:del_confirm") {
+      await answerCallbackQuery(query.id, "Profilingiz o'chirildi");
+      if (chatId && messageId) {
+        await editMessageReplyMarkup(chatId, messageId).catch(() => {});
+      }
+      if (!fromId || !chatId) return;
+
+      try {
+        const u = await findUserByTelegramId(fromId);
+        if (u) {
+          await db.delete(sessions).where(eq(sessions.userId, u.id)).catch(() => {});
+          await db.delete(users).where(eq(users.id, u.id)).catch(() => {});
+        }
+      } catch (e) {
+        console.error("[bot] Profilni o'chirish xatosi:", e);
+      }
+
+      await sendMessage(
+        chatId,
+        `🗑 <b>Siz profilingizni o'chirdingiz.</b>\n\nPlatformadan qayta foydalanish uchun /start bosib ro'yxatdan o'ting.`,
+        { keyboard: { remove_keyboard: true } }
+      );
+      return;
+    }
+
+    if (data === "user:del_cancel") {
+      await answerCallbackQuery(query.id, "Bekor qilindi");
+      if (chatId && messageId) {
+        await editMessageReplyMarkup(chatId, messageId).catch(() => {});
+      }
+      if (chatId) {
+        await sendMessage(chatId, `Profilni o'chirish bekor qilindi.`, {
+          keyboard: registeredUserMenuKeyboard(),
+        });
+      }
+      return;
+    }
     if (data.startsWith("reg:reg:")) {
       await answerCallbackQuery(query.id);
       if (chatId && messageId) {
@@ -592,7 +630,7 @@ router.post("/webhook", async (req, res) => {
         await sendMessage(
           chatId,
           `👋 <b>Assalomu alaykum, ${escapeHtml(registeredName)}!</b>\n\nSiz allaqachon ro'yxatdan o'tgansiz.\n\n👤 <b>Ism-familiya:</b> ${escapeHtml(registeredName)}\n📞 <b>Telefon:</b> <code>${escapeHtml(existingUser.phone)}</code>\n${locationLabel ? `📍 <b>Manzil:</b> ${escapeHtml(locationLabel)}\n` : ""}\nIlovaga kirish uchun pastdagi <b>«🌿 AgrozGo ga kirish»</b> tugmasini bosing 👇`,
-          { keyboard: agrozGoKeyboard() }
+          { keyboard: registeredUserMenuKeyboard() }
         );
         return res.json({ ok: true });
       }
@@ -600,26 +638,26 @@ router.post("/webhook", async (req, res) => {
       const regState = regStates.get(fromId);
       const chosenName = regState?.name || existingUser?.name || contactName;
 
-      const askRegionText = [
-        `📞 Raqamingiz: <code>${escapeHtml(phone)}</code>`,
+      const askLocationText = [
+        `📞 Telefon qabul qilindi: <code>${escapeHtml(phone)}</code>`,
         "",
-        `📍 <b>Qaysi viloyatdansiz?</b>`,
-        `Pastdagi tugma orqali GPS joylashuvingizni yuboring yoki o'z viloyatingizni tanlang:`,
+        `3️⃣ <b>Joylashuvingizni yuboring:</b>`,
+        `Pastdagi «📍 Joylashuvni yuborish» tugmasini bosing yoki manzilingizni yozing 👇`,
       ].join("\n");
 
-      const sent = await sendMessageWithId(chatId, askRegionText, {
-        keyboard: regionsKeyboard(),
-      });
-      await sendMessage(chatId, "Yoki pastdagi «📍 Joylashuvni yuborish (GPS)» tugmasini bosing 👇", {
-        keyboard: locationRequestKeyboard(),
+      await sendMessage(chatId, askLocationText, {
+        keyboard: {
+          keyboard: [[{ text: "📍 Joylashuvni yuborish", request_location: true }]],
+          resize_keyboard: true,
+          one_time_keyboard: true,
+        },
       });
 
       regStates.set(fromId, {
         ...regState,
-        step: "ask_region",
+        step: "ask_location",
         name: chosenName,
         phone,
-        promptMessageId: sent.messageId,
         updatedAt: Date.now(),
       });
       return res.json({ ok: true });
@@ -819,7 +857,7 @@ router.post("/webhook", async (req, res) => {
           .join("\n");
 
         await setAgrozGoMenuButton(chatId).catch(() => {});
-        await sendMessage(chatId, welcomeText, { keyboard: agrozGoKeyboard() });
+        await sendMessage(chatId, welcomeText, { keyboard: registeredUserMenuKeyboard() });
         return res.json({ ok: true });
       }
 
@@ -846,6 +884,137 @@ router.post("/webhook", async (req, res) => {
 
     // Agar foydalanuvchi allaqachon ro'yxatdan o'tgan bo'lsa:
     if (existingUser && existingUser.phone) {
+      if (text === "📦 Buyurtmalarim") {
+        const cleanDigits = existingUser.phone.replace(/\D/g, "").slice(-9);
+        const orderConditions = [];
+        if (existingUser.id) orderConditions.push(eq(orders.userId, existingUser.id));
+        if (cleanDigits) {
+          orderConditions.push(sql`RIGHT(REPLACE(${orders.customerPhone}, ' ', ''), 9) = ${cleanDigits}`);
+        }
+        const userOrders = await db
+          .select()
+          .from(orders)
+          .where(or(...orderConditions))
+          .orderBy(desc(orders.createdAt))
+          .limit(5);
+
+        if (!userOrders || userOrders.length === 0) {
+          await sendMessage(
+            chatId,
+            `📦 <b>Sizda hali hech qanday buyurtma mavjud emas.</b>\n\nDorilar katalogidan kerakli mahsulotlarni tanlab buyurtma berishingiz mumkin.`,
+            { keyboard: registeredUserMenuKeyboard() }
+          );
+          return res.json({ ok: true });
+        }
+
+        const lines = ["📦 <b>Sizning so'nggi buyurtmalaringiz:</b>", ""];
+        for (const o of userOrders) {
+          const statusText =
+            o.status === "yangi"
+              ? "⏳ Yuborildi"
+              : o.status === "tasdiqlandi"
+              ? "✅ Qabul qilindi"
+              : o.status === "yetkazildi"
+              ? "🎉 Yetkazildi"
+              : o.status === "bekor"
+              ? "❌ Bekor qilingan"
+              : o.status;
+          const formattedTotal = Number(o.totalSum || 0)
+            .toLocaleString("ru-RU")
+            .replace(/\u00a0/g, " ");
+          lines.push(`• <b>Buyurtma #${o.id}</b> · ${formattedTotal} so'm\n  Holat: ${statusText}\n  Qabul turi: ${o.deliveryType === "pickup" ? "Olib ketish" : "Yetkazib berish"}`);
+        }
+        await sendMessage(chatId, lines.join("\n\n"), { keyboard: registeredUserMenuKeyboard() });
+        return res.json({ ok: true });
+      }
+
+      if (text === "👨‍⚕️ Chaqiruvlarim") {
+        const cleanDigits = existingUser.phone.replace(/\D/g, "").slice(-9);
+        const userCalls = await db
+          .select({
+            id: specialistCalls.id,
+            status: specialistCalls.status,
+            problem: specialistCalls.problem,
+            specialistName: specialists.name,
+            specialty: specialists.specialty,
+            phone: specialists.phone,
+          })
+          .from(specialistCalls)
+          .leftJoin(specialists, eq(specialistCalls.specialistId, specialists.id))
+          .where(sql`RIGHT(REPLACE(${specialistCalls.customerPhone}, ' ', ''), 9) = ${cleanDigits}`)
+          .orderBy(desc(specialistCalls.createdAt))
+          .limit(5);
+
+        if (!userCalls || userCalls.length === 0) {
+          await sendMessage(
+            chatId,
+            `👨‍⚕️ <b>Sizda hali mutaxassis chaqiruvlari mavjud emas.</b>\n\nAgro mutaxassislar bo'limidan tajribali mutaxassisni chaqirishingiz mumkin.`,
+            { keyboard: registeredUserMenuKeyboard() }
+          );
+          return res.json({ ok: true });
+        }
+
+        const lines = ["👨‍⚕️ <b>Sizning mutaxassis chaqiruvlaringiz:</b>", ""];
+        for (const c of userCalls) {
+          const statusText =
+            c.status === "completed" || c.status === "bajarildi"
+              ? "🎉 Yakunlandi"
+              : c.status === "tasdiqlandi" || c.status === "qabul_qilindi"
+              ? "✅ Qabul qilindi"
+              : "⏳ So'rov yuborildi";
+          lines.push(
+            `• <b>Chaqiruv #${c.id}</b> — ${escapeHtml(c.specialistName || "Mutaxassis")} (${escapeHtml(c.specialty || "Agronom")})\n  Holat: ${statusText}\n  Telefon: ${escapeHtml(c.phone || "")}\n  Masala: ${escapeHtml(c.problem || "Ko'rik")}`
+          );
+        }
+        await sendMessage(chatId, lines.join("\n\n"), { keyboard: registeredUserMenuKeyboard() });
+        return res.json({ ok: true });
+      }
+
+      if (text === "👤 Ma'lumotlarim") {
+        const locationLabel = [existingUser.region, existingUser.district].filter(Boolean).join(", ");
+        const infoText = [
+          `👤 <b>Sizning ma'lumotlaringiz:</b>`,
+          "",
+          `• <b>Ism-familiya:</b> ${escapeHtml(existingUser.name || "Ko'rsatilmagan")}`,
+          `• <b>Telefon raqam:</b> <code>${escapeHtml(existingUser.phone || "")}</code>`,
+          existingUser.secondPhone ? `• <b>Qo'shimcha raqam:</b> <code>${escapeHtml(existingUser.secondPhone)}</code>` : "",
+          `• <b>Manzil:</b> ${escapeHtml(locationLabel || "Ko'rsatilmagan")}`,
+          `• <b>Telegram ID:</b> <code>${existingUser.telegramId || fromId}</code>`,
+        ]
+          .filter(Boolean)
+          .join("\n");
+
+        await sendMessage(chatId, infoText, { keyboard: registeredUserMenuKeyboard() });
+        return res.json({ ok: true });
+      }
+
+      if (text === "🗑 Profilni o'chirish") {
+        await sendMessage(
+          chatId,
+          `⚠️ <b>Haqiqatan ham profilingizni o'chirmoqchimisiz?</b>\n\nProfilingiz o'chirilsa, hisobingiz va ma'lumotlaringiz butunlay o'chiriladi. Qayta foydalanish uchun /start orqali yangidan ro'yxatdan o'tishingiz kerak bo'ladi.`,
+          {
+            keyboard: {
+              inline_keyboard: [
+                [
+                  { text: "🗑 Ha, o'chirish", callback_data: "user:del_confirm" },
+                  { text: "❌ Bekor qilish", callback_data: "user:del_cancel" },
+                ],
+              ],
+            },
+          }
+        );
+        return res.json({ ok: true });
+      }
+
+      if (text === "🌿 AgrozGo ga kirish") {
+        await sendMessage(
+          chatId,
+          `🌿 <b>AgrozGo platformasiga xush kelibsiz!</b>\n\nIlovani ochish uchun pastdagi tugmani bosing 👇`,
+          { keyboard: registeredUserMenuKeyboard() }
+        );
+        return res.json({ ok: true });
+      }
+
       const digits = text.replace(/\D/g, "");
       if (digits.length >= 9) {
         const newSecond = `+998${digits.slice(-9)}`;
@@ -858,7 +1027,7 @@ router.post("/webhook", async (req, res) => {
         await sendMessage(
           chatId,
           `✅ Qo'shimcha telefon raqamingiz yangilandi: <code>${escapeHtml(newSecond)}</code>`,
-          { keyboard: agrozGoKeyboard() }
+          { keyboard: registeredUserMenuKeyboard() }
         );
         return res.json({ ok: true });
       }
@@ -880,7 +1049,7 @@ router.post("/webhook", async (req, res) => {
         .join("\n");
 
       await setAgrozGoMenuButton(chatId).catch(() => {});
-      await sendMessage(chatId, greeting, { keyboard: agrozGoKeyboard() });
+      await sendMessage(chatId, greeting, { keyboard: registeredUserMenuKeyboard() });
       return res.json({ ok: true });
     }
 
@@ -888,7 +1057,8 @@ router.post("/webhook", async (req, res) => {
     const regState = regStates.get(fromId) || { step: "ask_name", updatedAt: Date.now() };
 
     // A) Agar viloyat kutilayotgan bo'lsa
-    if (regState.step === "ask_region") {
+    // A) Agar joylashuv (yoki manzil matni) kutilayotgan bo'lsa
+    if (regState.step === "ask_location" || regState.step === "ask_region") {
       const clean = text.trim();
       const matched = REGIONS_LIST.find((r) => r.toLowerCase().includes(clean.toLowerCase())) || clean.slice(0, 100);
 
@@ -956,25 +1126,25 @@ router.post("/webhook", async (req, res) => {
 
       const primaryPhone = `+998${digits.slice(-9)}`;
 
-      const askRegion = [
-        `📞 Raqamingiz: <code>${escapeHtml(primaryPhone)}</code>`,
+      const askLocation = [
+        `📞 Telefon qabul qilindi: <code>${escapeHtml(primaryPhone)}</code>`,
         "",
-        `📍 <b>Qaysi viloyatdansiz?</b>`,
-        `Pastdagi tugma orqali GPS joylashuvingizni yuboring yoki o'z viloyatingizni tanlang:`,
+        `3️⃣ <b>Joylashuvingizni yuboring:</b>`,
+        `Pastdagi «📍 Joylashuvni yuborish» tugmasini bosing yoki manzilingizni yozing 👇`,
       ].join("\n");
 
-      const sent = await sendMessageWithId(chatId, askRegion, {
-        keyboard: regionsKeyboard(),
-      });
-      await sendMessage(chatId, "Yoki pastdagi «📍 Joylashuvni yuborish (GPS)» tugmasini bosing 👇", {
-        keyboard: locationRequestKeyboard(),
+      await sendMessage(chatId, askLocation, {
+        keyboard: {
+          keyboard: [[{ text: "📍 Joylashuvni yuborish", request_location: true }]],
+          resize_keyboard: true,
+          one_time_keyboard: true,
+        },
       });
 
       regStates.set(fromId, {
         ...regState,
-        step: "ask_region",
+        step: "ask_location",
         phone: primaryPhone,
-        promptMessageId: sent.messageId,
         updatedAt: Date.now(),
       });
       return res.json({ ok: true });
@@ -989,27 +1159,27 @@ router.post("/webhook", async (req, res) => {
       const primaryPhone = `+998${digits.slice(-9)}`;
       const chosenName = textWithoutDigits.length >= 2 ? textWithoutDigits : (firstName || "Foydalanuvchi");
 
-      const askRegion = [
+      const askLocation = [
         `👤 Ism: <b>${escapeHtml(chosenName)}</b>`,
         `📞 Telefon: <code>${escapeHtml(primaryPhone)}</code>`,
         "",
-        `📍 <b>Qaysi viloyatdansiz?</b>`,
-        `Pastdagi tugma orqali GPS joylashuvingizni yuboring yoki o'z viloyatingizni tanlang:`,
+        `3️⃣ <b>Joylashuvingizni yuboring:</b>`,
+        `Pastdagi «📍 Joylashuvni yuborish» tugmasini bosing yoki manzilingizni yozing 👇`,
       ].join("\n");
 
-      const sent = await sendMessageWithId(chatId, askRegion, {
-        keyboard: regionsKeyboard(),
-      });
-      await sendMessage(chatId, "Yoki pastdagi «📍 Joylashuvni yuborish (GPS)» tugmasini bosing 👇", {
-        keyboard: locationRequestKeyboard(),
+      await sendMessage(chatId, askLocation, {
+        keyboard: {
+          keyboard: [[{ text: "📍 Joylashuvni yuborish", request_location: true }]],
+          resize_keyboard: true,
+          one_time_keyboard: true,
+        },
       });
 
       regStates.set(fromId, {
         ...regState,
-        step: "ask_region",
+        step: "ask_location",
         name: chosenName,
         phone: primaryPhone,
-        promptMessageId: sent.messageId,
         updatedAt: Date.now(),
       });
       return res.json({ ok: true });

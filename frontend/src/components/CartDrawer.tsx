@@ -107,10 +107,10 @@ export default function CartDrawer() {
 
   const fetchUserOrders = useCallback(async (phone?: string | null) => {
     try {
-      const url = phone
-        ? apiUrl(`/api/profile/activity?phone=${encodeURIComponent(phone)}`)
-        : apiUrl("/api/profile/activity");
-      const res = await fetch(url);
+      const path = phone
+        ? `/api/profile/activity?phone=${encodeURIComponent(phone)}`
+        : "/api/profile/activity";
+      const res = await apiFetch(path);
       if (res.ok) {
         const data = await res.json();
         if (data?.ok && Array.isArray(data.orders)) {

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { ChevronLeft, Check, Star, Send, CheckCircle2, Clock } from "lucide-react";
 import { createSpecialistCall, completeSpecialistCall } from "@/lib/specialist-calls";
-import { apiUrl } from "@/lib/api-config";
+import { apiUrl, apiFetch } from "@/lib/api-config";
 import { getTelegramUser } from "@/lib/telegram";
 
 export default function SpecialistCallModal({
@@ -92,9 +92,7 @@ export default function SpecialistCallModal({
       if (savedAddress) setAddress(savedAddress);
     } catch {}
 
-    fetch(apiUrl("/api/profile"), {
-      credentials: "include",
-    })
+    apiFetch("/api/profile")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.user) {

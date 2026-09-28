@@ -24,8 +24,22 @@ export function apiUrl(path: string): string {
 }
 
 export async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
+  const headers = new Headers(init?.headers);
+  if (typeof window !== "undefined") {
+    try {
+      const tg = (window as any).Telegram?.WebApp;
+      const tgUser = tg?.initDataUnsafe?.user;
+      if (tgUser?.id) {
+        headers.set("x-telegram-user-id", String(tgUser.id));
+      }
+      if (tg?.initData) {
+        headers.set("x-telegram-init-data", tg.initData);
+      }
+    } catch {}
+  }
   return fetch(apiUrl(path), {
     ...init,
+    headers,
     credentials: init?.credentials ?? "include",
   });
 }

@@ -67,11 +67,29 @@ router.delete("/", async (req, res) => {
     }
 
     // Barcha sessionlarni o'chirish
-    await db.delete(sessions).where(eq(sessions.userId, user.id));
+    await db.delete(sessions).where(eq(sessions.userId, user.id)).catch(() => {});
 
     // Foydalanuvchini o'chirish
-    await db.delete(users).where(eq(users.id, user.id));
+    await db.delete(users).where(eq(users.id, user.id)).catch(() => {});
 
+    // Foydalanuvchining Telegram botiga bildirishnoma yuborish
+    if (user.telegramId) {
+      try {
+        const { sendMessage, isBotConfigured } = await import("../lib/telegram-bot.js");
+        const { sendAuthMessage } = await import("../lib/auth-bot.js");
+        const delMsg = `🗑 <b>Siz profilingizni o'chirdingiz.</b>\n\nPlatformadan qayta foydalanish uchun /start bosib ro'yxatdan o'ting.`;
+        if (await isBotConfigured()) {
+          await sendMessage(Number(user.telegramId), delMsg, { keyboard: { remove_keyboard: true } });
+        } else {
+          await sendAuthMessage(Number(user.telegramId), delMsg, { removeKeyboard: true });
+        }
+      } catch (e) {
+        console.error("[profile:delete] Telegram notify error:", e);
+      }
+    }
+
+    res.clearCookie("agroai_session", { path: "/" });
+    res.clearCookie("agroz_session", { path: "/" });
     res.json({ ok: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Server xatosi" });
