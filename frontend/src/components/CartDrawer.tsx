@@ -37,6 +37,7 @@ import {
   loadLastOrder,
   clearLastOrder,
   addItemToCart,
+  closeCart,
 } from "@/lib/cart-store";
 import FadeImage from "@/components/FadeImage";
 import OrderTrackingStatusCard from "@/components/OrderTrackingStatusCard";
@@ -179,11 +180,13 @@ export default function CartDrawer() {
 
   const close = useCallback(() => {
     setOpen(false);
+    closeCart();
   }, []);
 
   // Har safar foydalanuvchi boshqa sahifaga o'tsa savat yopiladi
   useEffect(() => {
     setOpen(false);
+    closeCart();
   }, [pathname]);
 
   // Savat va tanlangan dorilarni sinxronlash
@@ -994,8 +997,8 @@ export default function CartDrawer() {
               )}
             </div>
 
-            {/* Pastki Harakatlar Paneli (Har doim ko'rinib turishi uchun shrink-0 va safe-area) */}
-            <div className="shrink-0 border-t border-black/10 bg-white p-4 pb-[max(1rem,calc(env(safe-area-inset-bottom)+0.75rem))] shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+            {/* Pastki Harakatlar Paneli (Har doim ko'rinib turishi uchun shrink-0 va BottomNav balandligini hisobga olgan safe-area) */}
+            <div className="shrink-0 border-t border-black/10 bg-white p-4 pb-[max(5.5rem,calc(env(safe-area-inset-bottom)+5rem))] shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
               {!currentUser ? (
                 <Link
                   href="/kirish"
