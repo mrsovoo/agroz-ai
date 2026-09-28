@@ -16,9 +16,9 @@ import {
   Pill,
   Star,
   Clock,
-  UserCheck,
   CheckCircle2,
   Sparkles,
+  User,
 } from "lucide-react";
 import { RADIUS_OPTIONS, AUTH_BOT_URL } from "@/lib/constants";
 import SpecialistCallModal from "@/components/SpecialistCallModal";
@@ -65,31 +65,6 @@ const FILTERS = [
   { v: "all", l: "Hammasi" },
   { v: "agronom", l: "🌱 Agronomlar" },
   { v: "veterinar", l: "🐄 Veterinarlar" },
-];
-
-const DEFAULT_SPECIALISTS: Specialist[] = [
-  {
-    id: 0,
-    name: "Mutaxassislar yo'q",
-    phone: "",
-    role: "specialist",
-    specialty: null,
-    education: null,
-    bio: null,
-    helpsWith: "both",
-    experienceYears: null,
-    organization: null,
-    address: "",
-    lat: 0,
-    lng: 0,
-    workHours: null,
-    distanceKm: null,
-    locked: false,
-    ratingAvg: null,
-    ratingCount: 0,
-    isBusy: false,
-    medicines: [],
-  },
 ];
 
 
@@ -241,6 +216,7 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
       return specsOnly.filter(
         (s) =>
           s.helpsWith === "crop" ||
+          s.helpsWith === "both" ||
           (s.specialty && /agronom/i.test(s.specialty))
       );
     }
@@ -248,6 +224,7 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
       return specsOnly.filter(
         (s) =>
           s.helpsWith === "animal" ||
+          s.helpsWith === "both" ||
           (s.specialty && /veterinar/i.test(s.specialty))
       );
     }
@@ -278,7 +255,7 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
     window.open(url, "_blank", "noopener");
   }
 
-  const listToDisplay = visible.length > 0 ? visible : DEFAULT_SPECIALISTS;
+  const listToDisplay = visible;
 
   return (
     <div className="px-5 pt-3 pb-28">
@@ -348,12 +325,28 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
         <div className="flex justify-center py-16">
           <Loader2 className="animate-spin text-[#039e1e]" size={30} />
         </div>
+      ) : listToDisplay.length === 0 ? (
+        <div className="mt-4 rounded-3xl bg-white p-8 text-center border border-black/5 shadow-xs">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-[var(--brand-green)]">
+            <User size={28} />
+          </div>
+          <h3 className="mt-3 text-[17px] font-bold text-neutral-900">
+            Mutaxassislar topilmadi
+          </h3>
+          <p className="mt-1 text-[13px] text-neutral-500 max-w-sm mx-auto">
+            Hozircha ushbu toifada ro&apos;yxatdan o&apos;tgan mutaxassislar mavjud emas.
+          </p>
+        </div>
       ) : (
         <ul className="space-y-3.5">
           {listToDisplay.map((s) => {
             const specialtyText = s.specialty || (s.role === "pharmacy" ? "Dorixona egasi" : "Veterinar");
-            const expText = s.experienceYears ? `${s.experienceYears} yil` : "8 yil";
-            const ratingText = s.ratingAvg ? s.ratingAvg.toFixed(1) : "4.5";
+            const expText = s.experienceYears
+              ? s.experienceYears >= 10
+                ? "10+ yil"
+                : `${s.experienceYears} yil`
+              : null;
+            const ratingText = s.ratingAvg && s.ratingAvg > 0 ? s.ratingAvg.toFixed(1) : null;
 
             return (
               <li
@@ -382,12 +375,20 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
 
                   {/* O'ng tomondagi ikkita badge (Tajriba va Reyting) */}
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="rounded-full bg-[#039e1e] px-2.5 py-0.5 text-[11.5px] font-bold text-white shadow-2xs">
-                      {expText}
-                    </span>
-                    <span className="rounded-full bg-[#ff9f1c] px-2.5 py-0.5 text-[11.5px] font-bold text-white shadow-2xs">
-                      {ratingText}
-                    </span>
+                    {expText && (
+                      <span className="rounded-full bg-[#039e1e] px-2.5 py-0.5 text-[11.5px] font-bold text-white shadow-2xs">
+                        {expText}
+                      </span>
+                    )}
+                    {ratingText ? (
+                      <span className="rounded-full bg-[#ff9f1c] px-2.5 py-0.5 text-[11.5px] font-bold text-white shadow-2xs">
+                        ★ {ratingText}
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10.5px] font-bold text-neutral-600">
+                        Yangi
+                      </span>
+                    )}
                   </div>
                 </div>
 

@@ -151,6 +151,7 @@ export default function MarketClient() {
   } | null>(null);
   const [locDetecting, setLocDetecting] = useState(false);
 
+
   // ---- Yoqtirilganlar: umumiy store'dan yuklash ----
   useEffect(() => {
     const sync = () => setFavorites(loadFavorites());
@@ -182,6 +183,8 @@ export default function MarketClient() {
       })
       .catch(() => {});
   }, []);
+
+
 
   function toggleFavorite(pharmacyId: number, medicineId: number) {
     toggleFavStore(pharmacyId, medicineId);
@@ -605,7 +608,7 @@ export default function MarketClient() {
                           {c.medicine.name}
                         </p>
                         <p className="text-[12px] font-semibold text-[var(--brand-green)]">
-                          {c.medicine.price ? `${shortSum(c.medicine.price)} so'm` : "Narx so'rang"}
+                          {shortSum(c.medicine.price || 0)} so'm
                         </p>
                         <p className="flex items-center gap-1 text-[11px] text-[var(--brand-muted)]">
                           <Store size={10} className="shrink-0" />
@@ -1083,6 +1086,8 @@ export default function MarketClient() {
           </div>
         </div>
       )}
+
+
     </div>
   );
 }

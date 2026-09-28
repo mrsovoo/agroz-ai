@@ -30,7 +30,6 @@ import {
 export default function NotificationsView({ userRegion }: { userRegion?: string }) {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
-  const [filter, setFilter] = useState<"all" | "unread">("unread");
   const [loading, setLoading] = useState(true);
   const loadedItemsRef = useRef<AppNotification[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -43,15 +42,6 @@ export default function NotificationsView({ userRegion }: { userRegion?: string 
       setNotifications(items);
       const readSet = getReadNotificationIds();
       setReadIds(readSet);
-
-      // Sahifaga kirganda qisqa vaqtdan so'ng barchasini o'qilgan qilish
-      // Foydalanuvchi talabi: "bildirishnomaga kirib qayta chiqib ketsa oqilgandek bosinda"
-      setTimeout(() => {
-        if (items.length > 0) {
-          markAllNotificationsRead(items);
-          setReadIds(getReadNotificationIds());
-        }
-      }, 1000);
     } finally {
       setLoading(false);
     }
@@ -71,24 +61,12 @@ export default function NotificationsView({ userRegion }: { userRegion?: string 
     };
   }, [userRegion]);
 
-  // Foydalanuvchi pastga scroll qilganda ham darhol o'qilgan deb belgilash
-  const handleScroll = () => {
-    if (notifications.length > 0) {
-      markAllNotificationsRead(notifications);
-      setReadIds(getReadNotificationIds());
-    }
-  };
-
   const handleMarkAll = () => {
     markAllNotificationsRead(notifications);
     setReadIds(getReadNotificationIds());
   };
 
   const unreadCount = notifications.filter((n) => !readIds.has(n.id)).length;
-  // Agar unreadCount === 0 bo'lsa va filter "unread" bo'lsa, bo'sh holat ko'rinadi
-  const displayed = filter === "unread" 
-    ? notifications.filter((n) => !readIds.has(n.id)) 
-    : notifications;
 
   const getIcon = (item: AppNotification) => {
     switch (item.type) {
@@ -115,7 +93,7 @@ export default function NotificationsView({ userRegion }: { userRegion?: string 
   };
 
   return (
-    <div ref={containerRef} onScroll={handleScroll} className="min-h-[80vh] pb-16">
+    <div ref={containerRef} className="min-h-[80vh] pb-16">
       {/* Yuqori header */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 pb-4">
         <div className="flex items-center gap-3">
@@ -150,74 +128,37 @@ export default function NotificationsView({ userRegion }: { userRegion?: string 
         )}
       </div>
 
-      {/* Filter tabs */}
-      <div className="mt-4 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setFilter("all")}
-            className={`rounded-xl px-3.5 py-1.5 text-[13px] font-bold transition ${
-              filter === "all"
-                ? "bg-[var(--brand-green)] text-white shadow-2xs"
-                : "bg-white text-neutral-600 hover:bg-neutral-100 border border-black/5"
-            }`}
-          >
-            Barchasi ({notifications.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilter("unread")}
-            className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-[13px] font-bold transition ${
-              filter === "unread"
-                ? "bg-[var(--brand-green)] text-white shadow-2xs"
-                : "bg-white text-neutral-600 hover:bg-neutral-100 border border-black/5"
-            }`}
-          >
-            <span>O&apos;qilmaganlar</span>
-            {unreadCount > 0 && (
-              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-extrabold text-white">
-                {unreadCount}
-              </span>
-            )}
-          </button>
-        </div>
-
+      {/* Hudud ma'lumoti */}
+      <div className="mt-3 flex items-center justify-between">
+        <span className="text-[12.5px] font-bold text-neutral-500">
+          Xabarnomalar ro&apos;yxati {notifications.length > 0 && `(${notifications.length})`}
+        </span>
         <span className="text-[12px] font-semibold text-neutral-400">
           Hudud: {userRegion || "Toshkent"}
         </span>
       </div>
 
       {/* Xabarlar ro'yxati */}
-      <div className="mt-5 space-y-3">
+      <div className="mt-4 space-y-3">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 text-center text-neutral-500">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--brand-green)] border-t-transparent" />
             <p className="mt-3 text-[14px] font-medium">Bildirishnomalar yuklanmoqda...</p>
           </div>
-        ) : displayed.length === 0 ? (
+        ) : notifications.length === 0 ? (
           <div className="rounded-3xl border border-black/5 bg-white p-8 text-center shadow-2xs">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100 text-neutral-400">
               <CheckCheck size={24} />
             </div>
             <h3 className="mt-3 text-[16px] font-bold text-neutral-800">
-              {filter === "unread" ? "Barcha xabarlar o'qilgan" : "Hozircha yangi bildirishnoma yo'q"}
+              Hozircha yangi bildirishnoma yo&apos;q
             </h3>
             <p className="mt-1 text-[13px] text-neutral-500">
               Yangi buyurtma, chaqiruv javobi yoki ob-havo xavfi paydo bo&apos;lganda shu yerda ko&apos;rinadi.
             </p>
-            {filter === "unread" && notifications.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setFilter("all")}
-                className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-neutral-100 px-4 py-2 text-xs font-bold text-neutral-700 hover:bg-neutral-200 transition"
-              >
-                <span>O&apos;qilgan xabarlar tarixi ({notifications.length})</span>
-                <span>→</span>
-              </button>
-            )}
           </div>
         ) : (
-          displayed.map((item) => {
+          notifications.map((item) => {
             const isRead = readIds.has(item.id);
             const isCritical = item.severity === "critical";
 
@@ -225,15 +166,19 @@ export default function NotificationsView({ userRegion }: { userRegion?: string 
               <div
                 key={item.id}
                 onClick={() => {
-                  markNotificationsRead([item.id]);
-                  setReadIds(getReadNotificationIds());
+                  if (!isRead) {
+                    markNotificationsRead([item.id]);
+                    setReadIds(getReadNotificationIds());
+                  }
                 }}
-                className={`relative overflow-hidden rounded-2xl border transition-all ${
-                  isCritical
-                    ? "border-red-200 bg-red-50/40 hover:bg-red-50/60"
-                    : !isRead
-                      ? "border-[var(--brand-green)]/30 bg-emerald-50/30 hover:bg-emerald-50/50 shadow-xs"
-                      : "border-black/5 bg-white hover:bg-neutral-50/80 shadow-2xs"
+                className={`relative overflow-hidden rounded-2xl border transition-all cursor-pointer ${
+                  !isRead
+                    ? isCritical
+                      ? "border-neutral-200 border-l-[4px] border-l-red-500 bg-red-50/40 hover:bg-red-50/60 shadow-xs"
+                      : "border-neutral-200 border-l-[4px] border-l-[#039e1e] bg-emerald-50/30 hover:bg-emerald-50/50 shadow-xs"
+                    : isCritical
+                      ? "border-neutral-200 bg-red-50/20 hover:bg-red-50/40 shadow-2xs"
+                      : "border-neutral-200/80 bg-white hover:bg-neutral-50 shadow-2xs"
                 } p-4 sm:p-4.5`}
               >
                 <div className="flex items-start gap-3.5">

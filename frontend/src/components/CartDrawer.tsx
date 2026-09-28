@@ -101,6 +101,8 @@ export default function CartDrawer() {
     customerAddress?: string | null;
   } | null>(null);
 
+
+
   // Foydalanuvchining avvalgi va joriy buyurtmalari
   const [userOrders, setUserOrders] = useState<any[]>([]);
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
@@ -746,7 +748,7 @@ export default function CartDrawer() {
                         </p>
                         <div className="mt-1 flex items-center justify-between">
                           <span className="text-[12.5px] font-black text-[var(--brand-green)]">
-                            {m.price ? `${shortSum(m.price)} so'm` : "Kelishiladi"}
+                            {shortSum(m.price || 0)} so'm
                           </span>
                           <button
                             type="button"
@@ -877,7 +879,7 @@ export default function CartDrawer() {
                           {line.medicine.name}
                         </p>
                         <p className="text-[12.5px] font-black text-[var(--brand-green)]">
-                          {line.medicine.price ? `${shortSum(line.medicine.price)} so'm` : "Kelishiladi"}
+                          {shortSum(line.medicine.price || 0)} so'm
                         </p>
                       </div>
 
@@ -1128,6 +1130,7 @@ export default function CartDrawer() {
           </form>
         )}
       </div>
+
     </div>
   );
 }

@@ -33,9 +33,10 @@ export default async function HomePage() {
 
     if (specRes.ok) {
       const sData = await specRes.json();
-      const list = Array.isArray(sData) ? sData : sData?.specialists || [];
-      if (list.length > 0) {
-        const spec = list[0];
+      const list = Array.isArray(sData) ? sData : (sData?.items || sData?.specialists || []);
+      const specsOnly = list.filter((s: any) => s.role === "specialist");
+      if (specsOnly.length > 0) {
+        const spec = specsOnly[0];
         initialSpecialist = {
           id: spec.id,
           name: spec.name,

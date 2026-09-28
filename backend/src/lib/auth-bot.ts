@@ -242,7 +242,7 @@ export const EXPERIENCE_KEYBOARD: InlineKeyboard = {
     ],
     [
       { text: "🌳 5–10 yil (tajribali)", callback_data: "exp:7" },
-      { text: "👑 10+ yil (katta mutaxassis)", callback_data: "exp:12" },
+      { text: "👑 10+ yil (katta mutaxassis)", callback_data: "exp:10" },
     ],
     [{ text: "⏩ O'tkazib yuborish", callback_data: "exp:skip" }],
   ],
@@ -274,11 +274,28 @@ export const PHARMACY_TYPE_KEYBOARD: InlineKeyboard = {
 /** Dorini tasdiqlash / qayta yuborish / bekor qilish. */
 export const MEDICINE_CONFIRM_KEYBOARD: InlineKeyboard = {
   inline_keyboard: [
-    [{ text: "✅ Tasdiqlash", callback_data: "m:ok" }],
+    [{ text: "✅ Ha, saqlansin", callback_data: "m:ok" }],
     [
-      { text: "🔄 Qayta yuborish", callback_data: "m:restart" },
+      { text: "🔄 Boshidan boshlash", callback_data: "m:restart" },
       { text: "❌ Bekor qilish", callback_data: "m:no" },
     ],
+  ],
+};
+
+/** Dori hajmi yoki birligi tanlash klaviaturasi. */
+export const MEDICINE_UNIT_KEYBOARD: InlineKeyboard = {
+  inline_keyboard: [
+    [
+      { text: "1 litr", callback_data: "u:1 litr" },
+      { text: "500 ml", callback_data: "u:500 ml" },
+      { text: "1 dona", callback_data: "u:1 dona" },
+    ],
+    [
+      { text: "1 kg", callback_data: "u:1 kg" },
+      { text: "5 kg", callback_data: "u:5 kg" },
+      { text: "100 gr", callback_data: "u:100 gr" },
+    ],
+    [{ text: "❌ Bekor qilish", callback_data: "m:no" }],
   ],
 };
 
@@ -964,11 +981,11 @@ export function medicineIntroMessage(pharmacyName: string, total: number): strin
     `🏪 Dorixona: <b>${escapeHtml(pharmacyName)}</b>`,
     `📦 Hozirgi dorilar: <b>${total}</b> ta`,
     "",
-    "<b>Bosqichlar:</b>",
-    "1️⃣ <b>Rasm (Majburiy)</b> → 2️⃣ Nomi → 3️⃣ Turi → 4️⃣ Nima uchun → 5️⃣ Narx → 6️⃣ Tasdiqlash",
+    "<b>Bosqichlar (Barchasi majburiy):</b>",
+    "1️⃣ 📸 Rasm (kamida 400×400) → 2️⃣ 💊 Nomi → 3️⃣ 🧭 Turi → 4️⃣ 🩺 Nima uchun → 5️⃣ ⚖️ Hajm/Birlik → 6️⃣ 💰 Narx → 7️⃣ 🧾 Tasdiqlash",
     "",
     "📸 <b>Dorining aniq rasmini yuboring (Majburiy):</b>",
-    "<i>Qutisi yoki idishi aniq ko'rinadigan qilib rasmga oling yoki galereyadan yuboring. Rasm mahsulotlar kartochkasiga to'liq (fill/cover) moslashtiriladi.</i>",
+    "<i>Qutisi yoki flakoni aniq ko'rinadigan qilib rasmga oling yoki galereyadan yuboring (kamida 400×400 px).</i>",
   ].join("\n");
 }
 
@@ -1019,13 +1036,23 @@ export const MEDICINE_TYPE_LABELS: Record<string, string> = {
   general: "📦 Umumiy",
 };
 
-/** Dori bosqichi indikatori: «📌 Bosqich 1/6 · Rasm ▰▱▱▱▱▱» ko'rinishida. */
-export function medicineStepIndicator(step: "photo" | "name" | "type" | "usage" | "price" | "confirm"): string {
-  const map = { photo: 1, name: 2, type: 3, usage: 4, price: 5, confirm: 6 } as const;
-  const labels = { photo: "Rasm", name: "Nomi", type: "Turi", usage: "Nima uchun", price: "Narx", confirm: "Tasdiqlash" } as const;
+/** Dori bosqichi indikatori: «📌 Bosqich 1/7 · Rasm ▰▱▱▱▱▱▱» ko'rinishida. */
+export function medicineStepIndicator(
+  step: "photo" | "name" | "type" | "usage" | "unit" | "price" | "confirm",
+): string {
+  const map = { photo: 1, name: 2, type: 3, usage: 4, unit: 5, price: 6, confirm: 7 } as const;
+  const labels = {
+    photo: "Rasm",
+    name: "Nomi",
+    type: "Turi",
+    usage: "Tavsif",
+    unit: "Hajmi/Birligi",
+    price: "Narxi",
+    confirm: "Tasdiqlash",
+  } as const;
   const n = map[step];
-  const bar = "▰".repeat(n) + "▱".repeat(6 - n);
-  return `📌 <b>Bosqich ${n}/6</b> ${bar} · ${labels[step]}`;
+  const bar = "▰".repeat(n) + "▱".repeat(7 - n);
+  return `📌 <b>Bosqich ${n}/7</b> ${bar} · ${labels[step]}`;
 }
 
 /** Kim uchun ekanini tanlash (dori turi). */
@@ -1042,12 +1069,20 @@ export const MEDICINE_TYPE_KEYBOARD: InlineKeyboard = {
   ],
 };
 
-/** Narx bosqichi: narxsiz saqlash imkoni ham bor. */
+/** Dori hajmi / birligi so'rovi */
+export function askMedicineUnit(): string {
+  return [
+    "⚖️ <b>5. Dorining hajmi yoki o'lchov birligini kiriting (Majburiy):</b>",
+    "",
+    "Mijoz narx qanday hajm uchun belgilanganini bilishi kerak.",
+    "Pastdagi tayyor tugmalardan birini bosing yoki o'zingiz yozing:",
+    "Masalan: <i>1 litr</i>, <i>500 ml</i>, <i>5 kg</i>, <i>1 dona</i> yoki <i>50 dona</i>",
+  ].join("\n");
+}
+
+/** Narx bosqichida bekor qilish tugmasi. */
 export const MEDICINE_PRICE_SKIP_KEYBOARD: InlineKeyboard = {
-  inline_keyboard: [
-    [{ text: "💰 Narxsiz saqlash", callback_data: "mp:skip" }],
-    [{ text: "❌ Bekor qilish", callback_data: "m:no" }],
-  ],
+  inline_keyboard: [[{ text: "❌ Bekor qilish", callback_data: "m:no" }]],
 };
 
 /** Narxni so'm ko'rinishida formatlaydi: 45000 → "45 000 so'm". */
@@ -1055,20 +1090,23 @@ export function formatSum(value: number): string {
   return `${value.toLocaleString("ru-RU").replace(/\u00a0/g, " ")} so'm`;
 }
 
-export function askMedicinePrice(): string {
+export function askMedicinePrice(unit?: string): string {
+  const u = unit ? ` (1 ${escapeHtml(unit)} uchun)` : "";
   return [
-    "💰 <b>Dorining narxini yozing (so'mda).</b>",
+    `💰 <b>6. Dorining narxini yozing${u} (Majburiy, so'mda):</b>`,
     "",
-    "Faqat raqam: masalan <i>45000</i> yoki <i>45 000</i>",
-    "Narx yozmasangiz — «💰 Narxsiz saqlash»ni bosing, keyin /dorilarim orqali",
-    "qo'shishingiz mumkin.",
+    "Faqat raqam bilan yozing: masalan <i>45000</i> yoki <i>120 000</i>",
+    "",
+    "<i>⚠️ Narx kiritish majburiydir! Narxsiz dorilar platformaga chiqarilmaydi.</i>",
   ].join("\n");
 }
 
 export function invalidPriceMessage(): string {
   return [
-    "❗️ Narx noto'g'ri. Faqat raqam yozing (masalan <i>45000</i>)",
-    "yoki «💰 Narxsiz saqlash»ni bosing.",
+    "❗️ <b>Narx noto'g'ri kiritildi!</b>",
+    "",
+    "Narx majburiy va 0 dan katta butun son bo'lishi kerak.",
+    "Iltimos, narxni faqat raqamlar bilan yozing (masalan <i>45000</i> yoki <i>120000</i>):",
   ].join("\n");
 }
 
@@ -1082,17 +1120,18 @@ export function medicineConfirmCaption(
   stockUnit?: string,
 ): string {
   return [
-    "🧾 <b>Tasdiqlash</b>",
+    "🧾 <b>Dori ma'lumotlari to'ldirildi</b>",
     "",
     `💊 Dori nomi: <b>${escapeHtml(name)}</b>`,
-    ...(typeLabel ? [`🧭 Turi: ${escapeHtml(typeLabel)}`] : []),
-    ...(usage ? [`🩺 Nima uchun: ${escapeHtml(usage)}`] : []),
-    ...(price ? [`💰 Narx: <b>${formatSum(price)}</b>`] : ["💰 Narx: kiritilmagan"]),
-    `📦 Qoldiq miqdori: <b>${stock ?? 10} ${stockUnit ?? "dona"}</b>`,
+    ...(typeLabel ? [`🧭 Turi: <b>${escapeHtml(typeLabel)}</b>`] : []),
+    ...(usage ? [`🩺 Nima uchun: <b>${escapeHtml(usage)}</b>`] : []),
+    `⚖️ Hajm / Birlik: <b>${escapeHtml(stockUnit ?? "1 dona")}</b>`,
+    `💰 Narxi: <b>${formatSum(price ?? 0)}</b>`,
+    `📦 Qoldiq miqdori: <b>${stock ?? 10} ${escapeHtml(stockUnit ?? "dona")}</b>`,
     ...(pharmacyName ? [`🏪 Dorixona: ${escapeHtml(pharmacyName)}`] : []),
     "",
-    "Tasdiqlasangiz, dori platformaga chiqadi va dehqon/chorvadorlar",
-    "dori qidirganda yoki yaqin dorixonalarni ko'rganda dorixonangiz bilan ko'rsatiladi.",
+    "💡 <b>Shunday ko'rinadi. Saqlaymizmi?</b>",
+    "Tasdiqlasangiz, dori darhol katalogda paydo bo'ladi.",
   ].join("\n");
 }
 

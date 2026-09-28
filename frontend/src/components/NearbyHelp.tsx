@@ -512,7 +512,7 @@ export default function NearbyHelp({
                             style={{ background: "var(--brand-bg)", color: "var(--brand-ink)" }}
                             title="Tajriba yillari"
                           >
-                            🏅 {s.experienceYears} yil
+                            🏅 {s.experienceYears >= 10 ? "10+ yil" : `${s.experienceYears} yil`}
                           </span>
                         )}
                         {typeof s.distanceKm === "number" && Number.isFinite(s.distanceKm) && (

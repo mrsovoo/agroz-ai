@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus, Minus, Heart, Pill, Sprout, Syringe, MapPin, Star, Bell } from "lucide-react";
 import FadeImage from "@/components/FadeImage";
-import PriceModal from "@/components/PriceModal";
 import {
   loadCart,
   saveCart,
@@ -67,25 +66,6 @@ export default function ProductCard({
   const [liked, setLiked] = useState(false);
   const [qty, setQty] = useState(0);
   const [notified, setNotified] = useState(false);
-  const [showPriceModal, setShowPriceModal] = useState(false);
-
-  const handleSavePrice = async (price: number) => {
-    try {
-      const res = await fetch(`${apiUrl}/api/medicines/${medicine.id}/price`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ price }),
-      });
-      if (!res.ok) throw new Error("Narxni saqlashda xatolik");
-      // Update local state
-      setQty(1); // Add to cart after price is set
-    } catch (err: any) {
-      alert(err.message || "Narxni saqlashda xatolik");
-    }
-  };
-
-  const openPriceModal = () => setShowPriceModal(true);
-  const closePriceModal = () => setShowPriceModal(false);
 
   useEffect(() => {
     const sync = () => {
@@ -211,30 +191,25 @@ export default function ProductCard({
           </Link>
 
           {/* Tavsifi */}
-          <p className="mt-1 text-[11px] sm:text-[11.5px] leading-tight text-neutral-500 line-clamp-2 min-h-[26px]">
-            {medicine.usage || "Tabiiy minerallarga boy ozuqa"}
-          </p>
+          {medicine.usage && (
+            <p className="mt-1 text-[11px] sm:text-[11.5px] leading-tight text-neutral-500 line-clamp-2 min-h-[26px]">
+              {medicine.usage}
+            </p>
+          )}
         </div>
 
         <div className="mt-2.5">
           {/* Narxi */}
-          {medicine.price && medicine.price > 0 ? (
+          <div className="flex items-baseline justify-between">
             <p className="text-[14px] sm:text-[15px] font-black text-neutral-900 tracking-tight">
-              {new Intl.NumberFormat("uz-UZ").format(medicine.price).replace(/\s/g, ".")} so'm
+              {new Intl.NumberFormat("uz-UZ").format(medicine.price || 0).replace(/\s/g, ".")} so&apos;m
             </p>
-          ) : (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                openPriceModal();
-              }}
-              className="flex w-full items-center justify-center rounded-full bg-amber-100 hover:bg-amber-200 py-2 sm:py-2.5 text-[12px] sm:text-[13px] font-bold text-amber-800 border border-amber-300 shadow-2xs active:scale-[0.98] transition-all"
-            >
-              💬 Kelishiladi
-            </button>
-          )}
+            {medicine.stockUnit && (
+              <span className="text-[11px] text-neutral-400 font-medium">
+                / {medicine.stockUnit}
+              </span>
+            )}
+          </div>
 
           {/* + Savatga tugmasi */}
           <div className="mt-2">
@@ -284,17 +259,6 @@ export default function ProductCard({
               </button>
             )}
           </div>
-      </div>
-      <div className="relative">
-        {showPriceModal && (
-          <PriceModal
-            medicineId={medicine.id}
-            medicineName={medicine.name}
-            currentPrice={medicine.price || null}
-            onClose={() => setShowPriceModal(false)}
-            onSave={handleSavePrice}
-          />
-        )}
       </div>
     </div>
     </div>

@@ -36,6 +36,8 @@ import {
   MEDICINE_PHOTO_KEYBOARD,
   MEDICINE_TYPE_KEYBOARD,
   MEDICINE_TYPE_LABELS,
+  MEDICINE_UNIT_KEYBOARD,
+  askMedicineUnit,
   formatSum,
   NEXT_STEP_KEYBOARD,
   ROLE_KEYBOARD,
@@ -157,6 +159,7 @@ type Step =
   | "med_name"
   | "med_type"
   | "med_usage"
+  | "med_unit"
   | "med_price"
   | "med_stock"
   | "med_confirm"
@@ -1667,6 +1670,31 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
       return;
     }
 
+    // Dori hajmi/birligi tanlandi (u:1 litr, u:500 ml, ...)
+    if (data.startsWith("u:")) {
+      const value = data.slice(2).trim();
+      draft.medStockUnit = value;
+      await setState(telegramId, "med_price", draft);
+      await answerCallbackQuery(query.id);
+      await sendAuthMessage(
+        chatId,
+        `${medicineStepIndicator("price")}\n\n${askMedicinePrice(value)}`,
+        { inline: MEDICINE_PRICE_SKIP_KEYBOARD },
+      );
+      return;
+    }
+
+    // Narxni o'tkazib yuborish taqiqlangan
+    if (data === "mp:skip") {
+      await answerCallbackQuery(query.id, "Narx kiritish majburiy!");
+      await sendAuthMessage(
+        chatId,
+        `⚠️ <b>Narx kiritish majburiy!</b>\n\nIltimos, dorining narxini raqam bilan yozing (masalan: <i>45000</i> yoki <i>120000</i>):`,
+        { inline: MEDICINE_PRICE_SKIP_KEYBOARD },
+      );
+      return;
+    }
+
     // Tasdiqlashda narx bosqichidan o'tgan bo'lishi kerak — m:ok to'g'ridan-to'g'ri ishlaydi.
 
     // Dorini tasdiqlash / qayta boshlash / bekor qilish / yana qo'shish.
@@ -1924,14 +1952,7 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
       return;
     }
 
-    // Dori narxini kiritmasdan davom etish.
-    if (data === "mp:skip") {
-      delete draft.medPrice;
-      await setState(telegramId, "med_confirm", draft);
-      await answerCallbackQuery(query.id);
-      await sendMedicineConfirm(chatId, draft);
-      return;
-    }
+
 
     // /dorilarim → dori boshqaruvi oynasi (mm:<id>).
     if (data.startsWith("mm:")) {
@@ -2507,6 +2528,12 @@ async function handleText(
     }
 
     case "med_name": {
+      if (text === "/skip" || text === "/otkaz") {
+        await sendAuthMessage(chatId, "⚠️ <b>Dori nomi majburiy!</b> O'tkazib yuborish mumkin emas. Iltimos, dorining to'liq nomini yozing:", {
+          inline: MEDICINE_CANCEL_KEYBOARD,
+        });
+        return;
+      }
       // Juda qisqa nomlar rad etiladi (masalan bitta harf).
       const name = cleanText(text, 160);
       if (!name || name.replace(/\s/g, "").length < 2) {
@@ -2515,6 +2542,33 @@ async function handleText(
         });
         return;
       }
+
+      // Takror tekshiruv: ushbu dorixonada shu nomli dori bormi?
+      const profile = await getSpecialistByTelegramId(telegramId);
+      if (profile) {
+        const { specialistMedicines } = await import("@/db/schema");
+        const { eq, and, sql } = await import("drizzle-orm");
+        const existing = await db
+          .select({ id: specialistMedicines.id })
+          .from(specialistMedicines)
+          .where(
+            and(
+              eq(specialistMedicines.specialistId, profile.id),
+              sql`LOWER(TRIM(${specialistMedicines.name})) = LOWER(TRIM(${name}))`
+            )
+          )
+          .limit(1);
+
+        if (existing.length > 0) {
+          await sendAuthMessage(
+            chatId,
+            `⚠️ <b>«${escapeHtml(name)}» dorisi allaqachon dorixonangizda mavjud!</b>\n\nBir xil nomli dori takroran qo'shilmaydi. Boshqa nom yozing yoki /dorilarim bo'limidan narxini o'zgartiring:`,
+            { inline: MEDICINE_CANCEL_KEYBOARD }
+          );
+          return;
+        }
+      }
+
       draft.medName = name;
       await setState(telegramId, "med_type", draft);
       await sendAuthMessage(
@@ -2526,44 +2580,86 @@ async function handleText(
     }
 
     case "med_usage": {
-      // /skip yoki /o'tkaz yozilsa — usage bo'sh qoladi.
-      const skip = text === "/skip" || text === "/otkaz";
-      const usage = skip ? null : cleanText(text, 300);
-      if (!skip && !usage) {
-        await sendAuthMessage(chatId, askMedicineUsage(), { inline: MEDICINE_CANCEL_KEYBOARD });
+      if (text === "/skip" || text === "/otkaz") {
+        await sendAuthMessage(
+          chatId,
+          "⚠️ <b>Dori tavsifi majburiy!</b> O'tkazib yuborish mumkin emas. Iltimos, dori nimaga yordam berishi haqida qisqacha yozing (kamida 5 ta harf):",
+          { inline: MEDICINE_CANCEL_KEYBOARD }
+        );
         return;
       }
-      draft.medUsage = usage ?? undefined;
-      // Keyingi: narx (6 bosqichli oqim).
+      const usage = cleanText(text, 300);
+      if (!usage || usage.replace(/\s/g, "").length < 5) {
+        await sendAuthMessage(
+          chatId,
+          "⚠️ <b>Dori tavsifi majburiy!</b>\n\nIltimos, dori nimaga yordam berishi haqida qisqacha yozing (kamida 5 ta harf).\nMasalan: <i>Kech piyozdog' va fitoftorozga qarshi</i>",
+          { inline: MEDICINE_CANCEL_KEYBOARD }
+        );
+        return;
+      }
+      draft.medUsage = usage;
+      // Keyingi: Hajm / Birlik (unit)
+      await setState(telegramId, "med_unit", draft);
+      await sendAuthMessage(
+        chatId,
+        `${medicineStepIndicator("unit")}\n\n${askMedicineUnit()}`,
+        { inline: MEDICINE_UNIT_KEYBOARD },
+      );
+      return;
+    }
+
+    case "med_unit": {
+      if (text === "/skip" || text === "/otkaz") {
+        await sendAuthMessage(
+          chatId,
+          "⚠️ <b>Hajm yoki o'lchov birligi majburiy!</b> O'tkazib yuborish mumkin emas. Masalan: <i>1 litr</i>, <i>500 ml</i>, <i>5 kg</i> yoki <i>1 dona</i>:",
+          { inline: MEDICINE_UNIT_KEYBOARD }
+        );
+        return;
+      }
+      const unit = cleanText(text, 50);
+      if (!unit || unit.length < 1) {
+        await sendAuthMessage(
+          chatId,
+          "⚠️ <b>Hajm yoki o'lchov birligini kiriting:</b>\n\nMasalan: <i>1 litr</i>, <i>500 ml</i>, <i>5 kg</i> yoki <i>1 dona</i>",
+          { inline: MEDICINE_UNIT_KEYBOARD },
+        );
+        return;
+      }
+      draft.medStockUnit = unit;
       await setState(telegramId, "med_price", draft);
       await sendAuthMessage(
         chatId,
-        `${medicineStepIndicator("price")}\n\n${askMedicinePrice()}`,
+        `${medicineStepIndicator("price")}\n\n${askMedicinePrice(unit)}`,
         { inline: MEDICINE_PRICE_SKIP_KEYBOARD },
       );
       return;
     }
 
-    // Dori qo'shishda narx kiritish (ixtiyoriy).
+    // Dori narxini kiritish (majburiy, noldan katta butun son).
     case "med_price": {
-      const skip = text === "/skip" || text === "/otkaz";
-      if (!skip) {
-        const price = parsePrice(text);
-        if (price === null) {
-          await sendAuthMessage(chatId, invalidPriceMessage(), {
-            inline: MEDICINE_PRICE_SKIP_KEYBOARD,
-          });
-          return;
-        }
-        draft.medPrice = price;
-      } else {
-        delete draft.medPrice;
+      if (text === "/skip" || text === "/otkaz") {
+        await sendAuthMessage(
+          chatId,
+          "⚠️ <b>Narx kiritish majburiy!</b> O'tkazib yuborish mumkin emas. Iltimos, narxni raqam bilan yozing (masalan: <i>45000</i> yoki <i>120000</i>):",
+          { inline: MEDICINE_PRICE_SKIP_KEYBOARD },
+        );
+        return;
       }
+      const price = parsePrice(text);
+      if (price === null || price <= 0) {
+        await sendAuthMessage(chatId, invalidPriceMessage(), {
+          inline: MEDICINE_PRICE_SKIP_KEYBOARD,
+        });
+        return;
+      }
+      draft.medPrice = price;
+
       // Narxdan keyin: dori qoldig'i (miqdori) so'raladi
       await setState(telegramId, "med_stock", draft);
       await sendAuthMessage(
         chatId,
-        "📦 <b>5. Dori qoldig'i (miqdori):</b>\n\nHozirda dorixonangizda bu doridan <b>necha dona (yoki kg/litr)</b> bor? Aniq sonini kiriting:\n\nMasalan: <i>10</i> yoki <i>50</i>",
+        `📦 <b>7. Dori qoldig'i (miqdori):</b>\n\nHozirda dorixonangizda bu doridan (${escapeHtml(draft.medStockUnit ?? "birlik")}) necha dona mavjud? Aniq sonini kiriting:\n\nMasalan: <i>10</i> yoki <i>50</i>`,
         { inline: MEDICINE_CANCEL_KEYBOARD },
       );
       return;
@@ -2582,7 +2678,7 @@ async function handleText(
         return;
       }
       draft.medStock = num;
-      draft.medStockUnit = "dona";
+      if (!draft.medStockUnit) draft.medStockUnit = "dona";
       await setState(telegramId, "med_confirm", draft);
       await sendMedicineConfirm(chatId, draft);
       return;
@@ -2596,17 +2692,13 @@ async function handleText(
         await sendAuthMessage(chatId, cancelMessage(), { inline: NEXT_STEP_KEYBOARD });
         return;
       }
-      if (text === "/skip") {
-        await setMedicinePrice(telegramId, medId, null);
-        await clearState(telegramId);
-        await sendAuthMessage(chatId, "✅ Narx olib tashlandi.", { inline: MEDICINE_PRICE_CANCEL_KEYBOARD });
-        return;
-      }
       const price = parsePrice(text);
-      if (price === null) {
-        await sendAuthMessage(chatId, invalidPriceMessage(), {
-          inline: MEDICINE_PRICE_CANCEL_KEYBOARD,
-        });
+      if (price === null || price <= 0) {
+        await sendAuthMessage(
+          chatId,
+          "⚠️ <b>Narx majburiy!</b> Iltimos, noldan katta butun son kiriting (masalan: <i>45000</i>):",
+          { inline: MEDICINE_PRICE_CANCEL_KEYBOARD },
+        );
         return;
       }
       const ok = await setMedicinePrice(telegramId, medId, price);
@@ -2913,6 +3005,14 @@ async function handleMedicinePhoto(
   const best = [...photos].sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0];
   if (!best?.file_id) {
     await sendAuthMessage(chatId, askMedicinePhoto(), { inline: MEDICINE_CANCEL_KEYBOARD });
+    return;
+  }
+  if ((best.width ?? 0) < 400 || (best.height ?? 0) < 400) {
+    await sendAuthMessage(
+      chatId,
+      "⚠️ <b>Rasm o'lchami juda kichik!</b>\n\nDorining aniq va sifatli ko'rinishi uchun kamida <b>400×400 piksel</b> o'lchamdagi sifatli rasm yuboring.",
+      { inline: MEDICINE_PHOTO_KEYBOARD },
+    );
     return;
   }
   const draft = state.draft;

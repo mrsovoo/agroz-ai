@@ -40,9 +40,6 @@ export type HomeSpecialist = {
   role?: string;
 };
 
-// Fallback ma'lumotlar — faqat API xatosi uchun minimal placeholder
-const DEFAULT_MEDICINES: HomeMedicine[] = [];
-
 export default function HomeClientView({
   initialMedicines = [],
   initialSpecialist,
@@ -50,9 +47,7 @@ export default function HomeClientView({
   initialMedicines?: HomeMedicine[];
   initialSpecialist?: HomeSpecialist | null;
 }) {
-  const [medicines] = useState<HomeMedicine[]>(
-    initialMedicines && initialMedicines.length >= 2 ? initialMedicines.slice(0, 2) : DEFAULT_MEDICINES
-  );
+  const [medicines] = useState<HomeMedicine[]>(initialMedicines || []);
   const [specialist] = useState<HomeSpecialist | null>(initialSpecialist || null);
 
   const [callModalOpen, setCallModalOpen] = useState(false);
@@ -117,7 +112,7 @@ export default function HomeClientView({
   }
 
   function formatPrice(sum?: number | null) {
-    if (!sum) return "35.000 so'm";
+    if (!sum || sum <= 0) return "Kelishilgan narxda";
     return new Intl.NumberFormat("uz-UZ").format(sum).replace(/\s/g, ".") + " so'm";
   }
 
@@ -146,95 +141,103 @@ export default function HomeClientView({
           </Link>
         </div>
 
-        {/* 2 ustunli kartalar */}
-        <div className="grid grid-cols-2 gap-3.5">
-          {medicines.map((med, idx) => {
-            const qty = quantities[med.id] || 0;
-            return (
-              <div
-                key={med.id || idx}
-                className="flex flex-col justify-between rounded-[24px] bg-[#f8f9fa] border border-neutral-100 p-3 shadow-2xs transition active:scale-[0.98]"
-              >
-                <div>
-                  {/* Rasm joyi — rasmda toza oq blok */}
-                  <div className="relative mb-2.5 flex h-[135px] w-full items-center justify-center overflow-hidden rounded-[18px] bg-white border border-neutral-100/80">
-                    {med.photoUrl ? (
-                      <img
-                        src={med.photoUrl}
-                        alt={med.name}
-                        className="h-full w-full object-contain p-2"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-white" />
+        {/* 2 ustunli kartalar yoki bo'sh holat */}
+        {medicines.length === 0 ? (
+          <div className="rounded-2xl border border-neutral-100 bg-[#f8f9fa] p-6 text-center text-[13px] text-neutral-400">
+            Hozircha dorilar mavjud emas
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3.5">
+            {medicines.map((med, idx) => {
+              const qty = quantities[med.id] || 0;
+              return (
+                <div
+                  key={med.id || idx}
+                  className="flex flex-col justify-between rounded-[24px] bg-[#f8f9fa] border border-neutral-100 p-3 shadow-2xs transition active:scale-[0.98]"
+                >
+                  <div>
+                    {/* Rasm joyi — rasmda toza oq blok */}
+                    <div className="relative mb-2.5 flex h-[135px] w-full items-center justify-center overflow-hidden rounded-[18px] bg-white border border-neutral-100/80">
+                      {med.photoUrl ? (
+                        <img
+                          src={med.photoUrl}
+                          alt={med.name}
+                          className="h-full w-full object-contain p-2"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-white" />
+                      )}
+                    </div>
+
+                    {/* Nomi */}
+                    <h3 className="text-[15px] font-black leading-tight text-neutral-900 line-clamp-1">
+                      {med.name}
+                    </h3>
+
+                    {/* Tavsifi */}
+                    {med.usage && (
+                      <p className="mt-1 text-[11.5px] leading-tight text-neutral-500 line-clamp-2">
+                        {med.usage}
+                      </p>
                     )}
                   </div>
 
-                  {/* Nomi */}
-                  <h3 className="text-[15px] font-black leading-tight text-neutral-900 line-clamp-1">
-                    {med.name}
-                  </h3>
+                  <div className="mt-3">
+                    {/* Narxi */}
+                    <p className="text-[15px] font-black text-neutral-900">
+                      {formatPrice(med.price)}
+                    </p>
 
-                  {/* Tavsifi */}
-                  <p className="mt-1 text-[11.5px] leading-tight text-neutral-500 line-clamp-2">
-                    {med.usage || "Tabiiy minerallarga boy ozuqa"}
-                  </p>
-                </div>
+                    {/* + Savatga yoki - 1 + tugmasi */}
+                    <div className="mt-2">
+                      {qty > 0 ? (
+                        <div className="flex h-10 w-full items-center justify-between rounded-full bg-[#eaf5e1] border border-[#039e1e]/30 px-1 text-[#039e1e]">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              changeQty(med, -1);
+                            }}
+                            className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#039e1e] shadow-xs active:scale-90 transition font-black"
+                            aria-label="Kamaytirish"
+                          >
+                            <Minus size={14} strokeWidth={3} />
+                          </button>
 
-                <div className="mt-3">
-                  {/* Narxi */}
-                  <p className="text-[15px] font-black text-neutral-900">
-                    {formatPrice(med.price)}
-                  </p>
+                          <span className="text-[13px] font-black tracking-tight select-none">
+                            {qty} ta
+                          </span>
 
-                  {/* + Savatga yoki - 1 + tugmasi */}
-                  <div className="mt-2">
-                    {qty > 0 ? (
-                      <div className="flex h-10 w-full items-center justify-between rounded-full bg-[#eaf5e1] border border-[#039e1e]/30 px-1 text-[#039e1e]">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              changeQty(med, 1);
+                            }}
+                            className="flex h-8 w-8 items-center justify-center rounded-full bg-[#039e1e] text-white shadow-xs active:scale-90 transition font-black"
+                            aria-label="Ko'paytirish"
+                          >
+                            <Plus size={14} strokeWidth={3} />
+                          </button>
+                        </div>
+                      ) : (
                         <button
                           type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            changeQty(med, -1);
-                          }}
-                          className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#039e1e] shadow-xs active:scale-90 transition font-black"
-                          aria-label="Kamaytirish"
+                          onClick={() => changeQty(med, 1)}
+                          className="flex w-full items-center justify-center rounded-full bg-[#039e1e] hover:bg-[#028518] py-2.5 text-[13px] font-bold text-white shadow-2xs active:scale-95 transition-all"
                         >
-                          <Minus size={14} strokeWidth={3} />
+                          + Savatga
                         </button>
-
-                        <span className="text-[13px] font-black tracking-tight select-none">
-                          {qty} ta
-                        </span>
-
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            changeQty(med, 1);
-                          }}
-                          className="flex h-8 w-8 items-center justify-center rounded-full bg-[#039e1e] text-white shadow-xs active:scale-90 transition font-black"
-                          aria-label="Ko'paytirish"
-                        >
-                          <Plus size={14} strokeWidth={3} />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => changeQty(med, 1)}
-                        className="flex w-full items-center justify-center rounded-full bg-[#039e1e] hover:bg-[#028518] py-2.5 text-[13px] font-bold text-white shadow-2xs active:scale-95 transition-all"
-                      >
-                        + Savatga
-                      </button>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {/* 4. Mutaxassislar bo'limi — faqat real mutaxassis borligini tekshiradi */}
@@ -256,34 +259,42 @@ export default function HomeClientView({
               <div className="flex items-center gap-3">
                 {/* Sariq/olovrang avatar */}
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] bg-gradient-to-br from-[#f59e0b] to-[#ea580c] text-white shadow-2xs font-black text-xl">
-                  {specialist.name.charAt(0)}
+                  {specialist?.name?.charAt(0) ?? "V"}
                 </div>
 
                 <div>
                   <h3 className="text-[17px] font-black leading-snug text-neutral-900">
-                    {specialist.specialty || "Veterinar"}
+                    {specialist?.specialty || "Veterinar"}
                   </h3>
                   <p className="text-[12.5px] font-medium text-neutral-500 mt-0.5">
-                    {specialist.name}
+                    {specialist?.name ?? "—"}
                   </p>
                 </div>
               </div>
 
               {/* Badgelar: tajriba yillari & reyting */}
               <div className="flex items-center gap-1.5 shrink-0">
-                <span className="rounded-full bg-[#028518] px-2.5 py-0.5 text-[11px] font-bold text-white shadow-2xs">
-                  {specialist.experienceYears ?? 0} yil
-                </span>
-                <span className="rounded-full bg-[#f59e0b] px-2.5 py-0.5 text-[11px] font-bold text-white shadow-2xs">
-                  {specialist.ratingAvg ? specialist.ratingAvg.toFixed(1) : "—"}
-                </span>
+                {specialist?.experienceYears != null && specialist.experienceYears > 0 && (
+                  <span className="rounded-full bg-[#028518] px-2.5 py-0.5 text-[11px] font-bold text-white shadow-2xs">
+                    {specialist.experienceYears >= 10 ? "10+ yil" : `${specialist.experienceYears} yil`}
+                  </span>
+                )}
+                {specialist?.ratingAvg && specialist.ratingAvg > 0 ? (
+                  <span className="rounded-full bg-[#f59e0b] px-2.5 py-0.5 text-[11px] font-bold text-white shadow-2xs">
+                    ★ {specialist.ratingAvg.toFixed(1)}
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-neutral-200/80 px-2 py-0.5 text-[10.5px] font-bold text-neutral-600">
+                    Yangi
+                  </span>
+                )}
               </div>
             </div>
 
             {/* 2 ta tugma: Bog'lanish & Chaqirish */}
             <div className="mt-3.5 grid grid-cols-2 gap-2.5">
               <a
-                href={`tel:${specialist.phone}`}
+                href={`tel:${specialist?.phone ?? ""}`}
                 onClick={() => haptic("light")}
                 className="flex items-center justify-center rounded-xl bg-[#6b7280] hover:bg-[#4b5563] py-2.5 text-[14px] font-bold text-white transition active:scale-95 shadow-2xs"
               >

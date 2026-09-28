@@ -15,6 +15,8 @@ router.get("/", async (req, res) => {
 
     const conditions = [
       eq(specialistMedicines.status, "bor"),
+      sql`${specialistMedicines.price} is not null and ${specialistMedicines.price} > 0`,
+      sql`(${specialistMedicines.photoFileId} is not null or ${specialistMedicines.photoData} is not null)`,
       eq(specialists.isActive, true),
       eq(specialists.isApproved, true),
     ];
@@ -37,6 +39,7 @@ router.get("/", async (req, res) => {
         type: specialistMedicines.type,
         usage: specialistMedicines.usage,
         price: specialistMedicines.price,
+        stockUnit: specialistMedicines.stockUnit,
         hasPhoto: sql<boolean>`(${specialistMedicines.photoFileId} is not null or ${specialistMedicines.photoData} is not null)`,
         photoVersion: sql<string>`coalesce(length(${specialistMedicines.photoData})::text, right(${specialistMedicines.photoFileId}, 12), ${specialistMedicines.id}::text)`,
         pharmacyId: specialists.id,
@@ -62,6 +65,7 @@ router.get("/", async (req, res) => {
       type: r.type,
       usage: r.usage,
       price: r.price,
+      stockUnit: r.stockUnit ?? "dona",
       hasPhoto: Boolean(r.hasPhoto),
       photoVersion: r.photoVersion,
       pharmacyId: r.pharmacyId,
@@ -320,26 +324,6 @@ router.patch("/:id/price", async (req, res) => {
       .update(specialistMedicines)
       .set({ price })
       .where(eq(specialistMedicines.id, id));
-
-    // Reset price notification timestamp
-    await db
-      .update(specialistMedicines)
-      .set({ priceNotifiedAt: null })
-      .where(eq(specialistMedicines.id, id));
-
-    // Reset image notification if image exists
-    const medRows = await db
-      .select({ photoFileId: specialistMedicines.photoFileId, photoData: specialistMedicines.photoData })
-      .from(specialistMedicines)
-      .where(eq(specialistMedicines.id, id))
-      .limit(1);
-    const med = medRows[0];
-    if (med?.photoFileId || med?.photoData) {
-      await db
-        .update(specialistMedicines)
-        .set({ imageNotifiedAt: null })
-        .where(eq(specialistMedicines.id, id));
-    }
 
     res.json({ ok: true, message: "Narx yangilandi", price });
   } catch (err: any) {

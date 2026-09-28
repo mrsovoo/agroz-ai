@@ -394,15 +394,21 @@ export async function listSpecialists(opts: {
 
   const bySpecialist = new Map<number, MedicineDto[]>();
   for (const m of medicineRows) {
+    const hasPhoto = Boolean(m.photoFileId || m.photoData);
+    const hasPrice = typeof m.price === "number" && m.price > 0;
+    // Fermerga faqat rasmi, narxi to'liq va mavjud bo'lgan dorilar ko'rinadi (boshqalar yashirin turadi)
+    if (!hasPhoto || !hasPrice || m.status !== "bor") {
+      continue;
+    }
     const list = bySpecialist.get(m.specialistId) ?? [];
     list.push({
       id: m.id,
       name: m.name,
       status: m.status,
-      hasPhoto: Boolean(m.photoFileId || m.photoData),
+      hasPhoto: true,
       type: m.type,
       usage: m.usage,
-      price: m.price ?? null,
+      price: m.price,
       stock: m.stock ?? 10,
       stockUnit: m.stockUnit ?? "dona",
     });
