@@ -856,17 +856,31 @@ async function handleIndependentCallback(
         }
 
         if (customerTelegramId) {
+          const [specInfo] = await db
+            .select()
+            .from(specialists)
+            .where(eq(specialists.id, callItem.specialistId))
+            .limit(1);
+
           const msg = `🏁 <b>Mutaxassis xizmati yakunlandi! (#${callId})</b>\n\n` +
-            `Xizmatdan mamnun bo'lsangiz, platforma orqali mutaxassisga baho va sharh qoldirishingiz mumkin.`;
+            `👨‍⚕️ <b>Mutaxassis:</b> ${escapeHtml(specInfo?.name || "Mutaxassis")}\n` +
+            (specInfo?.specialty ? `🔬 <b>Mutaxassisligi:</b> ${escapeHtml(specInfo.specialty)}\n` : "") +
+            `\nXizmatdan mamnun bo'lsangiz, platforma orqali mutaxassisga baho va sharh qoldirishingiz mumkin.`;
+
+          const { miniAppKeyboard, appBaseUrl, sendMessage, isBotConfigured } = await import("@/lib/telegram-bot");
+          const webUrl = (await appBaseUrl()) || "https://agrozgo.uz";
+          const appKb = (await miniAppKeyboard()) || {
+            inline_keyboard: [[{ text: "🚀 Agroz AI (Ilovani ochish)", url: webUrl }]],
+          };
+
           try {
-            const { sendMessage, isBotConfigured } = await import("@/lib/telegram-bot");
             if (await isBotConfigured()) {
-              await sendMessage(customerTelegramId, msg);
+              await sendMessage(customerTelegramId, msg, { keyboard: appKb });
             } else {
-              await sendAuthMessage(customerTelegramId, msg);
+              await sendAuthMessage(customerTelegramId, msg, { inline: appKb });
             }
           } catch {
-            await sendAuthMessage(customerTelegramId, msg).catch(() => {});
+            await sendAuthMessage(customerTelegramId, msg, { inline: appKb }).catch(() => {});
           }
         }
       } catch (e) {
@@ -998,16 +1012,29 @@ async function handleIndependentCallback(
         }
 
         if (customerTelegramId) {
-          const msg = `✅ <b>Mutaxassis chaqiruvingizni qabul qildi!</b>\n\n` +
-            `👨‍⚕️ <b>Mutaxassis:</b> ${escapeHtml(currentSpec?.name || "Mutaxassis")}\n` +
-            (currentSpec?.phone ? `📞 <b>Telefon:</b> <code>${escapeHtml(currentSpec.phone)}</code>\n\n` : "\n") +
-            `Tez orada mutaxassis siz bilan bog'lanadi.`;
+          const specParts = [
+            `✅ <b>Buyurtmangiz (chaqiruv) tasdiqlandi!</b>`,
+            "",
+            `👨‍⚕️ <b>Mutaxassis:</b> ${escapeHtml(currentSpec?.name || "Mutaxassis")}`,
+            currentSpec?.specialty ? `🔬 <b>Mutaxassisligi:</b> ${escapeHtml(currentSpec.specialty)}` : "",
+            currentSpec?.phone ? `📞 <b>Telefon:</b> <code>${escapeHtml(currentSpec.phone)}</code>` : "",
+            currentSpec?.address ? `📍 <b>Manzil:</b> ${escapeHtml(currentSpec.address)}` : "",
+            "",
+            `Tez orada mutaxassis siz bilan bog'lanadi.`,
+          ].filter(Boolean);
+
+          const msg = specParts.join("\n");
+
+          const { miniAppKeyboard, appBaseUrl, sendMessage, isBotConfigured } = await import("@/lib/telegram-bot");
+          const webUrl = (await appBaseUrl()) || "https://agrozgo.uz";
+          const appKb = (await miniAppKeyboard()) || {
+            inline_keyboard: [[{ text: "🚀 Agroz AI (Ilovani ochish)", url: webUrl }]],
+          };
 
           let sent = false;
           try {
-            const { sendMessage, isBotConfigured } = await import("@/lib/telegram-bot");
             if (await isBotConfigured()) {
-              await sendMessage(customerTelegramId, msg);
+              await sendMessage(customerTelegramId, msg, { keyboard: appKb });
               sent = true;
             }
           } catch (err) {
@@ -1016,7 +1043,7 @@ async function handleIndependentCallback(
 
           if (!sent) {
             try {
-              await sendAuthMessage(customerTelegramId, msg);
+              await sendAuthMessage(customerTelegramId, msg, { inline: appKb });
             } catch (err) {
               console.error("[sc:accept] Auth bot fallback send error:", err);
             }

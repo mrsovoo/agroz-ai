@@ -23,56 +23,10 @@ export function apiUrl(path: string): string {
   return `${base}${cleanPath}`;
 }
 
-/**
- * Telegram va sessiya avtorizatsiya sarlavhalarini qaytaradi.
- * Mini App ichida cookielar cheklangan bo'lsa ham foydalanuvchini 100% aniqlash uchun.
- */
-export function getAuthHeaders(): Record<string, string> {
-  const headers: Record<string, string> = {};
-  if (typeof window !== "undefined") {
-    try {
-      const w = window as any;
-      const tg = w?.Telegram?.WebApp;
-      if (tg?.initData) {
-        headers["x-telegram-init-data"] = tg.initData;
-      }
-      const tgUserId = tg?.initDataUnsafe?.user?.id;
-      if (tgUserId) {
-        headers["x-telegram-user-id"] = String(tgUserId);
-      }
-      const savedUserStr = localStorage.getItem("agroz_user");
-      if (savedUserStr) {
-        try {
-          const u = JSON.parse(savedUserStr);
-          if (u?.telegramId && !headers["x-telegram-user-id"]) {
-            headers["x-telegram-user-id"] = String(u.telegramId);
-          }
-        } catch {}
-      }
-      const session = localStorage.getItem("agroz_session");
-      if (session) {
-        headers["x-session-id"] = session;
-        headers["authorization"] = `Bearer ${session}`;
-      }
-    } catch {}
-  }
-  return headers;
-}
-
-/**
- * Avtomatik sessiya va Telegram identifikatorlari bilan fetch qilish.
- */
 export async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
-  const url = apiUrl(path);
-  const authHeaders = getAuthHeaders();
-  const mergedHeaders: Record<string, string> = {
-    ...authHeaders,
-    ...((init?.headers as Record<string, string>) || {}),
-  };
-
-  return fetch(url, {
+  return fetch(apiUrl(path), {
     ...init,
-    headers: mergedHeaders,
-    credentials: "include",
+    credentials: init?.credentials ?? "include",
   });
 }
+

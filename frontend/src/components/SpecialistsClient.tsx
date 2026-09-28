@@ -63,21 +63,21 @@ type Specialist = {
 
 const FILTERS = [
   { v: "all", l: "Hammasi" },
-  { v: "specialist", l: "Mutaxassislar" },
-  { v: "pharmacy", l: "Dorixona egalari" },
+  { v: "agronom", l: "🌱 Agronomlar" },
+  { v: "veterinar", l: "🐄 Veterinarlar" },
 ];
 
 export const DEFAULT_SPECIALISTS: Specialist[] = [
   {
     id: 1,
-    name: "Sohibjon Sulaymonov",
+    name: "Bahodir Rahmonov",
     phone: "+998 90 123 45 67",
     role: "specialist",
-    specialty: "Veterinar",
-    education: "Samarqand davlat veterinariya meditsinasi instituti",
-    bio: "Qoramol, qo'y va boshqa chorva mollari kasalliklarini davolash, emlash va profilaktika",
-    helpsWith: "animal",
-    experienceYears: 8,
+    specialty: "Agronom",
+    education: "Toshkent davlat agrar universiteti",
+    bio: "Ekin kasalliklari, o'g'itlash va hosildorlikni oshirish bo'yicha mutaxassis",
+    helpsWith: "crop",
+    experienceYears: 10,
     organization: null,
     address: "Toshkent viloyati, Zangiota tumani",
     lat: 41.3111,
@@ -85,8 +85,8 @@ export const DEFAULT_SPECIALISTS: Specialist[] = [
     workHours: "08:00 - 20:00",
     distanceKm: 2.4,
     locked: false,
-    ratingAvg: 4.5,
-    ratingCount: 24,
+    ratingAvg: 4.8,
+    ratingCount: 34,
   },
   {
     id: 2,
@@ -94,8 +94,8 @@ export const DEFAULT_SPECIALISTS: Specialist[] = [
     phone: "+998 90 987 65 43",
     role: "specialist",
     specialty: "Veterinar",
-    education: "Samarqand veterinariya instituti",
-    bio: "Katta va kichik shoxli mollar kasalliklarini davolash",
+    education: "Samarqand davlat veterinariya instituti",
+    bio: "Katta va kichik shoxli mollar kasalliklarini davolash, emlash",
     helpsWith: "animal",
     experienceYears: 8,
     organization: null,
@@ -105,19 +105,19 @@ export const DEFAULT_SPECIALISTS: Specialist[] = [
     workHours: "08:00 - 20:00",
     distanceKm: 3.1,
     locked: false,
-    ratingAvg: 4.5,
-    ratingCount: 18,
+    ratingAvg: 4.7,
+    ratingCount: 28,
   },
   {
     id: 3,
-    name: "Sohibjon Sulaymonov",
+    name: "Murodjon Aliyev",
     phone: "+998 94 321 00 11",
     role: "specialist",
-    specialty: "Veterinar",
-    education: "Veterinariya akademiyasi",
-    bio: "Profilaktik emlash va jarrohlik yordami",
-    helpsWith: "animal",
-    experienceYears: 8,
+    specialty: "Agronom",
+    education: "Toshkent davlat agrar universiteti",
+    bio: "Issiqxona ekinlari, tomchilatib sug'orish va o'simliklarni himoya qilish",
+    helpsWith: "crop",
+    experienceYears: 7,
     organization: null,
     address: "Toshkent viloyati, Qibray tumani",
     lat: 41.3811,
@@ -125,19 +125,19 @@ export const DEFAULT_SPECIALISTS: Specialist[] = [
     workHours: "08:00 - 20:00",
     distanceKm: 4.2,
     locked: false,
-    ratingAvg: 4.5,
-    ratingCount: 29,
+    ratingAvg: 4.6,
+    ratingCount: 21,
   },
   {
     id: 4,
-    name: "Sohibjon Sulaymonov",
+    name: "Alisher Usmonov",
     phone: "+998 97 765 43 21",
     role: "specialist",
     specialty: "Veterinar",
     education: "Agrar universiteti veterinariya fakulteti",
-    bio: "Chorvachilik fermalari uchun shartnoma asosida xizmat",
+    bio: "Chorvachilik fermalari uchun shartnoma asosida xizmat va parvarish",
     helpsWith: "animal",
-    experienceYears: 8,
+    experienceYears: 9,
     organization: null,
     address: "Toshkent shahri, Sergeli tumani",
     lat: 41.2211,
@@ -146,18 +146,18 @@ export const DEFAULT_SPECIALISTS: Specialist[] = [
     distanceKm: 4.8,
     locked: false,
     ratingAvg: 4.5,
-    ratingCount: 15,
+    ratingCount: 19,
   },
   {
     id: 5,
-    name: "Sohibjon Sulaymonov",
+    name: "Jasur Qodirov",
     phone: "+998 99 888 77 66",
     role: "specialist",
     specialty: "Veterinar",
     education: "Veterinariya ilmiy-tadqiqot instituti",
-    bio: "Chorva mollari parvarishi bo'yicha maslahat va davolash",
+    bio: "Chorva mollari parvarishi bo'yicha maslahat va tezkor ko'rik",
     helpsWith: "animal",
-    experienceYears: 8,
+    experienceYears: 6,
     organization: null,
     address: "Toshkent viloyati, Yangiyo'l tumani",
     lat: 41.1511,
@@ -165,7 +165,7 @@ export const DEFAULT_SPECIALISTS: Specialist[] = [
     workHours: "08:00 - 21:00",
     distanceKm: 5.0,
     locked: false,
-    ratingAvg: 4.5,
+    ratingAvg: 4.9,
     ratingCount: 32,
   },
 ];
@@ -238,6 +238,7 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
 
   const loadSpecialists = useCallback(() => {
     const params = new URLSearchParams();
+    params.set("role", "specialist");
     if (coords) {
       params.set("lat", String(coords.lat));
       params.set("lng", String(coords.lng));
@@ -308,10 +309,27 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
     };
   }, [calls, loadSpecialists]);
 
-  const visible = useMemo(
-    () => (role === "all" ? items : items.filter((s) => s.role === role)),
-    [items, role],
-  );
+  const visible = useMemo(() => {
+    // Faqat haqiqiy mutaxassislar (dorixonalar butunlay chiqarib tashlangan)
+    const specsOnly = items.filter((s) => s.role === "specialist");
+    if (role === "all") return specsOnly;
+    if (role === "agronom") {
+      return specsOnly.filter(
+        (s) =>
+          s.helpsWith === "crop" ||
+          (s.specialty && /agronom/i.test(s.specialty))
+      );
+    }
+    if (role === "veterinar") {
+      return specsOnly.filter(
+        (s) =>
+          s.helpsWith === "animal" ||
+          (s.specialty && /veterinar/i.test(s.specialty))
+      );
+    }
+    return specsOnly;
+  }, [items, role]);
+
   const openCount = visible.filter((s) => !s.locked).length;
 
   // Qayta joylashuvni o'qish — ro'yxat avtomatik yangilanadi.
@@ -341,10 +359,31 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
   return (
     <div className="px-5 pt-3 pb-28">
       {/* Sahifa Sarlavhasi (Mockup bilan 1:1) */}
-      <div className="pt-1 pb-3">
+      <div className="pt-1 pb-2">
         <h1 className="text-[26px] font-bold text-neutral-900 tracking-tight">
-          Mutaxasislar
+          Mutaxassislar
         </h1>
+      </div>
+
+      {/* Filter tablari: Hammasi, Agronomlar, Veterinarlar */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-3.5 scrollbar-none">
+        {FILTERS.map((f) => {
+          const isActive = role === f.v;
+          return (
+            <button
+              key={f.v}
+              type="button"
+              onClick={() => setRole(f.v)}
+              className={`rounded-full px-4 py-1.5 text-[13.5px] font-bold transition-all shrink-0 ${
+                isActive
+                  ? "bg-[#039e1e] text-white shadow-xs"
+                  : "bg-white text-neutral-600 border border-neutral-200/80 hover:bg-neutral-50"
+              }`}
+            >
+              {f.l}
+            </button>
+          );
+        })}
       </div>
 
       {/* Mutaxassis xizmati yakunlangan va hali baholanmagan chaqiruvlar bo'lsa */}

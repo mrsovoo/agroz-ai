@@ -96,8 +96,8 @@ export default function OrderTrackingStatusCard({
           </div>
         </div>
       ) : (
-        /* Qora/to'q rangli bosqichlar kartochkasi (foydalanuvchi yuborgan rasmga 1:1) */
-        <div className="rounded-[22px] bg-[#1e2329] p-4 text-white shadow-md">
+        /* Yorug' (Light UI) bosqichlar kartochkasi */
+        <div className="rounded-[22px] bg-white border border-neutral-200/90 p-4.5 text-neutral-900 shadow-2xs">
           <div className="space-y-3.5">
             {steps.map((st, idx) => {
               const state = getStepState(st.num);
@@ -109,7 +109,7 @@ export default function OrderTrackingStatusCard({
                   {!isLast && (
                     <div
                       className={`absolute left-[13px] top-[26px] h-4 w-[2px] ${
-                        state.done ? "bg-[#10b981]" : "bg-neutral-700"
+                        state.done ? "bg-[#10b981]" : "bg-neutral-200"
                       }`}
                     />
                   )}
@@ -120,18 +120,18 @@ export default function OrderTrackingStatusCard({
                       <Check size={16} strokeWidth={3} />
                     </div>
                   ) : state.active ? (
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[#10b981] bg-[#10b981]/20 text-[#10b981]">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[#10b981] bg-emerald-50 text-[#10b981]">
                       <Clock size={14} className="animate-spin" />
                     </div>
                   ) : (
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-neutral-600 bg-transparent" />
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-neutral-300 bg-neutral-100" />
                   )}
 
                   {/* Bosqich nomi */}
                   <span
                     className={`text-[14.5px] ${
                       state.done
-                        ? "font-bold text-white"
+                        ? "font-bold text-neutral-900"
                         : state.active
                           ? "font-bold text-[#10b981]"
                           : "font-medium text-neutral-400"

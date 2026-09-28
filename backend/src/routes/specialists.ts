@@ -1,3 +1,5 @@
+
+
 import { Router } from "express";
 import { listSpecialists } from "../lib/specialists.js";
 import { clampRadiusKm, parseCoords } from "../lib/geo.js";
@@ -12,7 +14,21 @@ import { pharmacyRadiusKmSetting, specialistRadiusKmSetting } from "../lib/setti
 
 const router = Router();
 
-import { getUserFromReq } from "../lib/user-auth.js";
+async function getUserFromReq(req: any) {
+  const authHeader = req.headers.authorization;
+  const cookieSession = req.headers.cookie
+    ?.split(";")
+    .find((c: string) => c.trim().startsWith("agroz_session="))
+    ?.split("=")[1];
+  const sessionId = authHeader?.replace("Bearer ", "") || cookieSession;
+  if (!sessionId) return null;
+
+  const s = (await db.select().from(sessions).where(eq(sessions.id, sessionId)).limit(1))[0];
+  if (!s) return null;
+
+  const u = (await db.select().from(users).where(eq(users.id, s.userId)).limit(1))[0];
+  return u ?? null;
+}
 
 // GET /api/specialists
 router.get("/", async (req, res) => {
@@ -20,7 +36,8 @@ router.get("/", async (req, res) => {
     const latRaw = req.query.lat as string | undefined;
     const lngRaw = req.query.lng as string | undefined;
     const coords = parseCoords(latRaw, lngRaw);
-    const role = (req.query.role as string) || null;
+    const roleParam = (req.query.role as string) || undefined;
+    const role = roleParam === "all" ? null : (roleParam || "specialist");
     const defaultRadius = role === "pharmacy" 
       ? await pharmacyRadiusKmSetting() 
       : await specialistRadiusKmSetting();
@@ -37,7 +54,7 @@ router.get("/", async (req, res) => {
       lat: coords?.lat ?? null,
       lng: coords?.lng ?? null,
       radiusKm,
-      role: (req.query.role as string) || null,
+      role,
       meds,
     });
 
@@ -70,6 +87,20 @@ router.post("/rate", async (req, res) => {
     const result = await rateSpecialist(specialistId, raterKey, stars);
     if (!result) {
       return res.status(404).json({ error: "Mutaxassis topilmadi" });
+    }
+
+    if (callId && /^\d+$/.test(callId)) {
+      const numCallId = Number(callId);
+      await db
+        .update(specialistCalls)
+        .set({ status: "bajarildi", updatedAt: new Date() })
+        .where(eq(specialistCalls.id, numCallId))
+        .catch(() => {});
+      await db
+        .update(specialists)
+        .set({ isBusy: false, currentCallId: null, updatedAt: new Date() })
+        .where(eq(specialists.currentCallId, numCallId))
+        .catch(() => {});
     }
 
     res.json({ ok: true, ...result });

@@ -7,7 +7,7 @@ import { ChevronRight, LogOut, Check } from "lucide-react";
 import OrderTrackingStatusCard from "@/components/OrderTrackingStatusCard";
 import SpecialistCallModal from "@/components/SpecialistCallModal";
 import { getTelegramUser } from "@/lib/telegram";
-import { apiUrl, apiFetch } from "@/lib/api-config";
+import { apiUrl } from "@/lib/api-config";
 import { loadLastOrder } from "@/lib/cart-store";
 import { getSpecialistCalls } from "@/lib/specialist-calls";
 
@@ -50,16 +50,7 @@ const DEFAULT_CALLS = [
 
 export default function ProfileClientView({ initialUser }: { initialUser?: UserProfile | null }) {
   const router = useRouter();
-  const [user, setUser] = useState<UserProfile | null>(() => {
-    if (initialUser) return initialUser;
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("agroz_user");
-        if (saved) return JSON.parse(saved);
-      } catch {}
-    }
-    return null;
-  });
+  const [user, setUser] = useState<UserProfile | null>(initialUser ?? null);
   const [orders, setOrders] = useState<any[]>([]);
   const [calls, setCalls] = useState<any[]>([]);
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
@@ -67,39 +58,29 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
 
   // Profil va real aktivliklarni (buyurtmalar, chaqiruvlar) yuklash
   useEffect(() => {
-    // 1. Agar localStorage'da oldin saqlangan user bo'lsa
-    try {
-      const saved = localStorage.getItem("agroz_user");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed?.name) setUser(parsed);
-      }
-    } catch {}
-
-    // 2. Profil ma'lumotlarini yuklash (Telegram x-telegram-user-id / session orqali)
-    apiFetch("/api/profile")
+    // 1. Profil ma'lumotlarini yuklash
+    fetch(apiUrl("/api/profile"))
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.ok && data.user) {
           setUser(data.user);
-          localStorage.setItem("agroz_user", JSON.stringify(data.user));
         } else {
           const tg = getTelegramUser();
           if (tg) {
             const fullName = [tg.first_name, tg.last_name].filter(Boolean).join(" ");
-            setUser((prev) => (prev?.name ? prev : {
+            setUser({
               id: tg.id,
               name: fullName || tg.username || "Sizning ismingiz",
               phone: null,
               telegramId: tg.id,
-            }));
+            });
           }
         }
       })
       .catch(() => {});
 
-    // 3. Buyurtma va chaqiruvlarni yuklash
-    apiFetch("/api/profile/activity")
+    // 2. Buyurtma va chaqiruvlarni yuklash
+    fetch(apiUrl("/api/profile/activity"))
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.ok) {
@@ -108,17 +89,6 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
         }
       })
       .catch(() => {});
-
-    // 4. Background auth voqeasini tinglash
-    const handleUserLoaded = (e: any) => {
-      if (e?.detail) {
-        setUser(e.detail);
-      }
-    };
-    window.addEventListener("agroz_user_loaded", handleUserLoaded);
-    return () => {
-      window.removeEventListener("agroz_user_loaded", handleUserLoaded);
-    };
   }, []);
 
   // Mahaliy (local) buyurtma va chaqiruvlarni birlashtirish
@@ -185,34 +155,33 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
   };
 
   return (
-    <div className="min-h-screen bg-[#121212] px-5 pt-8 pb-32 text-white max-w-[500px] mx-auto animate-in fade-in duration-200">
-      {/* 1. Foydalanuvchi ma'lumoti bosh qismi (Mockup bilan 1:1) */}
+    <div className="min-h-screen bg-neutral-50 px-5 pt-8 pb-32 text-neutral-900 max-w-[500px] mx-auto animate-in fade-in duration-200">
+      {/* 1. Foydalanuvchi ma'lumoti bosh qismi (Light UI) */}
       <div className="flex items-center gap-3.5">
-        {/* To'q yashil doirali avatar */}
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#18311d] text-[#22c55e] text-[20px] font-bold shadow-sm">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[#039e1e] text-[20px] font-bold shadow-2xs">
           {initials}
         </div>
         <div className="min-w-0">
-          <h1 className="text-[20px] font-bold text-white tracking-tight leading-snug truncate">
+          <h1 className="text-[20px] font-bold text-neutral-900 tracking-tight leading-snug truncate">
             {displayName}
           </h1>
-          <p className="text-[14px] text-neutral-400 font-normal mt-0.5 truncate">
+          <p className="text-[14px] text-neutral-500 font-normal mt-0.5 truncate">
             {displayPhone} {authSource}
           </p>
         </div>
       </div>
 
-      {/* 2. Manzil kartochkasi (Mockup bilan 1:1) */}
-      <div className="mt-5 rounded-2xl bg-[#242426] border border-neutral-800/80 p-4 shadow-xs">
-        <p className="text-[13px] text-neutral-400 font-normal">Manzil</p>
-        <p className="text-[15.5px] font-bold text-white mt-0.5">
+      {/* 2. Manzil kartochkasi */}
+      <div className="mt-5 rounded-2xl bg-white border border-neutral-200/90 p-4 shadow-2xs">
+        <p className="text-[13px] text-neutral-500 font-normal">Manzil</p>
+        <p className="text-[15.5px] font-bold text-neutral-900 mt-0.5">
           {displayAddress}
         </p>
       </div>
 
-      {/* 3. Buyurtmalarim bo'limi (Mockup bilan 1:1) */}
+      {/* 3. Buyurtmalarim bo'limi */}
       <div className="mt-6">
-        <h2 className="text-[18px] font-bold text-white mb-2.5">
+        <h2 className="text-[18px] font-bold text-neutral-900 mb-2.5">
           Buyurtmalarim
         </h2>
 
@@ -239,32 +208,32 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
             return (
               <div
                 key={order.id}
-                className="overflow-hidden rounded-2xl bg-[#242426] border border-neutral-800/80 transition-all shadow-sm"
+                className="overflow-hidden rounded-2xl bg-white border border-neutral-200/90 transition-all shadow-2xs"
               >
                 <button
                   type="button"
                   onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
-                  className="flex w-full items-center justify-between p-4 text-left hover:bg-[#2c2c2f] active:scale-[0.99] transition"
+                  className="flex w-full items-center justify-between p-4 text-left hover:bg-neutral-50 active:scale-[0.99] transition"
                 >
                   <div>
-                    <p className="text-[16px] font-bold text-white tracking-tight">
+                    <p className="text-[16px] font-bold text-neutral-900 tracking-tight">
                       #{order.id} · {formattedTotal} so&apos;m
                     </p>
-                    <p className="text-[13px] text-neutral-400 font-medium mt-0.5">
+                    <p className="text-[13px] text-neutral-500 font-medium mt-0.5">
                       {statusLabel}
                     </p>
                   </div>
                   <ChevronRight
                     size={20}
                     className={`text-neutral-400 transition-transform duration-200 ${
-                      isExpanded ? "rotate-90 text-[#22c55e]" : ""
+                      isExpanded ? "rotate-90 text-[#039e1e]" : ""
                     }`}
                   />
                 </button>
 
                 {/* Bosilganda to'liq 4 bosqichli kuzatuv paneli ochiladi */}
                 {isExpanded && (
-                  <div className="border-t border-white/10 bg-[#1c1c1e] p-4 animate-in fade-in duration-200">
+                  <div className="border-t border-neutral-100 bg-neutral-50/70 p-4 animate-in fade-in duration-200">
                     <OrderTrackingStatusCard
                       orderId={order.id}
                       status={order.status || "yangi"}
@@ -282,9 +251,9 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
         </div>
       </div>
 
-      {/* 4. Chaqiruvlarim bo'limi (Mockup bilan 1:1) */}
+      {/* 4. Chaqiruvlarim bo'limi */}
       <div className="mt-6">
-        <h2 className="text-[18px] font-bold text-white mb-2.5">
+        <h2 className="text-[18px] font-bold text-neutral-900 mb-2.5">
           Chaqiruvlarim
         </h2>
 
@@ -294,15 +263,15 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
               call.status === "pending" || call.status === "yangi"
                 ? "So'rov yuborildi"
                 : call.status === "tasdiqlandi" || call.status === "qabul_qilindi"
-                ? "Mutaxassis qabul qildi"
+                ? "Qabul qilindi"
                 : call.status === "completed" || call.status === "bajarildi"
-                ? "Aloqaga chiqdi"
+                ? "Yakunlandi"
                 : "So'rov yuborildi";
 
             return (
               <div
                 key={call.id}
-                className="overflow-hidden rounded-2xl bg-[#242426] border border-neutral-800/80 transition-all shadow-sm"
+                className="overflow-hidden rounded-2xl bg-white border border-neutral-200/90 transition-all shadow-2xs"
               >
                 <button
                   type="button"
@@ -314,13 +283,13 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
                       phone: call.phone || "+998 90 123 45 67",
                     });
                   }}
-                  className="flex w-full items-center justify-between p-4 text-left hover:bg-[#2c2c2f] active:scale-[0.99] transition"
+                  className="flex w-full items-center justify-between p-4 text-left hover:bg-neutral-50 active:scale-[0.99] transition"
                 >
                   <div>
-                    <p className="text-[16px] font-bold text-white tracking-tight">
+                    <p className="text-[16px] font-bold text-neutral-900 tracking-tight">
                       {call.specialistSpecialty ? `${call.specialistSpecialty} ` : ""}{call.specialistName || "Agronom B. Rahmonov"}
                     </p>
-                    <p className="text-[13px] text-neutral-400 font-medium mt-0.5">
+                    <p className="text-[13px] text-neutral-500 font-medium mt-0.5">
                       {statusLabel}
                     </p>
                   </div>
@@ -333,18 +302,18 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
       </div>
 
       {/* 5. Pastki qo'shimcha amallar (Chiqish) */}
-      <div className="mt-9 pt-4 border-t border-neutral-800/60 flex items-center justify-between">
+      <div className="mt-9 pt-4 border-t border-neutral-200/80 flex items-center justify-between">
         <button
           type="button"
           onClick={handleLogout}
-          className="flex items-center gap-2 text-[14px] font-medium text-neutral-400 hover:text-red-400 transition"
+          className="flex items-center gap-2 text-[14px] font-medium text-neutral-500 hover:text-red-500 transition"
         >
           <LogOut size={16} />
           <span>Tizimdan chiqish</span>
         </button>
         <Link
           href="/dorilar"
-          className="text-[13px] font-medium text-[#22c55e] hover:underline"
+          className="text-[13px] font-semibold text-[#039e1e] hover:underline"
         >
           Dorilar katalogi &rarr;
         </Link>
