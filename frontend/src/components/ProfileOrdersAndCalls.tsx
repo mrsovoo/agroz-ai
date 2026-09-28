@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { apiUrl } from "@/lib/api-config";
 import { formatOrderNumber } from "@/lib/format";
+import OrderTrackingStatusCard from "@/components/OrderTrackingStatusCard";
 
 type OrderItem = {
   name: string;
@@ -52,6 +53,7 @@ export default function ProfileOrdersAndCalls({ userPhone }: { userPhone?: strin
   const [activeTab, setActiveTab] = useState<"medicines" | "specialists">("medicines");
   const [orders, setOrders] = useState<UserOrder[]>([]);
   const [calls, setCalls] = useState<UserCall[]>([]);
+  const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
@@ -64,8 +66,16 @@ export default function ProfileOrdersAndCalls({ userPhone }: { userPhone?: strin
       if (res.ok) {
         const data = await res.json();
         if (data.ok) {
-          setOrders(data.orders || []);
+          const ords: UserOrder[] = data.orders || [];
+          setOrders(ords);
           setCalls(data.specialistCalls || []);
+          // Faol buyurtma bo'lsa, birinchisini avtomatik kengaytirish
+          const active = ords.find((o) => o.status === "yangi" || o.status === "tasdiqlandi" || o.status === "yolda");
+          if (active) {
+            setExpandedOrderId(active.id);
+          } else if (ords.length > 0) {
+            setExpandedOrderId(ords[0].id);
+          }
         }
       }
     } catch {
@@ -272,6 +282,36 @@ export default function ProfileOrdersAndCalls({ userPhone }: { userPhone?: strin
                       </span>
                     </div>
                   </div>
+
+                  {/* Bosqichli holat kuzatuvi tugmasi */}
+                  <button
+                    type="button"
+                    onClick={() => setExpandedOrderId(expandedOrderId === ord.id ? null : ord.id)}
+                    className="mt-2.5 flex w-full items-center justify-between rounded-xl bg-neutral-100/90 px-3 py-2 text-[12px] font-bold text-neutral-800 hover:bg-neutral-200 transition"
+                  >
+                    <span>📊 Buyurtma holati va bot xabarnomasi</span>
+                    <ChevronRight
+                      size={15}
+                      className={`transform transition-transform text-neutral-500 ${
+                        expandedOrderId === ord.id ? "rotate-90" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {expandedOrderId === ord.id && (
+                    <div className="mt-3 pt-3 border-t border-neutral-100">
+                      <OrderTrackingStatusCard
+                        orderId={ord.id}
+                        status={ord.status}
+                        totalSum={ord.totalSum}
+                        items={ord.items}
+                        deliveryType={ord.deliveryType}
+                        customerAddress={ord.customerAddress}
+                        pharmacyName={ord.pharmacyName}
+                        pharmacyPhone={ord.pharmacyPhone}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             ))

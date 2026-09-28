@@ -2203,8 +2203,9 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
         return;
       }
 
-      const statusMap: Record<string, "tasdiqlandi" | "bekor" | "yetkazildi"> = {
+      const statusMap: Record<string, "tasdiqlandi" | "yolda" | "bekor" | "yetkazildi"> = {
         confirm: "tasdiqlandi",
+        onway: "yolda",
         cancel: "bekor",
         done: "yetkazildi",
       };

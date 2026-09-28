@@ -39,6 +39,7 @@ import {
   addItemToCart,
 } from "@/lib/cart-store";
 import FadeImage from "@/components/FadeImage";
+import OrderTrackingStatusCard from "@/components/OrderTrackingStatusCard";
 import { onTelegramReady, getTelegramUser, requestDeviceLocation } from "@/lib/telegram";
 import { apiUrl } from "@/lib/api-config";
 import { formatOrderNumber } from "@/lib/format";
@@ -94,6 +95,8 @@ export default function CartDrawer() {
     total: number;
     deliveryType: string;
     pharmacyName: string;
+    items?: { name: string; qty: number }[];
+    customerAddress?: string | null;
   } | null>(null);
 
   // Tavsiya etilgan dorilar va xaridor buyurtma statistikasi
@@ -399,6 +402,8 @@ export default function CartDrawer() {
         total: selectedTotal,
         deliveryType,
         pharmacyName: data.pharmacy?.name || cart.pharmacy.name,
+        items: selectedLines.map((l) => ({ name: l.medicine.name, qty: l.qty })),
+        customerAddress: deliveryType === "delivery" ? address.trim() : null,
       };
       setSuccessOrder(orderInfo);
       saveLastOrder(orderInfo);
@@ -484,58 +489,44 @@ export default function CartDrawer() {
           <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4">
             {/* 1. Buyurtma qabul qilingan bo'lsa kartochkasi */}
             {successOrder ? (
-              <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-emerald-50/40 p-4 shadow-2xs space-y-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-xs">
-                      <CheckCircle2 size={24} />
-                    </div>
-                    <div>
-                      <h3 className="text-[15px] font-black text-neutral-900 leading-snug">
-                        Buyurtmangiz qabul qilindi!
-                      </h3>
-                      <p className="text-[12px] font-semibold text-neutral-600">
-                        Buyurtma raqami:{" "}
-                        <strong className="font-mono text-emerald-800 font-black text-[13px]">
-                          {formatOrderNumber(successOrder.id)}
-                        </strong>
-                      </p>
-                    </div>
+              <div className="space-y-4">
+                <div className="rounded-[24px] border border-neutral-200/90 bg-white p-4 shadow-sm">
+                  <div className="flex justify-end mb-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSuccessOrder(null);
+                        clearLastOrder();
+                      }}
+                      className="rounded-full bg-neutral-100 px-3 py-1 text-[11.5px] font-bold text-neutral-600 hover:bg-neutral-200 transition"
+                    >
+                      Yopish
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSuccessOrder(null);
-                      clearLastOrder();
-                    }}
-                    className="rounded-lg bg-black/5 px-2 py-1 text-[11px] font-bold text-neutral-600 hover:bg-black/10 transition"
-                  >
-                    Yopish
-                  </button>
-                </div>
 
-                <div className="grid grid-cols-2 gap-2 text-[12px]">
-                  <div className="rounded-xl bg-white p-2.5 border border-black/5">
-                    <span className="text-[10px] font-semibold text-neutral-400 block uppercase tracking-wider">
-                      Dorixona
-                    </span>
-                    <span className="font-bold text-neutral-800 truncate block mt-0.5">
-                      {successOrder.pharmacyName}
-                    </span>
-                  </div>
-                  <div className="rounded-xl bg-white p-2.5 border border-black/5">
-                    <span className="text-[10.5px] font-semibold text-neutral-400 block uppercase tracking-wider">
-                      {successOrder.deliveryType === "delivery" ? "Yetkazish" : "Olib ketish"}
-                    </span>
-                    <span className="font-extrabold text-[var(--brand-green)] block mt-0.5">
-                      {successOrder.total > 0 ? `${shortSum(successOrder.total)} so'm` : "Kelishiladi"}
-                    </span>
-                  </div>
-                </div>
+                  <OrderTrackingStatusCard
+                    orderId={successOrder.id}
+                    status="yangi"
+                    totalSum={successOrder.total}
+                    items={successOrder.items || []}
+                    deliveryType={successOrder.deliveryType}
+                    customerAddress={successOrder.customerAddress}
+                    pharmacyName={successOrder.pharmacyName}
+                  />
 
-                <div className="flex items-center gap-2 rounded-xl bg-emerald-50/80 px-3 py-2 text-[11.5px] text-emerald-900 border border-emerald-100">
-                  <span className="shrink-0 text-emerald-600">📲</span>
-                  <span>Dorixona egasiga Telegram orqali xabarnoma yuborildi. Tez orada bog&apos;lanishadi.</span>
+                  <div className="mt-4 pt-3 border-t border-neutral-100 flex gap-2">
+                    <Link
+                      href="/profil"
+                      onClick={() => {
+                        setSuccessOrder(null);
+                        clearLastOrder();
+                        setOpen(false);
+                      }}
+                      className="flex-1 flex items-center justify-center gap-1.5 rounded-2xl bg-[#039e1e] py-3 text-[13.5px] font-bold text-white shadow-xs hover:bg-[#028519] transition"
+                    >
+                      Profilga o&apos;tish va kuzatish
+                    </Link>
+                  </div>
                 </div>
               </div>
             ) : (

@@ -16,9 +16,11 @@ import type { OrderStatus, OrderWithItems } from "@/lib/orders";
 export function orderStatusLabel(status: OrderStatus, deliveryType?: string): { emoji: string; label: string } {
   switch (status) {
     case "yangi":
-      return { emoji: "🆕", label: "Yangi" };
+      return { emoji: "🆕", label: "Yuborildi" };
     case "tasdiqlandi":
-      return { emoji: "✅", label: "Tasdiqlandi" };
+      return { emoji: "✅", label: "Dorixona qabul qildi" };
+    case "yolda":
+      return { emoji: "🚚", label: "Yo'lda" };
     case "yetkazildi":
       return deliveryType === "pickup"
         ? { emoji: "🏪", label: "Olib ketildi" }
@@ -112,11 +114,19 @@ export function orderActionsKeyboard(order: OrderWithItems): InlineKeyboard {
       { text: "❌ Bekor qilish", callback_data: `o:cancel:${order.id}` },
     ]);
   } else if (order.status === "tasdiqlandi") {
+    if (order.deliveryType === "delivery") {
+      rows.push([
+        { text: "🚚 Yo'lda", callback_data: `o:onway:${order.id}` },
+        { text: "📦 Yetkazildi", callback_data: `o:done:${order.id}` },
+      ]);
+    } else {
+      rows.push([
+        { text: "✅ Mijoz olib ketdi", callback_data: `o:done:${order.id}` },
+      ]);
+    }
+  } else if (order.status === "yolda") {
     rows.push([
-      {
-        text: order.deliveryType === "delivery" ? "🛵 Yetkazildi" : "✅ Mijoz olib ketdi",
-        callback_data: `o:done:${order.id}`,
-      },
+      { text: "📦 Yetkazildi", callback_data: `o:done:${order.id}` },
     ]);
   }
 

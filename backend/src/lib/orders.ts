@@ -13,9 +13,9 @@ import {
 } from "@/db/schema";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 
-export type OrderStatus = "yangi" | "tasdiqlandi" | "yetkazildi" | "bekor";
+export type OrderStatus = "yangi" | "tasdiqlandi" | "yolda" | "yetkazildi" | "bekor";
 
-export const ORDER_STATUSES: OrderStatus[] = ["yangi", "tasdiqlandi", "yetkazildi", "bekor"];
+export const ORDER_STATUSES: OrderStatus[] = ["yangi", "tasdiqlandi", "yolda", "yetkazildi", "bekor"];
 
 export function isOrderStatus(value: unknown): value is OrderStatus {
   return typeof value === "string" && (ORDER_STATUSES as string[]).includes(value);
