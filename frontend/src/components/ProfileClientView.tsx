@@ -55,6 +55,8 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
   const [calls, setCalls] = useState<any[]>([]);
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
   const [selectedCallForModal, setSelectedCallForModal] = useState<any | null>(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Profil va real aktivliklarni (buyurtmalar, chaqiruvlar) yuklash
   useEffect(() => {
@@ -146,12 +148,33 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
     return displayName.slice(0, 2).toUpperCase();
   }, [displayName]);
 
-  const handleLogout = async () => {
+  const handleConfirmLogout = async () => {
+    setIsLoggingOut(true);
     try {
-      await fetch(apiUrl("/api/auth/logout"), { method: "POST" });
+      await fetch(apiUrl("/api/auth/logout"), {
+        method: "POST",
+        credentials: "include",
+      });
     } catch {}
-    router.push("/");
-    router.refresh();
+
+    try {
+      // 1. Mahalliy barcha saqlangan ma'lumotlar va amallarni to'liq tozalash
+      localStorage.clear();
+      sessionStorage.clear();
+
+      // 2. Cookie fayllarini tozalash
+      if (typeof document !== "undefined") {
+        const cookies = document.cookie.split(";");
+        for (const cookie of cookies) {
+          const eqPos = cookie.indexOf("=");
+          const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;`;
+        }
+      }
+    } catch {}
+
+    // 3. Ilovani bosh holatga to'liq yangilab ochish
+    window.location.href = "/";
   };
 
   return (
@@ -305,7 +328,7 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
       <div className="mt-9 pt-4 border-t border-neutral-200/80 flex items-center justify-between">
         <button
           type="button"
-          onClick={handleLogout}
+          onClick={() => setShowLogoutConfirm(true)}
           className="flex items-center gap-2 text-[14px] font-medium text-neutral-500 hover:text-red-500 transition"
         >
           <LogOut size={16} />
@@ -318,6 +341,50 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
           Dorilar katalogi &rarr;
         </Link>
       </div>
+
+      {/* Tizimdan chiqishni tasdiqlash modali */}
+      {showLogoutConfirm && (
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={() => !isLoggingOut && setShowLogoutConfirm(false)}
+        >
+          <div
+            className="w-full max-w-[380px] rounded-[24px] bg-white p-6 shadow-xl border border-neutral-100 text-center animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-100 text-red-600 mb-4">
+              <LogOut size={26} className="stroke-[2.2]" />
+            </div>
+
+            <h3 className="text-[19px] font-bold text-neutral-900 tracking-tight">
+              Tizimdan chiqishni tasdiqlaysizmi?
+            </h3>
+
+            <p className="mt-2 text-[14px] text-neutral-500 leading-relaxed">
+              Profildan chiqish bo&apos;ladi va barcha mahalliy ma&apos;lumotlar hamda amallar o&apos;chiriladi. Shuni tasdiqlaysizmi?
+            </p>
+
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                disabled={isLoggingOut}
+                onClick={() => setShowLogoutConfirm(false)}
+                className="rounded-xl border border-neutral-300 py-3 text-[14.5px] font-bold text-neutral-700 hover:bg-neutral-100 active:scale-95 transition disabled:opacity-50"
+              >
+                Bekor qilish
+              </button>
+              <button
+                type="button"
+                disabled={isLoggingOut}
+                onClick={handleConfirmLogout}
+                className="rounded-xl bg-red-600 py-3 text-[14.5px] font-bold text-white hover:bg-red-700 active:scale-95 transition shadow-xs disabled:opacity-50"
+              >
+                {isLoggingOut ? "Chiqilmoqda..." : "Ha, chiqish"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Agar chaqiruv bosilsa, 3-bosqichli chaqiruv status ekranini ochish */}
       {selectedCallForModal && (

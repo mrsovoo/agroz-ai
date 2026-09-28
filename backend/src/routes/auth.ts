@@ -499,11 +499,26 @@ router.post("/quick-login", async (req, res) => {
 // POST /api/auth/logout
 router.post("/logout", async (req, res) => {
   try {
-    const sessionId = req.cookies?.["agroai_session"] || req.headers["x-session-id"];
+    const authHeader = req.headers.authorization;
+    const cookieHeader = req.headers.cookie || "";
+    const cookieSession = cookieHeader
+      .split(";")
+      .find((c: string) => c.trim().startsWith("agroai_session=") || c.trim().startsWith("agroz_session="))
+      ?.split("=")[1];
+
+    const sessionId =
+      req.cookies?.["agroai_session"] ||
+      req.cookies?.["agroz_session"] ||
+      authHeader?.replace("Bearer ", "") ||
+      req.headers["x-session-id"] ||
+      cookieSession;
+
     if (sessionId && typeof sessionId === "string") {
-      await db.delete(sessions).where(eq(sessions.id, sessionId));
+      await db.delete(sessions).where(eq(sessions.id, sessionId)).catch(() => {});
     }
+
     res.clearCookie("agroai_session", { path: "/" });
+    res.clearCookie("agroz_session", { path: "/" });
     res.json({ ok: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Server xatosi" });
