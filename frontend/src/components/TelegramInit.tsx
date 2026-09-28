@@ -33,8 +33,8 @@ export default function TelegramInit() {
         tg.setBackgroundColor?.("#f2f3f5");
 
         // Telegram Mini App ochilganda, agar foydalanuvchi bot orqali ro'yxatdan o'tgan bo'lsa,
-        // sessiyani avtomatik faollashtirish (background auth)
-        if (tg.initData && typeof document !== "undefined" && !document.cookie.includes("agroai_session=")) {
+        // sessiyani va profil ma'lumotlarini avtomatik faollashtirish
+        if (tg.initData) {
           fetch("/api/auth/telegram", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -42,8 +42,14 @@ export default function TelegramInit() {
           })
             .then((r) => r.json())
             .then((data) => {
-              if (data.ok && data.sessionId && data.registered) {
-                document.cookie = `agroai_session=${data.sessionId}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
+              if (data?.ok && data.user) {
+                if (data.sessionId && typeof document !== "undefined") {
+                  document.cookie = `agroai_session=${data.sessionId}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
+                  document.cookie = `agroz_session=${data.sessionId}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
+                  localStorage.setItem("agroz_session", data.sessionId);
+                }
+                localStorage.setItem("agroz_user", JSON.stringify(data.user));
+                window.dispatchEvent(new CustomEvent("agroz_user_loaded", { detail: data.user }));
               }
             })
             .catch(() => {});

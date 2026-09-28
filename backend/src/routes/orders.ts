@@ -9,25 +9,7 @@ import { getDeliverySettings } from "../lib/settings.js";
 
 const router = Router();
 
-async function getUserFromReq(req: any) {
-  const authHeader = req.headers.authorization;
-  const cookieSession = req.headers.cookie
-    ?.split(";")
-    .find((c: string) => c.trim().startsWith("agroai_session=") || c.trim().startsWith("agroz_session="))
-    ?.split("=")[1];
-  const sessionId =
-    authHeader?.replace("Bearer ", "") ||
-    req.cookies?.agroai_session ||
-    req.cookies?.agroz_session ||
-    cookieSession;
-  if (!sessionId) return null;
-
-  const s = (await db.select().from(sessions).where(eq(sessions.id, sessionId)).limit(1))[0];
-  if (!s) return null;
-
-  const u = (await db.select().from(users).where(eq(users.id, s.userId)).limit(1))[0];
-  return u ?? null;
-}
+import { getUserFromReq } from "../lib/user-auth.js";
 
 // GET /api/orders/delivery-config
 router.get("/delivery-config", async (_req, res) => {

@@ -43,7 +43,7 @@ import {
 import FadeImage from "@/components/FadeImage";
 import OrderTrackingStatusCard from "@/components/OrderTrackingStatusCard";
 import { onTelegramReady, getTelegramUser, requestDeviceLocation } from "@/lib/telegram";
-import { apiUrl } from "@/lib/api-config";
+import { apiUrl, apiFetch } from "@/lib/api-config";
 import { formatOrderNumber } from "@/lib/format";
 
 function shortSum(value: number): string {
@@ -286,29 +286,42 @@ export default function CartDrawer() {
   useEffect(() => {
     if (!open) return;
     setUserLoading(true);
-    fetch("/api/profile")
+
+    // Darhol localStorage dan foydalanuvchini olamiz (flicker bo'lmasligi uchun)
+    try {
+      const savedUserStr = localStorage.getItem("agroz_user");
+      if (savedUserStr) {
+        const parsed = JSON.parse(savedUserStr);
+        if (parsed?.name) {
+          setCurrentUser(parsed);
+          if (parsed.phone) fetchUserOrders(parsed.phone);
+        }
+      }
+    } catch {}
+
+    apiFetch("/api/profile")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.ok && data.user) {
           setCurrentUser(data.user);
+          localStorage.setItem("agroz_user", JSON.stringify(data.user));
           fetchUserOrders(data.user.phone);
         } else {
           const tgUser = getTelegramUser();
           if (tgUser) {
             const fullName = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ");
-            setCurrentUser({
+            setCurrentUser((prev) => (prev?.name ? prev : {
               id: tgUser.id,
               name: fullName || tgUser.username || "Telegram foydalanuvchisi",
               phone: null,
-            });
+            }));
           } else {
-            setCurrentUser(null);
+            setCurrentUser((prev) => prev);
           }
           fetchUserOrders(null);
         }
       })
       .catch(() => {
-        setCurrentUser(null);
         fetchUserOrders(null);
       })
       .finally(() => setUserLoading(false));

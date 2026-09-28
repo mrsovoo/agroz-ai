@@ -59,6 +59,7 @@ import {
   type FavKey,
 } from "@/lib/favorites-store";
 import { formatOrderNumber } from "@/lib/format";
+import { apiFetch } from "@/lib/api-config";
 
 type Medicine = {
   id: number;
@@ -273,11 +274,20 @@ export default function MarketClient() {
   }, []);
 
   useEffect(() => {
-    fetch("/api/profile")
+    try {
+      const saved = localStorage.getItem("agroz_user");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed?.name) setCurrentUser(parsed);
+      }
+    } catch {}
+
+    apiFetch("/api/profile")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.ok && data.user) {
           setCurrentUser(data.user);
+          localStorage.setItem("agroz_user", JSON.stringify(data.user));
         }
       })
       .catch(() => {});

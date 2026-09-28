@@ -12,21 +12,7 @@ import { pharmacyRadiusKmSetting, specialistRadiusKmSetting } from "../lib/setti
 
 const router = Router();
 
-async function getUserFromReq(req: any) {
-  const authHeader = req.headers.authorization;
-  const cookieSession = req.headers.cookie
-    ?.split(";")
-    .find((c: string) => c.trim().startsWith("agroz_session="))
-    ?.split("=")[1];
-  const sessionId = authHeader?.replace("Bearer ", "") || cookieSession;
-  if (!sessionId) return null;
-
-  const s = (await db.select().from(sessions).where(eq(sessions.id, sessionId)).limit(1))[0];
-  if (!s) return null;
-
-  const u = (await db.select().from(users).where(eq(users.id, s.userId)).limit(1))[0];
-  return u ?? null;
-}
+import { getUserFromReq } from "../lib/user-auth.js";
 
 // GET /api/specialists
 router.get("/", async (req, res) => {

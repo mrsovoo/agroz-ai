@@ -2,6 +2,7 @@ import { Router } from "express";
 import { handleAuthBotUpdate, type AuthBotUpdate } from "../lib/auth-bot-flow.js";
 import { isAuthBotConfigured } from "../lib/auth-bot.js";
 import {
+  agrozGoKeyboard,
   alreadyVerifiedMessage,
   answerCallbackQuery,
   codeMessage,
@@ -16,6 +17,7 @@ import {
   miniAppKeyboard,
   sendMessage,
   sendMessageWithId,
+  setAgrozGoMenuButton,
   startLink,
 } from "../lib/telegram-bot.js";
 import { BOT_OTP_TTL_MINUTES } from "../lib/constants.js";
@@ -302,21 +304,21 @@ async function finalizeUserRegistration(
   const locationLabel = [userRegion, userDistrict].filter(Boolean).join(", ");
 
   const successText = [
-    `🎉 <b>Tabriklaymiz, ${welcomeName}!</b>`,
-    `Siz <b>Agroz AI</b> platformasidan muvaffaqiyatli ro'yxatdan o'tdingiz.`,
+    `🎉 <b>Siz muvaffaqiyatli ro'yxatdan o'tdingiz!</b>`,
     "",
-    `👤 <b>Ism:</b> ${welcomeName}`,
+    `👤 <b>Ism-familiya:</b> ${welcomeName}`,
     `📞 <b>Telefon:</b> <code>${escapeHtml(user?.phone || data.phone)}</code>`,
-    user?.secondPhone ? `📞 <b>Qo'shimcha:</b> <code>${escapeHtml(user.secondPhone)}</code>` : "",
-    locationLabel ? `📍 <b>Hudud:</b> ${escapeHtml(locationLabel)}` : "",
+    user?.secondPhone ? `📞 <b>Qo'shimcha raqam:</b> <code>${escapeHtml(user.secondPhone)}</code>` : "",
+    locationLabel ? `📍 <b>Manzil:</b> ${escapeHtml(locationLabel)}` : "",
     "",
-    `📱 <b>Agroz AI ilovasini ochish:</b>`,
-    `Ilovaga kirish uchun pastdagi <b>«🚀 Agroz AI ilovasini ochish»</b> tugmasini bosing 👇`,
+    `Ilovaga kirish uchun pastdagi <b>«🌿 AgrozGo ga kirish»</b> tugmasini bosing 👇`,
   ]
     .filter(Boolean)
     .join("\n");
 
-  await sendMessage(chatId, successText, { keyboard: greetingKeyboard() });
+  await setAgrozGoMenuButton(chatId).catch(() => {});
+  await setAgrozGoMenuButton().catch(() => {});
+  await sendMessage(chatId, successText, { keyboard: agrozGoKeyboard() });
 }
 
 async function handleMainBotCallback(query: NonNullable<TelegramUpdate["callback_query"]>): Promise<void> {
@@ -584,10 +586,13 @@ router.post("/webhook", async (req, res) => {
       const existingUser = await findUserByTelegramId(fromId);
 
       if (existingUser && existingUser.phone) {
+        const registeredName = existingUser.name?.trim() || contactName;
+        const locationLabel = [existingUser.region, existingUser.district].filter(Boolean).join(", ");
+        await setAgrozGoMenuButton(chatId).catch(() => {});
         await sendMessage(
           chatId,
-          `👋 <b>Assalomu alaykum, ${escapeHtml(existingUser.name || contactName)}!</b>\n\nSiz ro'yxatdan o'tgansiz. Ilovani ochish uchun pastdagi tugmani bosing 👇`,
-          { keyboard: greetingKeyboard() }
+          `👋 <b>Assalomu alaykum, ${escapeHtml(registeredName)}!</b>\n\nSiz allaqachon ro'yxatdan o'tgansiz.\n\n👤 <b>Ism-familiya:</b> ${escapeHtml(registeredName)}\n📞 <b>Telefon:</b> <code>${escapeHtml(existingUser.phone)}</code>\n${locationLabel ? `📍 <b>Manzil:</b> ${escapeHtml(locationLabel)}\n` : ""}\nIlovaga kirish uchun pastdagi <b>«🌿 AgrozGo ga kirish»</b> tugmasini bosing 👇`,
+          { keyboard: agrozGoKeyboard() }
         );
         return res.json({ ok: true });
       }
@@ -796,15 +801,25 @@ router.post("/webhook", async (req, res) => {
 
       // Oddiy /start: Agar allaqachon to'liq ro'yxatdan o'tgan bo'lsa
       if (existingUser && existingUser.phone) {
+        const registeredName = existingUser.name?.trim() || "Foydalanuvchi";
+        const locationLabel = [existingUser.region, existingUser.district].filter(Boolean).join(", ");
         const welcomeText = [
-          `👋 <b>Assalomu alaykum, ${escapeHtml(existingUser.name || firstName || "Foydalanuvchi")}!</b>`,
+          `👋 <b>Assalomu alaykum, ${escapeHtml(registeredName)}!</b>`,
           "",
-          `🌱 <b>Agroz AI</b> platformasiga xush kelibsiz.`,
-          `📞 Telefoningiz: <code>${escapeHtml(existingUser.phone)}</code>`,
+          `Siz allaqachon ro'yxatdan o'tgansiz.`,
           "",
-          `Ilovani ochish uchun quyidagi <b>«🚀 Agroz AI»</b> tugmasini bosing 👇`,
-        ].join("\n");
-        await sendMessage(chatId, welcomeText, { keyboard: greetingKeyboard() });
+          `👤 <b>Ism-familiya:</b> ${escapeHtml(registeredName)}`,
+          `📞 <b>Telefon:</b> <code>${escapeHtml(existingUser.phone)}</code>`,
+          existingUser.secondPhone ? `📞 <b>Qo'shimcha:</b> <code>${escapeHtml(existingUser.secondPhone)}</code>` : "",
+          locationLabel ? `📍 <b>Manzil:</b> ${escapeHtml(locationLabel)}` : "",
+          "",
+          `Ilovaga kirish uchun pastdagi <b>«🌿 AgrozGo ga kirish»</b> tugmasini bosing 👇`,
+        ]
+          .filter(Boolean)
+          .join("\n");
+
+        await setAgrozGoMenuButton(chatId).catch(() => {});
+        await sendMessage(chatId, welcomeText, { keyboard: agrozGoKeyboard() });
         return res.json({ ok: true });
       }
 
@@ -816,7 +831,7 @@ router.post("/webhook", async (req, res) => {
 
       const promptText = [
         `👋 <b>Assalomu alaykum!</b>`,
-        `Platformadan foydalanish uchun ro'yxatdan o'ting.`,
+        `Platformadan to'liq foydalanish uchun ro'yxatdan o'ting.`,
         "",
         `1️⃣ <b>Ism va familiyangizni yozing:</b>`,
         `<i>(Masalan: Dilshod Ergashev)</i>`,
@@ -843,13 +858,29 @@ router.post("/webhook", async (req, res) => {
         await sendMessage(
           chatId,
           `✅ Qo'shimcha telefon raqamingiz yangilandi: <code>${escapeHtml(newSecond)}</code>`,
-          { keyboard: greetingKeyboard() }
+          { keyboard: agrozGoKeyboard() }
         );
         return res.json({ ok: true });
       }
 
-      const greeting = greetingMessage(existingUser.name || firstName);
-      await sendMessage(chatId, greeting, { keyboard: greetingKeyboard() });
+      const registeredName = existingUser.name?.trim() || "Foydalanuvchi";
+      const locationLabel = [existingUser.region, existingUser.district].filter(Boolean).join(", ");
+      const greeting = [
+        `👋 <b>Assalomu alaykum, ${escapeHtml(registeredName)}!</b>`,
+        "",
+        `Siz allaqachon ro'yxatdan o'tgansiz.`,
+        "",
+        `👤 <b>Ism-familiya:</b> ${escapeHtml(registeredName)}`,
+        `📞 <b>Telefon:</b> <code>${escapeHtml(existingUser.phone)}</code>`,
+        locationLabel ? `📍 <b>Manzil:</b> ${escapeHtml(locationLabel)}` : "",
+        "",
+        `Ilovaga kirish uchun pastdagi <b>«🌿 AgrozGo ga kirish»</b> tugmasini bosing 👇`,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      await setAgrozGoMenuButton(chatId).catch(() => {});
+      await sendMessage(chatId, greeting, { keyboard: agrozGoKeyboard() });
       return res.json({ ok: true });
     }
 
@@ -1000,11 +1031,17 @@ router.post("/webhook", async (req, res) => {
     const askPhoneText = [
       `Rahmat, <b>${escapeHtml(enteredName)}</b>!`,
       "",
-      `2️⃣ <b>Telefon raqamingizni yozing:</b>`,
-      `<i>(Masalan: 90 123 45 67 yoki +998901234567)</i>`,
+      `2️⃣ <b>Telefon raqamingizni yuboring yoki yozing:</b>`,
+      `<i>(Pastdagi tugmani bosing yoki raqamingizni yozing: +998901234567)</i>`,
     ].join("\n");
 
-    await sendMessage(chatId, askPhoneText, { keyboard: { remove_keyboard: true } });
+    await sendMessage(chatId, askPhoneText, {
+      keyboard: {
+        keyboard: [[{ text: "📱 Telefon raqamni yuborish", request_contact: true }]],
+        resize_keyboard: true,
+        one_time_keyboard: true,
+      },
+    });
     return res.json({ ok: true });
   } catch (err) {
     console.error("[bot] webhook xatosi:", err instanceof Error ? err.stack : err);

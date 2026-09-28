@@ -7,7 +7,7 @@ import { ChevronRight, LogOut, Check } from "lucide-react";
 import OrderTrackingStatusCard from "@/components/OrderTrackingStatusCard";
 import SpecialistCallModal from "@/components/SpecialistCallModal";
 import { getTelegramUser } from "@/lib/telegram";
-import { apiUrl } from "@/lib/api-config";
+import { apiUrl, apiFetch } from "@/lib/api-config";
 import { loadLastOrder } from "@/lib/cart-store";
 import { getSpecialistCalls } from "@/lib/specialist-calls";
 
@@ -50,7 +50,16 @@ const DEFAULT_CALLS = [
 
 export default function ProfileClientView({ initialUser }: { initialUser?: UserProfile | null }) {
   const router = useRouter();
-  const [user, setUser] = useState<UserProfile | null>(initialUser ?? null);
+  const [user, setUser] = useState<UserProfile | null>(() => {
+    if (initialUser) return initialUser;
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("agroz_user");
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return null;
+  });
   const [orders, setOrders] = useState<any[]>([]);
   const [calls, setCalls] = useState<any[]>([]);
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
@@ -58,29 +67,39 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
 
   // Profil va real aktivliklarni (buyurtmalar, chaqiruvlar) yuklash
   useEffect(() => {
-    // 1. Profil ma'lumotlarini yuklash
-    fetch(apiUrl("/api/profile"))
+    // 1. Agar localStorage'da oldin saqlangan user bo'lsa
+    try {
+      const saved = localStorage.getItem("agroz_user");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed?.name) setUser(parsed);
+      }
+    } catch {}
+
+    // 2. Profil ma'lumotlarini yuklash (Telegram x-telegram-user-id / session orqali)
+    apiFetch("/api/profile")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.ok && data.user) {
           setUser(data.user);
+          localStorage.setItem("agroz_user", JSON.stringify(data.user));
         } else {
           const tg = getTelegramUser();
           if (tg) {
             const fullName = [tg.first_name, tg.last_name].filter(Boolean).join(" ");
-            setUser({
+            setUser((prev) => (prev?.name ? prev : {
               id: tg.id,
               name: fullName || tg.username || "Sizning ismingiz",
               phone: null,
               telegramId: tg.id,
-            });
+            }));
           }
         }
       })
       .catch(() => {});
 
-    // 2. Buyurtma va chaqiruvlarni yuklash
-    fetch(apiUrl("/api/profile/activity"))
+    // 3. Buyurtma va chaqiruvlarni yuklash
+    apiFetch("/api/profile/activity")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.ok) {
@@ -89,6 +108,17 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
         }
       })
       .catch(() => {});
+
+    // 4. Background auth voqeasini tinglash
+    const handleUserLoaded = (e: any) => {
+      if (e?.detail) {
+        setUser(e.detail);
+      }
+    };
+    window.addEventListener("agroz_user_loaded", handleUserLoaded);
+    return () => {
+      window.removeEventListener("agroz_user_loaded", handleUserLoaded);
+    };
   }, []);
 
   // Mahaliy (local) buyurtma va chaqiruvlarni birlashtirish

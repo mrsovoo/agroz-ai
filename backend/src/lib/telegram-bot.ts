@@ -98,8 +98,39 @@ export function miniAppKeyboard(): InlineKeyboard | undefined {
   const url = appBaseUrl();
   if (!url || !url.startsWith("https://")) return undefined;
   return {
-    inline_keyboard: [[{ text: "🚀 Agroz AI", web_app: { url } }]],
+    inline_keyboard: [[{ text: "🌿 AgrozGo ga kirish", web_app: { url } }]],
   };
+}
+
+/** AgrozGo tugmasi: Mini Appga kirish uchun maxsus inline keyboard */
+export function agrozGoKeyboard(): InlineKeyboard | undefined {
+  const url = appBaseUrl();
+  if (!url || !url.startsWith("https://")) {
+    return {
+      inline_keyboard: [[{ text: "🌿 AgrozGo ga kirish", url: url || "https://agroz-ai.vercel.app" }]],
+    };
+  }
+  return {
+    inline_keyboard: [[{ text: "🌿 AgrozGo ga kirish", web_app: { url } }]],
+  };
+}
+
+/** Telegram pastki burchakdagi (Native Launch App) menyu tugmasini "AgrozGo" deb o'rnatish */
+export async function setAgrozGoMenuButton(chatId?: number): Promise<boolean> {
+  const url = appBaseUrl();
+  if (!url || !url.startsWith("https://")) return false;
+  const payload: Record<string, unknown> = {
+    menu_button: {
+      type: "web_app",
+      text: "AgrozGo",
+      web_app: { url },
+    },
+  };
+  if (chatId) {
+    payload.chat_id = chatId;
+  }
+  const res = await callBot("setChatMenuButton", payload);
+  return res !== null;
 }
 
 /** `@agroz_auth_bot` username (ro'yxatdan o'tish havolasi uchun). */
