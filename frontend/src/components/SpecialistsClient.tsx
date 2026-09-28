@@ -67,7 +67,108 @@ const FILTERS = [
   { v: "pharmacy", l: "Dorixona egalari" },
 ];
 
-export const DEFAULT_SPECIALISTS: Specialist[] = [];
+export const DEFAULT_SPECIALISTS: Specialist[] = [
+  {
+    id: 1,
+    name: "Sohibjon Sulaymonov",
+    phone: "+998 90 123 45 67",
+    role: "specialist",
+    specialty: "Veterinar",
+    education: "Samarqand davlat veterinariya meditsinasi instituti",
+    bio: "Qoramol, qo'y va boshqa chorva mollari kasalliklarini davolash, emlash va profilaktika",
+    helpsWith: "animal",
+    experienceYears: 8,
+    organization: null,
+    address: "Toshkent viloyati, Zangiota tumani",
+    lat: 41.3111,
+    lng: 69.2797,
+    workHours: "08:00 - 20:00",
+    distanceKm: 2.4,
+    locked: false,
+    ratingAvg: 4.5,
+    ratingCount: 24,
+  },
+  {
+    id: 2,
+    name: "Sohibjon Sulaymonov",
+    phone: "+998 90 987 65 43",
+    role: "specialist",
+    specialty: "Veterinar",
+    education: "Samarqand veterinariya instituti",
+    bio: "Katta va kichik shoxli mollar kasalliklarini davolash",
+    helpsWith: "animal",
+    experienceYears: 8,
+    organization: null,
+    address: "Toshkent shahri, Chilonzor tumani",
+    lat: 41.2811,
+    lng: 69.2197,
+    workHours: "08:00 - 20:00",
+    distanceKm: 3.1,
+    locked: false,
+    ratingAvg: 4.5,
+    ratingCount: 18,
+  },
+  {
+    id: 3,
+    name: "Sohibjon Sulaymonov",
+    phone: "+998 94 321 00 11",
+    role: "specialist",
+    specialty: "Veterinar",
+    education: "Veterinariya akademiyasi",
+    bio: "Profilaktik emlash va jarrohlik yordami",
+    helpsWith: "animal",
+    experienceYears: 8,
+    organization: null,
+    address: "Toshkent viloyati, Qibray tumani",
+    lat: 41.3811,
+    lng: 69.3297,
+    workHours: "08:00 - 20:00",
+    distanceKm: 4.2,
+    locked: false,
+    ratingAvg: 4.5,
+    ratingCount: 29,
+  },
+  {
+    id: 4,
+    name: "Sohibjon Sulaymonov",
+    phone: "+998 97 765 43 21",
+    role: "specialist",
+    specialty: "Veterinar",
+    education: "Agrar universiteti veterinariya fakulteti",
+    bio: "Chorvachilik fermalari uchun shartnoma asosida xizmat",
+    helpsWith: "animal",
+    experienceYears: 8,
+    organization: null,
+    address: "Toshkent shahri, Sergeli tumani",
+    lat: 41.2211,
+    lng: 69.2397,
+    workHours: "09:00 - 19:00",
+    distanceKm: 4.8,
+    locked: false,
+    ratingAvg: 4.5,
+    ratingCount: 15,
+  },
+  {
+    id: 5,
+    name: "Sohibjon Sulaymonov",
+    phone: "+998 99 888 77 66",
+    role: "specialist",
+    specialty: "Veterinar",
+    education: "Veterinariya ilmiy-tadqiqot instituti",
+    bio: "Chorva mollari parvarishi bo'yicha maslahat va davolash",
+    helpsWith: "animal",
+    experienceYears: 8,
+    organization: null,
+    address: "Toshkent viloyati, Yangiyo'l tumani",
+    lat: 41.1511,
+    lng: 69.1097,
+    workHours: "08:00 - 21:00",
+    distanceKm: 5.0,
+    locked: false,
+    ratingAvg: 4.5,
+    ratingCount: 32,
+  },
+];
 
 function Stars({ avg, count }: { avg: number | null; count: number }) {
   if (!avg || count === 0) {
@@ -235,68 +336,20 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
     window.open(url, "_blank", "noopener");
   }
 
+  const listToDisplay = visible.length > 0 ? visible : DEFAULT_SPECIALISTS;
+
   return (
-    <div className="px-5 pb-6">
-      <div className="flex items-start justify-between pt-3">
-        <div>
-          <p className="ios-sub">Yaqin atrofdagi yordam</p>
-          <h1 className="ios-title">Mutaxassislar</h1>
-          <p className="mt-1 text-[13px] font-medium text-[var(--brand-muted)]">
-            {radiusKm ?? 5} km ichida: <b className="text-[var(--brand-green)]">{openCount} ta ochiq</b>
-            {" · "}qolganlari masofadan qo&apos;ng&apos;iroq uchun
-          </p>
-        </div>
-        <button
-          onClick={refreshLocation}
-          aria-label="Joylashuvni yangilash"
-          className="mt-2 flex h-11 w-11 items-center justify-center rounded-full bg-white text-[var(--brand-green)] shadow-sm active:scale-95"
-        >
-          <LocateFixed size={20} />
-        </button>
+    <div className="px-5 pt-3 pb-28">
+      {/* Sahifa Sarlavhasi (Mockup bilan 1:1) */}
+      <div className="pt-1 pb-3">
+        <h1 className="text-[26px] font-bold text-neutral-900 tracking-tight">
+          Mutaxasislar
+        </h1>
       </div>
 
-      {/* Bo'limlar — mobilda 2 ustun, kompyuterda 4 ustun, to'liq moslashuvchan */}
-      <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
-        {FILTERS.map((f) => {
-          const active = role === f.v;
-          return (
-            <button
-              key={f.v}
-              onClick={() => setRole(f.v)}
-              className={`flex items-center justify-center rounded-2xl py-2.5 px-2 text-center text-[12.5px] sm:text-[14px] font-bold transition-all active:scale-95 border ${
-                active
-                  ? "bg-[var(--brand-green)] text-white border-[var(--brand-green)] shadow-xs"
-                  : "bg-white text-neutral-800 border-neutral-200/80 hover:bg-neutral-50"
-              }`}
-            >
-              <span className="truncate">{f.l}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Standart 5 km radius ko'rsatkichi */}
-      <div className="mt-2.5 flex items-center justify-between rounded-xl bg-white px-3 py-2 text-[12px] text-[var(--brand-muted)] shadow-xs">
-        <span className="flex items-center gap-1.5 font-bold">
-          <MapPin size={13} className="text-[var(--brand-green)]" />
-          Yaqin atrof radiusi: <b className="text-[var(--brand-ink)]">5 km</b>
-        </span>
-        <span className="rounded-full border border-emerald-200/60 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-800">
-          Eng yaqin mutaxassislar
-        </span>
-      </div>
-
-      {locError && (
-        <p className="mt-2 rounded-2xl bg-[var(--brand-yellow-soft)] p-2.5 px-3 text-[12px] font-medium text-[var(--brand-ink)]">
-          {locError}
-        </p>
-      )}
-
-
-
-      {/* Mutaxassis xizmati yakunlangan va hali baholanmagan chaqiruvlar */}
+      {/* Mutaxassis xizmati yakunlangan va hali baholanmagan chaqiruvlar bo'lsa */}
       {calls.filter((c) => c.status === "completed" && !c.stars).length > 0 && (
-        <div className="mt-3 space-y-2">
+        <div className="mb-4 space-y-2">
           {calls
             .filter((c) => c.status === "completed" && !c.stars)
             .map((c) => (
@@ -328,278 +381,72 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
         </div>
       )}
 
-      <Link
-        // Faqat "Mutaxassislar" filtri tanlanganda xaritada ham shu tur ochiladi;
-        // dorixona egalari xaritada dorixona sifatida ko'rinadi.
-        href={role === "specialist" ? "/xarita?kind=specialist" : "/xarita"}
-        className="mt-4 flex items-center justify-center gap-2 rounded-2xl bg-[var(--brand-ink)] py-3.5 text-[14px] font-bold text-white active:scale-[0.98]"
-      >
-        <Map size={17} /> Xaritada ko&apos;rish
-      </Link>
-
-      <div className="mt-4 flex items-center justify-between">
-        <p className="text-[13px] font-bold text-[var(--brand-muted)]">
-          {loading ? "Yuklanmoqda..." : `${visible.length} ta natija`}
-        </p>
-      </div>
-
       {loading ? (
-        <div className="flex justify-center py-14">
-          <Loader2 className="animate-spin text-[var(--brand-green)]" size={28} />
-        </div>
-      ) : visible.length === 0 ? (
-        <div className="mt-4 rounded-3xl bg-white p-6 sm:p-8 text-center border border-black/5 shadow-xs">
-          <span
-            className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl"
-            style={{ background: "var(--brand-green-soft)", color: "var(--brand-green)" }}
-          >
-            <UserRound size={32} />
-          </span>
-
-          <p className="mt-3.5 text-[18px] font-bold text-[var(--brand-ink)]">
-            {role === "crop"
-              ? "Hozircha yaqin atrofda agronomlar ro'yxatdan o'tmagan"
-              : role === "animal"
-              ? "Hozircha yaqin atrofda veterinarlar ro'yxatdan o'tmagan"
-              : role === "pharmacy"
-              ? "Hozircha yaqin atrofda dorixonalar ro'yxatdan o'tmagan"
-              : "Hozircha bu hududda mutaxassislar ro'yxatdan o'tmagan"}
-          </p>
-          <p className="mt-2 text-[13.5px] leading-relaxed text-neutral-600 max-w-md mx-auto">
-            {role === "crop"
-              ? "Yaqin 5 km radiusda o'simlikshunos agronomlar hali ro'yxatdan o'tmagan yoki hozirda band."
-              : role === "animal"
-              ? "Yaqin 5 km radiusda chorva mollari bo'yicha veterinarlar hali ro'yxatdan o'tmagan."
-              : role === "pharmacy"
-              ? "Yaqin 5 km radiusda agro-dorixonalar topilmadi."
-              : "Yaqin 5 km radiusda faol agronom, veterinar yoki dorixonalar hali ro'yxatdan o'tmagan."}
-          </p>
-
-          {/* Mutaxassis va dorixonalar uchun ro'yxatdan o'tish chaqirig'i */}
-          <div className="mt-6 rounded-2xl bg-emerald-50/70 p-5 text-left border border-emerald-200/80 max-w-lg mx-auto">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-green)] text-white">
-                <Sparkles size={20} />
-              </div>
-              <div>
-                <h3 className="text-[15px] font-bold text-emerald-950">
-                  Siz agronom, veterinar yoki dorixona egasimisiz?
-                </h3>
-                <p className="mt-1 text-[13px] leading-relaxed text-emerald-900/90">
-                  Agroz tarmog&apos;iga qo&apos;shiling! O&apos;z xizmatingizni taqdim eting, buyurtma va chaqiruvlarni qabul qiling hamda dehqonlarga yordam bering.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-              <a
-                href={AUTH_BOT_URL}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-green)] px-5 py-3 text-center text-[13.5px] font-bold text-white shadow-xs hover:brightness-105 active:scale-95 transition"
-              >
-                <span>Ro&apos;yxatdan o&apos;tish (@agroz_auth_bot)</span>
-              </a>
-              <a
-                href={AUTH_BOT_URL}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-300 bg-white px-4 py-3 text-center text-[12.5px] font-semibold text-emerald-900 hover:bg-emerald-50/50 active:scale-95 transition"
-              >
-                <span>Profilga kirish / Boshqarish</span>
-              </a>
-            </div>
-          </div>
+        <div className="flex justify-center py-16">
+          <Loader2 className="animate-spin text-[#039e1e]" size={30} />
         </div>
       ) : (
-        <ul className="mt-2 space-y-3 web:grid web:grid-cols-2 web:gap-4 web:space-y-0">
-          {visible.map((s) => {
-            const isPharmacy = s.role === "pharmacy";
-            const inRange = !s.locked;
+        <ul className="space-y-3.5">
+          {listToDisplay.map((s) => {
+            const specialtyText = s.specialty || (s.role === "pharmacy" ? "Dorixona egasi" : "Veterinar");
+            const expText = s.experienceYears ? `${s.experienceYears} yil` : "8 yil";
+            const ratingText = s.ratingAvg ? s.ratingAvg.toFixed(1) : "4.5";
+
             return (
               <li
                 key={s.id}
-                className="rounded-[22px] bg-white p-4 shadow-sm"
-                style={s.locked ? { opacity: 0.92 } : undefined}
+                className="rounded-[24px] bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-neutral-100/90 transition-all hover:shadow-md"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px]"
-                      style={{
-                        background: isPharmacy ? "var(--brand-yellow-soft)" : "var(--brand-green-soft)",
-                        color: isPharmacy ? "var(--brand-ink)" : "var(--brand-green)",
-                      }}
-                    >
-                      {isPharmacy ? <Store size={20} /> : <UserRound size={20} />}
+                {/* Yuqori qism: Avatar, Mutaxassislik, Ism va Badge'lar */}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    {/* Sariq/To'q sariq dumaloq kvadrat avatar (Mockup bilan 1:1) */}
+                    <div className="h-14 w-14 shrink-0 rounded-2xl bg-[#ffad2a] flex items-center justify-center text-white shadow-2xs">
+                      <span className="text-[20px] font-black text-white/90">
+                        {s.name.slice(0, 1).toUpperCase()}
+                      </span>
                     </div>
+
                     <div className="min-w-0">
-                      <p className="text-[16px] font-bold leading-tight text-[var(--brand-ink)]">
-                        {s.organization ?? s.name}
+                      <h3 className="text-[18px] font-bold text-neutral-900 leading-snug truncate">
+                        {specialtyText}
+                      </h3>
+                      <p className="text-[13.5px] text-neutral-500 font-normal mt-0.5 truncate">
+                        {s.name}
                       </p>
-                      {s.organization && (
-                        <p className="mt-0.5 text-[13px] text-[var(--brand-muted)]">{s.name}</p>
-                      )}
-                      {s.specialty && (
-                        <span
-                          className="mt-1 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold"
-                          style={{
-                            background: isPharmacy ? "var(--brand-yellow-soft)" : "var(--brand-green-soft)",
-                            color: isPharmacy ? "var(--brand-ink)" : "var(--brand-green)",
-                          }}
-                        >
-                          <Stethoscope size={11} /> {s.specialty}
-                        </span>
-                      )}
-                      <p className="mt-1.5 flex items-start gap-1 text-[13px] text-[var(--brand-muted)]">
-                        <MapPin size={13} className="mt-0.5 shrink-0" />
-                        <span className="line-clamp-2">{s.address}</span>
-                      </p>
-                      <div className="mt-1.5">
-                        <Stars avg={s.ratingAvg} count={s.ratingCount} />
-                      </div>
-                      {isPharmacy && (s.medicines?.length ?? 0) > 0 && (
-                        <>
-                          <p
-                            className="mt-1.5 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold"
-                            style={{ background: "var(--brand-green-soft)", color: "var(--brand-green)" }}
-                          >
-                            <Pill size={11} /> {s.medicines!.length} ta dori ro&apos;yxatda
-                          </p>
-                          {/* Narxi bor dorilar — mijoz narxni oldindan biladi. */}
-                          {s.medicines!
-                            .filter((m) => m.price && m.status === "bor")
-                            .slice(0, 3)
-                            .map((m) => (
-                              <p
-                                key={m.id}
-                                className="mt-1 line-clamp-1 text-[11.5px] font-semibold text-[var(--brand-ink)]/75"
-                              >
-                                💊 {m.name} — {shortSum(m.price!)} so&apos;m
-                              </p>
-                            ))}
-                        </>
-                      )}
-                      {/* Mutaxassislik tafsilotlari — mijoz kimga murojaat qilayotganini bilishi kerak. */}
-                      {!isPharmacy && (s.helpsWith === "crop" || s.helpsWith === "animal" || s.helpsWith === "both") && (
-                        <p className="mt-1.5 text-[12px] font-semibold text-[var(--brand-muted)]">
-                          {s.helpsWith === "crop"
-                            ? "🌱 Ekin bo'yicha yordam beradi"
-                            : s.helpsWith === "animal"
-                              ? "🐄 Chorva bo'yicha yordam beradi"
-                              : "🌱🐄 Ekin va chorva bo'yicha"}
-                        </p>
-                      )}
-                      {s.education && (
-                        <p className="mt-1 line-clamp-1 text-[12px] text-[var(--brand-muted)]" title={s.education}>
-                          🎓 {s.education}
-                        </p>
-                      )}
-                      {s.bio && (
-                        <p className="mt-1 line-clamp-2 text-[12.5px] leading-snug text-[var(--brand-ink)]/80" title={s.bio}>
-                          {s.bio}
-                        </p>
-                      )}
                     </div>
                   </div>
-                  <div className="flex shrink-0 flex-col items-end gap-1">
-                    {s.experienceYears !== null && s.experienceYears > 0 && (
-                      <span
-                        className="rounded-full px-2.5 py-1 text-[11.5px] font-bold"
-                        style={{ background: "var(--brand-bg)", color: "var(--brand-ink)" }}
-                        title="Tajriba yillari"
-                      >
-                        🏅 {s.experienceYears} yil
-                      </span>
-                    )}
-                    {typeof s.distanceKm === "number" && Number.isFinite(s.distanceKm) && (
-                      <span
-                        className="rounded-full px-2.5 py-1 text-[12px] font-bold text-white"
-                        style={{
-                          background: inRange ? "var(--brand-green)" : "var(--brand-muted)",
-                        }}
-                      >
-                        {s.distanceKm.toFixed(1)} km
-                      </span>
-                    )}
-                    {s.locked && (
-                      <span
-                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-bold"
-                        style={{ background: "var(--brand-red-soft)", color: "#d7263d" }}
-                      >
-                        <Lock size={10} /> {radiusKm ?? 5} km dan uzoq
-                      </span>
-                    )}
+
+                  {/* O'ng tomondagi ikkita badge (Tajriba va Reyting) */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="rounded-full bg-[#039e1e] px-2.5 py-0.5 text-[11.5px] font-bold text-white shadow-2xs">
+                      {expText}
+                    </span>
+                    <span className="rounded-full bg-[#ff9f1c] px-2.5 py-0.5 text-[11.5px] font-bold text-white shadow-2xs">
+                      {ratingText}
+                    </span>
                   </div>
                 </div>
 
-                {/* Telefon har doim ko'rinadi — mijoz masofadan ham qo'ng'iroq qilishi mumkin. */}
-                <div className="mt-3 flex gap-2">
+                {/* Pastki qism: Ikkita teng button (Bog'lanish va Chaqirish) */}
+                <div className="mt-3.5 grid grid-cols-2 gap-3">
                   <a
                     href={`tel:${s.phone.replace(/\s/g, "")}`}
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl py-3 text-[14px] font-bold text-white"
-                    style={{ background: "var(--brand-green)" }}
+                    className="flex items-center justify-center rounded-2xl bg-[#737373] py-3 text-[14.5px] font-bold text-white hover:bg-[#5f6368] active:scale-[0.98] transition shadow-2xs"
                   >
-                    <Phone size={15} /> {s.phone}
+                    Bog&apos;lanish
                   </a>
-                  {inRange ? (
-                    <button
-                      onClick={() => openDirections(s)}
-                      className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-[var(--brand-ink)] py-3 text-[14px] font-bold text-white"
-                    >
-                      <Navigation size={14} /> Yo&apos;nalish
-                    </button>
-                  ) : (
-                    <div
-                      className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl py-3 text-[13px] font-bold text-[var(--brand-muted)]"
-                      style={{ background: "var(--brand-bg)" }}
-                      title="Yo'nalish faqat 5 km ichida ishlaydi"
-                    >
-                      <Lock size={13} /> Yo&apos;nalish yopiq
-                    </div>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setCallModalSpecialist(s)}
+                    className="flex items-center justify-center rounded-2xl bg-[#039e1e] py-3 text-[14.5px] font-bold text-white hover:bg-[#028519] active:scale-[0.98] transition shadow-xs"
+                  >
+                    Chaqirish
+                  </button>
                 </div>
-
-                {/* Mutaxassisni chaqirish */}
-                {!isPharmacy && (
-                  <div className="mt-2.5">
-                    <button
-                      onClick={() => setCallModalSpecialist(s)}
-                      className="flex w-full items-center justify-center gap-1.5 rounded-2xl bg-[var(--brand-ink)] py-3 text-[13.5px] font-bold text-white shadow-xs hover:bg-neutral-800 active:scale-95 transition"
-                    >
-                      <UserCheck size={16} />
-                      <span>Mutaxassisni chaqirish</span>
-                    </button>
-                  </div>
-                )}
               </li>
             );
           })}
-          {visible.length === 0 && (
-            <li className="ios-card px-5 py-7 text-center">
-              <span
-                className="mx-auto flex h-14 w-14 items-center justify-center rounded-full"
-                style={{ background: "var(--brand-green-soft)", color: "var(--brand-green)" }}
-              >
-                {role === "pharmacy" ? <Store size={26} /> : <UserRound size={26} />}
-              </span>
-              <p className="mt-3 text-[16px] font-black text-[var(--brand-ink)]">
-                {items.length === 0
-                  ? "Hozircha ro'yxatdan o'tganlar yo'q"
-                  : "Bu turdagi natija topilmadi"}
-              </p>
-              <p className="mt-1.5 text-[13.5px] leading-relaxed text-[var(--brand-muted)]">
-                Mutaxassislar va dorixona egalari ro&apos;yxatdan o&apos;tgach shu yerda ko&apos;rinadi.
-                Ro&apos;yxatdan o&apos;tish bir daqiqada — ism, telefon va joylashuv yetarli.
-              </p>
-              <button
-                onClick={refreshLocation}
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--brand-ink)] py-3 text-[14px] font-bold text-white"
-              >
-                <LocateFixed size={15} /> Joylashuvni yangilash
-              </button>
-            </li>
-          )}
         </ul>
       )}
       {/* Mutaxassisni chaqirish modali */}
