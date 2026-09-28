@@ -37,6 +37,7 @@ import {
   Store,
   Syringe,
   Trash2,
+  User,
   X,
 } from "lucide-react";
 import CartButton from "@/components/CartButton";
@@ -236,8 +237,12 @@ export default function MarketClient() {
   // Savat: umumiy localStorage ombori — bosh sahifa kartochkalari bilan bir xil savat.
   const [cartState, setCartStateLocal] = useState<CartStoreState>(null);
   const [cartOpen, setCartOpen] = useState(false);
-  const [cartName, setCartName] = useState("");
-  const [cartPhone, setCartPhone] = useState("");
+  const [currentUser, setCurrentUser] = useState<{
+    id?: number;
+    name?: string | null;
+    phone?: string | null;
+    secondPhone?: string | null;
+  } | null>(null);
   const [cartNote, setCartNote] = useState("");
   const [cartDelivery, setCartDelivery] = useState<"pickup" | "delivery">("pickup");
   const [cartAddress, setCartAddress] = useState("");
@@ -265,6 +270,17 @@ export default function MarketClient() {
       window.removeEventListener(FAV_EVENT, sync);
       window.removeEventListener("storage", sync);
     };
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/profile")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.ok && data.user) {
+          setCurrentUser(data.user);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   function toggleFavorite(pharmacyId: number, medicineId: number) {
@@ -439,13 +455,9 @@ export default function MarketClient() {
 
   async function submitOrder() {
     if (!cartState || cartState.lines.length === 0) return;
-    if (!cartName.trim()) {
-      setCartError("Iltimos, ismingizni kiriting");
-      return;
-    }
-    const cleanPhone = cartPhone.replace(/\D/g, "").replace(/^998/, "").slice(0, 9);
-    if (cleanPhone.length < 9) {
-      setCartError("Iltimos, to'liq telefon raqamingizni kiriting (+998...)");
+    const cleanPhone = (currentUser?.phone || currentUser?.secondPhone || "").replace(/\D/g, "").replace(/^998/, "").slice(-9);
+    if (!cleanPhone || cleanPhone.length !== 9) {
+      setCartError("Buyurtma berish uchun avval tizimga kiring yoki profilingizda telefon raqamingizni kiriting");
       return;
     }
     if (cartDelivery === "delivery" && !cartAddress.trim()) {
@@ -457,6 +469,7 @@ export default function MarketClient() {
     const cartPharmacyId = currentPharmacy.id;
     const cart = cartState.lines;
     const phoneFull = `+998${cleanPhone}`;
+    const customerName = currentUser?.name?.trim() || "Mijoz";
 
     setCartBusy(true);
     setCartError(null);
@@ -467,7 +480,7 @@ export default function MarketClient() {
         body: JSON.stringify({
           pharmacySpecialistId: cartPharmacyId,
           items: cart.map((l) => ({ medicineId: l.medicine.id, qty: l.qty })),
-          customerName: cartName.trim(),
+          customerName,
           customerPhone: phoneFull,
           note: cartNote.trim() || undefined,
           deliveryType: cartDelivery,
@@ -951,31 +964,38 @@ export default function MarketClient() {
                 <div className="mt-3 space-y-3">
                   <div>
                     <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-[var(--brand-muted)]">
-                      Ismingiz <span className="text-red-500">*</span>
+                      Buyurtmachi ma&apos;lumotlari
                     </label>
-                    <input
-                      value={cartName}
-                      onChange={(e) => setCartName(e.target.value)}
-                      placeholder="Ismingizni kiriting"
-                      maxLength={120}
-                      className="ios-input"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-[var(--brand-muted)]">
-                      Telefon raqamingiz <span className="text-red-500">*</span>
-                    </label>
-                    <div className="flex items-center rounded-2xl bg-[var(--brand-bg)] pl-3">
-                      <span className="pr-1 text-[15px] font-bold text-[var(--brand-muted)]">+998</span>
-                      <input
-                        value={cartPhone}
-                        onChange={(e) => setCartPhone(e.target.value.replace(/\D/g, "").replace(/^998/, "").slice(0, 9))}
-                        inputMode="tel"
-                        placeholder="90 123 45 67"
-                        className="ios-input !bg-transparent !pl-0"
-                      />
-                    </div>
+                    {currentUser ? (
+                      <div className="flex items-center justify-between rounded-2xl bg-neutral-50 p-3.5 border border-neutral-200/90 shadow-2xs">
+                        <div className="flex items-center gap-2.5">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 font-bold">
+                            <User size={18} />
+                          </div>
+                          <div>
+                            <p className="text-[13.5px] font-bold text-neutral-900 leading-tight">
+                              {currentUser.name || "Ro'yxatdan o'tgan mijoz"}
+                            </p>
+                            <p className="text-[12px] font-medium text-neutral-500 mt-0.5">
+                              {currentUser.phone || currentUser.secondPhone || "Telefon ko'rsatilmagan"}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10.5px] font-bold text-emerald-800">
+                          Profil
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl bg-amber-50/80 p-3 border border-amber-200 text-[12px] text-amber-900">
+                        <p className="font-bold">⚠️ Buyurtma berish uchun tizimga kiring</p>
+                        <Link
+                          href="/kirish"
+                          className="mt-1.5 inline-block text-[11.5px] font-bold text-[var(--brand-green)] underline"
+                        >
+                          Tizimga kirish / Ro&apos;yxatdan o&apos;tish
+                        </Link>
+                      </div>
+                    )}
                   </div>
 
                   {/* Qabul qilish usulini tanlash */}
@@ -1140,8 +1160,8 @@ export default function MarketClient() {
                   onClick={submitOrder}
                   disabled={
                     cartBusy ||
-                    !cartName.trim() ||
-                    cartPhone.replace(/\D/g, "").length < 9 ||
+                    !currentUser ||
+                    !(currentUser.phone || currentUser.secondPhone) ||
                     (cartDelivery === "delivery" && !cartAddress.trim())
                   }
                   className="ios-btn mt-3.5 w-full disabled:opacity-50"

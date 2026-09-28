@@ -20,6 +20,7 @@ import {
   Navigation,
   Sparkles,
   ArrowRight,
+  User,
 } from "lucide-react";
 import {
   loadCart,
@@ -60,9 +61,16 @@ export default function CartDrawer() {
   // Tanlangan dorilar (id'lar to'plami) — mijoz faqat tanlanganlarini buyurtma qiladi
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
+  // Ro'yxatdan o'tgan foydalanuvchi ma'lumotlari (ism, telefon profil orqali olinadi)
+  const [currentUser, setCurrentUser] = useState<{
+    id?: number;
+    name?: string | null;
+    phone?: string | null;
+    secondPhone?: string | null;
+  } | null>(null);
+  const [userLoading, setUserLoading] = useState(false);
+
   // Form states
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
   const [deliveryType, setDeliveryType] = useState<"pickup" | "delivery">("pickup");
   const [deliveryConfig, setDeliveryConfig] = useState<{
     enabled: boolean;
@@ -229,15 +237,32 @@ export default function CartDrawer() {
     };
   }, []);
 
-  // Telegram foydalanuvchi ma'lumotlarini auto-fill qilish
+  // Ro'yxatdan o'tgan foydalanuvchi ma'lumotlarini yuklash
   useEffect(() => {
     if (!open) return;
-    const tgUser = getTelegramUser();
-    if (tgUser && !name) {
-      const fullName = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ");
-      if (fullName) setName(fullName);
-    }
-  }, [open, name]);
+    setUserLoading(true);
+    fetch("/api/profile")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.ok && data.user) {
+          setCurrentUser(data.user);
+        } else {
+          const tgUser = getTelegramUser();
+          if (tgUser) {
+            const fullName = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ");
+            setCurrentUser({
+              id: tgUser.id,
+              name: fullName || tgUser.username || "Telegram foydalanuvchisi",
+              phone: null,
+            });
+          } else {
+            setCurrentUser(null);
+          }
+        }
+      })
+      .catch(() => setCurrentUser(null))
+      .finally(() => setUserLoading(false));
+  }, [open]);
 
   // Telegram Mini App orqaga qaytish tugmasi
   useEffect(() => {
@@ -324,14 +349,12 @@ export default function CartDrawer() {
       return;
     }
 
-    if (!name.trim() || name.trim().length < 2) {
-      setError("Iltimos, ismingizni kiriting");
-      return;
-    }
+    const customerName = currentUser?.name?.trim() || "Mijoz";
+    const customerPhoneRaw = currentUser?.phone || currentUser?.secondPhone;
+    const cleanPhoneDigits = (customerPhoneRaw || "").replace(/\D/g, "").replace(/^998/, "").slice(-9);
 
-    const cleanPhoneDigits = phone.replace(/\D/g, "").replace(/^998/, "");
-    if (cleanPhoneDigits.length !== 9) {
-      setError("Telefon raqamingizni to'liq kiriting (9 xonali, masalan: 90 123 45 67)");
+    if (!cleanPhoneDigits || cleanPhoneDigits.length !== 9) {
+      setError("Buyurtma berish uchun avval tizimga kiring yoki profilingizda telefon raqamingizni kiriting.");
       return;
     }
 
@@ -355,7 +378,7 @@ export default function CartDrawer() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           pharmacySpecialistId: pharmacyId,
-          customerName: name.trim(),
+          customerName,
           customerPhone: `+998${cleanPhoneDigits}`,
           deliveryType,
           customerAddress: deliveryType === "delivery" ? address.trim() : null,
@@ -890,39 +913,59 @@ export default function CartDrawer() {
                 )}
               </div>
 
-              {/* Mijoz ma'lumotlari */}
+              {/* Buyurtmachi ma'lumotlari (profil orqali avtomatik) */}
               <div className="space-y-3 pt-2">
                 <div>
-                  <label className="text-[12px] font-bold text-neutral-700">
-                    Ismingiz <span className="text-red-500">*</span>
+                  <label className="block text-[11.5px] font-bold text-neutral-500 uppercase tracking-wider mb-1.5">
+                    Buyurtmachi ma&apos;lumotlari:
                   </label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Masalan: Jamshid Aliyev"
-                    className="ios-input mt-1"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[12px] font-bold text-neutral-700">
-                    Telefon raqamingiz <span className="text-red-500">*</span>
-                  </label>
-                  <div className="flex items-center rounded-2xl bg-[var(--brand-bg)] pl-3 mt-1">
-                    <span className="pr-1 text-[14px] font-bold text-neutral-500">+998</span>
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) =>
-                        setPhone(e.target.value.replace(/\D/g, "").replace(/^998/, "").slice(0, 9))
-                      }
-                      placeholder="90 123 45 67"
-                      className="ios-input !bg-transparent !pl-0"
-                      required
-                    />
-                  </div>
+                  {currentUser ? (
+                    <div className="rounded-2xl bg-neutral-50 p-3.5 border border-neutral-200/90 shadow-2xs">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--brand-green-soft)] text-[var(--brand-green)] font-bold">
+                            <User size={18} />
+                          </div>
+                          <div>
+                            <p className="text-[14px] font-black text-neutral-900 leading-tight">
+                              {currentUser.name || "Ro'yxatdan o'tgan mijoz"}
+                            </p>
+                            <p className="text-[12px] font-medium text-neutral-500 mt-0.5">
+                              {currentUser.phone || currentUser.secondPhone ? (
+                                <span className="font-semibold text-neutral-700">
+                                  {currentUser.phone || currentUser.secondPhone}
+                                </span>
+                              ) : (
+                                <span className="text-amber-600 font-semibold">Telefon kiritilmagan</span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10.5px] font-black text-emerald-800">
+                          Profil
+                        </span>
+                      </div>
+                    </div>
+                  ) : userLoading ? (
+                    <div className="flex items-center justify-center gap-2 rounded-2xl bg-neutral-50 p-3.5 border border-neutral-200/70 text-[12.5px] text-neutral-500">
+                      <Loader2 size={16} className="animate-spin text-[var(--brand-green)]" />
+                      <span>Profil ma&apos;lumotlari yuklanmoqda...</span>
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl bg-amber-50/80 p-3.5 border border-amber-200/80 text-[12.5px] text-amber-900">
+                      <p className="font-bold">⚠️ Buyurtma berish uchun tizimga kiring</p>
+                      <p className="mt-1 text-[11.5px] text-amber-800 leading-relaxed">
+                        Buyurtma ro&apos;yxatdan o&apos;tgan profilingizdagi ism va telefon raqamingiz orqali rasmiylashtiriladi.
+                      </p>
+                      <Link
+                        href="/kirish"
+                        onClick={() => setOpen(false)}
+                        className="mt-2.5 inline-flex items-center gap-1.5 rounded-xl bg-[#039e1e] px-3.5 py-1.5 text-[12px] font-bold text-white shadow-xs hover:bg-[#028519]"
+                      >
+                        Tizimga kirish
+                      </Link>
+                    </div>
+                  )}
                 </div>
 
                 {deliveryType === "delivery" && (
@@ -962,22 +1005,33 @@ export default function CartDrawer() {
 
             {/* Pastki Harakatlar Paneli (Har doim ko'rinib turishi uchun shrink-0 va safe-area) */}
             <div className="shrink-0 border-t border-black/10 bg-white p-4 pb-[max(1rem,calc(env(safe-area-inset-bottom)+0.75rem))] shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
-              <button
-                type="submit"
-                disabled={submitting || selectedLines.length === 0}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--brand-green)] py-3.5 text-[15px] font-extrabold text-white shadow-md hover:brightness-105 active:scale-[0.98] transition disabled:opacity-50"
-              >
-                {submitting ? (
-                  <Loader2 size={18} className="animate-spin" />
-                ) : (
-                  <ShoppingCart size={18} />
-                )}
-                <span>
-                  {selectedLines.length === 0
-                    ? "Dorini tanlang"
-                    : `Buyurtma berish (${shortSum(selectedTotal)} so'm)`}
-                </span>
-              </button>
+              {!currentUser ? (
+                <Link
+                  href="/kirish"
+                  onClick={() => setOpen(false)}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#039e1e] py-3.5 text-[15px] font-extrabold text-white shadow-md hover:brightness-105 active:scale-[0.98] transition"
+                >
+                  <User size={18} />
+                  <span>Buyurtma berish uchun tizimga kiring</span>
+                </Link>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={submitting || selectedLines.length === 0}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--brand-green)] py-3.5 text-[15px] font-extrabold text-white shadow-md hover:brightness-105 active:scale-[0.98] transition disabled:opacity-50"
+                >
+                  {submitting ? (
+                    <Loader2 size={18} className="animate-spin" />
+                  ) : (
+                    <ShoppingCart size={18} />
+                  )}
+                  <span>
+                    {selectedLines.length === 0
+                      ? "Dorini tanlang"
+                      : `Buyurtma berish (${shortSum(selectedTotal)} so'm)`}
+                  </span>
+                </button>
+              )}
             </div>
           </form>
         )}

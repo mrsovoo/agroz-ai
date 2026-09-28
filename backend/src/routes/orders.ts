@@ -13,9 +13,13 @@ async function getUserFromReq(req: any) {
   const authHeader = req.headers.authorization;
   const cookieSession = req.headers.cookie
     ?.split(";")
-    .find((c: string) => c.trim().startsWith("agroz_session="))
+    .find((c: string) => c.trim().startsWith("agroai_session=") || c.trim().startsWith("agroz_session="))
     ?.split("=")[1];
-  const sessionId = authHeader?.replace("Bearer ", "") || cookieSession;
+  const sessionId =
+    authHeader?.replace("Bearer ", "") ||
+    req.cookies?.agroai_session ||
+    req.cookies?.agroz_session ||
+    cookieSession;
   if (!sessionId) return null;
 
   const s = (await db.select().from(sessions).where(eq(sessions.id, sessionId)).limit(1))[0];
@@ -44,14 +48,14 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "Dorixona tanlanmagan" });
     }
 
-    const name = cleanText(body.customerName, 120);
-    if (!name || name.length < 2) {
-      return res.status(400).json({ error: "Ismingizni kiriting" });
-    }
-
-    const phone = normalizePhone(body.customerPhone);
+    const user = await getUserFromReq(req);
+    const name = cleanText(body.customerName, 120) || user?.name || (user?.phone ? `Mijoz (${user.phone})` : "Mijoz");
+    const rawPhone = body.customerPhone || user?.phone || user?.secondPhone;
+    const phone = normalizePhone(rawPhone);
     if (!phone) {
-      return res.status(400).json({ error: "Telefon raqami noto'g'ri (+998...)" });
+      return res.status(400).json({
+        error: "Buyurtma berish uchun ro'yxatdan o'tgan telefon raqami topilmadi. Iltimos, tizimga kiring.",
+      });
     }
 
     const deliveryType = body.deliveryType === "delivery" ? "delivery" : "pickup";
@@ -91,7 +95,6 @@ router.post("/", async (req, res) => {
       combinedNote = combinedNote ? `${combinedNote}\n${deliveryStatusNote}` : deliveryStatusNote;
     }
 
-    const user = await getUserFromReq(req);
     let userId = user?.id ?? null;
     const cleanCustomerDigits = phone.replace(/\D/g, "").slice(-9);
 
