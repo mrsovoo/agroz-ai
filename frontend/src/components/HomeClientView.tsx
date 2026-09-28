@@ -40,39 +40,8 @@ export type HomeSpecialist = {
   role?: string;
 };
 
-// Fallback ma'lumotlar — rasmda ko'rsatilgan Bento Max va Veterinar
-const DEFAULT_MEDICINES: HomeMedicine[] = [
-  {
-    id: 101,
-    name: "Bento Max",
-    usage: "Tabiiy minerallarga boy ozuqa",
-    price: 35000,
-    pharmacyId: 1,
-    pharmacyName: "Agroz Dorixona",
-    pharmacyPhone: "+998901234567",
-    pharmacyAddress: "Toshkent shahri",
-  },
-  {
-    id: 102,
-    name: "Bento Max",
-    usage: "Tabiiy minerallarga boy ozuqa",
-    price: 35000,
-    pharmacyId: 1,
-    pharmacyName: "Agroz Dorixona",
-    pharmacyPhone: "+998901234567",
-    pharmacyAddress: "Toshkent shahri",
-  },
-];
-
-const DEFAULT_SPECIALIST: HomeSpecialist = {
-  id: 201,
-  name: "Sohibjon Sulaymonov",
-  phone: "+998901234567",
-  specialty: "Veterinar",
-  experienceYears: 8,
-  ratingAvg: 4.5,
-  role: "specialist",
-};
+// Fallback ma'lumotlar — faqat API xatosi uchun minimal placeholder
+const DEFAULT_MEDICINES: HomeMedicine[] = [];
 
 export default function HomeClientView({
   initialMedicines = [],
@@ -84,7 +53,7 @@ export default function HomeClientView({
   const [medicines] = useState<HomeMedicine[]>(
     initialMedicines && initialMedicines.length >= 2 ? initialMedicines.slice(0, 2) : DEFAULT_MEDICINES
   );
-  const [specialist] = useState<HomeSpecialist>(initialSpecialist || DEFAULT_SPECIALIST);
+  const [specialist] = useState<HomeSpecialist | null>(initialSpecialist || null);
 
   const [callModalOpen, setCallModalOpen] = useState(false);
   const [quantities, setQuantities] = useState<Record<number, number>>({});

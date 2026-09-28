@@ -31,6 +31,10 @@ export async function ensureSchema(): Promise<void> {
       ALTER TABLE specialist_medicines ADD COLUMN IF NOT EXISTS stock_unit varchar(20) DEFAULT 'dona' NOT NULL;
       ALTER TABLE specialist_medicines ADD COLUMN IF NOT EXISTS photo_data text;
       ALTER TABLE specialist_medicines ADD COLUMN IF NOT EXISTS price integer;
+      ALTER TABLE specialist_medicines ADD COLUMN IF NOT EXISTS image_notified_at timestamp;
+      ALTER TABLE specialist_medicines ADD COLUMN IF NOT EXISTS image_width integer;
+      ALTER TABLE specialist_medicines ADD COLUMN IF NOT EXISTS image_height integer;
+      ALTER TABLE specialist_medicines ADD COLUMN IF NOT EXISTS price_notified_at timestamp;
     `);
 
     // 4. Specialist calls (chaqiruvlar) jadvali

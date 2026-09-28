@@ -18,6 +18,7 @@ import adminRouter from "./routes/admin.js";
 import advertisementsRouter from "./routes/advertisements.js";
 import pharmaciesRouter from "./routes/pharmacies.js";
 import geoRouter from "./routes/geo.js";
+import medicineNotificationsRouter from "./routes/medicine-notifications.js";
 
 import { ensureSeed } from "./lib/seed.js";
 import { ensureSchema } from "./db/migrate.js";
@@ -78,6 +79,7 @@ app.use("/api/admin", adminRouter);
 app.use("/api/advertisements", advertisementsRouter);
 app.use("/api/pharmacies", pharmaciesRouter);
 app.use("/api/geo", geoRouter);
+app.use("/api/admin/medicine-notifications", medicineNotificationsRouter);
 
 // 404 Handler
 app.use((_req, res) => {
@@ -107,5 +109,16 @@ app.listen(PORT, async () => {
       console.warn("[seed warning]:", seedErr);
     }
   }
+
+  // Dorilar uchun rasm/narx yo'qligi xabarnomalarini har 6 soatda bir tekshirish
+  const { checkAllPharmacies } = await import("./lib/medicine-notifications.js");
+  setInterval(async () => {
+    try {
+      console.log("[cron] Checking pharmacy medicines for missing images/prices...");
+      await checkAllPharmacies();
+    } catch (err) {
+      console.error("[cron] Medicine notifications error:", err);
+    }
+  }, 6 * 60 * 60 * 1000); // 6 hours
 });
 

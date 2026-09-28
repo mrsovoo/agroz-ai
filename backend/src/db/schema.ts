@@ -169,6 +169,14 @@ export const specialistMedicines = pgTable("specialist_medicines", {
   stock: integer("stock").default(10).notNull(),
   /** O'lchov birligi (dona | kg | litr). */
   stockUnit: varchar("stock_unit", { length: 20 }).default("dona").notNull(),
+  /** Oxirgi rasm yo'qligi xabari yuborilgan vaqt. */
+  imageNotifiedAt: timestamp("image_notified_at"),
+  /** Rasm kengligi (px). */
+  imageWidth: integer("image_width"),
+  /** Rasm balandligi (px). */
+  imageHeight: integer("image_height"),
+  /** Oxirgi narx yo'qligi xabari yuborilgan vaqt. */
+  priceNotifiedAt: timestamp("price_notified_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

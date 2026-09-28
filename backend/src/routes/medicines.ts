@@ -285,5 +285,68 @@ router.get("/:id/photo", async (req, res) => {
   }
 });
 
+// PATCH /api/medicines/:id/price — Update medicine price (pharmacy owner)
+router.patch("/:id/price", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { price } = req.body;
+
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      return res.status(400).json({ error: "Noto'g'ri dori ID" });
+    }
+
+    if (!Number.isInteger(price) || price < 1000) {
+      return res.status(400).json({ error: "Narx kamida 1000 so'm bo'lishi kerak" });
+    }
+
+    // Get medicine with pharmacy info
+    const rows = await db
+      .select({
+        id: specialistMedicines.id,
+        specialistId: specialistMedicines.specialistId,
+        name: specialistMedicines.name,
+      })
+      .from(specialistMedicines)
+      .where(eq(specialistMedicines.id, id))
+      .limit(1);
+
+    const medicine = rows[0];
+    if (!medicine) {
+      return res.status(404).json({ error: "Dori topilmadi" });
+    }
+
+    // Update price
+    await db
+      .update(specialistMedicines)
+      .set({ price })
+      .where(eq(specialistMedicines.id, id));
+
+    // Reset price notification timestamp
+    await db
+      .update(specialistMedicines)
+      .set({ priceNotifiedAt: null })
+      .where(eq(specialistMedicines.id, id));
+
+    // Reset image notification if image exists
+    const medRows = await db
+      .select({ photoFileId: specialistMedicines.photoFileId, photoData: specialistMedicines.photoData })
+      .from(specialistMedicines)
+      .where(eq(specialistMedicines.id, id))
+      .limit(1);
+    const med = medRows[0];
+    if (med?.photoFileId || med?.photoData) {
+      await db
+        .update(specialistMedicines)
+        .set({ imageNotifiedAt: null })
+        .where(eq(specialistMedicines.id, id));
+    }
+
+    res.json({ ok: true, message: "Narx yangilandi", price });
+  } catch (err: any) {
+    console.error("[medicine price update error]:", err);
+    res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
+
 export default router;
 

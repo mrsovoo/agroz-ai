@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus, Minus, Heart, Pill, Sprout, Syringe, MapPin, Star, Bell } from "lucide-react";
 import FadeImage from "@/components/FadeImage";
+import PriceModal from "@/components/PriceModal";
 import {
   loadCart,
   saveCart,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/cart-store";
 import { isFavorite, toggleFavorite, FAV_EVENT } from "@/lib/favorites-store";
 import { calculateMedicineRating } from "@/lib/medicine-reviews";
+import { apiUrl } from "@/lib/api-config";
 
 export type ProductCardMedicine = CartStoreMedicine & {
   usage?: string | null;
@@ -65,6 +67,25 @@ export default function ProductCard({
   const [liked, setLiked] = useState(false);
   const [qty, setQty] = useState(0);
   const [notified, setNotified] = useState(false);
+  const [showPriceModal, setShowPriceModal] = useState(false);
+
+  const handleSavePrice = async (price: number) => {
+    try {
+      const res = await fetch(`${apiUrl}/api/medicines/${medicine.id}/price`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ price }),
+      });
+      if (!res.ok) throw new Error("Narxni saqlashda xatolik");
+      // Update local state
+      setQty(1); // Add to cart after price is set
+    } catch (err: any) {
+      alert(err.message || "Narxni saqlashda xatolik");
+    }
+  };
+
+  const openPriceModal = () => setShowPriceModal(true);
+  const closePriceModal = () => setShowPriceModal(false);
 
   useEffect(() => {
     const sync = () => {
@@ -197,11 +218,23 @@ export default function ProductCard({
 
         <div className="mt-2.5">
           {/* Narxi */}
-          <p className="text-[14px] sm:text-[15px] font-black text-neutral-900 tracking-tight">
-            {medicine.price
-              ? new Intl.NumberFormat("uz-UZ").format(medicine.price).replace(/\s/g, ".") + " so'm"
-              : "35.000 so'm"}
-          </p>
+          {medicine.price && medicine.price > 0 ? (
+            <p className="text-[14px] sm:text-[15px] font-black text-neutral-900 tracking-tight">
+              {new Intl.NumberFormat("uz-UZ").format(medicine.price).replace(/\s/g, ".")} so'm
+            </p>
+          ) : (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openPriceModal();
+              }}
+              className="flex w-full items-center justify-center rounded-full bg-amber-100 hover:bg-amber-200 py-2 sm:py-2.5 text-[12px] sm:text-[13px] font-bold text-amber-800 border border-amber-300 shadow-2xs active:scale-[0.98] transition-all"
+            >
+              💬 Kelishiladi
+            </button>
+          )}
 
           {/* + Savatga tugmasi */}
           <div className="mt-2">
@@ -251,8 +284,19 @@ export default function ProductCard({
               </button>
             )}
           </div>
-        </div>
       </div>
+      <div className="relative">
+        {showPriceModal && (
+          <PriceModal
+            medicineId={medicine.id}
+            medicineName={medicine.name}
+            currentPrice={medicine.price || null}
+            onClose={() => setShowPriceModal(false)}
+            onSave={handleSavePrice}
+          />
+        )}
+      </div>
+    </div>
     </div>
   );
 }

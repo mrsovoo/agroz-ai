@@ -55,7 +55,7 @@ function getAdminSid(req: any): string | undefined {
   );
 }
 
-async function requireAdmin(req: any, res: any, next: any) {
+export async function requireAdmin(req: any, res: any, next: any) {
   const sid = getAdminSid(req);
   if (sid && (await isAdminAuthenticated(sid))) {
     return next();
