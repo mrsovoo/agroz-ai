@@ -2458,7 +2458,8 @@ export default function SuperAdminPage() {
                 <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase text-[10px] tracking-wider font-mono">
-                      <th className="py-3 px-4">ID</th>
+                      <th className="py-3 px-4">№</th>
+                      <th className="py-3 px-4">User ID</th>
                       <th className="py-3 px-4">Foydalanuvchi</th>
                       <th className="py-3 px-4">Aloqa</th>
                       <th className="py-3 px-4">Hudud / Manzil (Qayerdan)</th>
@@ -2468,17 +2469,18 @@ export default function SuperAdminPage() {
                       <th className="py-3 px-4 text-right">Amallar</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-100 text-zinc-700">
+<tbody className="divide-y divide-zinc-100 text-zinc-700">
                     {filteredUsers.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="py-10 text-center text-zinc-500 font-medium">
+                        <td colSpan={9} className="py-10 text-center text-zinc-500 font-medium">
                           Foydalanuvchilar topilmadi.
                         </td>
                       </tr>
                     ) : (
-                      filteredUsers.map((u) => (
+                      filteredUsers.map((u, index) => (
                         <tr key={u.id} className="hover:bg-zinc-50/70 transition">
-                          <td className="py-3 px-4 font-mono text-zinc-400">#{u.id}</td>
+                          <td className="py-3 px-4 font-mono font-bold text-zinc-500">#{index + 1}</td>
+                          <td className="py-3 px-4 font-mono text-zinc-500">#{u.id}</td>
                           <td className="py-3 px-4">
                             <p className="font-bold text-zinc-900">{u.name}</p>
                             <span className="inline-block mt-0.5 text-[10px] font-mono text-zinc-500">
@@ -2532,9 +2534,27 @@ export default function SuperAdminPage() {
                           <td className="py-3 px-4 text-right">
                             <button
                               onClick={() => setSelectedUserDetail(u)}
-                              className="rounded-xl bg-zinc-900 hover:bg-zinc-800 px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition"
+                              className="rounded-xl bg-zinc-900 hover:bg-zinc-800 px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition mr-2"
                             >
                               Batafsil
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (!confirm("Haqiqatan ham bu foydalanuvchini o'chirasizmi? Barcha ma'lumotlari o'chib ketadi.")) return;
+                                adminFetch(`/api/admin/users/${u.id}`, { method: "DELETE" })
+                                  .then(r => r.json())
+                                  .then(data => {
+                                    if (data.ok) {
+                                      loadData();
+                                    } else {
+                                      alert(data.error || "O'chirishda xatolik");
+                                    }
+                                  })
+                                  .catch(() => alert("Tarmoq xatosi"));
+                              }}
+                              className="rounded-xl bg-red-600 hover:bg-red-700 px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition"
+                            >
+                              🗑️
                             </button>
                           </td>
                         </tr>
