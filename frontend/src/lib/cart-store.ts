@@ -176,6 +176,8 @@ export type LastOrderInfo = {
   total: number;
   deliveryType: string;
   pharmacyName: string;
+  customerAddress?: string | null;
+  items?: { name: string; qty: number }[];
   timestamp: number;
 };
 
