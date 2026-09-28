@@ -237,70 +237,72 @@ export default function HomeClientView({
         </div>
       </section>
 
-      {/* 4. Mutaxassislar bo'limi */}
-      <section className="mt-6">
-        <div className="flex items-center justify-between mb-3 px-0.5">
-          <h2 className="text-[20px] font-black tracking-tight text-neutral-900">Mutaxasislar</h2>
-          <Link
-            href="/mutaxassislar"
-            className="text-[14px] font-bold text-[#039e1e] hover:underline active:opacity-80 transition"
-          >
-            Barchasi
-          </Link>
-        </div>
+      {/* 4. Mutaxassislar bo'limi — faqat real mutaxassis borligini tekshiradi */}
+      {specialist && (
+        <section className="mt-6">
+          <div className="flex items-center justify-between mb-3 px-0.5">
+            <h2 className="text-[20px] font-black tracking-tight text-neutral-900">Mutaxasislar</h2>
+            <Link
+              href="/mutaxassislar"
+              className="text-[14px] font-bold text-[#039e1e] hover:underline active:opacity-80 transition"
+            >
+              Barchasi
+            </Link>
+          </div>
 
-        {/* Mutaxassis kartasi */}
-        <div className="rounded-[24px] bg-[#f8f9fa] border border-neutral-100 p-4 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {/* Sariq/olovrang avatar */}
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] bg-gradient-to-br from-[#f59e0b] to-[#ea580c] text-white shadow-2xs font-black text-xl">
-                {specialist.name ? specialist.name.charAt(0) : "V"}
+          {/* Mutaxassis kartasi */}
+          <div className="rounded-[24px] bg-[#f8f9fa] border border-neutral-100 p-4 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {/* Sariq/olovrang avatar */}
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] bg-gradient-to-br from-[#f59e0b] to-[#ea580c] text-white shadow-2xs font-black text-xl">
+                  {specialist.name.charAt(0)}
+                </div>
+
+                <div>
+                  <h3 className="text-[17px] font-black leading-snug text-neutral-900">
+                    {specialist.specialty || "Veterinar"}
+                  </h3>
+                  <p className="text-[12.5px] font-medium text-neutral-500 mt-0.5">
+                    {specialist.name}
+                  </p>
+                </div>
               </div>
 
-              <div>
-                <h3 className="text-[17px] font-black leading-snug text-neutral-900">
-                  {specialist.specialty || "Veterinar"}
-                </h3>
-                <p className="text-[12.5px] font-medium text-neutral-500 mt-0.5">
-                  {specialist.name || "Sohibjon Sulaymonov"}
-                </p>
+              {/* Badgelar: tajriba yillari & reyting */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="rounded-full bg-[#028518] px-2.5 py-0.5 text-[11px] font-bold text-white shadow-2xs">
+                  {specialist.experienceYears ?? 0} yil
+                </span>
+                <span className="rounded-full bg-[#f59e0b] px-2.5 py-0.5 text-[11px] font-bold text-white shadow-2xs">
+                  {specialist.ratingAvg ? specialist.ratingAvg.toFixed(1) : "—"}
+                </span>
               </div>
             </div>
 
-            {/* Badgelar: 8 yil & 4.5 */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="rounded-full bg-[#028518] px-2.5 py-0.5 text-[11px] font-bold text-white shadow-2xs">
-                {specialist.experienceYears ?? 8} yil
-              </span>
-              <span className="rounded-full bg-[#f59e0b] px-2.5 py-0.5 text-[11px] font-bold text-white shadow-2xs">
-                {specialist.ratingAvg ? specialist.ratingAvg.toFixed(1) : "4.5"}
-              </span>
+            {/* 2 ta tugma: Bog'lanish & Chaqirish */}
+            <div className="mt-3.5 grid grid-cols-2 gap-2.5">
+              <a
+                href={`tel:${specialist.phone}`}
+                onClick={() => haptic("light")}
+                className="flex items-center justify-center rounded-xl bg-[#6b7280] hover:bg-[#4b5563] py-2.5 text-[14px] font-bold text-white transition active:scale-95 shadow-2xs"
+              >
+                Bog&apos;lanish
+              </a>
+              <button
+                type="button"
+                onClick={() => {
+                  haptic("medium");
+                  setCallModalOpen(true);
+                }}
+                className="flex items-center justify-center rounded-xl bg-[#039e1e] hover:bg-[#028518] py-2.5 text-[14px] font-bold text-white transition active:scale-95 shadow-2xs"
+              >
+                Chaqirish
+              </button>
             </div>
           </div>
-
-          {/* 2 ta tugma: Bog'lanish & Chaqirish */}
-          <div className="mt-3.5 grid grid-cols-2 gap-2.5">
-            <a
-              href={`tel:${specialist.phone || "+998901234567"}`}
-              onClick={() => haptic("light")}
-              className="flex items-center justify-center rounded-xl bg-[#6b7280] hover:bg-[#4b5563] py-2.5 text-[14px] font-bold text-white transition active:scale-95 shadow-2xs"
-            >
-              Bog&apos;lanish
-            </a>
-            <button
-              type="button"
-              onClick={() => {
-                haptic("medium");
-                setCallModalOpen(true);
-              }}
-              className="flex items-center justify-center rounded-xl bg-[#039e1e] hover:bg-[#028518] py-2.5 text-[14px] font-bold text-white transition active:scale-95 shadow-2xs"
-            >
-              Chaqirish
-            </button>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* 5. AI Tashxis bloki */}
       <section className="mt-4">
@@ -326,18 +328,20 @@ export default function HomeClientView({
         </Link>
       </section>
 
-      {/* Mutaxassis chaqirish modali */}
-      <SpecialistCallModal
-        specialist={{
-          id: specialist.id,
-          name: specialist.name,
-          phone: specialist.phone,
-          specialty: specialist.specialty,
-        }}
-        isOpen={callModalOpen}
-        onClose={() => setCallModalOpen(false)}
-        onSuccess={() => setCallModalOpen(false)}
-      />
+      {/* Mutaxassis chaqirish modali — faqat real mutaxassis bo'lsa */}
+      {specialist && (
+        <SpecialistCallModal
+          specialist={{
+            id: specialist.id,
+            name: specialist.name,
+            phone: specialist.phone,
+            specialty: specialist.specialty,
+          }}
+          isOpen={callModalOpen}
+          onClose={() => setCallModalOpen(false)}
+          onSuccess={() => setCallModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
