@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { X, UserRound, Phone, MapPin, Loader2, CheckCircle2, ShieldCheck, ArrowLeft } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { ChevronLeft, Check } from "lucide-react";
 import { createSpecialistCall } from "@/lib/specialist-calls";
 import { apiUrl } from "@/lib/api-config";
+import { getTelegramUser } from "@/lib/telegram";
 
 export default function SpecialistCallModal({
   specialist,
@@ -23,373 +24,206 @@ export default function SpecialistCallModal({
   onClose: () => void;
   onSuccess: () => void;
 }) {
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [callType, setCallType] = useState<"crop" | "animal">("crop");
-  const [address, setAddress] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [step, setStep] = useState<"select" | "confirm" | "sent">("select");
-  const [error, setError] = useState<string | null>(null);
+  const [callId, setCallId] = useState(501);
+  const [callProgress, setCallProgress] = useState<1 | 2 | 3>(1);
+  const [name, setName] = useState("Telegram foydalanuvchisi");
+  const [phone, setPhone] = useState("+998 90 123 45 67");
+  const [address, setAddress] = useState("Toshkent viloyati, Zangiota tumani");
 
-  // Avtomatik ravishda foydalanuvchi ism va raqamini yuklash
+  // Avtomatik ravishda foydalanuvchi ma'lumotlarini yuklash va chaqiruvni shakllantirish
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !specialist) return;
 
-    // 1. localStorage dan olish
+    // Yangi ID generatsiya qilish (501 dan boshlab)
+    const storedLastId = localStorage.getItem("agroz_last_call_id");
+    const nextId = storedLastId ? Math.max(501, Number(storedLastId) + 1) : 501;
+    setCallId(nextId);
+    localStorage.setItem("agroz_last_call_id", String(nextId));
+    setCallProgress(1);
+
+    // 1. Profil va Telegram ma'lumotlarini olish
+    const tgUser = getTelegramUser();
+    if (tgUser) {
+      const fullName = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ");
+      if (fullName || tgUser.username) {
+        setName(fullName || tgUser.username || "Telegram foydalanuvchisi");
+      }
+    }
+
     try {
       const savedName = localStorage.getItem("agroz_customer_name");
       const savedPhone = localStorage.getItem("agroz_customer_phone");
       const savedAddress = localStorage.getItem("agroz_customer_address");
       if (savedName) setName(savedName);
-      if (savedPhone) setPhone(savedPhone);
+      if (savedPhone) setPhone(savedPhone.startsWith("+") ? savedPhone : `+998${savedPhone}`);
       if (savedAddress) setAddress(savedAddress);
     } catch {}
 
-    // 2. /api/profile dan olish (tizimga kirgan bo'lsa)
-    const cookieSession = typeof document !== "undefined"
-      ? document.cookie.split(";").find((c) => c.trim().startsWith("agroz_session="))?.split("=")[1]
-      : undefined;
-
     fetch(apiUrl("/api/profile"), {
       credentials: "include",
-      headers: cookieSession ? { Authorization: `Bearer ${cookieSession}` } : {},
-      cache: "no-store",
     })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.user) {
-          if (data.user.name) setName((prev) => prev || data.user.name);
+          if (data.user.name) setName(data.user.name);
           if (data.user.phone) {
-            const clean = data.user.phone.replace(/\D/g, "").replace(/^998/, "").slice(0, 9);
-            setPhone((prev) => prev || clean);
+            setPhone(data.user.phone.startsWith("+") ? data.user.phone : `+${data.user.phone}`);
           }
           if (data.user.region || data.user.district) {
-            const fullAddr = [data.user.region, data.user.district].filter(Boolean).join(", ");
-            setAddress((prev) => prev || fullAddr);
+            setAddress([data.user.region, data.user.district].filter(Boolean).join(", "));
           }
         }
       })
       .catch(() => {});
 
-    setStep("select");
-    setError(null);
-  }, [isOpen]);
+    // 2. Chaqiruvni serverga va lokal bazaga qayd qilish
+    const callRecord = {
+      id: String(nextId),
+      specialistId: specialist.id,
+      specialistName: specialist.organization || specialist.name,
+      customerName: name,
+      customerPhone: phone,
+      problem: `${specialist.specialty || "Mutaxassis"} ko'rigi va maslahati`,
+      address: address,
+    };
+    createSpecialistCall(callRecord);
+
+    fetch(apiUrl("/api/specialists/call"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        specialistId: specialist.id,
+        customerName: name,
+        customerPhone: phone,
+        problem: callRecord.problem,
+        address: address,
+      }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.callId) {
+          setCallId(Number(d.callId));
+        }
+      })
+      .catch(() => {});
+  }, [isOpen, specialist]);
+
+  const handleNextStep = () => {
+    setCallProgress((prev) => (prev === 1 ? 2 : prev === 2 ? 3 : 1));
+  };
+
+  const handleBack = useCallback(() => {
+    onClose();
+    onSuccess();
+  }, [onClose, onSuccess]);
 
   if (!isOpen || !specialist) return null;
 
-  const cleanDigits = phone.replace(/\D/g, "").replace(/^998/, "");
-
-  // 1. Ekin yoki Chorvani bosganda
-  function handleSelectType(type: "crop" | "animal") {
-    setCallType(type);
-    setError(null);
-    setStep("confirm");
-  }
-
-  // 2. Tasdiqlash bosilganda mutaxassisni chaqirish
-  async function handleConfirmSubmit() {
-    if (!specialist) return;
-
-    if (!name.trim() || name.trim().length < 2) {
-      setError("Iltimos, ismingizni kiriting");
-      return;
-    }
-    if (cleanDigits.length !== 9) {
-      setError("Telefon raqamingizni to'liq kiriting (masalan: 90 123 45 67)");
-      return;
-    }
-
-    setBusy(true);
-    setError(null);
-
-    // Ma'lumotlarni keyingi safar avto to'ldirish uchun eslab qolamiz
-    try {
-      localStorage.setItem("agroz_customer_name", name.trim());
-      localStorage.setItem("agroz_customer_phone", cleanDigits);
-      if (address.trim()) localStorage.setItem("agroz_customer_address", address.trim());
-    } catch {}
-
-    const problemDescription =
-      callType === "crop"
-        ? "🌾 Ekin (O'simliklar) bo'yicha ko'rik va xizmat"
-        : "🐄 Chorva (Hayvonlar) bo'yicha veterinariya ko'rigi";
-
-    try {
-      let userLat: number | undefined;
-      let userLng: number | undefined;
-
-      try {
-        if (navigator.geolocation) {
-          const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 3000 });
-          });
-          userLat = pos.coords.latitude;
-          userLng = pos.coords.longitude;
-        }
-      } catch {}
-
-      const res = await fetch(apiUrl("/api/specialists/call"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          specialistId: specialist.id,
-          customerName: name.trim(),
-          customerPhone: `+998${cleanDigits}`,
-          problem: problemDescription,
-          address: address.trim() || undefined,
-          userLat,
-          userLng,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.ok) {
-        throw new Error(data.error || "Chaqiruv yuborib bo'lmadi");
-      }
-
-      const callId = Number(data.callId);
-
-      // Lokal tarix uchun ham saqlab qo'yamiz
-      createSpecialistCall({
-        id: String(callId),
-        specialistId: specialist.id,
-        specialistName: specialist.organization || specialist.name,
-        customerName: name.trim(),
-        customerPhone: `+998${cleanDigits}`,
-        problem: problemDescription,
-        address: address.trim() || undefined,
-      });
-
-      setStep("sent");
-    } catch (err: any) {
-      setError(err.message || "Chaqiruv yuborishda xatolik yuz berdi");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const handleModalClose = () => {
-    setStep("select");
-    setError(null);
-    onClose();
-  };
+  const specialistTitle = specialist.specialty || (specialist.role === "pharmacy" ? "Dorixona egasi" : "Agronom");
 
   return (
-    <div
-      onClick={handleModalClose}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in"
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-[460px] rounded-[24px] bg-white p-6 shadow-2xl animate-in zoom-in-95"
-      >
-        <button
-          onClick={handleModalClose}
-          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200 transition"
-        >
-          <X size={18} />
-        </button>
+    <div className="fixed inset-0 z-[110] flex justify-center bg-[#121212] overflow-y-auto animate-in fade-in duration-200">
+      <div className="w-full max-w-[500px] min-h-[100dvh] flex flex-col justify-between px-5 pt-7 pb-28">
+        <div>
+          {/* 1. Orqaga tugmasi (Mockup bilan 1:1) */}
+          <button
+            type="button"
+            onClick={handleBack}
+            className="inline-flex items-center gap-1 text-[17px] font-semibold text-[#22c55e] hover:opacity-85 active:scale-95 transition"
+          >
+            <ChevronLeft size={22} className="stroke-[2.6] -ml-1" />
+            <span>Orqaga</span>
+          </button>
 
-        {/* 3-BOSQICH: Chaqiruv muvaffaqiyatli yuborildi */}
-        {step === "sent" ? (
-          <div className="flex flex-col items-center justify-center py-6 text-center animate-in fade-in">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mb-4 animate-in zoom-in">
-              <CheckCircle2 size={38} />
-            </div>
-            <span className="inline-block rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-800 mb-2">
-              ✅ Chaqiruv yuborildi
-            </span>
-            <h3 className="text-xl font-extrabold text-neutral-900">
-              Mutaxassisga xabar yetkazildi!
-            </h3>
-            <p className="mt-2 text-[14px] text-neutral-600 max-w-sm leading-relaxed">
-              Hozirda <b>{specialist.organization || specialist.name}</b> ga chaqiruv yuborildi, tez orada siz bilan bog&apos;lanadi. Telegram botingizga ham bildirishnoma yuborildi.
+          {/* 2. Sarlavha: Chaqiruv #... va Mutaxassis nomi */}
+          <div className="mt-4">
+            <h1 className="text-[24px] font-bold text-white tracking-tight leading-tight">
+              Chaqiruv #{callId}
+            </h1>
+            <p className="text-[15px] font-normal text-neutral-400 mt-1">
+              {specialistTitle} {specialist.name}
             </p>
-            <button
-              onClick={() => {
-                handleModalClose();
-                onSuccess();
-              }}
-              className="mt-6 rounded-2xl bg-[var(--brand-green)] px-8 py-3 text-xs font-bold text-white shadow-sm hover:brightness-105 active:scale-95 transition"
-            >
-              Tushunarli
-            </button>
           </div>
-        ) : step === "confirm" ? (
-          /* 2-BOSQICH: Ekin/Chorva tanlangandan keyin TASDIQLASH */
-          <div className="py-1 animate-in fade-in">
-            <div className="flex items-center gap-2 mb-3">
-              <button
-                type="button"
-                onClick={() => setStep("select")}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200 transition"
-                title="Orqaga qaytish"
-              >
-                <ArrowLeft size={16} />
-              </button>
-              <div>
-                <span className="inline-flex items-center gap-1 text-[11.5px] font-bold text-[var(--brand-green)]">
-                  <ShieldCheck size={13} /> Chaqiruvni tasdiqlash
-                </span>
-                <h2 className="text-[18px] font-black text-neutral-900 leading-tight">
-                  Chaqiruvni tasdiqlaysizmi?
-                </h2>
+
+          {/* 3. 3-bosqichli status kartochkasi (Mockup bilan 1:1) */}
+          <div className="mt-5 rounded-[22px] bg-[#222225] border border-neutral-800/80 p-5 shadow-sm space-y-4">
+            {/* 1-bosqich: So'rov yuborildi */}
+            <div className="flex items-center gap-3.5">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#22c55e] text-black">
+                <Check size={15} className="stroke-[3]" />
               </div>
-            </div>
-
-            {/* Mutaxassis va Chaqiruv kartochkasi */}
-            <div className="rounded-2xl bg-neutral-50 p-4 border border-neutral-200/80 space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-neutral-200/60">
-                <span className="text-[12.5px] font-medium text-neutral-500">Mutaxassis</span>
-                <span className="text-[13.5px] font-bold text-neutral-900 text-right">
-                  {specialist.organization || specialist.name}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between pb-2 border-b border-neutral-200/60">
-                <span className="text-[12.5px] font-medium text-neutral-500">Chaqiruv turi</span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-[12.5px] font-bold text-emerald-800">
-                  {callType === "crop" ? "🌾 Ekin (O'simliklar)" : "🐄 Chorva (Hayvonlar)"}
-                </span>
-              </div>
-
-              {/* Ismni avto-to'ldirish / tahrirlash */}
-              <div>
-                <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-neutral-500 mb-1">
-                  <UserRound size={12} /> Ismingiz
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Ismingizni kiriting"
-                  className="ios-input !p-2.5 text-[13.5px] font-semibold bg-white"
-                  required
-                />
-              </div>
-
-              {/* Telefonni avto-to'ldirish / tahrirlash */}
-              <div>
-                <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-neutral-500 mb-1">
-                  <Phone size={12} /> Telefon raqamingiz
-                </label>
-                <div className="flex items-center rounded-2xl bg-white border border-neutral-200/80 pl-3">
-                  <span className="pr-1 text-[13.5px] font-bold text-neutral-500">+998</span>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) =>
-                      setPhone(e.target.value.replace(/\D/g, "").replace(/^998/, "").slice(0, 9))
-                    }
-                    placeholder="90 123 45 67"
-                    className="ios-input !border-0 !bg-transparent !p-2.5 !pl-0 text-[13.5px] font-semibold"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Manzil (ixtiyoriy) */}
-              <div>
-                <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-neutral-500 mb-1">
-                  <MapPin size={12} /> Manzil (ixtiyoriy)
-                </label>
-                <input
-                  type="text"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Tuman, qishloq yoki xonadon"
-                  className="ios-input !p-2 text-[12.5px] bg-white"
-                />
-              </div>
-            </div>
-
-            {error && (
-              <p className="mt-3 rounded-xl bg-red-50 p-2.5 text-[12.5px] font-semibold text-red-600 border border-red-200">
-                {error}
-              </p>
-            )}
-
-            {/* Tasdiqlash yoki Bekor qilish tugmalari */}
-            <div className="mt-5 flex gap-2.5">
-              <button
-                type="button"
-                onClick={handleModalClose}
-                disabled={busy}
-                className="flex-1 rounded-2xl bg-neutral-100 py-3 text-[13.5px] font-bold text-neutral-700 hover:bg-neutral-200 transition"
-              >
-                Bekor qilish
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmSubmit}
-                disabled={busy}
-                className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-[var(--brand-green)] py-3 text-[13.5px] font-bold text-white shadow-sm hover:brightness-105 active:scale-95 transition"
-              >
-                {busy ? <Loader2 size={16} className="animate-spin" /> : null}
-                <span>Tasdiqlash</span>
-              </button>
-            </div>
-          </div>
-        ) : (
-          /* 1-BOSQICH: EKIN YOKI CHORVANI TANLASH */
-          <div className="space-y-4 pt-1">
-            <div>
-              <span className="rounded-full bg-[var(--brand-green-soft)] px-3 py-1 text-[11.5px] font-bold text-[var(--brand-green)]">
-                Mutaxassisni chaqirish
+              <span className="text-[16px] font-bold text-white">
+                So&apos;rov yuborildi
               </span>
-              <h2 className="mt-2 text-[19px] font-black text-neutral-900 leading-snug">
-                {specialist.organization || specialist.name}
-              </h2>
-              {specialist.specialty && (
-                <p className="text-[13px] text-neutral-500 font-medium">
-                  {specialist.specialty}
-                </p>
+            </div>
+
+            {/* 2-bosqich: Mutaxassis qabul qildi */}
+            <div className="flex items-center gap-3.5">
+              {callProgress >= 2 ? (
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#22c55e] text-black">
+                  <Check size={15} className="stroke-[3]" />
+                </div>
+              ) : (
+                <div className="h-6 w-6 shrink-0 rounded-full border-2 border-neutral-600 bg-transparent" />
               )}
-            </div>
-
-            <div className="pt-2">
-              <label className="block text-[13px] font-extrabold uppercase tracking-wider text-neutral-700 mb-3 text-center">
-                Qanday chaqiruv? Tanlang:
-              </label>
-
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => handleSelectType("crop")}
-                  className="group flex flex-col items-center justify-center gap-2 rounded-2xl p-5 border-2 border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100/70 hover:border-emerald-500 active:scale-95 transition shadow-xs cursor-pointer text-center"
-                >
-                  <span className="text-4xl transition-transform group-hover:scale-110">🌾</span>
-                  <span className="text-[16px] font-black text-emerald-900">Ekin</span>
-                  <span className="text-[11.5px] font-semibold text-emerald-700">
-                    O&apos;simliklar / Bog&apos;
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSelectType("animal")}
-                  className="group flex flex-col items-center justify-center gap-2 rounded-2xl p-5 border-2 border-amber-200 bg-amber-50/60 hover:bg-amber-100/70 hover:border-amber-500 active:scale-95 transition shadow-xs cursor-pointer text-center"
-                >
-                  <span className="text-4xl transition-transform group-hover:scale-110">🐄</span>
-                  <span className="text-[16px] font-black text-amber-900">Chorva</span>
-                  <span className="text-[11.5px] font-semibold text-amber-700">
-                    Hayvonlar / Veterinariya
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            <div className="pt-3">
-              <button
-                type="button"
-                onClick={handleModalClose}
-                className="w-full rounded-2xl bg-neutral-100 py-3 text-[13.5px] font-bold text-neutral-600 hover:bg-neutral-200 transition"
+              <span
+                className={`text-[16px] ${
+                  callProgress >= 2 ? "font-bold text-white" : "font-medium text-neutral-400"
+                }`}
               >
-                Bekor qilish
-              </button>
+                Mutaxassis qabul qildi
+              </span>
+            </div>
+
+            {/* 3-bosqich: Aloqaga chiqdi */}
+            <div className="flex items-center gap-3.5">
+              {callProgress >= 3 ? (
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#22c55e] text-black">
+                  <Check size={15} className="stroke-[3]" />
+                </div>
+              ) : (
+                <div className="h-6 w-6 shrink-0 rounded-full border-2 border-neutral-600 bg-transparent" />
+              )}
+              <span
+                className={`text-[16px] ${
+                  callProgress >= 3 ? "font-bold text-white" : "font-medium text-neutral-400"
+                }`}
+              >
+                Aloqaga chiqdi
+              </span>
             </div>
           </div>
-        )}
+
+          {/* 4. Mutaxassis botiga kelgan xabar (demo) */}
+          <div className="mt-7">
+            <p className="text-[14.5px] text-neutral-400 font-normal mb-2.5">
+              Mutaxassis botiga kelgan xabar (demo):
+            </p>
+
+            <div className="rounded-2xl bg-[#eef4fa] p-4.5 text-[#1e293b] shadow-sm">
+              <h4 className="text-[16px] font-bold text-[#1e3a8a] tracking-tight">
+                Yangi chaqiruv #{callId}
+              </h4>
+              <p className="text-[14.5px] font-medium text-[#1e293b] mt-1">
+                Mijoz: {name}
+              </p>
+              <p className="text-[14.5px] font-medium text-[#1e293b] mt-0.5">
+                Manzil: {address}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 5. Mutaxassis sifatida: keyingi holat tugmasi */}
+        <div className="mt-8 pt-4">
+          <button
+            type="button"
+            onClick={handleNextStep}
+            className="w-full rounded-2xl border border-[#22c55e] bg-transparent py-3.5 text-center text-[15px] font-bold text-[#22c55e] hover:bg-[#22c55e]/10 active:scale-[0.98] transition shadow-2xs"
+          >
+            Mutaxassis sifatida: keyingi holat
+          </button>
+        </div>
       </div>
     </div>
   );
