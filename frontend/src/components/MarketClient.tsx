@@ -108,116 +108,6 @@ function typeBadge(type: string): { label: string; bg: string; color: string } {
   return { label: "📦 Umumiy", bg: "#ccfbf1", color: "#0d9488" };
 }
 
-const DEFAULT_MARKET_CARDS: Card[] = [
-  {
-    pharmacy: {
-      id: 1,
-      name: "Agroz Dorixona",
-      phone: "+998901234567",
-      role: "pharmacy",
-      specialty: "Dorixona",
-      organization: "Agroz Dorixona",
-      address: "Toshkent shahri",
-      lat: 41.2995,
-      lng: 69.2401,
-      distanceKm: 1.2,
-      locked: false,
-      ratingAvg: 4.8,
-      ratingCount: 12,
-      medicines: [],
-    },
-    medicine: {
-      id: 101,
-      name: "Bento Max",
-      status: "bor",
-      hasPhoto: false,
-      type: "agro",
-      usage: "Tabiiy minerallarga boy ozuqa",
-      price: 35000,
-    },
-  },
-  {
-    pharmacy: {
-      id: 1,
-      name: "Agroz Dorixona",
-      phone: "+998901234567",
-      role: "pharmacy",
-      specialty: "Dorixona",
-      organization: "Agroz Dorixona",
-      address: "Toshkent shahri",
-      lat: 41.2995,
-      lng: 69.2401,
-      distanceKm: 1.2,
-      locked: false,
-      ratingAvg: 4.8,
-      ratingCount: 12,
-      medicines: [],
-    },
-    medicine: {
-      id: 102,
-      name: "Bento Max",
-      status: "bor",
-      hasPhoto: false,
-      type: "agro",
-      usage: "Tabiiy minerallarga boy ozuqa",
-      price: 35000,
-    },
-  },
-  {
-    pharmacy: {
-      id: 1,
-      name: "Agroz Dorixona",
-      phone: "+998901234567",
-      role: "pharmacy",
-      specialty: "Dorixona",
-      organization: "Agroz Dorixona",
-      address: "Toshkent shahri",
-      lat: 41.2995,
-      lng: 69.2401,
-      distanceKm: 1.2,
-      locked: false,
-      ratingAvg: 4.8,
-      ratingCount: 12,
-      medicines: [],
-    },
-    medicine: {
-      id: 103,
-      name: "Bento Max",
-      status: "bor",
-      hasPhoto: false,
-      type: "agro",
-      usage: "Tabiiy minerallarga boy ozuqa",
-      price: 35000,
-    },
-  },
-  {
-    pharmacy: {
-      id: 1,
-      name: "Agroz Dorixona",
-      phone: "+998901234567",
-      role: "pharmacy",
-      specialty: "Dorixona",
-      organization: "Agroz Dorixona",
-      address: "Toshkent shahri",
-      lat: 41.2995,
-      lng: 69.2401,
-      distanceKm: 1.2,
-      locked: false,
-      ratingAvg: 4.8,
-      ratingCount: 12,
-      medicines: [],
-    },
-    medicine: {
-      id: 104,
-      name: "Bento Max",
-      status: "bor",
-      hasPhoto: false,
-      type: "agro",
-      usage: "Tabiiy minerallarga boy ozuqa",
-      price: 35000,
-    },
-  },
-];
 
 export default function MarketClient() {
   const [items, setItems] = useState<Pharmacy[]>([]);
@@ -322,7 +212,7 @@ export default function MarketClient() {
 
   // ---- Dorixonalar (dorilari bilan) ----
   useEffect(() => {
-    const params = new URLSearchParams({ radius: String(radiusKm) });
+    const params = new URLSearchParams({ radius: String(radiusKm), role: "pharmacy" });
     if (coords) {
       params.set("lat", String(coords.lat));
       params.set("lng", String(coords.lng));
@@ -365,11 +255,7 @@ export default function MarketClient() {
     return list;
   }, [items, section, query]);
 
-  const displayCards = useMemo<Card[]>(() => {
-    if (cards.length > 0) return cards;
-    if (query.trim()) return [];
-    return DEFAULT_MARKET_CARDS;
-  }, [cards, query]);
+  const displayCards = cards;
 
   // Yoqtirilgan kartochkalar (dorilar o'chirilgan bo'lsa ro'yxatdan tushadi).
   const favCards = useMemo<Card[]>(
@@ -608,7 +494,7 @@ export default function MarketClient() {
             <Store size={32} />
           </span>
 
-          {query && (
+          {query ? (
             <>
               <p className="mt-3.5 text-[17px] font-bold text-neutral-900">
                 «{query}» bo&apos;yicha dori topilmadi
@@ -622,6 +508,15 @@ export default function MarketClient() {
               >
                 <X size={15} /> Qidiruvni tozalash
               </button>
+            </>
+          ) : (
+            <>
+              <p className="mt-3.5 text-[17px] font-bold text-neutral-900">
+                Hozircha dorilar mavjud emas
+              </p>
+              <p className="mt-1.5 text-[13.5px] leading-relaxed text-neutral-500 max-w-md mx-auto">
+                Dorixonalar dori vositalarini qo&apos;shishi bilan bu yerda real ko&apos;rinadi.
+              </p>
             </>
           )}
         </div>
