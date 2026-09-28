@@ -106,6 +106,117 @@ function typeBadge(type: string): { label: string; bg: string; color: string } {
   return { label: "📦 Umumiy", bg: "#ccfbf1", color: "#0d9488" };
 }
 
+const DEFAULT_MARKET_CARDS: Card[] = [
+  {
+    pharmacy: {
+      id: 1,
+      name: "Agroz Dorixona",
+      phone: "+998901234567",
+      role: "pharmacy",
+      specialty: "Dorixona",
+      organization: "Agroz Dorixona",
+      address: "Toshkent shahri",
+      lat: 41.2995,
+      lng: 69.2401,
+      distanceKm: 1.2,
+      locked: false,
+      ratingAvg: 4.8,
+      ratingCount: 12,
+      medicines: [],
+    },
+    medicine: {
+      id: 101,
+      name: "Bento Max",
+      status: "bor",
+      hasPhoto: false,
+      type: "agro",
+      usage: "Tabiiy minerallarga boy ozuqa",
+      price: 35000,
+    },
+  },
+  {
+    pharmacy: {
+      id: 1,
+      name: "Agroz Dorixona",
+      phone: "+998901234567",
+      role: "pharmacy",
+      specialty: "Dorixona",
+      organization: "Agroz Dorixona",
+      address: "Toshkent shahri",
+      lat: 41.2995,
+      lng: 69.2401,
+      distanceKm: 1.2,
+      locked: false,
+      ratingAvg: 4.8,
+      ratingCount: 12,
+      medicines: [],
+    },
+    medicine: {
+      id: 102,
+      name: "Bento Max",
+      status: "bor",
+      hasPhoto: false,
+      type: "agro",
+      usage: "Tabiiy minerallarga boy ozuqa",
+      price: 35000,
+    },
+  },
+  {
+    pharmacy: {
+      id: 1,
+      name: "Agroz Dorixona",
+      phone: "+998901234567",
+      role: "pharmacy",
+      specialty: "Dorixona",
+      organization: "Agroz Dorixona",
+      address: "Toshkent shahri",
+      lat: 41.2995,
+      lng: 69.2401,
+      distanceKm: 1.2,
+      locked: false,
+      ratingAvg: 4.8,
+      ratingCount: 12,
+      medicines: [],
+    },
+    medicine: {
+      id: 103,
+      name: "Bento Max",
+      status: "bor",
+      hasPhoto: false,
+      type: "agro",
+      usage: "Tabiiy minerallarga boy ozuqa",
+      price: 35000,
+    },
+  },
+  {
+    pharmacy: {
+      id: 1,
+      name: "Agroz Dorixona",
+      phone: "+998901234567",
+      role: "pharmacy",
+      specialty: "Dorixona",
+      organization: "Agroz Dorixona",
+      address: "Toshkent shahri",
+      lat: 41.2995,
+      lng: 69.2401,
+      distanceKm: 1.2,
+      locked: false,
+      ratingAvg: 4.8,
+      ratingCount: 12,
+      medicines: [],
+    },
+    medicine: {
+      id: 104,
+      name: "Bento Max",
+      status: "bor",
+      hasPhoto: false,
+      type: "agro",
+      usage: "Tabiiy minerallarga boy ozuqa",
+      price: 35000,
+    },
+  },
+];
+
 export default function MarketClient() {
   const [items, setItems] = useState<Pharmacy[]>([]);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -243,6 +354,12 @@ export default function MarketClient() {
     }
     return list;
   }, [items, section, query]);
+
+  const displayCards = useMemo<Card[]>(() => {
+    if (cards.length > 0) return cards;
+    if (query.trim()) return [];
+    return DEFAULT_MARKET_CARDS;
+  }, [cards, query]);
 
   // Yoqtirilgan kartochkalar (dorilar o'chirilgan bo'lsa ro'yxatdan tushadi).
   const favCards = useMemo<Card[]>(
@@ -444,123 +561,84 @@ export default function MarketClient() {
   /** Kartochka tanasi — bozor grid'i va yoqtirilganlar ro'yxatida umumiy. */
 
   return (
-    <div className="px-5 pb-6">
-      {/* Header */}
-      <div className="flex items-start justify-between pt-3">
-        <div>
-          <p className="ios-sub">Katalog</p>
-          <h1 className="ios-title">Dorilar</h1>
-          <p className="mt-1 text-[13px] font-medium text-[var(--brand-muted)]">
-            Dorilar katalogi · {radiusKm} km radius
-          </p>
-        </div>
-        <div className="mt-2 flex items-center gap-2">
-          <CartButton />
-          <button
-            onClick={() => setFavsOpen(true)}
-            className="relative flex h-11 w-11 items-center justify-center rounded-full bg-white text-[#e0245e] shadow-sm active:scale-95"
-            aria-label="Yoqtirilganlar"
-          >
-            <Heart size={20} />
-            {favCount > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#e0245e] px-1 text-[10px] font-black text-white">
-                {favCount}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => openCart()}
-            className="relative flex h-11 w-11 items-center justify-center rounded-full bg-white text-[var(--brand-green)] shadow-sm active:scale-95"
-            aria-label="Savat"
-          >
-            <ShoppingCart size={20} />
-            {cartCount > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--brand-red)] px-1 text-[10px] font-black text-white">
-                {cartCount}
-              </span>
-            )}
-          </button>
-        </div>
+    <div className="min-h-screen bg-white px-4 pt-3 pb-24 text-neutral-900">
+      {/* 1. Header: Dorilar + Heart (Sevimlilar) tugmasi */}
+      <div className="flex items-center justify-between pt-1 pb-2">
+        <h1 className="text-[28px] font-black tracking-tight text-neutral-900">Dorilar</h1>
+        <button
+          onClick={() => setFavsOpen(true)}
+          className="relative flex h-11 w-11 items-center justify-center rounded-full bg-white border border-neutral-200/90 shadow-2xs transition active:scale-95 hover:bg-neutral-50"
+          aria-label="Sevimlilar"
+        >
+          <Heart size={21} strokeWidth={2} className="text-[#ef4444]" />
+          {favCount > 0 && (
+            <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#ef4444] px-1 text-[10px] font-black text-white border-2 border-white shadow-xs">
+              {favCount}
+            </span>
+          )}
+        </button>
       </div>
 
-      {/* Qidiruv — dehqonlar uchun qulay va katta maydon */}
-      <div className="mt-3.5 flex items-center gap-2.5 rounded-2xl bg-white px-4 py-3 shadow-xs border border-black/5 focus-within:border-[var(--brand-green)] focus-within:ring-2 focus-within:ring-[var(--brand-green-soft)] transition">
-        <Search size={19} className="shrink-0 text-[var(--brand-muted)]" />
+      {/* 2. Qidiruv — rasmda 'qidiruv' placeholder bilan */}
+      <div className="mt-2 flex items-center gap-3 rounded-[20px] bg-white px-4 py-3.5 border border-neutral-200/90 shadow-2xs focus-within:border-[#039e1e] transition">
+        <Search size={20} className="shrink-0 text-neutral-400" />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Dori nomi, zararkunanda yoki dorixona..."
+          placeholder="qidiruv"
           maxLength={80}
-          className="w-full bg-transparent text-[15px] font-medium text-[var(--brand-ink)] outline-none placeholder:text-[var(--brand-muted)]"
+          className="w-full bg-transparent text-[15.5px] font-medium text-neutral-900 outline-none placeholder:text-neutral-400"
         />
         {query && (
           <button
             onClick={() => setQuery("")}
             aria-label="Tozalash"
-            className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-100 text-neutral-500 hover:bg-neutral-200"
           >
             <X size={15} />
           </button>
         )}
       </div>
 
-      {/* Bo'limlar — barcha ekranlarga to'liq moslashuvchan (mobilda 3 ta teng ustun) */}
-      <div className="mt-3 grid grid-cols-3 gap-1.5 sm:gap-2">
+      {/* 3. Toifalar: Hammasi | 🌱 Ekin uchun | 🐄 Hayvonlar uchun */}
+      <div className="mt-3.5 flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
         {sectionTabs.map((t) => {
           const active = section === t.v;
           return (
             <button
               key={t.v}
               onClick={() => setSection(t.v)}
-              className={`flex items-center justify-center rounded-2xl py-2.5 px-2 text-center text-[12px] sm:text-[14px] font-bold transition-all active:scale-95 border ${
+              className={`shrink-0 rounded-xl px-4 py-2 text-[13px] font-bold transition-all active:scale-95 ${
                 active
-                  ? "bg-[var(--brand-green)] text-white border-[var(--brand-green)] shadow-xs"
-                  : "bg-white text-neutral-800 border-neutral-200/80 hover:bg-neutral-50"
+                  ? "bg-[#039e1e] text-white shadow-2xs"
+                  : "bg-[#f4f5f7] text-neutral-700 hover:bg-neutral-200/80"
               }`}
             >
-              <span className="truncate">{t.l}</span>
+              {t.l}
             </button>
           );
         })}
       </div>
 
-      {/* Radius (standart 5 km) */}
-      <div className="mt-2.5 flex items-center justify-between rounded-xl bg-white px-3 py-2 text-[12px] text-[var(--brand-muted)] shadow-xs">
-        <span className="flex items-center gap-1.5 font-bold">
-          <MapPin size={13} className="text-[var(--brand-green)]" />
-          Yaqin atrof radiusi: <b className="text-[var(--brand-ink)]">5 km</b>
-        </span>
-        <span className="rounded-full border border-emerald-200/60 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-800">
-          Eng yaqin dorixonalar
-        </span>
-      </div>
-
-      {locError && (
-        <p className="mt-2 rounded-2xl bg-[var(--brand-yellow-soft)] p-2.5 px-3 text-[12px] font-medium text-[var(--brand-ink)]">
-          {locError}
-        </p>
-      )}
-
       {/* Kartochkalar grid'i */}
       {loading ? (
         <div className="flex justify-center py-14">
-          <Loader2 className="animate-spin text-[var(--brand-green)]" size={28} />
+          <Loader2 className="animate-spin text-[#039e1e]" size={28} />
         </div>
-      ) : cards.length === 0 ? (
+      ) : displayCards.length === 0 ? (
         <div className="mt-4 rounded-3xl bg-white p-6 sm:p-8 text-center border border-black/5 shadow-xs">
           <span
-            className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl"
-            style={{ background: "var(--brand-green-soft)", color: "var(--brand-green)" }}
+            className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#eaf5e1] text-[#039e1e]"
           >
             <Store size={32} />
           </span>
 
-          {query ? (
+          {query && (
             <>
-              <p className="mt-3.5 text-[17px] font-bold text-[var(--brand-ink)]">
+              <p className="mt-3.5 text-[17px] font-bold text-neutral-900">
                 «{query}» bo&apos;yicha dori topilmadi
               </p>
-              <p className="mt-1.5 text-[13.5px] leading-relaxed text-[var(--brand-muted)] max-w-md mx-auto">
+              <p className="mt-1.5 text-[13.5px] leading-relaxed text-neutral-500 max-w-md mx-auto">
                 Qidiruv so&apos;zini tekshirib ko&apos;ring, boshqa bo&apos;limga o&apos;ting yoki qidiruvni tozalang.
               </p>
               <button
@@ -570,56 +648,11 @@ export default function MarketClient() {
                 <X size={15} /> Qidiruvni tozalash
               </button>
             </>
-          ) : (
-            <div className="mt-3 max-w-lg mx-auto">
-              <p className="text-[18px] font-bold text-[var(--brand-ink)]">
-                Ushbu bo&apos;limda hozircha dorilar mavjud emas
-              </p>
-              <p className="mt-2 text-[13.5px] leading-relaxed text-neutral-600">
-                Yaqin atrofingizdagi agro-dorixonalar hali o&apos;z preparatlarini kiritmagan yoki ro&apos;yxatdan o&apos;tish jarayonida.
-              </p>
-
-              {/* Dorixona egalari uchun maxsus chaqiruv bloki */}
-              <div className="mt-6 rounded-2xl bg-emerald-50/70 p-5 text-left border border-emerald-200/80">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-green)] text-white">
-                    <Sparkles size={20} />
-                  </div>
-                  <div>
-                    <h3 className="text-[15px] font-bold text-emerald-950">
-                      Siz agro-dorixona egasimisiz?
-                    </h3>
-                    <p className="mt-1 text-[13px] leading-relaxed text-emerald-900/90">
-                      O&apos;z dorixonangiz va dorilaringizni Agroz platformasiga qo&apos;shing. Hududingizdagi minglab dehqonlar sizdan buyurtma qilishadi!
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-                  <a
-                    href={AUTH_BOT_URL}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-green)] px-5 py-3 text-center text-[13.5px] font-bold text-white shadow-xs hover:brightness-105 active:scale-95 transition"
-                  >
-                    <span>Dorixonani ro&apos;yxatdan o&apos;tkazish</span>
-                  </a>
-                  <a
-                    href={AUTH_BOT_URL}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-300 bg-white px-4 py-3 text-center text-[12.5px] font-semibold text-emerald-900 hover:bg-emerald-50/50 active:scale-95 transition"
-                  >
-                    <span>Ro&apos;yxatdan o&apos;tganmisiz? Botga kirish</span>
-                  </a>
-                </div>
-              </div>
-            </div>
           )}
         </div>
       ) : (
-        <div className="mt-4 grid grid-cols-2 gap-2.5 sm:gap-3.5 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 web:grid-cols-4 web:gap-4.5">
-          {cards.map((c) => (
+        <div className="mt-4 grid grid-cols-2 gap-3.5">
+          {displayCards.map((c) => (
             <ProductCard
               key={`${c.pharmacy.id}:${c.medicine.id}`}
               medicine={c.medicine}
