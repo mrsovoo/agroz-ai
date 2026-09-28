@@ -38,16 +38,9 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="mobile-bottom-nav fixed bottom-0 left-1/2 z-50 w-full max-w-[520px] -translate-x-1/2 transition-all"
-      style={{
-        background: "rgba(255, 255, 255, 0.92)",
-        WebkitBackdropFilter: "blur(24px) saturate(190%)",
-        backdropFilter: "blur(24px) saturate(190%)",
-        borderTop: "1px solid rgba(0, 0, 0, 0.08)",
-        boxShadow: "0 -4px 20px rgba(0, 0, 0, 0.04)",
-      }}
+      className="mobile-bottom-nav fixed bottom-0 left-1/2 z-50 w-full max-w-[520px] -translate-x-1/2 transition-all bg-white border-t border-neutral-100 shadow-[0_-4px_20px_rgba(0,0,0,0.03)]"
     >
-      <ul className="grid grid-cols-5 pb-[max(10px,env(safe-area-inset-bottom))] pt-2">
+      <ul className="grid grid-cols-5 pb-[max(10px,env(safe-area-inset-bottom))] pt-2.5">
         {/* 1. Asosiy */}
         <li>
           <Link
@@ -55,10 +48,10 @@ export default function BottomNav() {
             prefetch={true}
             onClick={handleNavClick}
             className={`flex flex-col items-center gap-1 py-1 text-[11px] font-bold transition-all active:scale-90 ${
-              isHome ? "text-[var(--brand-green)]" : "text-neutral-500 hover:text-neutral-900"
+              isHome ? "text-[#0ba324]" : "text-neutral-400 hover:text-neutral-700"
             }`}
           >
-            <Home size={23} strokeWidth={isHome ? 2.5 : 1.8} />
+            <Home size={22} strokeWidth={isHome ? 2.6 : 2} />
             <span>Asosiy</span>
           </Link>
         </li>
@@ -70,10 +63,10 @@ export default function BottomNav() {
             prefetch={true}
             onClick={handleNavClick}
             className={`flex flex-col items-center gap-1 py-1 text-[11px] font-bold transition-all active:scale-90 ${
-              isDorilar ? "text-[var(--brand-green)]" : "text-neutral-500 hover:text-neutral-900"
+              isDorilar ? "text-[#0ba324]" : "text-neutral-400 hover:text-neutral-700"
             }`}
           >
-            <Pill size={23} strokeWidth={isDorilar ? 2.5 : 1.8} />
+            <Pill size={22} strokeWidth={isDorilar ? 2.6 : 2} />
             <span>Dorilar</span>
           </Link>
         </li>
@@ -86,37 +79,35 @@ export default function BottomNav() {
               haptic("medium");
               toggleCart();
             }}
-            className="flex w-full flex-col items-center gap-1 py-1 text-[11px] font-bold text-neutral-500 hover:text-[var(--brand-green)] active:scale-90 transition-all"
+            className="flex w-full flex-col items-center gap-1 py-1 text-[11px] font-bold text-neutral-400 hover:text-neutral-700 active:scale-90 transition-all"
             aria-label="Savat"
           >
             <div className="relative">
               <ShoppingCart
-                size={23}
-                strokeWidth={cartCount > 0 ? 2.4 : 1.8}
-                className={cartCount > 0 ? "text-[var(--brand-green)]" : ""}
+                size={22}
+                strokeWidth={2}
+                className="text-neutral-400"
               />
-              {cartCount > 0 && (
-                <span className="absolute -top-1.5 -right-2.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-black text-white shadow-xs animate-in zoom-in-50">
-                  {cartCount > 9 ? "9+" : cartCount}
-                </span>
-              )}
+              <span className="absolute -top-1.5 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#ef4444] px-1 text-[9px] font-black text-white shadow-xs">
+                {cartCount > 0 ? (cartCount > 9 ? "9+" : cartCount) : 1}
+              </span>
             </div>
-            <span className={cartCount > 0 ? "text-[var(--brand-green)]" : ""}>Savat</span>
+            <span>Savat</span>
           </button>
         </li>
 
-        {/* 4. Mutaxassislar — bosilganda savat yopiladi va mutaxassislar ochiladi */}
+        {/* 4. Mutaxassislar */}
         <li>
           <Link
             href="/mutaxassislar"
             prefetch={true}
             onClick={handleNavClick}
             className={`flex flex-col items-center gap-1 py-1 text-[11px] font-bold transition-all active:scale-90 ${
-              isSpecialists ? "text-[var(--brand-green)]" : "text-neutral-500 hover:text-neutral-900"
+              isSpecialists ? "text-[#0ba324]" : "text-neutral-400 hover:text-neutral-700"
             }`}
           >
-            <UsersRound size={23} strokeWidth={isSpecialists ? 2.5 : 1.8} />
-            <span>Mutaxassis</span>
+            <UsersRound size={22} strokeWidth={isSpecialists ? 2.6 : 2} />
+            <span>Mutaxasislar</span>
           </Link>
         </li>
 
@@ -127,10 +118,10 @@ export default function BottomNav() {
             prefetch={true}
             onClick={handleNavClick}
             className={`flex flex-col items-center gap-1 py-1 text-[11px] font-bold transition-all active:scale-90 ${
-              isProfile ? "text-[var(--brand-green)]" : "text-neutral-500 hover:text-neutral-900"
+              isProfile ? "text-[#0ba324]" : "text-neutral-400 hover:text-neutral-700"
             }`}
           >
-            <UserRound size={23} strokeWidth={isProfile ? 2.5 : 1.8} />
+            <UserRound size={22} strokeWidth={isProfile ? 2.6 : 2} />
             <span>Profil</span>
           </Link>
         </li>

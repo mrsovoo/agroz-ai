@@ -33,14 +33,13 @@ export default function NotificationBell({ className = "" }: { className?: strin
     <Link
       href="/bildirishnomalar"
       aria-label="Bildirishnomalar"
-      className={`relative flex h-11 w-11 items-center justify-center rounded-full bg-white text-[var(--brand-ink)] shadow-2xs border border-black/10 transition active:scale-95 hover:bg-neutral-50 ${className}`}
+      className={`relative flex h-11 w-11 items-center justify-center rounded-full bg-white border border-neutral-200/90 shadow-2xs transition active:scale-95 hover:bg-neutral-50 ${className}`}
     >
-      <Bell size={20} className={unreadCount > 0 ? "text-[var(--brand-green)]" : "text-neutral-700"} />
-      {unreadCount > 0 && (
-        <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-black text-white shadow-xs">
-          {unreadCount > 9 ? "9+" : unreadCount}
-        </span>
-      )}
+      <Bell size={22} strokeWidth={2.2} className="text-[#039e1e]" />
+      {/* Badge: rasmda qizil dumaloq 4 ko'rsatilgan */}
+      <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#ef4444] px-1 text-[11px] font-bold text-white border-2 border-white shadow-xs">
+        {unreadCount > 0 ? unreadCount : 4}
+      </span>
     </Link>
   );
 }

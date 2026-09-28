@@ -63,9 +63,11 @@ const scopeStyle: Record<AdviceScope, { bg: string; fg: string; icon: ReactNode;
 export default function WeatherCard({
   showTips = false,
   showRegion = false,
+  showDetails = false,
 }: {
   showTips?: boolean;
   showRegion?: boolean;
+  showDetails?: boolean;
 }) {
   const [w, setW] = useState<Weather | null>(null);
   const [place, setPlace] = useState("Hudud aniqlanmoqda");
@@ -211,103 +213,119 @@ export default function WeatherCard({
   return (
     <div>
       <div
-        className="overflow-hidden rounded-[28px] p-5 text-white shadow-[0_20px_40px_-20px_rgba(2,142,17,0.45)]"
-        style={{ background: "linear-gradient(135deg,#028e11 0%,#0a9c1b 50%,#76b44d 100%)" }}
+        className="relative overflow-hidden rounded-[26px] p-5 text-white shadow-[0_12px_30px_-10px_rgba(2,142,17,0.4)]"
+        style={{ background: "linear-gradient(135deg, #028e11 0%, #0ba324 45%, #5db838 100%)" }}
       >
-        {/* Joylashuv va Asosiy harorat */}
-        <div className="flex items-start justify-between">
+        <div className="flex items-center justify-between">
           <div>
-            <p className="flex items-center gap-1.5 text-[13px] font-medium text-white/90">
-              <Sun size={14} /> Bugun · {place}
+            <p className="flex items-center gap-1.5 text-[13px] font-medium text-white/95">
+              <Sun size={14} className="text-yellow-200" /> Bugun · {region || "Toshkent"}
             </p>
-            <div className="mt-1.5 flex items-end gap-2">
-              <span className="text-[54px] font-black leading-none tracking-tight">
-                {w ? w.temp : "—"}
+            <div className="my-1 flex items-baseline gap-1">
+              <span className="text-[52px] font-black leading-none tracking-tight">
+                {w ? w.temp : "22"}
               </span>
-              <span className="pb-2 text-2xl font-semibold text-white/80">°C</span>
+              <span className="text-2xl font-bold text-white/90">°C</span>
             </div>
 
             {/* Kunduzi va Kechasi harorati */}
-            {w && (
-              <p className="mt-1 flex items-center gap-2 text-[12.5px] font-semibold text-white/85">
-                <span className="flex items-center gap-1">
-                  <Sun size={12} className="text-yellow-300" />
-                  Kunduzi: +{w.tempDay ?? w.temp}°C
+            <p className="mt-1.5 flex items-center gap-2 text-[12px] font-medium text-white/90">
+              <span className="flex items-center gap-1">
+                <Sun size={12} className="text-yellow-300" />
+                Kunduzi: +{w?.tempDay ?? 28}°C
+              </span>
+              <span>·</span>
+              <span className="flex items-center gap-1">
+                <Moon size={12} className="text-sky-200" />
+                Kechasi: +{w?.tempNight ?? 18}°C
+              </span>
+            </p>
+          </div>
+
+          {/* 3D Quyosh illustratsiyasi */}
+          <div className="relative pr-2 shrink-0">
+            <svg viewBox="0 0 100 100" className="w-[84px] h-[84px] drop-shadow-[0_4px_12px_rgba(251,191,36,0.5)]">
+              <defs>
+                <radialGradient id="sunGrad" cx="35%" cy="35%" r="65%">
+                  <stop offset="0%" stopColor="#fff5a5" />
+                  <stop offset="45%" stopColor="#ffb703" />
+                  <stop offset="100%" stopColor="#fb8500" />
+                </radialGradient>
+              </defs>
+              {/* 8 ta dumaloq nur */}
+              <g fill="#ffc300">
+                <rect x="47" y="5" width="6" height="14" rx="3" />
+                <rect x="47" y="81" width="6" height="14" rx="3" />
+                <rect x="5" y="47" width="14" height="6" rx="3" />
+                <rect x="81" y="47" width="14" height="6" rx="3" />
+                <rect x="18" y="18" width="6" height="14" rx="3" transform="rotate(-45 21 25)" />
+                <rect x="76" y="76" width="6" height="14" rx="3" transform="rotate(-45 79 83)" />
+                <rect x="76" y="18" width="6" height="14" rx="3" transform="rotate(45 79 25)" />
+                <rect x="18" y="76" width="6" height="14" rx="3" transform="rotate(45 21 83)" />
+              </g>
+              {/* Markaziy quyosh shari */}
+              <circle cx="50" cy="50" r="27" fill="url(#sunGrad)" />
+            </svg>
+          </div>
+        </div>
+
+        {/* 3 ta muhim parametr: Shamol, Namlik, Yog'in (faqat showDetails bo'lsa) */}
+        {showDetails && (
+          <>
+            <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+              <div className="rounded-2xl bg-white/15 py-2.5 backdrop-blur">
+                <div className="flex items-center justify-center gap-1 text-[11px] opacity-85">
+                  <Wind size={11} /> Shamol
+                </div>
+                <p className="text-base font-bold">{w ? `${w.wind} m/s` : "—"}</p>
+              </div>
+              <div className="rounded-2xl bg-white/15 py-2.5 backdrop-blur">
+                <div className="flex items-center justify-center gap-1 text-[11px] opacity-85">
+                  <Droplets size={11} /> Namlik
+                </div>
+                <p className="text-base font-bold">{w ? `${w.humidity}%` : "—"}</p>
+              </div>
+              <div className="rounded-2xl bg-white/15 py-2.5 backdrop-blur">
+                <div className="flex items-center justify-center gap-1 text-[11px] opacity-85">
+                  <CloudRain size={11} /> Yog'in
+                </div>
+                <p className="text-base font-bold">{w ? `${w.rain} mm` : "—"}</p>
+              </div>
+            </div>
+
+            {/* Diqqat {manzil} Ogohlantirish va Agrometeorologik Tavsiya Bloki */}
+            {advisory ? (
+              <div
+                className={`mt-4 flex items-start gap-2.5 rounded-[20px] px-4 py-3 text-[14px] font-semibold leading-snug transition-all ${
+                  advisory.isHazard
+                    ? "bg-amber-300 text-neutral-950 shadow-xs"
+                    : "bg-white/20 border border-white/25 text-white backdrop-blur shadow-2xs"
+                }`}
+              >
+                <span className="mt-0.5 shrink-0">
+                  {advisory.isHazard ? (
+                    <TriangleAlert size={18} strokeWidth={2.4} className="text-amber-950" />
+                  ) : (
+                    <CheckCircle2 size={18} strokeWidth={2.4} className="text-white" />
+                  )}
                 </span>
-                <span>·</span>
-                <span className="flex items-center gap-1">
-                  <Moon size={12} className="text-sky-200" />
-                  Kechasi: +{w.tempNight ?? (w.temp - 6)}°C
+                <span>
+                  <b className={`font-extrabold mr-1.5 ${advisory.isHazard ? "text-amber-950" : "text-white"}`}>
+                    {advisory.tag}
+                  </b>
+                  {advisory.text}
                 </span>
-              </p>
+              </div>
+            ) : loadFailed ? (
+              <div className="mt-4 rounded-[18px] bg-red-500/20 border border-red-500/30 px-4 py-3 text-[13px] text-white">
+                Ob-havo ma&apos;lumotini yuklab bo&apos;lmadi. Qayta urinib ko&apos;ring.
+              </div>
+            ) : (
+              <div className="mt-4 rounded-[18px] bg-white/10 px-4 py-3 text-[13px] text-white/80">
+                Ob-havo ma&apos;lumotlari tahlil qilinmoqda...
+              </div>
             )}
-          </div>
-
-          <div className="flex flex-col items-end gap-2">
-            <div
-              className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--brand-ink)] shadow-xs"
-              style={{ background: "var(--brand-yellow)" }}
-            >
-              <Sun size={22} strokeWidth={2.2} />
-            </div>
-
-
-          </div>
-        </div>
-
-        {/* 3 ta muhim parametr: Shamol, Namlik, Yog'in */}
-        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-2xl bg-white/15 py-2.5 backdrop-blur">
-            <div className="flex items-center justify-center gap-1 text-[11px] opacity-85">
-              <Wind size={11} /> Shamol
-            </div>
-            <p className="text-base font-bold">{w ? `${w.wind} m/s` : "—"}</p>
-          </div>
-          <div className="rounded-2xl bg-white/15 py-2.5 backdrop-blur">
-            <div className="flex items-center justify-center gap-1 text-[11px] opacity-85">
-              <Droplets size={11} /> Namlik
-            </div>
-            <p className="text-base font-bold">{w ? `${w.humidity}%` : "—"}</p>
-          </div>
-          <div className="rounded-2xl bg-white/15 py-2.5 backdrop-blur">
-            <div className="flex items-center justify-center gap-1 text-[11px] opacity-85">
-              <CloudRain size={11} /> Yog'in
-            </div>
-            <p className="text-base font-bold">{w ? `${w.rain} mm` : "—"}</p>
-          </div>
-        </div>
-
-        {/* Diqqat {manzil} Ogohlantirish va Agrometeorologik Tavsiya Bloki */}
-        {advisory ? (
-          <div
-            className={`mt-4 flex items-start gap-2.5 rounded-[20px] px-4 py-3 text-[14px] font-semibold leading-snug transition-all ${
-              advisory.isHazard
-                ? "bg-amber-300 text-neutral-950 shadow-xs"
-                : "bg-white/20 border border-white/25 text-white backdrop-blur shadow-2xs"
-            }`}
-          >
-            <span className="mt-0.5 shrink-0">
-              {advisory.isHazard ? (
-                <TriangleAlert size={18} strokeWidth={2.4} className="text-amber-950" />
-              ) : (
-                <CheckCircle2 size={18} strokeWidth={2.4} className="text-white" />
-              )}
-            </span>
-            <span>
-              <b className={`font-extrabold mr-1.5 ${advisory.isHazard ? "text-amber-950" : "text-white"}`}>
-                {advisory.tag}
-              </b>
-              {advisory.text}
-            </span>
-          </div>
-        ) : loadFailed ? (
-          <div className="mt-4 rounded-[18px] bg-red-500/20 border border-red-500/30 px-4 py-3 text-[13px] text-white">
-            Ob-havo ma&apos;lumotini yuklab bo&apos;lmadi. Qayta urinib ko&apos;ring.
-          </div>
-        ) : (
-          <div className="mt-4 rounded-[18px] bg-white/10 px-4 py-3 text-[13px] text-white/80">
-            Ob-havo ma&apos;lumotlari tahlil qilinmoqda...
-          </div>
+          </>
         )}
       </div>
 

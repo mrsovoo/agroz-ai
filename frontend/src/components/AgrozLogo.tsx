@@ -1,20 +1,23 @@
-import Image from "next/image";
-
 export default function AgrozLogo({
   className = "h-8 w-auto",
-  variant = "light",
 }: {
   className?: string;
   variant?: "light" | "dark";
 }) {
   return (
-    <div className={`inline-flex items-center gap-2 ${className}`}>
+    <div className={`inline-flex items-center gap-2 select-none ${className}`}>
+      {/* Yashil dumaloq belgi */}
       <img
-        src="/logo.svg"
-        alt="Agroz AI"
-        className="h-full w-auto object-contain"
-        style={variant === "dark" ? { filter: "brightness(0) invert(1)" } : undefined}
+        src="/logo-icon.svg"
+        alt="Agroz"
+        className="h-8 w-8 object-contain shrink-0"
       />
+
+      {/* AgrozGO matni */}
+      <div className="flex items-center font-black tracking-tight leading-none text-[26px]">
+        <span className="text-[#1c1c1e]">Agroz</span>
+        <span className="text-[#f59e0b]">GO</span>
+      </div>
     </div>
   );
 }
