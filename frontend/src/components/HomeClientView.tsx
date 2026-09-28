@@ -1,14 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import AgrozLogo from "@/components/AgrozLogo";
 import NotificationBell from "@/components/NotificationBell";
 import WeatherCard from "@/components/WeatherCard";
 import SpecialistCallModal from "@/components/SpecialistCallModal";
-import { loadCart, saveCart, notifyCartChanged, type CartStorePharmacy, type CartStoreMedicine } from "@/lib/cart-store";
+import {
+  loadCart,
+  saveCart,
+  notifyCartChanged,
+  CART_EVENT,
+  type CartStorePharmacy,
+  type CartStoreMedicine,
+} from "@/lib/cart-store";
 import { haptic } from "@/lib/telegram";
-import { Sparkles, Check } from "lucide-react";
+import { Sparkles, Minus, Plus } from "lucide-react";
 
 export type HomeMedicine = {
   id: number;
@@ -80,10 +87,30 @@ export default function HomeClientView({
   const [specialist] = useState<HomeSpecialist>(initialSpecialist || DEFAULT_SPECIALIST);
 
   const [callModalOpen, setCallModalOpen] = useState(false);
-  const [addedIds, setAddedIds] = useState<number[]>([]);
+  const [quantities, setQuantities] = useState<Record<number, number>>({});
 
-  function handleAddToCart(med: HomeMedicine) {
-    haptic("medium");
+  useEffect(() => {
+    const sync = () => {
+      const cart = loadCart();
+      const map: Record<number, number> = {};
+      if (cart?.lines) {
+        for (const line of cart.lines) {
+          map[line.medicine.id] = line.qty;
+        }
+      }
+      setQuantities(map);
+    };
+    sync();
+    window.addEventListener(CART_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(CART_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+
+  function changeQty(med: HomeMedicine, delta: number) {
+    haptic(delta > 0 ? "medium" : "light");
     const cart = loadCart();
     const pharmacy: CartStorePharmacy = {
       id: med.pharmacyId || 1,
@@ -102,22 +129,22 @@ export default function HomeClientView({
       status: "bor",
     };
 
-    const lines = cart?.lines ? [...cart.lines] : [];
+    let lines = cart?.lines ? [...cart.lines] : [];
     const existingIndex = lines.findIndex((l) => l.medicine.id === med.id);
+
     if (existingIndex >= 0) {
-      lines[existingIndex].qty += 1;
-    } else {
+      const newQty = lines[existingIndex].qty + delta;
+      if (newQty <= 0) {
+        lines = lines.filter((l) => l.medicine.id !== med.id);
+      } else {
+        lines[existingIndex].qty = Math.min(99, newQty);
+      }
+    } else if (delta > 0) {
       lines.push({ medicine: cartMedicine, pharmacy, qty: 1 });
     }
 
     saveCart({ pharmacy, lines });
     notifyCartChanged();
-
-    // Tugmada bir muddat tasdiq animatsiyasi
-    setAddedIds((prev) => [...prev, med.id]);
-    setTimeout(() => {
-      setAddedIds((prev) => prev.filter((id) => id !== med.id));
-    }, 1200);
   }
 
   function formatPrice(sum?: number | null) {
@@ -153,7 +180,7 @@ export default function HomeClientView({
         {/* 2 ustunli kartalar */}
         <div className="grid grid-cols-2 gap-3.5">
           {medicines.map((med, idx) => {
-            const isAdded = addedIds.includes(med.id);
+            const qty = quantities[med.id] || 0;
             return (
               <div
                 key={med.id || idx}
@@ -190,22 +217,50 @@ export default function HomeClientView({
                     {formatPrice(med.price)}
                   </p>
 
-                  {/* + Savatga tugmasi */}
-                  <button
-                    type="button"
-                    onClick={() => handleAddToCart(med)}
-                    className={`mt-2 flex w-full items-center justify-center gap-1.5 rounded-full py-2.5 text-[13px] font-bold text-white shadow-2xs transition-all active:scale-95 ${
-                      isAdded ? "bg-emerald-700" : "bg-[#039e1e] hover:bg-[#028518]"
-                    }`}
-                  >
-                    {isAdded ? (
-                      <>
-                        <Check size={15} strokeWidth={2.6} /> Qo&apos;shildi
-                      </>
+                  {/* + Savatga yoki - 1 + tugmasi */}
+                  <div className="mt-2">
+                    {qty > 0 ? (
+                      <div className="flex h-10 w-full items-center justify-between rounded-full bg-[#eaf5e1] border border-[#039e1e]/30 px-1 text-[#039e1e]">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            changeQty(med, -1);
+                          }}
+                          className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#039e1e] shadow-xs active:scale-90 transition font-black"
+                          aria-label="Kamaytirish"
+                        >
+                          <Minus size={14} strokeWidth={3} />
+                        </button>
+
+                        <span className="text-[13px] font-black tracking-tight select-none">
+                          {qty} ta
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            changeQty(med, 1);
+                          }}
+                          className="flex h-8 w-8 items-center justify-center rounded-full bg-[#039e1e] text-white shadow-xs active:scale-90 transition font-black"
+                          aria-label="Ko'paytirish"
+                        >
+                          <Plus size={14} strokeWidth={3} />
+                        </button>
+                      </div>
                     ) : (
-                      "+ Savatga"
+                      <button
+                        type="button"
+                        onClick={() => changeQty(med, 1)}
+                        className="flex w-full items-center justify-center rounded-full bg-[#039e1e] hover:bg-[#028518] py-2.5 text-[13px] font-bold text-white shadow-2xs active:scale-95 transition-all"
+                      >
+                        + Savatga
+                      </button>
                     )}
-                  </button>
+                  </div>
                 </div>
               </div>
             );
