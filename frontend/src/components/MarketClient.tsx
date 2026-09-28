@@ -255,22 +255,6 @@ export default function MarketClient() {
   } | null>(null);
   const [locDetecting, setLocDetecting] = useState(false);
 
-  // Buyurtma kuzatuvi va reyting
-  const [trackPhone, setTrackPhone] = useState("");
-  const [trackResult, setTrackResult] = useState<
-    {
-      id: number;
-      status: string;
-      deliveryType?: string;
-      totalSum: number | null;
-      pharmacyName: string | null;
-      ratingStars: number | null;
-      items: { medicineId?: number; name: string; qty: number }[];
-    }[] | null
-  >(null);
-  const [trackBusy, setTrackBusy] = useState(false);
-  const [trackError, setTrackError] = useState<string | null>(null);
-
   // ---- Yoqtirilganlar: umumiy store'dan yuklash ----
   useEffect(() => {
     const sync = () => setFavorites(loadFavorites());
@@ -519,38 +503,6 @@ export default function MarketClient() {
     }
   }
 
-  async function trackOrders() {
-    setTrackBusy(true);
-    setTrackError(null);
-    setTrackResult(null);
-    try {
-      const res = await fetch(`/api/orders/track?phone=${encodeURIComponent(trackPhone)}`);
-      const data = (await res.json()) as {
-        orders?: { id: number; status: string; totalSum: number | null; pharmacyName: string | null; ratingStars: number | null; items: { name: string; qty: number }[] }[];
-        error?: string;
-      };
-      if (!res.ok) throw new Error(data.error ?? "Xatolik");
-      setTrackResult(data.orders ?? []);
-    } catch (e) {
-      setTrackError(e instanceof Error ? e.message : "Xatolik");
-    } finally {
-      setTrackBusy(false);
-    }
-  }
-
-  async function rateOrder(orderId: number, stars: number) {
-    const res = await fetch("/api/orders", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderId, customerPhone: trackPhone, stars }),
-    });
-    if (res.ok) {
-      await trackOrders();
-    } else {
-      const data = (await res.json()) as { error?: string };
-      setTrackError(data.error ?? "Baho saqlanmadi");
-    }
-  }
 
   const sectionTabs: { v: typeof section; l: string }[] = [
     { v: "all", l: "Hammasi" },
@@ -669,128 +621,6 @@ export default function MarketClient() {
         </div>
       )}
 
-      {/* Buyurtmalarni kuzatish */}
-      <section id="order-tracking-section" className="mt-8">
-        <p className="ios-section-title">Buyurtmamni kuzatish</p>
-        <div className="ios-card p-4">
-          <p className="text-[13px] leading-relaxed text-[var(--brand-muted)]">
-            Buyurtma bergan telefon raqamingizni yozing — holati va yakunlangan buyurtmalarni
-            yulduzcha bilan baholaysiz.
-          </p>
-          <div className="mt-3 flex gap-2">
-            <div className="flex flex-1 items-center rounded-2xl bg-[var(--brand-bg)] pl-3">
-              <span className="pr-1 text-[15px] font-bold text-[var(--brand-muted)]">+998</span>
-              <input
-                value={trackPhone}
-                onChange={(e) => setTrackPhone(e.target.value.replace(/\D/g, "").replace(/^998/, "").slice(0, 9))}
-                inputMode="tel"
-                placeholder="90 123 45 67"
-                className="ios-input !bg-transparent !py-2.5 !pl-0"
-              />
-            </div>
-            <button
-              onClick={trackOrders}
-              disabled={trackBusy || trackPhone.length < 9}
-              className="rounded-2xl px-4 text-[13px] font-bold text-white disabled:opacity-50"
-              style={{ background: "var(--brand-ink)" }}
-            >
-              {trackBusy ? "..." : "Ko'rish"}
-            </button>
-          </div>
-          {trackError && (
-            <p className="mt-2 rounded-xl bg-[var(--brand-red-soft)] p-2.5 text-[12.5px] font-semibold text-[#d7263d]">
-              {trackError}
-            </p>
-          )}
-          {trackResult && (
-            <ul className="mt-3 space-y-2">
-              {trackResult.length === 0 && (
-                <li className="text-[13px] text-[var(--brand-muted)]">Bu raqamga buyurtma topilmadi.</li>
-              )}
-              {trackResult.map((o) => (
-                <li key={o.id} className="rounded-2xl bg-[var(--brand-bg)] p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[14px] font-bold text-[var(--brand-ink)]">
-                      #{o.id} · {o.pharmacyName ?? "Dorixona"}
-                    </span>
-                    <span
-                      className="rounded-full px-2 py-0.5 text-[10.5px] font-bold"
-                      style={
-                        o.status === "yetkazildi"
-                          ? { background: "var(--brand-green-soft)", color: "var(--brand-green)" }
-                          : o.status === "bekor"
-                            ? { background: "var(--brand-red-soft)", color: "#d7263d" }
-                            : { background: "var(--brand-yellow-soft)", color: "var(--brand-ink)" }
-                      }
-                    >
-                      {o.status === "yangi" ? "🆕 Yangi" : o.status === "tasdiqlandi" ? "✅ Tasdiqlandi" : o.status === "yetkazildi" ? (o.deliveryType === "pickup" ? "🏪 Olib ketildi" : "📦 Yetkazildi") : "❌ Bekor"}
-                    </span>
-                  </div>
-                  <div className="mt-2 space-y-1.5 border-t border-[var(--brand-sep)]/60 pt-2">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--brand-muted)]">
-                      Buyurtma qilingan dorilar:
-                    </p>
-                    <div className="space-y-1">
-                      {o.items.map((i, idx) => (
-                        <div key={idx} className="flex items-center justify-between gap-2 text-[12.5px]">
-                          <span className="font-semibold text-[var(--brand-ink)]">
-                            {i.name} <span className="font-normal text-[var(--brand-muted)]">×{i.qty}</span>
-                          </span>
-                          {i.medicineId ? (
-                            <Link
-                              href={`/dori/${i.medicineId}`}
-                              className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 hover:bg-emerald-100 transition"
-                            >
-                              <MessageSquare size={11} />
-                              {o.status === "yetkazildi" ? "Fikr va baho" : "Batafsil"}
-                            </Link>
-                          ) : null}
-                        </div>
-                      ))}
-                    </div>
-                    {o.totalSum !== null && (
-                      <p className="text-right text-[12px] font-black text-[var(--brand-ink)] pt-1">
-                        Jami: {shortSum(o.totalSum)} so&apos;m
-                      </p>
-                    )}
-                  </div>
-                  {o.status === "yetkazildi" && (
-                    <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white p-2.5 border border-[var(--brand-sep)]">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[12px] font-bold text-[var(--brand-ink)]">
-                          {o.ratingStars ? "Xizmatga bahoyingiz:" : "Xizmatni baholang:"}
-                        </span>
-                        <div className="flex gap-1">
-                          {[1, 2, 3, 4, 5].map((n) => (
-                            <button
-                              key={n}
-                              onClick={() => !o.ratingStars && rateOrder(o.id, n)}
-                              aria-label={`${n} yulduz`}
-                              className="p-0.5 text-[#d1d1d6] transition hover:scale-125 hover:text-[#fcbd00] disabled:cursor-default"
-                              disabled={Boolean(o.ratingStars)}
-                            >
-                              <Star
-                                size={17}
-                                fill={o.ratingStars && o.ratingStars >= n ? "#fcbd00" : "none"}
-                                className={o.ratingStars && o.ratingStars >= n ? "text-[#fcbd00]" : ""}
-                              />
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      {o.ratingStars && (
-                        <span className="text-[11px] font-bold text-emerald-700">
-                          ✓ Qabul qilindi
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </section>
 
       {/* Yoqtirilganlar bottom sheet */}
       {favsOpen && (
@@ -999,27 +829,16 @@ export default function MarketClient() {
 
                 {/* Tugmalar */}
                 <div className="space-y-2">
-                  <button
+                  <Link
+                    href="/profil"
                     onClick={() => {
-                      const phoneToTrack = orderDone.customerPhone;
                       setOrderDone(null);
                       setCartOpen(false);
-                      setTrackPhone(phoneToTrack);
-                      const trackEl = document.getElementById("order-tracking-section");
-                      if (trackEl) {
-                        trackEl.scrollIntoView({ behavior: "smooth" });
-                      }
-                      setTimeout(() => {
-                        fetch(`/api/orders/track?phone=${encodeURIComponent(phoneToTrack)}`)
-                          .then((r) => r.json())
-                          .then((d) => setTrackResult(d.orders ?? []))
-                          .catch(() => {});
-                      }, 400);
                     }}
-                    className="ios-btn w-full"
+                    className="ios-btn w-full flex items-center justify-center gap-1.5"
                   >
-                    🔍 Buyurtma holatini kuzatish
-                  </button>
+                    Profilga o&apos;tish va kuzatish
+                  </Link>
 
                   <button
                     onClick={() => {
