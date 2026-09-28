@@ -2539,20 +2539,31 @@ export default function SuperAdminPage() {
                               Batafsil
                             </button>
                             <button
-                              onClick={() => {
-                                if (!confirm("Haqiqatan ham bu foydalanuvchini o'chirasizmi? Barcha ma'lumotlari o'chib ketadi.")) return;
-                                adminFetch(`/api/admin/users/${u.id}`, { method: "DELETE" })
-                                  .then(r => r.json())
-                                  .then(data => {
-                                    if (data.ok) {
-                                      loadData();
-                                    } else {
-                                      alert(data.error || "O'chirishda xatolik");
-                                    }
-                                  })
-                                  .catch(() => alert("Tarmoq xatosi"));
+                              onClick={async () => {
+                                if (!confirm("Haqiqatan ham bu foydalanuvchini o'chirasizmi? Barcha ma'lumotlari (buyurtmalar, chaqiruvlar, sessiyalar) o'chib ketadi.")) return;
+                                const btn = event?.currentTarget as HTMLButtonElement;
+                                const originalHtml = btn.innerHTML;
+                                btn.disabled = true;
+                                btn.innerHTML = "⏳";
+                                btn.classList.add("opacity-50", "cursor-not-allowed");
+                                try {
+                                  const res = await adminFetch(`/api/admin/users/${u.id}`, { method: "DELETE" });
+                                  const data = await res.json();
+                                  if (data.ok) {
+                                    loadData();
+                                  } else {
+                                    alert(data.error || "O'chirishda xatolik");
+                                  }
+                                } catch {
+                                  alert("Tarmoq xatosi");
+                                } finally {
+                                  btn.disabled = false;
+                                  btn.innerHTML = originalHtml;
+                                  btn.classList.remove("opacity-50", "cursor-not-allowed");
+                                }
                               }}
-                              className="rounded-xl bg-red-600 hover:bg-red-700 px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition"
+                              className="rounded-xl bg-red-600 hover:bg-red-700 active:bg-red-800 px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition hover:shadow-sm"
+                              title="Foydalanuvchini o'chirish"
                             >
                               🗑️
                             </button>
