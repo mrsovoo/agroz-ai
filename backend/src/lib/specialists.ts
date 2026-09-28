@@ -57,6 +57,7 @@ export type MedicineDto = {
   name: string;
   status: string;
   hasPhoto: boolean;
+  photoVersion?: string | null;
   /** crop | animal | general — kim uchun. */
   type: string;
   /** Nima uchun ishlatiladi (mijozga ko'rinadi). */
@@ -394,18 +395,21 @@ export async function listSpecialists(opts: {
 
   const bySpecialist = new Map<number, MedicineDto[]>();
   for (const m of medicineRows) {
-    const hasPhoto = Boolean(m.photoFileId || m.photoData);
-    const hasPrice = typeof m.price === "number" && m.price > 0;
-    // Fermerga faqat rasmi, narxi to'liq va mavjud bo'lgan dorilar ko'rinadi (boshqalar yashirin turadi)
-    if (!hasPhoto || !hasPrice || m.status !== "bor") {
+    if (m.status !== "bor") {
       continue;
     }
+    const hasPhoto = Boolean(m.photoFileId || m.photoData);
     const list = bySpecialist.get(m.specialistId) ?? [];
     list.push({
       id: m.id,
       name: m.name,
       status: m.status,
-      hasPhoto: true,
+      hasPhoto,
+      photoVersion: m.photoData
+        ? `${m.photoData.length}_${m.photoData.slice(-10)}`
+        : m.photoFileId
+        ? m.photoFileId.slice(-10)
+        : null,
       type: m.type,
       usage: m.usage,
       price: m.price,
