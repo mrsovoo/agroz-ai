@@ -67,6 +67,31 @@ const FILTERS = [
   { v: "veterinar", l: "🐄 Veterinarlar" },
 ];
 
+const DEFAULT_SPECIALISTS: Specialist[] = [
+  {
+    id: 0,
+    name: "Mutaxassislar yo'q",
+    phone: "",
+    role: "specialist",
+    specialty: null,
+    education: null,
+    bio: null,
+    helpsWith: "both",
+    experienceYears: null,
+    organization: null,
+    address: "",
+    lat: 0,
+    lng: 0,
+    workHours: null,
+    distanceKm: null,
+    locked: false,
+    ratingAvg: null,
+    ratingCount: 0,
+    isBusy: false,
+    medicines: [],
+  },
+];
+
 
 
 function Stars({ avg, count }: { avg: number | null; count: number }) {
