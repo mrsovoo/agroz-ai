@@ -55,47 +55,10 @@ export default function HomeClientView({
   const [specialist] = useState<HomeSpecialist | null>(initialSpecialist || null);
 
   useEffect(() => {
-    // 1) SSR orqali kelgan dorilarni dastlab aralashtirish
     if (initialMedicines && initialMedicines.length > 0) {
-      setMedicines([...initialMedicines].sort(() => Math.random() - 0.5));
+      const list = [...initialMedicines].sort(() => Math.random() - 0.5);
+      setMedicines(list);
     }
-
-    // 2) Barcha dorixonalardan dorilarni to'liq yuklab olish (hech qanday dori tushib qolmasligi uchun)
-    async function loadAllFromPharmacies() {
-      try {
-        const res = await fetch("/api/specialists?role=pharmacy");
-        if (!res.ok) return;
-        const data = await res.json();
-        const items = Array.isArray(data?.items) ? data.items : [];
-        const collected: HomeMedicine[] = [];
-        for (const p of items) {
-          for (const m of p.medicines || []) {
-            if (m.status === "yoq") continue;
-            collected.push({
-              id: m.id,
-              name: m.name,
-              type: m.type,
-              usage: m.usage,
-              price: m.price,
-              stockUnit: m.stockUnit,
-              hasPhoto: Boolean(m.hasPhoto),
-              photoVersion: m.photoVersion,
-              photoUrl: m.hasPhoto ? `/api/medicines/${m.id}/photo` : null,
-              pharmacyId: p.id,
-              pharmacyName: p.organization || p.name,
-              pharmacyPhone: p.phone,
-              pharmacyAddress: p.address,
-            });
-          }
-        }
-        if (collected.length > 0) {
-          // Tasodifiy tartibda aralashtirish (shuffle)
-          const shuffled = [...collected].sort(() => Math.random() - 0.5);
-          setMedicines(shuffled);
-        }
-      } catch {}
-    }
-    loadAllFromPharmacies();
   }, [initialMedicines]);
 
   const [callModalOpen, setCallModalOpen] = useState(false);
@@ -183,22 +146,20 @@ export default function HomeClientView({
           <h2 className="text-[20px] font-black tracking-tight text-neutral-900">Dorilar</h2>
           <Link
             href="/dorilar"
-            className="text-[14px] font-bold text-[#039e1e] hover:underline active:opacity-80 transition inline-flex items-center gap-1"
+            className="text-[14px] font-bold text-[#039e1e] hover:underline active:opacity-80 transition"
           >
-            <span>Barchasi</span>
-            {medicines.length > 0 && <span>({medicines.length})</span>}
-            <span>→</span>
+            Barchasi
           </Link>
         </div>
 
-        {/* 2 yoki 4 ta dori kartalari (har kirishda random aylanadi) yoki bo'sh holat */}
+        {/* 2 ustunli kartalar yoki bo'sh holat */}
         {medicines.length === 0 ? (
           <div className="rounded-2xl border border-neutral-100 bg-[#f8f9fa] p-6 text-center text-[13px] text-neutral-400">
             Hozircha dorilar mavjud emas
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3.5">
-            {medicines.slice(0, 4).map((med, idx) => (
+            {medicines.map((med, idx) => (
               <ProductCard
                 key={med.id || idx}
                 medicine={{
