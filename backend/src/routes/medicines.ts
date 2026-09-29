@@ -12,13 +12,11 @@ router.get("/", async (req, res) => {
     const limit = Math.min(Number(req.query.limit) || 48, 96);
     const type = typeof req.query.type === "string" ? req.query.type : null;
     const q = typeof req.query.q === "string" ? req.query.q.trim() : null;
+    const isRandom = req.query.random === "1" || req.query.shuffle === "1";
 
     const conditions = [
-      eq(specialistMedicines.status, "bor"),
-      sql`${specialistMedicines.price} is not null and ${specialistMedicines.price} > 0`,
-      sql`(${specialistMedicines.photoFileId} is not null or ${specialistMedicines.photoData} is not null)`,
+      ne(specialistMedicines.status, "yoq"),
       eq(specialists.isActive, true),
-      eq(specialists.isApproved, true),
     ];
     if (type === "crop" || type === "animal") {
       conditions.push(eq(specialistMedicines.type, type));
@@ -56,7 +54,7 @@ router.get("/", async (req, res) => {
       .from(specialistMedicines)
       .innerJoin(specialists, eq(specialists.id, specialistMedicines.specialistId))
       .where(and(...conditions))
-      .orderBy(sql`${specialistMedicines.id} desc`)
+      .orderBy(isRandom ? sql`RANDOM()` : sql`${specialistMedicines.id} desc`)
       .limit(limit);
 
     const medicines = rows.map((r) => ({

@@ -51,8 +51,15 @@ export default function HomeClientView({
   initialMedicines?: HomeMedicine[];
   initialSpecialist?: HomeSpecialist | null;
 }) {
-  const [medicines] = useState<HomeMedicine[]>(initialMedicines || []);
+  const [medicines, setMedicines] = useState<HomeMedicine[]>(initialMedicines || []);
   const [specialist] = useState<HomeSpecialist | null>(initialSpecialist || null);
+
+  useEffect(() => {
+    if (initialMedicines && initialMedicines.length > 0) {
+      const list = [...initialMedicines].sort(() => Math.random() - 0.5);
+      setMedicines(list);
+    }
+  }, [initialMedicines]);
 
   const [callModalOpen, setCallModalOpen] = useState(false);
   const [quantities, setQuantities] = useState<Record<number, number>>({});

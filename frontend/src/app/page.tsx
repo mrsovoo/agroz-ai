@@ -9,7 +9,7 @@ export default async function HomePage() {
 
   try {
     const [medRes, specRes] = await Promise.all([
-      fetch(apiUrl("/api/medicines?limit=24"), { next: { revalidate: 10 } }),
+      fetch(apiUrl("/api/medicines?limit=24&random=1"), { cache: "no-store" }),
       fetch(apiUrl("/api/specialists"), { next: { revalidate: 10 } }),
     ]);
 
