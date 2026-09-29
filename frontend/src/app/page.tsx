@@ -9,28 +9,32 @@ export default async function HomePage() {
 
   try {
     const [medRes, specRes] = await Promise.all([
-      fetch(apiUrl("/api/medicines?limit=24&random=1"), { cache: "no-store" }),
+      fetch(apiUrl("/api/medicines?limit=48&random=1"), { cache: "no-store" }),
       fetch(apiUrl("/api/specialists"), { next: { revalidate: 10 } }),
     ]);
+
+    const medMap = new Map<number, HomeMedicine>();
 
     if (medRes.ok) {
       const data = await medRes.json();
       if (Array.isArray(data) && data.length > 0) {
-        initialMedicines = data.map((m: any) => ({
-          id: m.id,
-          name: m.name,
-          type: m.type,
-          usage: m.usage,
-          price: m.price,
-          stockUnit: m.stockUnit,
-          hasPhoto: m.hasPhoto,
-          photoVersion: m.photoVersion,
-          photoUrl: m.hasPhoto ? apiUrl(`/api/medicines/${m.id}/photo`) : null,
-          pharmacyId: m.pharmacyId,
-          pharmacyName: m.pharmacyName,
-          pharmacyPhone: m.pharmacyPhone,
-          pharmacyAddress: m.pharmacyAddress,
-        }));
+        for (const m of data) {
+          medMap.set(m.id, {
+            id: m.id,
+            name: m.name,
+            type: m.type,
+            usage: m.usage,
+            price: m.price,
+            stockUnit: m.stockUnit,
+            hasPhoto: m.hasPhoto,
+            photoVersion: m.photoVersion,
+            photoUrl: m.hasPhoto ? apiUrl(`/api/medicines/${m.id}/photo`) : null,
+            pharmacyId: m.pharmacyId,
+            pharmacyName: m.pharmacyName,
+            pharmacyPhone: m.pharmacyPhone,
+            pharmacyAddress: m.pharmacyAddress,
+          });
+        }
       }
     }
 
@@ -50,7 +54,35 @@ export default async function HomePage() {
           role: spec.role,
         };
       }
+
+      // Dorixonalardagi barcha dorilarni ham to'liq qo'shib olish (birorta dori qolib ketmasligi uchun)
+      for (const p of list) {
+        if (Array.isArray(p.medicines)) {
+          for (const m of p.medicines) {
+            if (m.status === "yoq") continue;
+            if (!medMap.has(m.id)) {
+              medMap.set(m.id, {
+                id: m.id,
+                name: m.name,
+                type: m.type,
+                usage: m.usage,
+                price: m.price,
+                stockUnit: m.stockUnit,
+                hasPhoto: Boolean(m.hasPhoto),
+                photoVersion: m.photoVersion,
+                photoUrl: m.hasPhoto ? apiUrl(`/api/medicines/${m.id}/photo`) : null,
+                pharmacyId: p.id,
+                pharmacyName: p.organization || p.name,
+                pharmacyPhone: p.phone,
+                pharmacyAddress: p.address,
+              });
+            }
+          }
+        }
+      }
     }
+
+    initialMedicines = Array.from(medMap.values());
   } catch {
     // Tarmoq xatosi bo'lsa HomeClientView o'zidagi standart Bento Max va Veterinar fallback'ini ishlatadi
   }
