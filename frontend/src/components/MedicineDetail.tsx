@@ -15,6 +15,7 @@ export type MedicineDetailData = {
   type: string;
   usage: string | null;
   price: number | null;
+  stockUnit?: string | null;
   hasPhoto: boolean;
   photoVersion?: string | null;
   status: string;
@@ -31,29 +32,125 @@ export type MedicineDetailData = {
 export async function getMedicineDetail(id: number): Promise<MedicineDetailData | null> {
   if (!Number.isSafeInteger(id) || id <= 0) return null;
   try {
-    const res = await fetch(apiUrl(`/api/medicines/${id}`), {
-      next: { revalidate: 10 },
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { medicine?: MedicineDetailData };
-    return data.medicine ?? null;
+    const [medRes, specRes] = await Promise.allSettled([
+      fetch(apiUrl(`/api/medicines/${id}`), { cache: "no-store" }),
+      fetch(apiUrl("/api/specialists"), { cache: "no-store" }),
+    ]);
+
+    if (medRes.status === "fulfilled" && medRes.value.ok) {
+      const data = (await medRes.value.json()) as { medicine?: MedicineDetailData };
+      if (data?.medicine) return data.medicine;
+    }
+
+    if (specRes.status === "fulfilled" && specRes.value.ok) {
+      const sData = await specRes.value.json();
+      const list = Array.isArray(sData) ? sData : (sData?.items || sData?.specialists || []);
+      for (const p of list) {
+        if (Array.isArray(p.medicines)) {
+          for (const m of p.medicines) {
+            if (Number(m.id) === id) {
+              return {
+                id: m.id,
+                name: m.name,
+                type: m.type || "general",
+                usage: m.usage ?? null,
+                price: m.price ?? null,
+                stockUnit: m.stockUnit ?? "dona",
+                hasPhoto: Boolean(m.hasPhoto),
+                photoVersion: m.photoVersion ?? null,
+                status: m.status || "bor",
+                pharmacyId: p.id,
+                pharmacyOrg: p.organization ?? null,
+                pharmacyName: p.organization || p.name || "Agroz Dorixona",
+                pharmacyPhone: p.phone || "",
+                pharmacyAddress: p.address || "",
+                workHours: p.workHours ?? "09:00 - 18:00",
+                ratingAvg: p.ratingAvg ?? null,
+                ratingCount: p.ratingCount ?? 0,
+              };
+            }
+          }
+        }
+      }
+    }
+
+    return null;
   } catch {
     return null;
   }
 }
 
-/** O'xshash mahsulotlar: backend API /api/medicines/:id dan olinadi */
+/** O'xshash mahsulotlar: backend API /api/medicines/:id va /api/specialists dan olinadi */
 export async function getSimilarMedicines(
   medicine: MedicineDetailData,
-  _limit = 8,
+  limit = 8,
 ): Promise<MedicineDetailData[]> {
   try {
-    const res = await fetch(apiUrl(`/api/medicines/${medicine.id}`), {
-      next: { revalidate: 60 },
+    const [medRes, specRes] = await Promise.allSettled([
+      fetch(apiUrl(`/api/medicines/${medicine.id}`), { cache: "no-store" }),
+      fetch(apiUrl("/api/specialists"), { cache: "no-store" }),
+    ]);
+
+    const simMap = new Map<number, MedicineDetailData>();
+
+    if (medRes.status === "fulfilled" && medRes.value.ok) {
+      const data = (await medRes.value.json()) as { similar?: MedicineDetailData[] };
+      if (Array.isArray(data?.similar)) {
+        for (const s of data.similar) {
+          if (s.id !== medicine.id) {
+            simMap.set(s.id, s);
+          }
+        }
+      }
+    }
+
+    if (specRes.status === "fulfilled" && specRes.value.ok) {
+      const sData = await specRes.value.json();
+      const list = Array.isArray(sData) ? sData : (sData?.items || sData?.specialists || []);
+      for (const p of list) {
+        if (Array.isArray(p.medicines)) {
+          for (const m of p.medicines) {
+            if (m.id === medicine.id || m.status === "yoq") continue;
+            if (!simMap.has(m.id)) {
+              simMap.set(m.id, {
+                id: m.id,
+                name: m.name,
+                type: m.type || "general",
+                usage: m.usage ?? null,
+                price: m.price ?? null,
+                stockUnit: m.stockUnit ?? "dona",
+                hasPhoto: Boolean(m.hasPhoto),
+                photoVersion: m.photoVersion ?? null,
+                status: m.status || "bor",
+                pharmacyId: p.id,
+                pharmacyOrg: p.organization ?? null,
+                pharmacyName: p.organization || p.name || "Agroz Dorixona",
+                pharmacyPhone: p.phone || "",
+                pharmacyAddress: p.address || "",
+                workHours: p.workHours ?? "09:00 - 18:00",
+                ratingAvg: p.ratingAvg ?? null,
+                ratingCount: p.ratingCount ?? 0,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    const allSimilar = Array.from(simMap.values());
+    allSimilar.sort((a, b) => {
+      const aSameType = a.type === medicine.type ? 0 : 1;
+      const bSameType = b.type === medicine.type ? 0 : 1;
+      if (aSameType !== bSameType) return aSameType - bSameType;
+
+      const aSamePh = a.pharmacyId === medicine.pharmacyId ? 0 : 1;
+      const bSamePh = b.pharmacyId === medicine.pharmacyId ? 0 : 1;
+      if (aSamePh !== bSamePh) return aSamePh - bSamePh;
+
+      return Math.random() - 0.5;
     });
-    if (!res.ok) return [];
-    const data = (await res.json()) as { similar?: MedicineDetailData[] };
-    return Array.isArray(data?.similar) ? data.similar : [];
+
+    return allSimilar.slice(0, limit);
   } catch {
     return [];
   }
@@ -148,12 +245,12 @@ export default async function MedicineDetail({ medicine }: { medicine: MedicineD
             </span>
           </div>
 
-          {medicine.price ? (
+          {medicine.price != null && medicine.price > 0 ? (
             <p className="mt-2 text-[24px] font-black text-[var(--brand-green)] web:text-[30px]">
               {shortSum(medicine.price)} so&apos;m
             </p>
           ) : (
-            <p className="mt-2 text-[18px] font-black text-[var(--brand-muted)]">Narx so&apos;rang</p>
+            <p className="mt-2 text-[16px] font-bold text-[var(--brand-muted)]">Narxi ko&apos;rsatilmagan</p>
           )}
 
           {/* Tavsif */}
@@ -209,6 +306,7 @@ export default async function MedicineDetail({ medicine }: { medicine: MedicineD
               price: medicine.price,
               type: medicine.type,
               hasPhoto: medicine.hasPhoto,
+              photoVersion: medicine.photoVersion,
               usage: medicine.usage,
               status: "bor",
             }}
@@ -229,7 +327,7 @@ export default async function MedicineDetail({ medicine }: { medicine: MedicineD
       {similar.length > 0 && (
         <section className="mt-7 web:mt-10">
           <p className="ios-section-title">O&apos;xshash mahsulotlar</p>
-          <div className="mt-2 grid grid-cols-2 gap-2.5 sm:gap-3.5 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 web:grid-cols-4 web:gap-4.5">
+          <div className="mt-2 grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 web:grid-cols-4 web:gap-4.5">
             {similar.map((s) => (
               <ProductCard
                 key={s.id}
@@ -239,7 +337,9 @@ export default async function MedicineDetail({ medicine }: { medicine: MedicineD
                   price: s.price,
                   type: s.type,
                   hasPhoto: s.hasPhoto,
+                  photoVersion: s.photoVersion,
                   usage: s.usage,
+                  stockUnit: s.stockUnit,
                   status: "bor",
                 }}
                 pharmacy={{

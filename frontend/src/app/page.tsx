@@ -8,15 +8,15 @@ export default async function HomePage() {
   let initialSpecialist: HomeSpecialist | null = null;
 
   try {
-    const [medRes, specRes] = await Promise.all([
-      fetch(apiUrl("/api/medicines?limit=48&random=1"), { cache: "no-store" }),
-      fetch(apiUrl("/api/specialists"), { next: { revalidate: 10 } }),
+    const [medRes, specRes] = await Promise.allSettled([
+      fetch(apiUrl("/api/medicines?limit=60&random=1"), { cache: "no-store" }),
+      fetch(apiUrl("/api/specialists"), { cache: "no-store" }),
     ]);
 
     const medMap = new Map<number, HomeMedicine>();
 
-    if (medRes.ok) {
-      const data = await medRes.json();
+    if (medRes.status === "fulfilled" && medRes.value.ok) {
+      const data = await medRes.value.json();
       if (Array.isArray(data) && data.length > 0) {
         for (const m of data) {
           medMap.set(m.id, {
@@ -38,8 +38,8 @@ export default async function HomePage() {
       }
     }
 
-    if (specRes.ok) {
-      const sData = await specRes.json();
+    if (specRes.status === "fulfilled" && specRes.value.ok) {
+      const sData = await specRes.value.json();
       const list = Array.isArray(sData) ? sData : (sData?.items || sData?.specialists || []);
       const specsOnly = list.filter((s: any) => s.role === "specialist");
       if (specsOnly.length > 0) {
@@ -82,7 +82,7 @@ export default async function HomePage() {
       }
     }
 
-    initialMedicines = Array.from(medMap.values());
+    initialMedicines = Array.from(medMap.values()).sort(() => Math.random() - 0.5);
   } catch {
     // Tarmoq xatosi bo'lsa HomeClientView o'zidagi standart Bento Max va Veterinar fallback'ini ishlatadi
   }
