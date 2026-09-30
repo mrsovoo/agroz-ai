@@ -27,29 +27,69 @@ import { ensureSchema } from "./db/migrate.js";
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// CORS sozlamalari — faqat ALLOWED_ORIGINS (yoki CORS_ORIGIN) ro'yxatidagi manbalarga ruxsat beriladi
-const rawAllowedOrigins = process.env.ALLOWED_ORIGINS || process.env.CORS_ORIGIN;
-const allowedOrigins = rawAllowedOrigins
-  ? rawAllowedOrigins.split(",").map((s) => s.trim()).filter(Boolean)
-  : [
-      "http://localhost:3000",
-      "http://localhost:3001",
-      "https://agroz.uz",
-      "https://www.agroz.uz",
-      "https://admin.agroz.uz",
-    ];
+// CORS sozlamalari — ALLOWED_ORIGINS, CORS_ORIGIN, APP_URL hamda loyiha domenlariga ruxsat beriladi
+const defaultAllowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "http://localhost:3002",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:3001",
+  "https://agroz.uz",
+  "https://www.agroz.uz",
+  "https://admin.agroz.uz",
+];
+
+const envOrigins = [
+  process.env.ALLOWED_ORIGINS,
+  process.env.CORS_ORIGIN,
+  process.env.APP_URL,
+  process.env.FRONTEND_URL,
+  process.env.ADMIN_URL,
+  process.env.NEXT_PUBLIC_APP_URL,
+]
+  .filter(Boolean)
+  .flatMap((raw) => String(raw).split(","))
+  .map((s) => s.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
+
+const allowedOrigins = Array.from(new Set([...defaultAllowedOrigins, ...envOrigins]));
+
+function isAllowedOrigin(origin: string): boolean {
+  const normalized = origin.trim().replace(/\/+$/, "");
+  if (allowedOrigins.includes(normalized)) return true;
+
+  try {
+    const url = new URL(normalized);
+    const host = url.hostname.toLowerCase();
+    if (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "agroz.uz" ||
+      host.endsWith(".agroz.uz") ||
+      host.endsWith(".vercel.app") ||
+      host.endsWith(".up.railway.app") ||
+      host.endsWith(".railway.app") ||
+      host.endsWith(".onrender.com") ||
+      host.endsWith(".telegram.org")
+    ) {
+      return true;
+    }
+  } catch {
+    return false;
+  }
+
+  return false;
+}
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Server-to-server yoki bir xil origin so'rovlari (!origin)
-      if (!origin) {
+      // Server-to-server, Next.js rewrite proxy yoki bir xil origin so'rovlari (!origin)
+      if (!origin || isAllowedOrigin(origin)) {
         return callback(null, true);
       }
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error("Not allowed by CORS"), false);
+      // Xato otmasdan (500 bermasdan) faqat CORS headerini qo'ymaslik:
+      return callback(null, false);
     },
     credentials: true,
   })
