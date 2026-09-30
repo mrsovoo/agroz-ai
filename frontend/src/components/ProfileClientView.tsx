@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ChevronRight, LogOut, Check } from "lucide-react";
 import OrderTrackingStatusCard from "@/components/OrderTrackingStatusCard";
 import SupportTicketsPanel from "@/components/SupportTicketsPanel";
+import { AddToHomeScreenButton } from "@/components/HomeScreenPromptBanner";
 import { getTelegramUser } from "@/lib/telegram";
 import { apiUrl, apiFetch } from "@/lib/api-config";
 import { loadLastOrder } from "@/lib/cart-store";
@@ -181,6 +182,9 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
           {displayAddress}
         </p>
       </div>
+
+      {/* 2.5. Telefon ekraniga qo'shish (1-bosishda) */}
+      <AddToHomeScreenButton variant="profile" />
 
       {/* 3. Buyurtmalarim bo'limi */}
       <div className="mt-6">

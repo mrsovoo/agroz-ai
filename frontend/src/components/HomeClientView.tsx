@@ -7,7 +7,7 @@ import NotificationBell from "@/components/NotificationBell";
 import WeatherCard from "@/components/WeatherCard";
 import SpecialistCallModal from "@/components/SpecialistCallModal";
 import ProductCard from "@/components/ProductCard";
-import HomeScreenPromptBanner from "@/components/HomeScreenPromptBanner";
+import HomeScreenPromptBanner, { AddToHomeScreenButton } from "@/components/HomeScreenPromptBanner";
 import {
   loadCart,
   saveCart,
@@ -167,10 +167,13 @@ export default function HomeClientView({
 
   return (
     <div className="min-h-screen bg-white px-4 pt-3 pb-24 text-neutral-900">
-      {/* 1. Header: AgrozGO + NotificationBell */}
+      {/* 1. Header: AgrozGO + Ekranimga + NotificationBell */}
       <header className="flex items-center justify-between py-2">
         <AgrozLogo className="h-8" />
-        <NotificationBell />
+        <div className="flex items-center gap-2">
+          <AddToHomeScreenButton variant="header" />
+          <NotificationBell />
+        </div>
       </header>
 
       {/* Telegram Mini App: Bosh ekranga qo'shish banneri */}
