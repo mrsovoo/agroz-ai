@@ -70,6 +70,8 @@ type Medicine = {
   type: string;
   usage: string | null;
   price: number | null;
+  stockUnit?: string;
+  updatedAt?: string | null;
 };
 
 type Pharmacy = {
@@ -112,7 +114,7 @@ function typeBadge(type: string): { label: string; bg: string; color: string } {
 export default function MarketClient() {
   const [items, setItems] = useState<Pharmacy[]>([]);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [radiusKm] = useState(5);
+  const [radiusKm, setRadiusKm] = useState<number>(15);
   const [loading, setLoading] = useState(true);
   const [locError, setLocError] = useState<string | null>(null);
 
@@ -227,7 +229,12 @@ export default function MarketClient() {
       .then((d: { items?: Pharmacy[] }) => {
         if (cancelled) return;
         const list = Array.isArray(d?.items) ? d.items : [];
-        setItems(list.filter((s) => s.role === "pharmacy" && (s.medicines?.length ?? 0) > 0));
+        // Faqat locked === false (tanlangan radius ichidagi) dorixonalarni qoldiramiz
+        setItems(
+          list.filter(
+            (s) => s.role === "pharmacy" && s.locked === false && (s.medicines?.length ?? 0) > 0,
+          ),
+        );
       })
       .catch(() => {
         if (!cancelled) setItems([]);
@@ -240,11 +247,17 @@ export default function MarketClient() {
     };
   }, [coords, radiusKm]);
 
+  function expandRadius() {
+    const nextOption = RADIUS_OPTIONS.find((r) => r > radiusKm);
+    setRadiusKm(nextOption ?? 1000);
+  }
+
   // ---- Filtrlash: bo'lim + qidiruv → flat kartochkalar ----
   const cards = useMemo<Card[]>(() => {
     const q = query.trim().toLowerCase();
     const list: Card[] = [];
     for (const p of items) {
+      if (p.locked) continue;
       for (const m of p.medicines) {
         if (m.status !== "bor") continue;
         if (section !== "all" && m.type !== section && m.type !== "general") continue;
@@ -515,11 +528,28 @@ export default function MarketClient() {
           ) : (
             <>
               <p className="mt-3.5 text-[17px] font-bold text-neutral-900">
-                Hozircha dorilar mavjud emas
+                Bu radiusda dorixona topilmadi. Radiusni kengaytirasizmi?
               </p>
               <p className="mt-1.5 text-[13.5px] leading-relaxed text-neutral-500 max-w-md mx-auto">
-                Dorixonalar dori vositalarini qo&apos;shishi bilan bu yerda real ko&apos;rinadi.
+                Hozirgi qidiruv radiusi: <b>{radiusKm >= 1000 ? "Butun O'zbekiston" : `${radiusKm} km`}</b>. Uzoqroqdagi dorixonalar va dorilarni ko&apos;rish uchun radiusni kengaytiring.
               </p>
+              {radiusKm < 1000 && (
+                <button
+                  type="button"
+                  onClick={expandRadius}
+                  className="mt-4 inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-[#039e1e] px-5 py-2.5 text-[13.5px] font-bold text-white hover:bg-[#028518] active:scale-95 transition shadow-xs"
+                >
+                  <MapPin size={16} />
+                  <span>
+                    Radiusni kengaytirish (
+                    {(() => {
+                      const next = RADIUS_OPTIONS.find((r) => r > radiusKm) ?? 1000;
+                      return next >= 1000 ? "Barchasi" : `${next} km`;
+                    })()}
+                    )
+                  </span>
+                </button>
+              )}
             </>
           )}
         </div>

@@ -57,6 +57,12 @@ export type TelegramWebApp = {
     getLocation: (callback: (location: { latitude: number; longitude: number } | null) => void) => void;
     openSettings: () => void;
   };
+  addToHomeScreen?: () => void;
+  checkHomeScreenStatus?: (
+    callback: (status: "unsupported" | "unknown" | "added" | "missed") => void,
+  ) => void;
+  onEvent?: (eventType: string, callback: (...args: unknown[]) => void) => void;
+  offEvent?: (eventType: string, callback: (...args: unknown[]) => void) => void;
 };
 
 /**
@@ -212,3 +218,57 @@ export async function requestDeviceLocation(): Promise<{ lat: number; lng: numbe
   });
 }
 
+export type HomeScreenStatus = "unsupported" | "unknown" | "added" | "missed";
+
+/** Eski Telegram versiyalarida addToHomeScreen mavjud bo'lmasligi mumkin */
+export function canAddToHomeScreen(tg: TelegramWebApp | null = getTelegram()): boolean {
+  return Boolean(tg && typeof tg.addToHomeScreen === "function");
+}
+
+/** checkHomeScreenStatus orqali foydalanuvchi allaqachon bosh ekranga qo'shganini tekshiradi */
+export function checkTelegramHomeScreenStatus(
+  tg: TelegramWebApp | null = getTelegram(),
+): Promise<HomeScreenStatus> {
+  return new Promise((resolve) => {
+    if (!tg || typeof tg.addToHomeScreen !== "function") {
+      resolve("unsupported");
+      return;
+    }
+    if (typeof tg.checkHomeScreenStatus !== "function") {
+      resolve("unknown");
+      return;
+    }
+    let settled = false;
+    const timeout = window.setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        resolve("unknown");
+      }
+    }, 2000);
+
+    try {
+      tg.checkHomeScreenStatus((status) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timeout);
+        resolve(status || "unknown");
+      });
+    } catch {
+      if (!settled) {
+        settled = true;
+        window.clearTimeout(timeout);
+        resolve("unknown");
+      }
+    }
+  });
+}
+
+export function promptAddToHomeScreen(tg: TelegramWebApp | null = getTelegram()): boolean {
+  if (!tg || typeof tg.addToHomeScreen !== "function") return false;
+  try {
+    tg.addToHomeScreen();
+    return true;
+  } catch {
+    return false;
+  }
+}

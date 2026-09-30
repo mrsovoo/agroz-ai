@@ -54,7 +54,7 @@ export default function AdminBroadcastCenter() {
   const [buttonText, setButtonText] = useState("");
   const [buttonUrl, setButtonUrl] = useState("");
   const [imageUrl, setImageUrl] = useState("");
-  const [signature, setSignature] = useState("AgrozAI");
+  const [signature, setSignature] = useState("AgrozGO");
 
   const [counts, setCounts] = useState<RecipientCounts>({
     pharmacies: 0,
@@ -64,6 +64,16 @@ export default function AdminBroadcastCenter() {
   });
   const [loadingCounts, setLoadingCounts] = useState(false);
   const [sending, setSending] = useState(false);
+  const [activeBroadcast, setActiveBroadcast] = useState<{
+    id: number;
+    target: string;
+    total: number;
+    sentCount: number;
+    failedCount: number;
+    remaining: number;
+    status: "jarayonda" | "tugadi" | "toxtadi" | string;
+    createdAt?: string;
+  } | null>(null);
   const [result, setResult] = useState<{
     ok: boolean;
     message?: string;
@@ -76,6 +86,57 @@ export default function AdminBroadcastCenter() {
   useEffect(() => {
     fetchCounts();
   }, []);
+
+  useEffect(() => {
+    if (!activeBroadcast || activeBroadcast.status !== "jarayonda") return;
+
+    const token =
+      typeof window !== "undefined"
+        ? localStorage.getItem("agroz_admin_session") || "super-admin-session"
+        : "super-admin-session";
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/admin/broadcasts/${activeBroadcast.id}`, {
+          headers: {
+            "x-admin-session": token,
+            "x-super-admin": "true",
+          },
+          credentials: "include",
+        });
+        const data = await res.json();
+        if (res.ok && data.ok && data.broadcast) {
+          const b = data.broadcast;
+          setActiveBroadcast({
+            id: b.id,
+            target: b.target,
+            total: b.total ?? 0,
+            sentCount: b.sentCount ?? 0,
+            failedCount: b.failedCount ?? 0,
+            remaining: b.remaining ?? Math.max(0, (b.total ?? 0) - (b.sentCount ?? 0) - (b.failedCount ?? 0)),
+            status: b.status || "jarayonda",
+            createdAt: b.createdAt,
+          });
+          if (b.status === "tugadi" || b.status === "toxtadi") {
+            setResult({
+              ok: b.status === "tugadi",
+              message:
+                b.status === "tugadi"
+                  ? `Ommaviy xabar yakunlandi: ${b.sentCount ?? 0} ta yuborildi, ${b.failedCount ?? 0} ta xatolik.`
+                  : `Ommaviy xabar to'xtatildi: ${b.sentCount ?? 0} ta yuborildi, ${b.failedCount ?? 0} ta xatolik.`,
+              sentCount: b.sentCount ?? 0,
+              failedCount: b.failedCount ?? 0,
+              totalTarget: b.total ?? 0,
+            });
+          }
+        }
+      } catch {
+        // ignore transient polling error
+      }
+    }, 1500);
+
+    return () => clearInterval(interval);
+  }, [activeBroadcast]);
 
   async function fetchCounts() {
     setLoadingCounts(true);
@@ -143,9 +204,21 @@ export default function AdminBroadcastCenter() {
 
       const data = await res.json();
       if (res.ok && data.ok) {
+        if (data.broadcastId) {
+          const total = data.total ?? data.totalTarget ?? 0;
+          setActiveBroadcast({
+            id: Number(data.broadcastId),
+            target: targetAudience,
+            total,
+            sentCount: data.sentCount ?? 0,
+            failedCount: data.failedCount ?? 0,
+            remaining: data.remaining ?? total,
+            status: data.status || "jarayonda",
+          });
+        }
         setResult({
           ok: true,
-          message: data.message || "Xabar muvaffaqiyatli yuborildi!",
+          message: data.message || "Yuborish boshlandi!",
           sentCount: data.sentCount,
           failedCount: data.failedCount,
           totalTarget: data.totalTarget,
@@ -401,9 +474,24 @@ export default function AdminBroadcastCenter() {
               onSubmit={handleSendMessage}
               className="lg:col-span-7 rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-4"
             >
-              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2">
-                2. Xabar ma&apos;lumotlari
-              </h3>
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                  2. Xabar ma&apos;lumotlari
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTargetAudience("pharmacies");
+                    setTitle("Yangi talab: Rasm va narx majburiy");
+                    setMessage(
+                      "Yangi talab: dori uchun rasm va narx majburiy. To'ldirilmagan dorilaringiz vaqtincha ko'rinmaydi.",
+                    );
+                  }}
+                  className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700 hover:bg-emerald-100 transition"
+                >
+                  📋 Shablon: Rasm va narx majburiy (Dorixonalarga)
+                </button>
+              </div>
 
               {/* Sarlavha */}
               <div>
@@ -509,10 +597,10 @@ export default function AdminBroadcastCenter() {
                   ) : (
                     <button
                       type="button"
-                      onClick={() => setSignature("AgrozAI")}
+                      onClick={() => setSignature("AgrozGO")}
                       className="text-[10px] font-semibold text-emerald-600 hover:underline"
                     >
-                      Standart: AgrozAI
+                      Standart: AgrozGO
                     </button>
                   )}
                 </div>
@@ -520,13 +608,79 @@ export default function AdminBroadcastCenter() {
                   type="text"
                   value={signature}
                   onChange={(e) => setSignature(e.target.value)}
-                  placeholder="Masalan: AgrozAI (bo'sh qoldirilsa imzo qo'yilmaydi)"
+                  placeholder="Masalan: AgrozGO (bo'sh qoldirilsa imzo qo'yilmaydi)"
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
                 <p className="text-[10px] text-slate-500">
-                  Standart qiymat: <b>AgrozAI</b>. O&apos;zingiz xohlagancha o&apos;zgartirishingiz yoki xabarni imzosiz yuborish uchun tozalab qo&apos;yishingiz mumkin.
+                  Standart qiymat: <b>AgrozGO</b>. O&apos;zingiz xohlagancha o&apos;zgartirishingiz yoki xabarni imzosiz yuborish uchun tozalab qo&apos;yishingiz mumkin.
                 </p>
               </div>
+
+              {/* Background Broadcast Progress */}
+              {activeBroadcast && (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-slate-900 flex items-center gap-1.5">
+                      {activeBroadcast.status === "jarayonda" ? (
+                        <Loader2 size={14} className="animate-spin text-emerald-600" />
+                      ) : activeBroadcast.status === "tugadi" ? (
+                        <CheckCircle2 size={14} className="text-emerald-600" />
+                      ) : (
+                        <AlertTriangle size={14} className="text-amber-600" />
+                      )}
+                      Ommaviy xabar #{activeBroadcast.id} holati:
+                    </span>
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase ${
+                        activeBroadcast.status === "jarayonda"
+                          ? "bg-blue-100 text-blue-700"
+                          : activeBroadcast.status === "tugadi"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-amber-100 text-amber-700"
+                      }`}
+                    >
+                      {activeBroadcast.status}
+                    </span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                    <div
+                      className="h-full bg-emerald-600 transition-all duration-300"
+                      style={{
+                        width: `${
+                          activeBroadcast.total > 0
+                            ? Math.min(
+                                100,
+                                Math.round(
+                                  ((activeBroadcast.sentCount + activeBroadcast.failedCount) /
+                                    activeBroadcast.total) *
+                                    100
+                                )
+                              )
+                            : 0
+                        }%`,
+                      }}
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 text-center text-[11px]">
+                    <div className="rounded-lg bg-white p-2 border border-slate-200">
+                      <span className="block text-[10px] text-slate-500">Jami</span>
+                      <span className="font-black text-slate-900">{activeBroadcast.total}</span>
+                    </div>
+                    <div className="rounded-lg bg-emerald-50 p-2 border border-emerald-200">
+                      <span className="block text-[10px] text-emerald-700">Yuborildi</span>
+                      <span className="font-black text-emerald-800">{activeBroadcast.sentCount}</span>
+                    </div>
+                    <div className="rounded-lg bg-blue-50 p-2 border border-blue-200">
+                      <span className="block text-[10px] text-blue-700">Qoldi</span>
+                      <span className="font-black text-blue-800">{activeBroadcast.remaining}</span>
+                    </div>
+                    <div className="rounded-lg bg-red-50 p-2 border border-red-200">
+                      <span className="block text-[10px] text-red-700">Xatolik</span>
+                      <span className="font-black text-red-800">{activeBroadcast.failedCount}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Natija xabari */}
               {result && (
@@ -595,7 +749,7 @@ export default function AdminBroadcastCenter() {
                     </div>
                     <div>
                       <p className="text-xs font-bold text-white flex items-center gap-1">
-                        Agroz AI Bot
+                        AgrozGO Bot
                         <span className="inline-block h-3 w-3 rounded-full bg-sky-400 text-[8px] text-slate-900 text-center font-black leading-3">
                           ✓
                         </span>

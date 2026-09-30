@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${medicine.name} — Dorilar`,
     description:
       medicine.usage ??
-      `${medicine.name} — ${medicine.pharmacyName} dorixonasida. Agroz AI orqali buyurtma bering.`,
+      `${medicine.name} — ${medicine.pharmacyName} dorixonasida. AgrozGO orqali buyurtma bering.`,
   };
 }
 

@@ -19,6 +19,7 @@ import {
   getSpecialistByTelegramId,
   isSpecialistRole,
   listMedicines,
+  setMedicinePhoto,
   setMedicinePrice,
   setMedicineStatus,
   updateSpecialistFields,
@@ -163,15 +164,18 @@ type Step =
   | "med_price"
   | "med_stock"
   | "med_confirm"
-  // /dorilarim → bitta dorining narxini o'zgartirish.
+  // /dorilarim → bitta dorining narxini yoki rasmini o'zgartirish.
   | "med_price_edit"
+  | "med_photo_edit"
   // Profil ma'lumotlarini qisman tahrirlash
   | "edit_name"
   | "edit_phone"
   | "edit_hours"
   | "edit_loc"
   | "edit_org"
-  | "edit_spec";
+  | "edit_spec"
+  // Murojaat / Yordam matnini kutish
+  | "support_text";
 
 type Draft = {
   role?: SpecialistRole;
@@ -197,13 +201,15 @@ type Draft = {
   /** crop | animal | general */
   medType?: string;
   medUsage?: string;
-  /** Narx so'mda (ixtiyoriy). */
+  /** Narx so'mda (majburiy). */
   medPrice?: number;
   /** Qoldiq miqdori (dona, kg, litr). */
   medStock?: number;
   medStockUnit?: string;
   /** /dorilarim → narxini o'zgartirayotgan dori id'si. */
   editingPriceFor?: number;
+  /** /dorilarim → rasmini o'zgartirayotgan dori id'si. */
+  editingPhotoFor?: number;
 };
 
 type StateRow = typeof botStates.$inferSelect;
@@ -319,7 +325,9 @@ export async function handleAuthBotUpdate(update: AuthBotUpdate): Promise<void> 
       text === "➕ Dori qo'shish" ||
       text === "👤 Ma'lumotlarim" ||
       text === "⏳ Ariza holati" ||
-      text === "✏️ Profilni tahrirlash";
+      text === "✏️ Profilni tahrirlash" ||
+      text === "💬 Yordam" ||
+      text === "Yordam";
 
     if (isMenuButton) {
       await handleMenuButton(chatId, telegramId, firstName, text);
@@ -426,6 +434,30 @@ async function handleMenuButton(
   btn: string,
 ): Promise<void> {
   const profile = await getSpecialistByTelegramId(telegramId);
+
+  if (btn === "💬 Yordam" || btn === "Yordam") {
+    await setState(telegramId, "support_text", {});
+    const menuKeyboard = profile
+      ? profile.isApproved
+        ? profile.role === "pharmacy"
+          ? approvedPharmacyMenuKeyboard()
+          : approvedSpecialistMenuKeyboard()
+        : pendingApprovalMenuKeyboard()
+      : undefined;
+    await sendAuthMessage(
+      chatId,
+      [
+        "💬 <b>Yordam va murojaat</b>",
+        "",
+        "Muammo yoki savolingizni batafsil yozib yuboring — AgrozGO ma'muriyati ko'rib chiqib, shu yerning o'zida javob beradi.",
+        "",
+        "<i>Bekor qilish uchun: /bekor</i>",
+      ].join("\n"),
+      { replyKeyboard: menuKeyboard },
+    );
+    return;
+  }
+
   if (!profile) {
     await sendAuthMessage(chatId, welcomeMessage(firstName, false), { inline: NEXT_STEP_KEYBOARD });
     return;
@@ -873,7 +905,7 @@ async function handleIndependentCallback(
           const { miniAppKeyboard, appBaseUrl, sendMessage, isBotConfigured } = await import("@/lib/telegram-bot");
           const webUrl = (await appBaseUrl()) || "https://agrozgo.uz";
           const appKb = (await miniAppKeyboard()) || {
-            inline_keyboard: [[{ text: "🚀 Agroz AI (Ilovani ochish)", url: webUrl }]],
+            inline_keyboard: [[{ text: "🚀 AgrozGO (Ilovani ochish)", url: webUrl }]],
           };
 
           try {
@@ -1031,7 +1063,7 @@ async function handleIndependentCallback(
           const { miniAppKeyboard, appBaseUrl, sendMessage, isBotConfigured } = await import("@/lib/telegram-bot");
           const webUrl = (await appBaseUrl()) || "https://agrozgo.uz";
           const appKb = (await miniAppKeyboard()) || {
-            inline_keyboard: [[{ text: "🚀 Agroz AI (Ilovani ochish)", url: webUrl }]],
+            inline_keyboard: [[{ text: "🚀 AgrozGO (Ilovani ochish)", url: webUrl }]],
           };
 
           let sent = false;
@@ -1214,8 +1246,9 @@ async function handleIndependentCallback(
       return true;
     }
 
-    const statusMap: Record<string, "tasdiqlandi" | "bekor" | "yetkazildi"> = {
+    const statusMap: Record<string, "tasdiqlandi" | "yolda" | "bekor" | "yetkazildi"> = {
       confirm: "tasdiqlandi",
+      onway: "yolda",
       cancel: "bekor",
       done: "yetkazildi",
     };
@@ -1230,12 +1263,10 @@ async function handleIndependentCallback(
     const order = orders[0];
     if (order) {
       await sendAuthMessage(chatId, orderMessage(order), { inline: orderActionsKeyboard(order) });
-      if (nextStatus === "yetkazildi") {
-        const { notifyCustomerOrderDelivered } = await import("@/lib/orders-bot");
-        notifyCustomerOrderDelivered(orderId).catch((err) =>
-          console.error("[orders] mijozga yetkazildi xabarnomasi yuborilmadi:", err),
-        );
-      }
+      const { notifyCustomerOrderStatusChange } = await import("@/lib/orders-bot");
+      notifyCustomerOrderStatusChange(orderId, nextStatus).catch((err) =>
+        console.error(`[orders] mijozga ${nextStatus} xabarnomasi yuborilmadi:`, err),
+      );
     }
     return true;
   }
@@ -1373,11 +1404,30 @@ async function handleIndependentCallback(
   }
 
   if (data.startsWith("ms:")) {
-    await answerCallbackQuery(query.id);
     const [, idPart, statusPart] = data.split(":");
     const medId = Number(idPart);
     const status = statusPart === "yoq" ? "yoq" : "bor";
-    if (!Number.isSafeInteger(medId)) return true;
+    if (!Number.isSafeInteger(medId)) {
+      await answerCallbackQuery(query.id);
+      return true;
+    }
+    const beforeData = await listMedicines(telegramId);
+    const beforeMed = beforeData?.medicines.find((m) => m.id === medId);
+    if (status === "bor" && beforeMed) {
+      const missingParts: string[] = [];
+      if (!beforeMed.photoFileId && !beforeMed.photoData) missingParts.push("rasm (min 400×400)");
+      if (!beforeMed.price || beforeMed.price <= 0) missingParts.push("narx");
+      if (missingParts.length > 0) {
+        await answerCallbackQuery(query.id, `Avval ${missingParts.join(" va ")} kiriting!`);
+        await sendAuthMessage(
+          chatId,
+          `⚠️ <b>«${escapeHtml(beforeMed.name)}» dorisini faollashtirish uchun quyidagilar yetishmayapti:</b>\n• ${missingParts.join("\n• ")}\n\nIltimos, pastdagi tugmalar orqali rasm va narxni to'ldiring:`,
+          { inline: medicineManageKeyboard(beforeMed) },
+        );
+        return true;
+      }
+    }
+    await answerCallbackQuery(query.id);
     const ok = await setMedicineStatus(telegramId, medId, status);
     if (!ok) {
       await sendAuthMessage(chatId, errorMessage());
@@ -1411,6 +1461,29 @@ async function handleIndependentCallback(
     await sendAuthMessage(
       chatId,
       `💰 <b>${escapeHtml(med.name)}</b> uchun yangi narxni yozing (so'mda).\n\nMasalan: <i>45000</i>`,
+      { inline: MEDICINE_PRICE_CANCEL_KEYBOARD },
+    );
+    return true;
+  }
+
+  if (data.startsWith("mp:photo:")) {
+    const medId = Number(data.slice("mp:photo:".length));
+    if (!Number.isSafeInteger(medId)) {
+      await answerCallbackQuery(query.id);
+      return true;
+    }
+    const data2 = await listMedicines(telegramId);
+    const med = data2?.medicines.find((m) => m.id === medId);
+    if (!data2 || !med) {
+      await answerCallbackQuery(query.id);
+      await sendAuthMessage(chatId, errorMessage());
+      return true;
+    }
+    await setState(telegramId, "med_photo_edit", { editingPhotoFor: medId });
+    await answerCallbackQuery(query.id);
+    await sendAuthMessage(
+      chatId,
+      `📸 <b>${escapeHtml(med.name)}</b> uchun rasm yuboring (kamida 400×400 piksel).\n\nQutisi yoki flakoni aniq ko'rinadigan rasm yuboring:`,
       { inline: MEDICINE_PRICE_CANCEL_KEYBOARD },
     );
     return true;
@@ -1699,13 +1772,19 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
 
     // Dorini tasdiqlash / qayta boshlash / bekor qilish / yana qo'shish.
     if (data === "m:ok") {
+      const missingMed = requiredMedicineMissing(draft);
+      if (missingMed) {
+        await answerCallbackQuery(query.id, missingMed.shortError);
+        await setState(telegramId, missingMed.step, draft);
+        await sendAuthMessage(chatId, missingMed.question, { inline: missingMed.keyboard });
+        return;
+      }
       await answerCallbackQuery(query.id);
       const saved = await saveMedicine(telegramId, draft);
       if (!saved) {
         await sendAuthMessage(chatId, needRegistrationMessage(), { inline: NEXT_STEP_KEYBOARD });
         return;
       }
-      const savedProfile = await getSpecialistByTelegramId(telegramId);
       await clearState(telegramId);
       await sendAuthMessage(chatId, medicineSavedMessage(saved.name, saved.total, saved.price), {
         replyKeyboard: approvedPharmacyMenuKeyboard(),
@@ -2267,12 +2346,10 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
       const order = orders[0];
       if (order) {
         await sendAuthMessage(chatId, orderMessage(order), { inline: orderActionsKeyboard(order) });
-        if (nextStatus === "yetkazildi") {
-          const { notifyCustomerOrderDelivered } = await import("@/lib/orders-bot");
-          notifyCustomerOrderDelivered(orderId).catch((err) =>
-            console.error("[orders] mijozga yetkazildi xabarnomasi yuborilmadi:", err),
-          );
-        }
+        const { notifyCustomerOrderStatusChange } = await import("@/lib/orders-bot");
+        notifyCustomerOrderStatusChange(orderId, nextStatus).catch((err) =>
+          console.error(`[orders] mijozga ${nextStatus} xabarnomasi yuborilmadi:`, err),
+        );
       }
       return;
     }
@@ -2732,8 +2809,17 @@ async function handleText(
       // Rasm majburiy! Agar foydalanuvchi rasm yubormay, matn yuborsa yoki skip qilmoqchi bo'lsa:
       await sendAuthMessage(
         chatId,
-        `⚠️ <b>Mahsulot rasmini yuklash majburiy!</b>\n\nIltimos, dorining aniq rasmini yuboring (telefon kamerasi orqali yoki galereyadan 📸).\nRasm qabul qilingandan so'ng dorining nomini kiritish bosqichiga o'tiladi.`,
+        `⚠️ <b>Mahsulot rasmini yuklash majburiy (kamida 400×400 px)!</b>\n\nIltimos, dorining aniq rasmini yuboring (telefon kamerasi orqali yoki galereyadan 📸).\nRasm qabul qilingandan so'ng dorining nomini kiritish bosqichiga o'tiladi.`,
         { inline: MEDICINE_PHOTO_KEYBOARD },
+      );
+      return;
+    }
+
+    case "med_photo_edit": {
+      await sendAuthMessage(
+        chatId,
+        `⚠️ <b>Iltimos, matn emas, dorining rasmini (kamida 400×400 piksel) yuboring 📸:</b>`,
+        { inline: MEDICINE_PRICE_CANCEL_KEYBOARD },
       );
       return;
     }
@@ -2835,6 +2921,44 @@ async function handleText(
         return;
       }
       await sendAuthMessage(chatId, askSpecialty(), { inline: SPECIALTY_KEYBOARD });
+      return;
+    }
+
+    case "support_text": {
+      const cleanSupport = cleanText(text, 2000);
+      if (!cleanSupport || cleanSupport.length < 3) {
+        await sendAuthMessage(
+          chatId,
+          "⚠️ Iltimos, murojaat matnini batafsilroq yozing (kamida 3 ta belgi):\n\n<i>Bekor qilish uchun: /bekor</i>",
+        );
+        return;
+      }
+      const profile = await getSpecialistByTelegramId(telegramId);
+      const { createBotSupportTicket } = await import("@/routes/support");
+      const { ticketId } = await createBotSupportTicket({
+        userType: "specialist",
+        specialistId: profile?.id ?? null,
+        telegramId,
+        category: "texnik",
+        text: cleanSupport,
+      });
+      await clearState(telegramId);
+      const menuKeyboard = profile
+        ? profile.isApproved
+          ? profile.role === "pharmacy"
+            ? approvedPharmacyMenuKeyboard()
+            : approvedSpecialistMenuKeyboard()
+          : pendingApprovalMenuKeyboard()
+        : undefined;
+      await sendAuthMessage(
+        chatId,
+        [
+          `✅ <b>Murojaatingiz (#${ticketId}) qabul qilindi!</b>`,
+          "",
+          "AgrozGO adminlari murojaatingizni ko'rib chiqib, javobni aynan shu botga yuborishadi.",
+        ].join("\n"),
+        { replyKeyboard: menuKeyboard },
+      );
       return;
     }
 
@@ -2997,7 +3121,7 @@ async function handleMedicinePhoto(
   photos: { file_id?: string; width?: number; height?: number }[],
 ): Promise<void> {
   const state = await getState(telegramId);
-  if (!state || state.step !== "med_photo") {
+  if (!state || (state.step !== "med_photo" && state.step !== "med_photo_edit")) {
     await sendAuthMessage(chatId, helpMessage(), { inline: NEXT_STEP_KEYBOARD });
     return;
   }
@@ -3010,28 +3134,56 @@ async function handleMedicinePhoto(
   if ((best.width ?? 0) < 400 || (best.height ?? 0) < 400) {
     await sendAuthMessage(
       chatId,
-      "⚠️ <b>Rasm o'lchami juda kichik!</b>\n\nDorining aniq va sifatli ko'rinishi uchun kamida <b>400×400 piksel</b> o'lchamdagi sifatli rasm yuboring.",
-      { inline: MEDICINE_PHOTO_KEYBOARD },
+      `⚠️ <b>Rasm o'lchami juda kichik (${best.width ?? 0}×${best.height ?? 0} px)!</b>\n\nDorining aniq va sifatli ko'rinishi uchun kamida <b>400×400 piksel</b> o'lchamdagi sifatli rasm yuboring.`,
+      { inline: state.step === "med_photo_edit" ? MEDICINE_PRICE_CANCEL_KEYBOARD : MEDICINE_PHOTO_KEYBOARD },
     );
     return;
   }
   const draft = state.draft;
-  draft.medPhotoFileId = best.file_id;
 
-  // Rasmi Telegram'dan yuklab, 1080×1450 ga normallashtiramiz (oq fon + JPEG siqish).
-  // Bazaga saqlanadi — sahifalarda Telegram'ga qayta murojaat qilmasdan ko'rsatiladi.
+  let normalizedBase64: string | null = null;
   try {
     const { fetchTelegramPhoto } = await import("@/lib/image");
     const processed = await fetchTelegramPhoto(best.file_id);
     if (processed) {
-      draft.medPhotoBase64 = processed.base64;
-      await sendAuthMessage(
-        chatId,
-        "🖼 Rasm qabul qilindi va mahsulotlar kartochkasiga to'liq (fill/cover) moslashtirildi.",
-      );
+      normalizedBase64 = processed.base64;
     }
   } catch (err) {
     console.error("[auth-bot] rasmni normallashtirishda xatolik:", err);
+  }
+
+  if (state.step === "med_photo_edit") {
+    const medId = draft.editingPhotoFor;
+    if (!medId) {
+      await clearState(telegramId);
+      await sendAuthMessage(chatId, cancelMessage(), { inline: NEXT_STEP_KEYBOARD });
+      return;
+    }
+    const ok = await setMedicinePhoto(telegramId, medId, best.file_id, normalizedBase64);
+    await clearState(telegramId);
+    if (!ok) {
+      await sendAuthMessage(chatId, errorMessage());
+      return;
+    }
+    const data2 = await listMedicines(telegramId);
+    const med = data2?.medicines.find((m) => m.id === medId);
+    if (med) {
+      await sendAuthMessage(
+        chatId,
+        `✅ <b>Rasm muvaffaqiyatli yuklandi!</b>\n\n${medicineManageMessage(med)}`,
+        { inline: medicineManageKeyboard(med) },
+      );
+    }
+    return;
+  }
+
+  draft.medPhotoFileId = best.file_id;
+  if (normalizedBase64) {
+    draft.medPhotoBase64 = normalizedBase64;
+    await sendAuthMessage(
+      chatId,
+      "🖼 Rasm qabul qilindi va mahsulotlar kartochkasiga to'liq (fill/cover) moslashtirildi.",
+    );
   }
 
   await setState(telegramId, "med_name", draft);
@@ -3040,6 +3192,67 @@ async function handleMedicinePhoto(
     `${medicineStepIndicator("name")}\n\n${photoReceivedMessage()}`,
     { inline: MEDICINE_CANCEL_KEYBOARD },
   );
+}
+
+/**
+ * Dori qo'shishda majburiy maydonlardan biri yetishmasa, aniq nima yetishmayotganini
+ * va qaysi bosqichga qaytish kerakligini qaytaradi.
+ */
+function requiredMedicineMissing(draft: Draft): {
+  step: Step;
+  shortError: string;
+  question: string;
+  keyboard: typeof MEDICINE_PHOTO_KEYBOARD;
+} | null {
+  if (!draft.medPhotoFileId && !draft.medPhotoBase64) {
+    return {
+      step: "med_photo",
+      shortError: "Rasm (min 400×400) yetishmayapti!",
+      question: "⚠️ <b>Dori rasmi yetishmayapti!</b>\n\nIltimos, kamida <b>400×400 piksel</b> o'lchamdagi aniq rasm yuboring:",
+      keyboard: MEDICINE_PHOTO_KEYBOARD,
+    };
+  }
+  if (!draft.medName || draft.medName.trim().length < 2) {
+    return {
+      step: "med_name",
+      shortError: "Dori nomi yetishmayapti!",
+      question: "⚠️ <b>Dori nomi yetishmayapti!</b>\n\nIltimos, dorining to'liq nomini yozing:",
+      keyboard: MEDICINE_CANCEL_KEYBOARD,
+    };
+  }
+  if (draft.medType !== "crop" && draft.medType !== "animal" && draft.medType !== "general") {
+    return {
+      step: "med_type",
+      shortError: "Dori turi tanlanmagan!",
+      question: `⚠️ <b>Dori turi tanlanmagan!</b>\n\n${askMedicineType()}`,
+      keyboard: MEDICINE_TYPE_KEYBOARD,
+    };
+  }
+  if (!draft.medUsage || draft.medUsage.trim().length < 5) {
+    return {
+      step: "med_usage",
+      shortError: "Dori tavsifi yetishmayapti!",
+      question: "⚠️ <b>Dori tavsifi yetishmayapti!</b>\n\nIltimos, dori nimaga yordam berishini yozing (kamida 5 ta harf):",
+      keyboard: MEDICINE_CANCEL_KEYBOARD,
+    };
+  }
+  if (!draft.medStockUnit || !draft.medStockUnit.trim()) {
+    return {
+      step: "med_unit",
+      shortError: "Hajm/birlik yetishmayapti!",
+      question: `⚠️ <b>Dori hajmi yoki o'lchov birligi yetishmayapti!</b>\n\n${askMedicineUnit()}`,
+      keyboard: MEDICINE_UNIT_KEYBOARD,
+    };
+  }
+  if (typeof draft.medPrice !== "number" || draft.medPrice <= 0) {
+    return {
+      step: "med_price",
+      shortError: "Dori narxi yetishmayapti!",
+      question: `⚠️ <b>Dori narxi yetishmayapti!</b>\n\n${askMedicinePrice(draft.medStockUnit)}`,
+      keyboard: MEDICINE_PRICE_SKIP_KEYBOARD,
+    };
+  }
+  return null;
 }
 
 /**
@@ -3079,6 +3292,7 @@ async function saveMedicine(
   telegramId: number,
   draft: Draft,
 ): Promise<{ name: string; total: number; price: number | null } | null> {
+  if (requiredMedicineMissing(draft)) return null;
   const name = draft.medName?.trim();
   if (!name) return null;
   const profile = await getSpecialistByTelegramId(telegramId);

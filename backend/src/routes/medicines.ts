@@ -15,7 +15,9 @@ router.get("/", async (req, res) => {
     const isRandom = req.query.random === "1" || req.query.shuffle === "1";
 
     const conditions = [
-      ne(specialistMedicines.status, "yoq"),
+      eq(specialistMedicines.status, "bor"),
+      sql`${specialistMedicines.price} is not null and ${specialistMedicines.price} > 0`,
+      sql`(${specialistMedicines.photoFileId} is not null or ${specialistMedicines.photoData} is not null)`,
       eq(specialists.isActive, true),
     ];
     if (type === "crop" || type === "animal") {
@@ -50,6 +52,8 @@ router.get("/", async (req, res) => {
         ratingCount: sql<number>`(
           select count(*)::int from specialist_ratings r where r.specialist_id = ${specialists.id}
         )`,
+        updatedAt: specialistMedicines.updatedAt,
+        createdAt: specialistMedicines.createdAt,
       })
       .from(specialistMedicines)
       .innerJoin(specialists, eq(specialists.id, specialistMedicines.specialistId))
@@ -72,6 +76,11 @@ router.get("/", async (req, res) => {
       pharmacyAddress: r.pharmacyAddress,
       ratingAvg: r.ratingAvg === null ? null : Number(r.ratingAvg),
       ratingCount: Number(r.ratingCount),
+      updatedAt: r.updatedAt
+        ? new Date(r.updatedAt).toISOString()
+        : r.createdAt
+          ? new Date(r.createdAt).toISOString()
+          : null,
     }));
 
     res.json(medicines);
@@ -140,7 +149,9 @@ router.get("/:id", async (req, res) => {
       .limit(1);
 
     const r = rows[0];
-    if (!r || r.status !== "bor") {
+    const hasValidPhoto = Boolean(r?.photoFileId || r?.photoData);
+    const hasValidPrice = typeof r?.price === "number" && r.price > 0;
+    if (!r || r.status !== "bor" || !hasValidPhoto || !hasValidPrice) {
       return res.status(404).json({ error: "Dori topilmadi" });
     }
 
@@ -195,6 +206,8 @@ router.get("/:id", async (req, res) => {
       .where(
         and(
           eq(specialistMedicines.status, "bor"),
+          sql`${specialistMedicines.price} is not null and ${specialistMedicines.price} > 0`,
+          sql`(${specialistMedicines.photoFileId} is not null or ${specialistMedicines.photoData} is not null)`,
           eq(specialists.isActive, true),
           ne(specialistMedicines.id, medicine.id),
         )

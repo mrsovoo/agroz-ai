@@ -14,46 +14,74 @@ export type AppNotification = {
   region?: string;
 };
 
-const READ_STORAGE_KEY = "agroz:notifications:read_ids";
-const LAST_READ_STORAGE_KEY = "agroz:notifications:last_read_at";
 export const NOTIFICATIONS_EVENT = "agroz:notifications_updated";
 
+const cachedReadIds = new Set<string>();
+
 /**
- * Mahalliy xotiradan o'qilgan bildirishnoma ID larini olish
+ * Backend API (/api/notifications/read-status) orqali foydalanuvchining o'qilgan bildirishnomalarini yuklash
+ */
+export async function syncReadNotificationIds(): Promise<Set<string>> {
+  if (typeof window === "undefined") return new Set(cachedReadIds);
+  try {
+    const res = await fetch("/api/notifications/read-status", {
+      credentials: "include",
+      cache: "no-store",
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data?.readIds)) {
+        data.readIds.forEach((id: unknown) => {
+          if (typeof id === "string" && id.trim()) {
+            cachedReadIds.add(id.trim());
+          }
+        });
+      }
+    }
+  } catch {
+    // Tarmoq uzilishida joriy kesh saqlanib qoladi
+  }
+  return new Set(cachedReadIds);
+}
+
+/**
+ * Bazadan sinxronlangan o'qilgan bildirishnoma ID larini olish
  */
 export function getReadNotificationIds(): Set<string> {
-  if (typeof window === "undefined") return new Set();
-  try {
-    const raw = localStorage.getItem(READ_STORAGE_KEY);
-    if (!raw) return new Set();
-    const arr = JSON.parse(raw);
-    return new Set(Array.isArray(arr) ? arr : []);
-  } catch {
-    return new Set();
-  }
+  return new Set(cachedReadIds);
 }
 
 /**
  * Bildirishnoma o'qilganligini tekshirish
  */
 export function isNotificationRead(id: string): boolean {
-  return getReadNotificationIds().has(id);
+  return cachedReadIds.has(id);
 }
 
 /**
- * Muayyan bildirishnomalarni o'qilgan deb belgilash
+ * Muayyan bildirishnomalarni backend API orqali o'qilgan deb belgilash
  */
 export function markNotificationsRead(ids: string[]): void {
   if (typeof window === "undefined" || ids.length === 0) return;
-  try {
-    const current = getReadNotificationIds();
-    ids.forEach((id) => current.add(id));
-    localStorage.setItem(READ_STORAGE_KEY, JSON.stringify(Array.from(current)));
-    localStorage.setItem(LAST_READ_STORAGE_KEY, Date.now().toString());
-    window.dispatchEvent(new CustomEvent(NOTIFICATIONS_EVENT));
-  } catch (e) {
-    console.error("markNotificationsRead error:", e);
-  }
+  const cleanIds = Array.from(new Set(ids.map((id) => id.trim()).filter(Boolean)));
+  if (cleanIds.length === 0) return;
+
+  cleanIds.forEach((id) => cachedReadIds.add(id));
+  window.dispatchEvent(new CustomEvent(NOTIFICATIONS_EVENT));
+
+  const targetId = cleanIds.length === 1 ? encodeURIComponent(cleanIds[0]) : "batch";
+  fetch(`/api/notifications/${targetId}/read`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ ids: cleanIds }),
+  })
+    .then(() => {
+      window.dispatchEvent(new CustomEvent(NOTIFICATIONS_EVENT));
+    })
+    .catch((e) => {
+      console.error("markNotificationsRead API error:", e);
+    });
 }
 
 /**
@@ -77,10 +105,8 @@ export function countUnreadNotifications(notifications: AppNotification[]): numb
 export function subscribeToNotificationChanges(callback: () => void): () => void {
   if (typeof window === "undefined") return () => {};
   window.addEventListener(NOTIFICATIONS_EVENT, callback);
-  window.addEventListener("storage", callback);
   return () => {
     window.removeEventListener(NOTIFICATIONS_EVENT, callback);
-    window.removeEventListener("storage", callback);
   };
 }
 
@@ -88,6 +114,7 @@ export function subscribeToNotificationChanges(callback: () => void): () => void
  * Real ob-havo, mavsum va tizim ma'lumotlari asosida bildirishnomalar to'plamini shakllantirish
  */
 export async function fetchRealAppNotifications(userRegion: string = "Toshkent"): Promise<AppNotification[]> {
+  await syncReadNotificationIds();
   const items: AppNotification[] = [];
   const now = Date.now();
 
@@ -270,12 +297,12 @@ export async function fetchRealAppNotifications(userRegion: string = "Toshkent")
     );
   }
 
-  // 4. Agroz AI tizimi xabarnomasi
+  // 4. AgrozGO tizimi xabarnomasi
   items.push({
     id: "system-status-welcome",
     type: "system",
     severity: "info",
-    title: "📱 Agroz AI xizmatlari faol",
+    title: "📱 AgrozGO xizmatlari faol",
     body: "Dorilar yetkazib berish, veterinarlar va agronomlar chaqiruvi hamda sun'iy intellekt agro-tashxisi 24/7 ishlamoqda.",
     dateText: "Tizim xabari",
     timestamp: now - 24 * 3600 * 1000,

@@ -198,7 +198,7 @@ export default function GeoLocationBlocker() {
         {/* Asosiy tushuntirish matni */}
         <div className="mt-4 space-y-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
           <p>
-            Hurmatli foydalanuvchi, <b>Agroz AI</b> agro-platformasi ayni vaqtda faqat{" "}
+            Hurmatli foydalanuvchi, <b>AgrozGO</b> agro-platformasi ayni vaqtda faqat{" "}
             <b>O&apos;zbekiston Respublikasi</b> hududidagi dehqon, fermer va chorvadorlar uchun to&apos;liq
             xizmat ko&apos;rsatmoqda.
           </p>
@@ -290,7 +290,7 @@ export default function GeoLocationBlocker() {
 
         {/* Pastki yordamchi qism (Admin kirishi yoki xabardorlik) */}
         <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
-          <span>Agroz AI Ecosystem</span>
+          <span>AgrozGO Ecosystem</span>
           <a
             href="/admin"
             className="hover:text-slate-600 hover:underline transition"

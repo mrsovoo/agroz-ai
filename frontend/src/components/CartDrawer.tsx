@@ -603,14 +603,14 @@ export default function CartDrawer() {
             {cart && (
               <button
                 onClick={clearAll}
-                className="text-[12px] font-bold text-red-600 hover:underline px-2 py-1"
+                className="min-h-[44px] px-3 text-[12px] font-bold text-red-600 hover:underline flex items-center justify-center"
               >
                 Tozalash
               </button>
             )}
             <button
               onClick={close}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 hover:bg-neutral-200 active:scale-95 transition"
+              className="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-neutral-100 text-neutral-700 hover:bg-neutral-200 active:scale-95 transition"
               aria-label="Yopish"
             >
               <X size={18} />
@@ -970,33 +970,35 @@ export default function CartDrawer() {
                       </div>
 
                       {/* Miqdor tugmalari */}
-                      <div className="flex items-center gap-1.5 rounded-xl bg-neutral-100 p-1">
+                      <div className="flex items-center gap-1 rounded-xl bg-neutral-100 p-0.5">
                         <button
                           type="button"
                           onClick={() => changeQty(line.medicine.id, -1)}
-                          className="flex h-6 w-6 items-center justify-center rounded-lg bg-white text-neutral-800 shadow-xs active:scale-90"
+                          className="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg bg-white text-neutral-800 shadow-xs active:scale-90 transition"
+                          aria-label="Kamaytirish"
                         >
-                          <Minus size={13} />
+                          <Minus size={15} />
                         </button>
-                        <span className="w-5 text-center text-[13px] font-black text-neutral-900">
+                        <span className="w-6 text-center text-[13px] font-black text-neutral-900 select-none">
                           {line.qty}
                         </span>
                         <button
                           type="button"
                           onClick={() => changeQty(line.medicine.id, 1)}
-                          className="flex h-6 w-6 items-center justify-center rounded-lg bg-white text-neutral-800 shadow-xs active:scale-90"
+                          className="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg bg-white text-neutral-800 shadow-xs active:scale-90 transition"
+                          aria-label="Ko'paytirish"
                         >
-                          <Plus size={13} />
+                          <Plus size={15} />
                         </button>
                       </div>
 
                       <button
                         type="button"
                         onClick={() => changeQty(line.medicine.id, -line.qty)}
-                        className="text-neutral-400 hover:text-red-600 p-1 transition"
+                        className="flex h-11 w-11 min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-xl text-neutral-400 hover:bg-red-50 hover:text-red-600 transition"
                         aria-label="O'chirish"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={17} />
                       </button>
                     </li>
                   );

@@ -162,22 +162,19 @@ export const specialistMedicines = pgTable("specialist_medicines", {
   type: varchar("type", { length: 20 }).notNull().default("general"),
   /** Nima uchun ishlatiladi (qisqa tavsif, mijozga ko'rinadi). */
   usage: varchar("usage", { length: 300 }),
-  status: varchar("status", { length: 20 }).notNull().default("bor"), // bor | yoq
-  /** Narx so'mda (ixtiyoriy) — dorixona egasi yozadi, mijozga ko'rinadi. */
+  status: varchar("status", { length: 20 }).notNull().default("bor"), // bor | yoq | qoralama
+  /** Narx so'mda (majburiy) — dorixona egasi yozadi, mijozga ko'rinadi. */
   price: integer("price"),
   /** Dori qoldiq miqdori (dona, kg, litr). */
   stock: integer("stock").default(10).notNull(),
   /** O'lchov birligi (dona | kg | litr). */
   stockUnit: varchar("stock_unit", { length: 20 }).default("dona").notNull(),
-  /** Oxirgi rasm yo'qligi xabari yuborilgan vaqt. */
-  imageNotifiedAt: timestamp("image_notified_at"),
   /** Rasm kengligi (px). */
   imageWidth: integer("image_width"),
   /** Rasm balandligi (px). */
   imageHeight: integer("image_height"),
-  /** Oxirgi narx yo'qligi xabari yuborilgan vaqt. */
-  priceNotifiedAt: timestamp("price_notified_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 /**
@@ -226,6 +223,8 @@ export const orders = pgTable("orders", {
   ratingStars: integer("rating_stars"),
   ratingNote: varchar("rating_note", { length: 300 }),
   ratedAt: timestamp("rated_at"),
+  /** 30 daqiqa davomida "yangi" holatda javobsiz qolgan buyurtma uchun dorixonaga yuborilgan yagona eslatma vaqti. */
+  reminderSentAt: timestamp("reminder_sent_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -290,5 +289,61 @@ export const specialistCalls = pgTable("specialist_calls", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+/**
+ * Foydalanuvchilar tomonidan o'qilgan bildirishnomalar holati (Telegram va brauzerda bir xil bo'lishi uchun bazada saqlanadi).
+ */
+export const notificationReads = pgTable("notification_reads", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  notificationKey: varchar("notification_key", { length: 160 }).notNull(),
+  readAt: timestamp("read_at").defaultNow().notNull(),
+});
+
+/**
+ * Support / Murojaatlar tizimi — foydalanuvchi va mutaxassis murojaatlari (tickets).
+ * user_type: 'user' | 'specialist'
+ * category: 'texnik' | 'umumiy'
+ * status: 'yangi' | 'javob_berildi' | 'yopiq'
+ */
+export const supportTickets = pgTable("support_tickets", {
+  id: serial("id").primaryKey(),
+  userType: varchar("user_type", { length: 20 }).notNull().default("user"),
+  userId: integer("user_id"),
+  specialistId: integer("specialist_id"),
+  telegramId: bigint("telegram_id", { mode: "number" }),
+  category: varchar("category", { length: 40 }).notNull().default("umumiy"),
+  status: varchar("status", { length: 30 }).notNull().default("yangi"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+/**
+ * Murojaat ichidagi xabarlar (chat ko'rinishida).
+ * sender: 'user' | 'admin'
+ */
+export const supportMessages = pgTable("support_messages", {
+  id: serial("id").primaryKey(),
+  ticketId: integer("ticket_id").notNull(),
+  sender: varchar("sender", { length: 20 }).notNull().default("user"),
+  text: text("text").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+/**
+ * Ommaviy xabarlar (fon jarayoni sifatida yuboriladigan broadcastlar).
+ * status: 'jarayonda' | 'tugadi' | 'toxtadi'
+ */
+export const broadcasts = pgTable("broadcasts", {
+  id: serial("id").primaryKey(),
+  text: text("text").notNull(),
+  target: varchar("target", { length: 40 }).notNull().default("all"),
+  total: integer("total").notNull().default(0),
+  sentCount: integer("sent_count").notNull().default(0),
+  failedCount: integer("failed_count").notNull().default(0),
+  status: varchar("status", { length: 20 }).notNull().default("jarayonda"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 import { advertisements } from "./advertisements.js";
 export { advertisements };
+

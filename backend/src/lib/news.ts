@@ -432,7 +432,7 @@ export async function getStoredNews(limit = 10): Promise<NewsItem[]> {
       id: `db-${n.id}`,
       title: n.title,
       link: "",
-      source: "Agroz AI",
+      source: "AgrozGO",
       tag: n.tag === "Chorva" ? "Chorva" : "Agro",
       publishedAt: new Date(n.createdAt).toISOString(),
       summary: n.body,

@@ -59,7 +59,7 @@ export default async function HomePage() {
       for (const p of list) {
         if (Array.isArray(p.medicines)) {
           for (const m of p.medicines) {
-            if (m.status === "yoq") continue;
+            if (m.status === "yoq" || m.status === "qoralama" || !m.price || m.price <= 0 || !m.hasPhoto) continue;
             if (!medMap.has(m.id)) {
               medMap.set(m.id, {
                 id: m.id,

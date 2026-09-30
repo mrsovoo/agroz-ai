@@ -401,6 +401,140 @@ export async function notifyCustomerOrderDelivered(orderId: number): Promise<voi
 }
 
 /**
+ * Buyurtma holati o'zgarganda ("tasdiqlandi", "yolda", "bekor" yoki "yetkazildi")
+ * mijozga Telegram (@agroz_bot) orqali xabar yuboradi.
+ */
+export async function notifyCustomerOrderStatusChange(
+  orderId: number,
+  status: "tasdiqlandi" | "yolda" | "bekor" | "yetkazildi",
+  reason?: string | null,
+): Promise<void> {
+  if (status === "yetkazildi") {
+    await notifyCustomerOrderDelivered(orderId);
+    return;
+  }
+
+  if (!(await isMainBotConfigured())) return;
+
+  const { db } = await import("@/db");
+  const { orders, orderItems, specialists, users } = await import("@/db/schema");
+  const { eq, sql } = await import("drizzle-orm");
+
+  const orderRows = await db
+    .select({
+      id: orders.id,
+      userId: orders.userId,
+      customerName: orders.customerName,
+      customerPhone: orders.customerPhone,
+      deliveryType: orders.deliveryType,
+      customerAddress: orders.customerAddress,
+      totalSum: orders.totalSum,
+      pharmacyName: specialists.organization,
+      pharmacyContact: specialists.name,
+      pharmacyPhone: specialists.phone,
+      pharmacyAddress: specialists.address,
+    })
+    .from(orders)
+    .leftJoin(specialists, eq(specialists.id, orders.pharmacySpecialistId))
+    .where(eq(orders.id, orderId))
+    .limit(1);
+
+  const order = orderRows[0];
+  if (!order) return;
+
+  let customerTelegramId: number | null = null;
+  if (order.userId) {
+    const byId = await db
+      .select({ telegramId: users.telegramId })
+      .from(users)
+      .where(eq(users.id, order.userId))
+      .limit(1);
+    customerTelegramId = byId[0]?.telegramId ?? null;
+  }
+
+  if (!customerTelegramId) {
+    const clean = order.customerPhone.replace(/\D/g, "");
+    const suffix = clean.slice(-9);
+    if (suffix.length >= 7) {
+      const userRows = await db
+        .select({ telegramId: users.telegramId })
+        .from(users)
+        .where(sql`replace(replace(${users.phone}, '+', ''), ' ', '') like ${"%" + suffix}`)
+        .limit(1);
+      customerTelegramId = userRows[0]?.telegramId ?? null;
+    }
+  }
+
+  if (!customerTelegramId) return;
+
+  const items = await db
+    .select({
+      name: orderItems.name,
+      qty: orderItems.qty,
+    })
+    .from(orderItems)
+    .where(eq(orderItems.orderId, orderId));
+
+  const pharmacyName = order.pharmacyName || order.pharmacyContact || "Dorixona";
+  const orderNum = formatOrderNumber(order.id);
+  const itemsText = items.map((i) => `• ${escapeHtml(i.name)} × ${i.qty} ta`).join("\n");
+
+  let msg = "";
+  if (status === "tasdiqlandi") {
+    msg = [
+      `✅ <b>Buyurtmangiz tasdiqlandi, tayyorlanmoqda (${orderNum})</b>`,
+      "",
+      `🏪 <b>Dorixona:</b> ${escapeHtml(pharmacyName)}`,
+      order.pharmacyPhone ? `📞 <b>Dorixona telefoni:</b> <code>${escapeHtml(order.pharmacyPhone)}</code>` : "",
+      order.deliveryType === "pickup" && order.pharmacyAddress
+        ? `📍 <b>Olib ketish manzili:</b> ${escapeHtml(order.pharmacyAddress)}`
+        : "",
+      "",
+      "📦 <b>Buyurtma tarkibi:</b>",
+      itemsText,
+      order.totalSum !== null ? `\n💰 <b>Jami summa:</b> ${shortSum(order.totalSum)} so'm` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+  } else if (status === "yolda") {
+    msg = [
+      `🚚 <b>Buyurtmangiz yo'lda (${orderNum})</b>`,
+      "",
+      `🏪 <b>Dorixona:</b> ${escapeHtml(pharmacyName)}`,
+      order.pharmacyPhone ? `📞 <b>Dorixona telefoni:</b> <code>${escapeHtml(order.pharmacyPhone)}</code>` : "",
+      order.customerAddress ? `📍 <b>Yetkazish manzili:</b> ${escapeHtml(order.customerAddress)}` : "",
+      "",
+      "📦 <b>Buyurtma tarkibi:</b>",
+      itemsText,
+      "",
+      "Kuryer tez orada siz bilan bog'lanadi.",
+    ]
+      .filter(Boolean)
+      .join("\n");
+  } else if (status === "bekor") {
+    const cancelReason =
+      reason?.trim() || "Dorixona tomonidan bekor qilindi (mahsulot tugagan yoki texnik sabab)";
+    msg = [
+      `❌ <b>Buyurtmangiz bekor qilindi (${orderNum})</b>`,
+      "",
+      `🏪 <b>Dorixona:</b> ${escapeHtml(pharmacyName)}`,
+      `📝 <b>Sababi:</b> ${escapeHtml(cancelReason)}`,
+      "",
+      "📦 <b>Buyurtma tarkibi:</b>",
+      itemsText,
+      "",
+      "AgrozGO ilovasidagi <b>Dorilar</b> bo'limidan boshqa yaqin dorixonadan buyurtma berishingiz mumkin.",
+    ]
+      .filter(Boolean)
+      .join("\n");
+  }
+
+  if (msg) {
+    await sendMainBotMessage(customerTelegramId, msg);
+  }
+}
+
+/**
  * Dorixona egasiga dori qoldig'i kam qolgani (<= 3) yoki tugagani (0) haqida
  * Telegram (@agroz_auth_bot) orqali darhol ogohlantirish yuboradi.
  */
@@ -441,3 +575,58 @@ export async function notifyPharmacyStockAlert(
     console.error("[orders-bot] Stock alert yuborishda xato:", err);
   }
 }
+
+/**
+ * Buyurtma "yangi" holatida 30 daqiqadan ortiq javobsiz tursa,
+ * dorixona egasiga botda BITTA marta eslatma xabari yuboradi.
+ */
+export async function checkUnansweredOrderReminders(): Promise<void> {
+  if (!(await isAuthBotConfigured())) return;
+
+  const { db } = await import("@/db");
+  const { orders, specialists } = await import("@/db/schema");
+  const { and, eq, isNull, lte } = await import("drizzle-orm");
+  const { listOrders } = await import("@/lib/orders");
+
+  const thirtyMinsAgo = new Date(Date.now() - 30 * 60 * 1000);
+
+  const pendingOrders = await db
+    .select({
+      id: orders.id,
+      pharmacySpecialistId: orders.pharmacySpecialistId,
+      telegramId: specialists.telegramId,
+    })
+    .from(orders)
+    .innerJoin(specialists, eq(specialists.id, orders.pharmacySpecialistId))
+    .where(
+      and(
+        eq(orders.status, "yangi"),
+        isNull(orders.reminderSentAt),
+        lte(orders.createdAt, thirtyMinsAgo),
+      ),
+    )
+    .limit(20);
+
+  for (const row of pendingOrders) {
+    // Qayta-qayta yubormasligi uchun darhol reminder_sent_at ni belgilaymiz
+    await db
+      .update(orders)
+      .set({ reminderSentAt: new Date() })
+      .where(eq(orders.id, row.id));
+
+    if (!row.telegramId) continue;
+
+    try {
+      const fullOrders = await listOrders({ orderId: row.id });
+      const fullOrder = fullOrders[0];
+      const text = `⏰ <b>Yangi buyurtmangizga hali javob bermadingiz: #${row.id}</b> (${formatOrderNumber(row.id)})\n\nIltimos, buyurtmani qabul qiling yoki bekor qiling:`;
+      await sendAuthMessage(row.telegramId, text, {
+        inline: fullOrder ? orderActionsKeyboard(fullOrder) : undefined,
+      });
+      console.log(`[orders-reminder] Buyurtma #${row.id} uchun dorixonaga (TG: ${row.telegramId}) yagona eslatma yuborildi.`);
+    } catch (err) {
+      console.error(`[orders-reminder] Buyurtma #${row.id} eslatmasida xato:`, err);
+    }
+  }
+}
+

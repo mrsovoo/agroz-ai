@@ -1,33 +1,23 @@
-
-
 import { Router } from "express";
-import { listSpecialists } from "../lib/specialists.js";
+import { listSpecialists, rateSpecialist } from "../lib/specialists.js";
 import { clampRadiusKm, parseCoords } from "../lib/geo.js";
-import { rateSpecialist } from "../lib/specialists.js";
-import crypto from "node:crypto";
 import { db } from "../db/index.js";
-import { specialists, specialistCalls, sessions, users } from "../db/schema.js";
-import { eq, sql } from "drizzle-orm";
+import { specialists, specialistCalls, orders, users } from "../db/schema.js";
+import { and, eq, or, sql } from "drizzle-orm";
 import { sendAuthMessage, isAuthBotConfigured } from "../lib/auth-bot.js";
 import { escapeHtml } from "../lib/tg-escape.js";
 import { pharmacyRadiusKmSetting, specialistRadiusKmSetting } from "../lib/settings.js";
+import { getUserFromReq } from "../lib/user-auth.js";
 
 const router = Router();
 
-async function getUserFromReq(req: any) {
-  const authHeader = req.headers.authorization;
-  const cookieSession = req.headers.cookie
-    ?.split(";")
-    .find((c: string) => c.trim().startsWith("agroz_session="))
-    ?.split("=")[1];
-  const sessionId = authHeader?.replace("Bearer ", "") || cookieSession;
-  if (!sessionId) return null;
-
-  const s = (await db.select().from(sessions).where(eq(sessions.id, sessionId)).limit(1))[0];
-  if (!s) return null;
-
-  const u = (await db.select().from(users).where(eq(users.id, s.userId)).limit(1))[0];
-  return u ?? null;
+function getUserPhoneSuffixes(user: typeof users.$inferSelect): string[] {
+  const list: string[] = [];
+  const p1 = (user.phone || "").replace(/\D/g, "").slice(-9);
+  const p2 = (user.secondPhone || "").replace(/\D/g, "").slice(-9);
+  if (p1.length === 9) list.push(p1);
+  if (p2.length === 9 && !list.includes(p2)) list.push(p2);
+  return list;
 }
 
 // GET /api/specialists
@@ -66,11 +56,16 @@ router.get("/", async (req, res) => {
   }
 });
 
-// POST /api/specialists/rate
-router.post("/rate", async (req, res) => {
+// POST /api/specialists/rate & POST /api/specialists/:id/rate
+async function handleRateSpecialist(req: any, res: any) {
   try {
+    const user = await getUserFromReq(req);
+    if (!user) {
+      return res.status(401).json({ error: "Baholash uchun tizimga kiring" });
+    }
+
     const body = req.body || {};
-    const specialistId = Number(body.specialistId);
+    const specialistId = Number(req.params?.id || body.specialistId);
     const stars = Number(body.stars);
 
     if (!Number.isInteger(specialistId) || specialistId <= 0) {
@@ -80,26 +75,78 @@ router.post("/rate", async (req, res) => {
       return res.status(400).json({ error: "Baho 1 dan 5 gacha bo'lishi kerak" });
     }
 
-    const callId = typeof body.callId === "string" ? body.callId.trim() : null;
-    const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress || "anon";
-    const raterKey = callId ? `call:${callId.slice(0, 24)}` : crypto.createHash("sha256").update(`${ip}:specialist_rating`).digest("hex").slice(0, 32);
+    const suffixes = getUserPhoneSuffixes(user);
+    if (suffixes.length === 0) {
+      return res.status(403).json({ error: "Telefon raqamingiz tasdiqlanmagan" });
+    }
 
-    const result = await rateSpecialist(specialistId, raterKey, stars);
+    const rawCallId = typeof body.callId === "string" || typeof body.callId === "number" ? String(body.callId).trim() : null;
+    let verifiedRaterKey: string | null = null;
+    let verifiedCallId: number | null = null;
+
+    if (rawCallId && /^\d+$/.test(rawCallId)) {
+      const numCallId = Number(rawCallId);
+      const [callRow] = await db
+        .select()
+        .from(specialistCalls)
+        .where(and(eq(specialistCalls.id, numCallId), eq(specialistCalls.specialistId, specialistId)))
+        .limit(1);
+
+      const callSuffix = (callRow?.customerPhone || "").replace(/\D/g, "").slice(-9);
+      if (!callRow || !suffixes.includes(callSuffix)) {
+        return res.status(403).json({ error: "Ruxsat yo'q: bu chaqiruv sizga tegishli emas" });
+      }
+      verifiedCallId = numCallId;
+      verifiedRaterKey = `call:${numCallId}`;
+    } else {
+      // Foydalanuvchining shu mutaxassisda chaqiruvi yoki buyurtmasi borligini tekshiramiz
+      const phoneConds = suffixes.map(
+        (sfx) => sql`RIGHT(REGEXP_REPLACE(${specialistCalls.customerPhone}, '\\D', '', 'g'), 9) = ${sfx}`,
+      );
+      const [matchingCall] = await db
+        .select({ id: specialistCalls.id })
+        .from(specialistCalls)
+        .where(and(eq(specialistCalls.specialistId, specialistId), or(...phoneConds)))
+        .limit(1);
+
+      if (matchingCall) {
+        verifiedCallId = matchingCall.id;
+        verifiedRaterKey = `call:${matchingCall.id}`;
+      } else {
+        const orderPhoneConds = [
+          eq(orders.userId, user.id),
+          ...suffixes.map((sfx) => sql`RIGHT(REGEXP_REPLACE(${orders.customerPhone}, '\\D', '', 'g'), 9) = ${sfx}`),
+        ];
+        const [matchingOrder] = await db
+          .select({ id: orders.id })
+          .from(orders)
+          .where(and(eq(orders.pharmacySpecialistId, specialistId), or(...orderPhoneConds)))
+          .limit(1);
+
+        if (!matchingOrder) {
+          return res.status(403).json({
+            error: "Faqat tegishli chaqiruv yoki buyurtma egasi mutaxassisni baholay oladi",
+          });
+        }
+        verifiedRaterKey = `order:${matchingOrder.id}`;
+      }
+    }
+
+    const result = await rateSpecialist(specialistId, verifiedRaterKey, stars);
     if (!result) {
       return res.status(404).json({ error: "Mutaxassis topilmadi" });
     }
 
-    if (callId && /^\d+$/.test(callId)) {
-      const numCallId = Number(callId);
+    if (verifiedCallId) {
       await db
         .update(specialistCalls)
         .set({ status: "bajarildi", updatedAt: new Date() })
-        .where(eq(specialistCalls.id, numCallId))
+        .where(eq(specialistCalls.id, verifiedCallId))
         .catch(() => {});
       await db
         .update(specialists)
         .set({ isBusy: false, currentCallId: null, updatedAt: new Date() })
-        .where(eq(specialists.currentCallId, numCallId))
+        .where(eq(specialists.currentCallId, verifiedCallId))
         .catch(() => {});
     }
 
@@ -108,7 +155,10 @@ router.post("/rate", async (req, res) => {
     console.error("[rate error]:", err);
     res.status(500).json({ error: err.message || "Server xatosi" });
   }
-});
+}
+
+router.post("/rate", handleRateSpecialist);
+router.post("/:id/rate", handleRateSpecialist);
 
 // POST /api/specialists/call
 router.post("/call", async (req, res) => {
@@ -214,7 +264,7 @@ router.post("/call", async (req, res) => {
       }
     }
 
-    // Mijozga Agroz AI bot (@agrozai_bot) orqali avtomatik bildirishnoma
+    // Mijozga AgrozGO bot (@agroz_bot) orqali avtomatik bildirishnoma
     try {
       const cleanCustomerDigits = customerPhone.replace(/\D/g, "").slice(-9);
       let customerTelegramId = user?.telegramId ?? null;
@@ -282,6 +332,11 @@ router.post("/call", async (req, res) => {
 // GET /api/specialists/call/:id/status
 router.get("/call/:id/status", async (req, res) => {
   try {
+    const user = await getUserFromReq(req);
+    if (!user) {
+      return res.status(401).json({ error: "Chaqiruv holatini ko'rish uchun tizimga kiring" });
+    }
+
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id <= 0) {
       return res.status(400).json({ error: "Noto'g'ri chaqiruv ID" });
@@ -295,6 +350,12 @@ router.get("/call/:id/status", async (req, res) => {
 
     if (!call) {
       return res.status(404).json({ error: "Chaqiruv topilmadi" });
+    }
+
+    const suffixes = getUserPhoneSuffixes(user);
+    const callPhoneSuffix = (call.customerPhone || "").replace(/\D/g, "").slice(-9);
+    if (!callPhoneSuffix || !suffixes.includes(callPhoneSuffix)) {
+      return res.status(403).json({ error: "Ruxsat yo'q: bu chaqiruv sizga tegishli emas" });
     }
 
     const [spec] = await db

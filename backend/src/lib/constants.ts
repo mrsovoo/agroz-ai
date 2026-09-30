@@ -30,12 +30,12 @@ export const DEFAULT_SEARCH_RADIUS_KM = 15;
 
 /**
  * Yaqin atrof qidiruvining chegarasi (km).
- * Admin sozlamalari orqali 100 km gacha kengaytirilishi mumkin.
+ * Admin sozlamalari yoki foydalanuvchi radiusni kengaytirishi orqali 1000 km gacha kengaytirilishi mumkin.
  */
-export const MAX_NEARBY_RADIUS_KM = 100;
+export const MAX_NEARBY_RADIUS_KM = 1000;
 
 /** UI'da qo'llaniladigan radius variantlari (km). */
-export const RADIUS_OPTIONS = [5, 10, 15, 25, 50] as const;
+export const RADIUS_OPTIONS = [5, 15, 30, 50, 100, 1000] as const;
 
 /**
  * AI tashxisi shu foizdan past ishonch bilan qaytsa — foydalanuvchi

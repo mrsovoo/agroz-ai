@@ -30,12 +30,11 @@ export const DEFAULT_SEARCH_RADIUS_KM = 5;
 
 /**
  * Yaqin atrof qidiruvining chegarasi (km).
- * Standart yagona 5 km radius belgilanadi.
  */
-export const MAX_NEARBY_RADIUS_KM = 5;
+export const MAX_NEARBY_RADIUS_KM = 1000;
 
-/** UI'da qo'llaniladigan standart yagona radius (5 km). */
-export const RADIUS_OPTIONS = [5] as const;
+/** UI'da qo'llaniladigan radius variantlari (km). */
+export const RADIUS_OPTIONS = [5, 15, 30, 50, 100, 1000] as const;
 
 /**
  * AI tashxisi shu foizdan past ishonch bilan qaytsa — foydalanuvchi

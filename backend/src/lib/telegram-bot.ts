@@ -93,25 +93,27 @@ export function botChatLink(botUsername: string | null): string | null {
   return botUsername ? `https://t.me/${botUsername}` : null;
 }
 
+let botNameSynced = false;
+
 /** Mini App tugmasi: faqat HTTPS manzilda ishlaydi. */
 export function miniAppKeyboard(): InlineKeyboard | undefined {
   const url = appBaseUrl();
   if (!url || !url.startsWith("https://")) return undefined;
   return {
-    inline_keyboard: [[{ text: "🌿 AgrozGo ga kirish", web_app: { url } }]],
+    inline_keyboard: [[{ text: "🌿 AgrozGO ga kirish", web_app: { url } }]],
   };
 }
 
-/** AgrozGo tugmasi: Mini Appga kirish uchun maxsus inline keyboard */
+/** AgrozGO tugmasi: Mini Appga kirish uchun maxsus inline keyboard */
 export function agrozGoKeyboard(): InlineKeyboard | undefined {
   const url = appBaseUrl();
   if (!url || !url.startsWith("https://")) {
     return {
-      inline_keyboard: [[{ text: "🌿 AgrozGo ga kirish", url: url || "https://agroz-ai.vercel.app" }]],
+      inline_keyboard: [[{ text: "🌿 AgrozGO ga kirish", url: url || "https://agroz-ai.vercel.app" }]],
     };
   }
   return {
-    inline_keyboard: [[{ text: "🌿 AgrozGo ga kirish", web_app: { url } }]],
+    inline_keyboard: [[{ text: "🌿 AgrozGO ga kirish", web_app: { url } }]],
   };
 }
 
@@ -119,27 +121,32 @@ export function agrozGoKeyboard(): InlineKeyboard | undefined {
 export function registeredUserMenuKeyboard(): ReplyKeyboard {
   const url = appBaseUrl() || "https://agroz-ai.vercel.app";
   const webAppBtn = url.startsWith("https://")
-    ? { text: "🌿 AgrozGo ga kirish", web_app: { url } }
-    : { text: "🌿 AgrozGo ga kirish" };
+    ? { text: "🌿 AgrozGO ga kirish", web_app: { url } }
+    : { text: "🌿 AgrozGO ga kirish" };
 
   return {
     keyboard: [
       [webAppBtn],
       [{ text: "📦 Buyurtmalarim" }, { text: "👨‍⚕️ Chaqiruvlarim" }],
-      [{ text: "👤 Ma'lumotlarim" }, { text: "🗑 Profilni o'chirish" }],
+      [{ text: "👤 Ma'lumotlarim" }, { text: "💬 Yordam" }],
+      [{ text: "🗑 Profilni o'chirish" }],
     ],
     resize_keyboard: true,
   };
 }
 
-/** Telegram pastki burchakdagi (Native Launch App) menyu tugmasini "AgrozGo" deb o'rnatish */
+/** Telegram pastki burchakdagi (Native Launch App) menyu tugmasini va bot nomini "AgrozGO" deb o'rnatish */
 export async function setAgrozGoMenuButton(chatId?: number): Promise<boolean> {
+  if (!botNameSynced) {
+    botNameSynced = true;
+    callBot("setMyName", { name: "AgrozGO" }).catch(() => {});
+  }
   const url = appBaseUrl();
   if (!url || !url.startsWith("https://")) return false;
   const payload: Record<string, unknown> = {
     menu_button: {
       type: "web_app",
-      text: "AgrozGo",
+      text: "AgrozGO",
       web_app: { url },
     },
   };
@@ -161,7 +168,7 @@ export function greetingKeyboard(): InlineKeyboard | undefined {
   const url = appBaseUrl();
   if (!url) return undefined;
   const rows: InlineKeyboard["inline_keyboard"] = [];
-  if (url.startsWith("https://")) rows.push([{ text: "🚀 Agroz AI ilovasini ochish", web_app: { url } }]);
+  if (url.startsWith("https://")) rows.push([{ text: "🚀 AgrozGO ilovasini ochish", web_app: { url } }]);
   rows.push([{ text: "🌐 Sayt orqali kirish", url }]);
   rows.push([
     { text: "📋 Mutaxassis / Dorixona ro'yxati", url: `https://t.me/${authBotUsername()}` },
@@ -199,20 +206,20 @@ export function greetingMessage(name?: string): string {
   return [
     `👋 Salom${name ? `, ${escapeHtml(name)}` : ""}!`,
     "",
-    "Men <b>Agroz AI</b> — dehqon va chorvador yordamchisiman:",
+    "Men <b>AgrozGO</b> — dehqon va chorvador yordamchisiman:",
     "• 💊 Ekin va chorva dori vositalari katalogi",
     "• 📍 Yaqin agro va vet dorixonalar xaritasi (5 km)",
     "• 👨‍🌾 Malakali agronom va veterinarlar",
     "• 🌤 Ob-havo ma'lumotlari va purkash tavsiyalari",
     "",
-    "<b>👇 «Agroz AI» tugmasini bosing — ilova shu yerda ochiladi.</b>",
+    "<b>👇 «AgrozGO» tugmasini bosing — ilova shu yerda ochiladi.</b>",
     "",
     "🔐 <b>Telefon raqamni tasdiqlash:</b> saytda raqamingizni kiriting va",
     "«Tasdiqlash kodini olish»ni bosing. Havola sizni shu chatga olib keladi va",
     "tasdiqlash kodi shu yerda chiqadi.",
     "",
     "📋 <b>Mutaxassis yoki dorixona egasimisiz?</b> Pastdagi tugma orqali",
-    `<b>@${escapeHtml(authBotUsername())}</b> botida ro'yxatdan o'ting — profilingiz Agroz AI`,
+    `<b>@${escapeHtml(authBotUsername())}</b> botida ro'yxatdan o'ting — profilingiz AgrozGO`,
     "xaritasida 5 km radius ichida ko'rinadi.",
   ].join("\n");
 }

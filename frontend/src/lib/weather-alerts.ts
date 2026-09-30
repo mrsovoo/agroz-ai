@@ -348,7 +348,7 @@ export function formatAlertTelegramMessage(alert: WeatherAlert): string {
     `🐄 <b>Chorva uchun tezkor choralar:</b>`,
     animalItems,
     "",
-    `📱 <i>Agroz AI — Ekin va chorva uchun aqlli yordamchi</i>`,
+    `📱 <i>AgrozGO — Ekin va chorva uchun aqlli yordamchi</i>`,
   ].join("\n");
 }
 

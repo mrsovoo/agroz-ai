@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import AdminBroadcastCenter from "@/components/AdminBroadcastCenter";
+import AdminSupportCenter from "@/components/AdminSupportCenter";
 import {
   Users,
   MapPin,
@@ -301,9 +302,9 @@ export default function SuperAdminPage() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Tablar: dashboard | analytics | orders | specialist_calls | pharmacies | specialists | users | regions | reviews | settings | broadcast
+  // Tablar: dashboard | analytics | orders | specialist_calls | pharmacies | specialists | users | regions | reviews | settings | broadcast | support
   const [activeTab, setActiveTab] = useState<
-    "dashboard" | "analytics" | "orders" | "specialist_calls" | "pharmacies" | "specialists" | "users" | "regions" | "reviews" | "settings" | "broadcast"
+    "dashboard" | "analytics" | "orders" | "specialist_calls" | "pharmacies" | "specialists" | "users" | "regions" | "reviews" | "settings" | "broadcast" | "support"
   >("dashboard");
 
   const [stats, setStats] = useState<Stats | null>(null);
@@ -1006,6 +1007,7 @@ export default function SuperAdminPage() {
             <h3 className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Sozlamalar</h3>
             <div className="space-y-1 mt-1">
               {[
+                { id: "support", label: "Murojaatlar (Support)", icon: MessageSquare },
                 { id: "settings", label: "Radius & Yetkazib Berish", icon: Settings },
                 { id: "broadcast", label: "Xabarlar & Xabarnomalar", icon: MessageSquare },
               ].map((tab) => {
@@ -1488,8 +1490,19 @@ export default function SuperAdminPage() {
                           (o.customerAddress && o.customerAddress.toLowerCase().includes(q))
                         );
                       })
-                      .map((o) => (
-                        <tr key={o.id} className="hover:bg-zinc-50/70 transition">
+                      .map((o) => {
+                        const ageMs = o.createdAt ? Date.now() - new Date(o.createdAt).getTime() : 0;
+                        const isUnansweredOver2Hours =
+                          o.status === "yangi" && Number.isFinite(ageMs) && ageMs >= 2 * 60 * 60 * 1000;
+                        return (
+                        <tr
+                          key={o.id}
+                          className={`transition ${
+                            isUnansweredOver2Hours
+                              ? "bg-red-50/75 hover:bg-red-100/70 border-l-4 border-l-red-600"
+                              : "hover:bg-zinc-50/70"
+                          }`}
+                        >
                           <td className="py-3 px-4 font-mono font-bold text-zinc-400">#{o.id}</td>
                           <td className="py-3 px-4">
                             <p className="font-bold text-zinc-900">{o.customerName}</p>
@@ -1559,23 +1572,30 @@ export default function SuperAdminPage() {
                             )}
                           </td>
                           <td className="py-3 px-4">
-                            <span
-                              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-mono font-bold ${
-                                o.status === "yetkazildi"
-                                  ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                                  : o.status === "tasdiqlandi"
-                                  ? "bg-blue-50 text-blue-800 border border-blue-200"
-                                  : o.status === "bekor"
-                                  ? "bg-red-50 text-red-700 border border-red-200 font-bold"
-                                  : "bg-amber-50 text-amber-800 border border-amber-200"
-                              }`}
-                            >
-                              {o.status === "yetkazildi" && "✅ Yetkazildi"}
-                              {o.status === "tasdiqlandi" && "🔵 Tasdiqlandi"}
-                              {o.status === "bekor" && "⚠️ Bekor qilingan"}
-                              {o.status === "yangi" && "⏳ Yangi"}
-                              {!["yetkazildi", "tasdiqlandi", "bekor", "yangi"].includes(o.status) && o.status}
-                            </span>
+                            <div className="flex flex-col items-start gap-1">
+                              <span
+                                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-mono font-bold ${
+                                  o.status === "yetkazildi"
+                                    ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                                    : o.status === "tasdiqlandi"
+                                    ? "bg-blue-50 text-blue-800 border border-blue-200"
+                                    : o.status === "bekor"
+                                    ? "bg-red-50 text-red-700 border border-red-200 font-bold"
+                                    : "bg-amber-50 text-amber-800 border border-amber-200"
+                                }`}
+                              >
+                                {o.status === "yetkazildi" && "✅ Yetkazildi"}
+                                {o.status === "tasdiqlandi" && "🔵 Tasdiqlandi"}
+                                {o.status === "bekor" && "⚠️ Bekor qilingan"}
+                                {o.status === "yangi" && "⏳ Yangi"}
+                                {!["yetkazildi", "tasdiqlandi", "bekor", "yangi"].includes(o.status) && o.status}
+                              </span>
+                              {isUnansweredOver2Hours && (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-red-600 px-2.5 py-0.5 text-[10px] font-mono font-bold text-white shadow-2xs">
+                                  🚨 Javobsiz (2+ soat)
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="py-3 px-4 text-right">
                             <button
@@ -1586,7 +1606,8 @@ export default function SuperAdminPage() {
                             </button>
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                   </tbody>
                 </table>
               </div>
@@ -3036,6 +3057,9 @@ export default function SuperAdminPage() {
 
         {/* 5. BROADCAST TAB */}
         {activeTab === "broadcast" && <AdminBroadcastCenter />}
+
+        {/* 6. SUPPORT / MUROJAATLAR TAB */}
+        {activeTab === "support" && <AdminSupportCenter />}
 
         {/* BUYURTMA BATAFSIL MODAL */}
         {selectedOrderDetail && (

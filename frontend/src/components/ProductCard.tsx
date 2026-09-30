@@ -18,11 +18,27 @@ import { isFavorite, toggleFavorite, FAV_EVENT } from "@/lib/favorites-store";
 import { calculateMedicineRating } from "@/lib/medicine-reviews";
 import { apiUrl } from "@/lib/api-config";
 
-export type ProductCardMedicine = CartStoreMedicine & {
+export type PharmacyMedicine = CartStoreMedicine & {
   usage?: string | null;
   ratingAvg?: number | null;
   ratingCount?: number;
+  updatedAt?: string | null;
 };
+
+export type ProductCardMedicine = PharmacyMedicine;
+
+export function formatMedicineUpdatedAt(updatedAt?: string | null): string | null {
+  if (!updatedAt) return null;
+  const ts = new Date(updatedAt).getTime();
+  if (!Number.isFinite(ts)) return null;
+  const diffMs = Math.max(0, Date.now() - ts);
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays <= 0) return "Bugun yangilangan";
+  if (diffDays === 1) return "1 kun oldin yangilangan";
+  if (diffDays < 30) return `${diffDays} kun oldin yangilangan`;
+  const months = Math.floor(diffDays / 30);
+  return `${months} oy oldin yangilangan`;
+}
 
 export function getShortCity(address?: string | null, orgName?: string | null): string {
   const text = `${address || ""} ${orgName || ""}`.toLowerCase();
@@ -182,6 +198,8 @@ export default function ProductCard({
     );
   };
 
+  const updatedText = formatMedicineUpdatedAt(medicine.updatedAt);
+
   return (
     <div
       onClick={handleCardClick}
@@ -260,11 +278,16 @@ export default function ProductCard({
               </span>
             )}
           </div>
+          {updatedText && (
+            <p className="mt-0.5 text-[10.5px] font-medium text-neutral-400">
+              {updatedText}
+            </p>
+          )}
 
           {/* + Savatga tugmasi */}
           <div className="mt-2">
             {qty > 0 ? (
-              <div className="flex h-9 sm:h-10 w-full items-center justify-between rounded-full bg-[#eaf5e1] border border-[#039e1e]/30 px-1 text-[#039e1e]">
+              <div className="flex h-11 min-h-[44px] w-full items-center justify-between rounded-full bg-[#eaf5e1] border border-[#039e1e]/30 px-0.5 text-[#039e1e]">
                 <button
                   type="button"
                   onClick={(e) => {
@@ -272,10 +295,10 @@ export default function ProductCard({
                     e.stopPropagation();
                     changeQty(-1);
                   }}
-                  className="flex h-7.5 w-7.5 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white text-[#039e1e] shadow-xs active:scale-90 transition font-black"
+                  className="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-white text-[#039e1e] shadow-xs active:scale-90 transition font-black"
                   aria-label="Kamaytirish"
                 >
-                  <Minus size={13} strokeWidth={3} />
+                  <Minus size={15} strokeWidth={3} />
                 </button>
 
                 <span className="text-[12.5px] sm:text-[13px] font-black tracking-tight select-none">
@@ -289,10 +312,10 @@ export default function ProductCard({
                     e.stopPropagation();
                     changeQty(1);
                   }}
-                  className="flex h-7.5 w-7.5 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-[#039e1e] text-white shadow-xs active:scale-90 transition font-black"
+                  className="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-[#039e1e] text-white shadow-xs active:scale-90 transition font-black"
                   aria-label="Ko'paytirish"
                 >
-                  <Plus size={13} strokeWidth={3} />
+                  <Plus size={15} strokeWidth={3} />
                 </button>
               </div>
             ) : (
@@ -303,7 +326,7 @@ export default function ProductCard({
                   e.stopPropagation();
                   add();
                 }}
-                className="flex w-full items-center justify-center rounded-full bg-[#039e1e] hover:bg-[#028518] py-2 sm:py-2.5 text-[12px] sm:text-[13px] font-bold text-white shadow-2xs active:scale-95 transition-all"
+                className="flex h-11 min-h-[44px] w-full items-center justify-center rounded-full bg-[#039e1e] hover:bg-[#028518] px-3 text-[12.5px] sm:text-[13px] font-bold text-white shadow-2xs active:scale-95 transition-all"
               >
                 + Savatga
               </button>

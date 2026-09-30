@@ -28,19 +28,19 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   metadataBase: metadataBase(),
   title: {
-    default: "Agroz AI — Dehqon va chorvador yordamchisi",
-    template: "%s — Agroz AI",
+    default: "AgrozGO — Dehqon va chorvador yordamchisi",
+    template: "%s — AgrozGO",
   },
   description: DESCRIPTION,
-  applicationName: "Agroz AI",
+  applicationName: "AgrozGO",
   openGraph: {
     type: "website",
-    siteName: "Agroz AI",
-    title: "Agroz AI — Dehqon va chorvador yordamchisi",
+    siteName: "AgrozGO",
+    title: "AgrozGO — Dehqon va chorvador yordamchisi",
     description: DESCRIPTION,
     locale: "uz_UZ",
   },
-  appleWebApp: { capable: true, title: "Agroz", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "AgrozGO", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

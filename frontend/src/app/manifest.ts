@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Agroz AI — Dehqon va chorvador yordamchisi",
-    short_name: "Agroz",
+    name: "AgrozGO — Dehqon va chorvador yordamchisi",
+    short_name: "AgrozGO",
     description:
       "Ekin va chorva dori vositalari platformasi, yaqin dorixonalar va mutaxassislar xaritasi.",
     start_url: "/",

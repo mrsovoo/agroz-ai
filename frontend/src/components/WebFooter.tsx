@@ -32,7 +32,7 @@ export default function WebFooter() {
             <Sprout size={20} />
           </span>
           <div>
-            <strong>Agroz AI</strong>
+            <strong>AgrozGO</strong>
             <p>
               Ekin va chorva dori vositalari platformasi, yaqin dorixonalar va mutaxassislar.
             </p>
@@ -54,7 +54,7 @@ export default function WebFooter() {
       </div>
 
       <div className="web-footer-bottom">
-        <span>© {year} Agroz AI</span>
+        <span>© {year} AgrozGO</span>
         <span>Tavsiyalar maslahat xarakterida — jiddiy holatlarda mutaxassisga murojaat qiling.</span>
       </div>
     </footer>

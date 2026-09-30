@@ -370,7 +370,7 @@ export default function LoginPage() {
             <Sprout size={34} />
           </div>
           <h1 className="ios-title mt-3 text-center web:mt-5 web:text-left web:text-[46px]">
-            Agroz AI Profil
+            AgrozGO Profil
           </h1>
           <p className="ios-sub mt-2 text-center web:max-w-[420px] web:text-left web:text-[15.5px] leading-relaxed">
             Dehqon va chorvadorlar uchun yagona yordamchi. Hech qanday murakkab parolsiz,
@@ -850,7 +850,7 @@ export default function LoginPage() {
       </div>
 
       <p className="mt-auto pt-6 text-center text-[11px] text-[var(--brand-muted)] web:pt-2">
-        Agroz AI · Ma&apos;lumotlar himoyalangan va xavfsiz saqlanadi.
+        AgrozGO · Ma&apos;lumotlar himoyalangan va xavfsiz saqlanadi.
       </p>
     </main>
   );

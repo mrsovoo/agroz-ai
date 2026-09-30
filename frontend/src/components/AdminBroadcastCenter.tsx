@@ -595,7 +595,7 @@ export default function AdminBroadcastCenter() {
                     </div>
                     <div>
                       <p className="text-xs font-bold text-white flex items-center gap-1">
-                        Agroz AI Bot
+                        AgrozGO Bot
                         <span className="inline-block h-3 w-3 rounded-full bg-sky-400 text-[8px] text-slate-900 text-center font-black leading-3">
                           ✓
                         </span>

@@ -64,9 +64,9 @@ export default function WebTopNav() {
           prefetch={true}
           onClick={() => closeCart()}
           className="flex items-center gap-2.5 py-1"
-          aria-label="Agroz AI bosh sahifa"
+          aria-label="AgrozGO bosh sahifa"
         >
-          <img src="/logo.svg" alt="Agroz AI" className="h-9 sm:h-10 w-auto object-contain" />
+          <img src="/logo.svg" alt="AgrozGO" className="h-9 sm:h-10 w-auto object-contain" />
         </Link>
 
         {/* Faqat matnli toza navigatsiya havolalari — tezkor prefetch bilan */}

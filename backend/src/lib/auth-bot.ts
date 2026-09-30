@@ -326,6 +326,7 @@ export function approvedPharmacyMenuKeyboard(): ReplyKeyboard {
     keyboard: [
       [{ text: "📦 Buyurtmalar" }, { text: "💊 Dorilarim" }],
       [{ text: "➕ Dori qo'shish" }, { text: "👤 Ma'lumotlarim" }],
+      [{ text: "💬 Yordam" }],
     ],
     resize_keyboard: true,
   };
@@ -336,7 +337,7 @@ export function approvedSpecialistMenuKeyboard(): ReplyKeyboard {
   return {
     keyboard: [
       [{ text: "📋 Chaqiruvlarim" }, { text: "👤 Ma'lumotlarim" }],
-      [{ text: "✏️ Profilni tahrirlash" }],
+      [{ text: "✏️ Profilni tahrirlash" }, { text: "💬 Yordam" }],
     ],
     resize_keyboard: true,
   };
@@ -347,6 +348,7 @@ export function pendingApprovalMenuKeyboard(): ReplyKeyboard {
   return {
     keyboard: [
       [{ text: "⏳ Ariza holati" }, { text: "👤 Ma'lumotlarim" }],
+      [{ text: "💬 Yordam" }],
     ],
     resize_keyboard: true,
   };
@@ -445,7 +447,7 @@ export function welcomeMessage(name?: string, registered = false): string {
   const lines = [
     `👋 Salom${name ? `, ${escapeHtml(name)}` : ""}!`,
     "",
-    "Men <b>Agroz Auth</b> botiman — <b>Agroz AI</b> platformasi uchun mutaxassislar va",
+    "Men <b>Agroz Auth</b> botiman — <b>AgrozGO</b> platformasi uchun mutaxassislar va",
     "dorixona egalarini ro'yxatdan o'tkazaman.",
     "",
     "📋 Ro'yxatdan o'tish uchun quyidagilar so'raladi:",
@@ -524,7 +526,7 @@ export function askSpecialty(): string {
   return [
     "🧑‍🌾 <b>1. Faoliyat yo'nalishingizni tanlang:</b>",
     "",
-    "Agroz AI platformasida qaysi soha bo'yicha fermer va dehqonlarga yordam berasiz?",
+    "AgrozGO platformasida qaysi soha bo'yicha fermer va dehqonlarga yordam berasiz?",
     "Pastdagi 3 ta asosiy yo'nalishdan birini tanlang:",
   ].join("\n");
 }
@@ -622,7 +624,7 @@ export function savedMessage(name: string, role?: string): string {
   return [
     "✅ <b>Ro'yxatdan muvaffaqiyatli o'tdingiz!</b>",
     "",
-    `${escapeHtml(name)}, siz endi <b>Agroz AI</b> platformasida ${isPharmacy ? "dorixona sifatida" : "mutaxassis sifatida"} faolsiz.`,
+    `${escapeHtml(name)}, siz endi <b>AgrozGO</b> platformasida ${isPharmacy ? "dorixona sifatida" : "mutaxassis sifatida"} faolsiz.`,
     "📍 Yaqin atrofdagi dehqon va chorvadorlar sizni xaritada topa oladi va bevosita bog'lanadi.",
     "",
     "💡 Pastdagi tugmalar orqali boshqaruv panelidan foydalanishingiz mumkin.",
@@ -634,7 +636,7 @@ export function applicationPendingMessage(name: string, role: string, orgName?: 
   const rows = [
     "📋 <b>Arizangiz qabul qilindi!</b>",
     "",
-    `Hurmatli <b>${escapeHtml(name)}</b>! Sizning <b>${roleLabel}</b> sifatida yuborgan arizangiz Agroz AI ma'muriyatiga ko'rib chiqish uchun yuborildi.`,
+    `Hurmatli <b>${escapeHtml(name)}</b>! Sizning <b>${roleLabel}</b> sifatida yuborgan arizangiz AgrozGO ma'muriyatiga ko'rib chiqish uchun yuborildi.`,
   ];
   if (orgName) rows.push(`🏪 Dorixona: <b>${escapeHtml(orgName)}</b>`);
   rows.push(
@@ -667,7 +669,7 @@ export function applicationStatusMessage(s: {
   return [
     "⏳ <b>Arizangiz ko'rib chiqilmoqda</b>",
     "",
-    `Hurmatli <b>${escapeHtml(s.name)}</b>! Sizning <b>${roleLabel}</b> arizangiz hozirda Agroz AI ma'muriyati tomonidan ko'rib chiqilmoqda.`,
+    `Hurmatli <b>${escapeHtml(s.name)}</b>! Sizning <b>${roleLabel}</b> arizangiz hozirda AgrozGO ma'muriyati tomonidan ko'rib chiqilmoqda.`,
     s.organization ? `🏪 Tashkilot: <b>${escapeHtml(s.organization)}</b>\n` : "",
     "Adminlarimiz arizangizni tekshirib tasdiqlagach, sizga darhol xabarnoma yuboriladi va botdagi barcha funksiyalar ochiladi.",
   ].filter(Boolean).join("\n");
@@ -815,12 +817,17 @@ export function medicinesListMessage(
   }
   for (const m of items) {
     const t = m.type === "crop" ? "🌱" : m.type === "animal" ? "🐄" : "📦";
-    const status = m.status === "bor" ? "✅ Bor" : "❌ Yo'q";
-    const price = m.price ? ` · ${formatSum(m.price)}` : "";
+    const status =
+      m.status === "bor"
+        ? "✅ Bor"
+        : m.status === "qoralama"
+        ? "📝 Qoralama (rasm yoki narx yo'q)"
+        : "❌ Yo'q";
+    const price = m.price ? ` · ${formatSum(m.price)}` : " · Narxsiz";
     lines.push(`${t} <b>${escapeHtml(m.name)}</b>`);
     lines.push(`   ${status}${price}`);
   }
-  lines.push("", "Dori ustiga bossangiz — bor/yo'q, narx, o'chirish.");
+  lines.push("", "Dori ustiga bossangiz — bor/yo'q, narx, rasm, o'chirish.");
   return lines.join("\n");
 }
 
@@ -831,7 +838,7 @@ export function medicinesListKeyboard(
     inline_keyboard: [
       ...items.slice(0, 15).map((m) => [
         {
-          text: `${m.status === "bor" ? "✅" : "❌"} ${m.name.slice(0, 28)}`,
+          text: `${m.status === "bor" ? "✅" : m.status === "qoralama" ? "📝" : "❌"} ${m.name.slice(0, 28)}`,
           callback_data: `mm:${m.id}`,
         },
       ]),
@@ -840,7 +847,7 @@ export function medicinesListKeyboard(
   };
 }
 
-/** Bitta dori boshqaruvi klaviaturasi (bor/yoq, narx, o'chirish). */
+/** Bitta dori boshqaruvi klaviaturasi (bor/yoq, narx, rasm, o'chirish). */
 export function medicineManageKeyboard(m: {
   id: number;
   status: string;
@@ -853,7 +860,10 @@ export function medicineManageKeyboard(m: {
           : { text: "✅ Bor deb belgilash", callback_data: `ms:${m.id}:bor` },
         { text: "💰 Narx", callback_data: `mp:set:${m.id}` },
       ],
-      [{ text: "🗑 O'chirish", callback_data: `md:${m.id}` }],
+      [
+        { text: "📸 Rasm yuklash", callback_data: `mp:photo:${m.id}` },
+        { text: "🗑 O'chirish", callback_data: `md:${m.id}` },
+      ],
       [{ text: "⬅️ Ro'yxatga qaytish", callback_data: "m:list" }],
     ],
   };
@@ -866,13 +876,23 @@ export function medicineManageMessage(m: {
   status: string;
   price?: number | null;
   usage?: string | null;
+  photoFileId?: string | null;
+  photoData?: string | null;
 }): string {
   const t = m.type === "crop" ? "🌱" : m.type === "animal" ? "🐄" : "📦";
+  const hasPhoto = Boolean(m.photoFileId || m.photoData);
+  const statusLabel =
+    m.status === "bor"
+      ? "✅ Bor (mijozlarga ko'rinadi)"
+      : m.status === "qoralama"
+      ? "📝 Qoralama (rasm yoki narx yo'q — vaqtincha yashirilgan)"
+      : "❌ Yo'q";
   return [
     `${t} <b>${escapeHtml(m.name)}</b>`,
     "",
-    `Holat: <b>${m.status === "bor" ? "✅ Bor" : "❌ Yo'q"}</b>`,
-    m.price ? `Narx: <b>${formatSum(m.price)}</b>` : "Narx: kiritilmagan",
+    `Holat: <b>${statusLabel}</b>`,
+    m.price ? `Narx: <b>${formatSum(m.price)}</b>` : "Narx: ⚠️ <b>kiritilmagan (majburiy)</b>",
+    `Rasm: ${hasPhoto ? "✅ <b>yuklangan</b>" : "⚠️ <b>yuklanmagan (majburiy, min 400×400)</b>"}`,
     ...(m.usage ? [`Nima uchun: ${escapeHtml(m.usage)}`] : []),
     "",
     "Kerakli amalni tanlang:",

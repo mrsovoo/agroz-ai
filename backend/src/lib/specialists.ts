@@ -67,6 +67,7 @@ export type MedicineDto = {
   /** Dori qoldig'i (dona/kg). */
   stock: number;
   stockUnit: string;
+  updatedAt?: string | null;
 };
 
 export type SpecialistDto = {
@@ -274,11 +275,20 @@ export async function addMedicine(params: {
   photoData?: string | null;
   type?: "crop" | "animal" | "general";
   usage?: string | null;
-  /** Narx so'mda (ixtiyoriy). */
+  /** Narx so'mda (majburiy). */
   price?: number | null;
   stock?: number;
   stockUnit?: string;
 }) {
+  const hasPhoto = Boolean(params.photoFileId || params.photoData);
+  const hasPrice = typeof params.price === "number" && params.price > 0;
+  const computedStatus =
+    !hasPhoto || !hasPrice
+      ? "qoralama"
+      : params.stock !== undefined && params.stock <= 0
+      ? "yoq"
+      : "bor";
+
   const rows = await db
     .insert(specialistMedicines)
     .values({
@@ -291,23 +301,42 @@ export async function addMedicine(params: {
       price: params.price ?? null,
       stock: params.stock !== undefined ? Math.max(0, params.stock) : 10,
       stockUnit: params.stockUnit || "dona",
-      status: (params.stock !== undefined && params.stock <= 0) ? "yoq" : "bor",
+      status: computedStatus,
+      updatedAt: new Date(),
     })
     .returning();
   return rows[0];
 }
 
-/** Dorining bor/yoq statusini almashtiradi. Egalik tekshiriladi. */
+/** Dorining bor/yoq/qoralama statusini almashtiradi. Egalik tekshiriladi. */
 export async function setMedicineStatus(
   telegramId: number,
   medicineId: number,
-  status: "bor" | "yoq",
+  status: "bor" | "yoq" | "qoralama",
 ): Promise<boolean> {
   const profile = await getSpecialistByTelegramId(telegramId);
   if (!profile || profile.role !== "pharmacy") return false;
+
+  const existing = await db
+    .select()
+    .from(specialistMedicines)
+    .where(
+      and(
+        eq(specialistMedicines.id, medicineId),
+        eq(specialistMedicines.specialistId, profile.id),
+      ),
+    )
+    .limit(1);
+  const med = existing[0];
+  if (!med) return false;
+
+  const hasPhoto = Boolean(med.photoFileId || med.photoData);
+  const hasPrice = typeof med.price === "number" && med.price > 0;
+  const nextStatus = status === "bor" && (!hasPhoto || !hasPrice) ? "qoralama" : status;
+
   const rows = await db
     .update(specialistMedicines)
-    .set({ status })
+    .set({ status: nextStatus, updatedAt: new Date() })
     .where(
       and(
         eq(specialistMedicines.id, medicineId),
@@ -318,7 +347,7 @@ export async function setMedicineStatus(
   return rows.length > 0;
 }
 
-/** Dorining narxini yangilaydi (null — narx olib tashlanadi). Egalik tekshiriladi. */
+/** Dorining narxini yangilaydi. Rasm ham bor bo'lsa qoralama holatdan 'bor' ga o'tkazadi. */
 export async function setMedicinePrice(
   telegramId: number,
   medicineId: number,
@@ -326,9 +355,76 @@ export async function setMedicinePrice(
 ): Promise<boolean> {
   const profile = await getSpecialistByTelegramId(telegramId);
   if (!profile || profile.role !== "pharmacy") return false;
+
+  const existing = await db
+    .select()
+    .from(specialistMedicines)
+    .where(
+      and(
+        eq(specialistMedicines.id, medicineId),
+        eq(specialistMedicines.specialistId, profile.id),
+      ),
+    )
+    .limit(1);
+  const med = existing[0];
+  if (!med) return false;
+
+  const hasPhoto = Boolean(med.photoFileId || med.photoData);
+  const hasPrice = typeof price === "number" && price > 0;
+  const nextStatus =
+    !hasPhoto || !hasPrice
+      ? "qoralama"
+      : med.status === "qoralama"
+      ? "bor"
+      : med.status;
+
   const rows = await db
     .update(specialistMedicines)
-    .set({ price })
+    .set({ price, status: nextStatus, updatedAt: new Date() })
+    .where(
+      and(
+        eq(specialistMedicines.id, medicineId),
+        eq(specialistMedicines.specialistId, profile.id),
+      ),
+    )
+    .returning({ id: specialistMedicines.id });
+  return rows.length > 0;
+}
+
+/** Dorining rasmini yangilaydi. Narxi ham bor bo'lsa qoralama holatdan 'bor' ga o'tkazadi. */
+export async function setMedicinePhoto(
+  telegramId: number,
+  medicineId: number,
+  photoFileId: string,
+  photoData: string | null,
+): Promise<boolean> {
+  const profile = await getSpecialistByTelegramId(telegramId);
+  if (!profile || profile.role !== "pharmacy") return false;
+
+  const existing = await db
+    .select()
+    .from(specialistMedicines)
+    .where(
+      and(
+        eq(specialistMedicines.id, medicineId),
+        eq(specialistMedicines.specialistId, profile.id),
+      ),
+    )
+    .limit(1);
+  const med = existing[0];
+  if (!med) return false;
+
+  const hasPrice = typeof med.price === "number" && med.price > 0;
+  const nextStatus = !hasPrice ? "qoralama" : med.status === "qoralama" ? "bor" : med.status;
+
+  const rows = await db
+    .update(specialistMedicines)
+    .set({
+      photoFileId,
+      photoData,
+      status: nextStatus,
+      updatedAt: new Date(),
+    })
     .where(
       and(
         eq(specialistMedicines.id, medicineId),
@@ -395,10 +491,11 @@ export async function listSpecialists(opts: {
 
   const bySpecialist = new Map<number, MedicineDto[]>();
   for (const m of medicineRows) {
-    if (m.status === "yoq") {
+    const hasPhoto = Boolean(m.photoFileId || m.photoData);
+    const hasPrice = typeof m.price === "number" && m.price > 0;
+    if (m.status === "yoq" || m.status === "qoralama" || !hasPhoto || !hasPrice) {
       continue;
     }
-    const hasPhoto = Boolean(m.photoFileId || m.photoData);
     const list = bySpecialist.get(m.specialistId) ?? [];
     list.push({
       id: m.id,
@@ -415,6 +512,7 @@ export async function listSpecialists(opts: {
       price: m.price,
       stock: m.stock ?? 10,
       stockUnit: m.stockUnit ?? "dona",
+      updatedAt: m.updatedAt ? new Date(m.updatedAt).toISOString() : m.createdAt ? new Date(m.createdAt).toISOString() : null,
     });
     bySpecialist.set(m.specialistId, list);
   }

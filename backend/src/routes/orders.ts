@@ -138,7 +138,7 @@ router.post("/", async (req, res) => {
       console.warn(`[orders] Dorixona (#${result.pharmacy.id}) uchun telegramId mavjud emas`);
     }
 
-    // Xaridorga Agroz AI bot (@agrozai_bot) orqali avtomatik kvitansiya xabarnomasi
+    // Xaridorga AgrozGO bot (@agroz_bot) orqali avtomatik kvitansiya xabarnomasi
     try {
       let customerTelegramId = user?.telegramId ?? null;
 
@@ -206,13 +206,25 @@ router.post("/", async (req, res) => {
 // GET /api/orders/track
 router.get("/track", async (req, res) => {
   try {
-    const raw = (req.query.phone as string) || "";
-    const clean = raw.replace(/\D/g, "");
-    if (!clean || clean.length < 7) {
-      return res.status(400).json({ error: "Telefon raqamni to'liq kiriting" });
+    const user = await getUserFromReq(req);
+    if (!user) {
+      return res.status(401).json({ error: "Buyurtmalarni ko'rish uchun avval tizimga kiring" });
     }
 
-    const suffix = clean.slice(-9);
+    const userPhoneDigits = (user.phone || "").replace(/\D/g, "").slice(-9);
+    const secondPhoneDigits = (user.secondPhone || "").replace(/\D/g, "").slice(-9);
+
+    const ownershipConditions = [eq(orders.userId, user.id)];
+    if (userPhoneDigits.length === 9) {
+      ownershipConditions.push(
+        sql`RIGHT(REGEXP_REPLACE(${orders.customerPhone}, '\\D', '', 'g'), 9) = ${userPhoneDigits}`,
+      );
+    }
+    if (secondPhoneDigits.length === 9) {
+      ownershipConditions.push(
+        sql`RIGHT(REGEXP_REPLACE(${orders.customerPhone}, '\\D', '', 'g'), 9) = ${secondPhoneDigits}`,
+      );
+    }
 
     const orderRows = await db
       .select({
@@ -229,9 +241,9 @@ router.get("/track", async (req, res) => {
       })
       .from(orders)
       .leftJoin(specialists, eq(specialists.id, orders.pharmacySpecialistId))
-      .where(sql`replace(replace(${orders.customerPhone}, '+', ''), ' ', '') like ${'%' + suffix}`)
+      .where(or(...ownershipConditions))
       .orderBy(desc(orders.id))
-      .limit(10);
+      .limit(20);
 
     if (orderRows.length === 0) {
       return res.json({ orders: [] });
@@ -278,9 +290,14 @@ router.get("/track", async (req, res) => {
 // POST /api/orders/rate
 router.post("/rate", async (req, res) => {
   try {
+    const user = await getUserFromReq(req);
+    if (!user) {
+      return res.status(401).json({ error: "Baholash uchun tizimga kiring" });
+    }
+
     const body = req.body || {};
     const orderId = Number(body.orderId);
-    const customerPhone = normalizePhone(body.customerPhone);
+    const customerPhone = normalizePhone(user.phone || body.customerPhone);
     const stars = Number(body.stars);
     const note = cleanText(body.note, 300);
 

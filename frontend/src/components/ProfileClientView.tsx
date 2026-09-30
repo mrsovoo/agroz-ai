@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronRight, LogOut, Check } from "lucide-react";
 import OrderTrackingStatusCard from "@/components/OrderTrackingStatusCard";
+import SupportTicketsPanel from "@/components/SupportTicketsPanel";
 import { getTelegramUser } from "@/lib/telegram";
 import { apiUrl, apiFetch } from "@/lib/api-config";
 import { loadLastOrder } from "@/lib/cart-store";
@@ -400,7 +401,10 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
         )}
       </div>
 
-      {/* 5. Pastki qo'shimcha amallar (Chiqish) */}
+      {/* 5. Yordam / Bog'lanish (Support Tickets) bo'limi */}
+      <SupportTicketsPanel />
+
+      {/* 6. Pastki qo'shimcha amallar (Chiqish) */}
       <div className="mt-9 pt-4 border-t border-neutral-200/80 flex items-center justify-between">
         <button
           type="button"

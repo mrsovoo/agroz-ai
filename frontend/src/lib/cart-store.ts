@@ -14,6 +14,7 @@ export type CartStoreMedicine = {
   status: string;
   stock?: number | null;
   stockUnit?: string | null;
+  updatedAt?: string | null;
 };
 
 export type CartStorePharmacy = {

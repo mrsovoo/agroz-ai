@@ -365,7 +365,7 @@ export default function WeatherAlertBanner({
 
       <p className="mt-2.5 flex items-center gap-1 text-[11.5px] font-medium text-neutral-500">
         <Info size={12} />
-        Gidrometeorologiya va Open-Meteo tahlili asosida Agroz AI agro-tizimi tomonidan tayyorlandi.
+        Gidrometeorologiya va Open-Meteo tahlili asosida AgrozGO agro-tizimi tomonidan tayyorlandi.
       </p>
     </section>
   );

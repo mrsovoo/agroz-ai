@@ -35,7 +35,7 @@ export default function AdminWeatherAlertsBroadcast() {
   const [alertType, setAlertType] = useState<"frost" | "heavy_rain">("frost");
   const [customTitle, setCustomTitle] = useState("");
   const [customMessage, setCustomMessage] = useState("");
-  const [buttonText, setButtonText] = useState("🌐 Agroz AI platformasi");
+  const [buttonText, setButtonText] = useState("🌐 AgrozGO platformasi");
   const [buttonUrl, setButtonUrl] = useState("https://agroz.uz");
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{
@@ -190,7 +190,7 @@ export default function AdminWeatherAlertsBroadcast() {
                 type="text"
                 value={buttonText}
                 onChange={(e) => setButtonText(e.target.value)}
-                placeholder="🌐 Agroz AI platformasi"
+                placeholder="🌐 AgrozGO platformasi"
                 className="mt-1 w-full rounded-lg bg-slate-900 px-3 py-2 text-xs text-white border border-slate-700 focus:border-emerald-500 focus:outline-none"
               />
             </div>

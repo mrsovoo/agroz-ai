@@ -13,8 +13,11 @@ import {
   adminSessions,
   sessions,
   botStates,
+  supportTickets,
+  supportMessages,
+  broadcasts,
 } from "../db/schema.js";
-import { sql, eq, desc, isNotNull, and, or, inArray } from "drizzle-orm";
+import { sql, eq, desc, asc, isNotNull, and, or, inArray } from "drizzle-orm";
 import {
   adminEnabled,
   adminLogin,
@@ -87,6 +90,19 @@ router.get("/me", async (req, res) => {
   }
 });
 
+// Admin login brute-force himoyasi: 5 marta xato urinishdan keyin 15 daqiqaga bloklash
+const ADMIN_MAX_FAILED_ATTEMPTS = 5;
+const ADMIN_LOCKOUT_MS = 15 * 60 * 1000;
+const adminLoginAttempts = new Map<string, { failedCount: number; lockedUntil: number }>();
+
+function getClientIp(req: any): string {
+  const forwarded = req.headers?.["x-forwarded-for"];
+  if (typeof forwarded === "string" && forwarded.trim()) {
+    return forwarded.split(",")[0].trim();
+  }
+  return req.socket?.remoteAddress || "unknown-ip";
+}
+
 // POST /api/admin/login & POST /api/admin/session
 async function handleLogin(req: any, res: any) {
   if (!(await adminEnabled())) {
@@ -98,10 +114,46 @@ async function handleLogin(req: any, res: any) {
     return res.status(400).json({ error: "Login va parol kiritilishi shart" });
   }
 
+  const ip = getClientIp(req);
+  const now = Date.now();
+  const attemptKey = `${ip}:${String(username).trim().toLowerCase()}`;
+  const ipState = adminLoginAttempts.get(ip);
+  const userState = adminLoginAttempts.get(attemptKey);
+
+  const activeLockUntil = Math.max(ipState?.lockedUntil ?? 0, userState?.lockedUntil ?? 0);
+  if (activeLockUntil > now) {
+    const remainingMinutes = Math.ceil((activeLockUntil - now) / 60_000);
+    return res.status(429).json({
+      error: `5 marta xato urinish tufayli kirish 15 daqiqaga bloklandi. (${remainingMinutes} daqiqadan so'ng qayta urinib ko'ring)`,
+      retryAfterMs: activeLockUntil - now,
+    });
+  }
+
   const result = await adminLogin(username, password);
   if (!result.ok) {
-    return res.status(401).json({ error: "Login yoki parol noto'g'ri" });
+    const nextIpCount = ((ipState && ipState.lockedUntil <= now && ipState.lockedUntil > 0) ? 0 : (ipState?.failedCount ?? 0)) + 1;
+    const nextUserCount = ((userState && userState.lockedUntil <= now && userState.lockedUntil > 0) ? 0 : (userState?.failedCount ?? 0)) + 1;
+    const maxCount = Math.max(nextIpCount, nextUserCount);
+    const lockedUntil = maxCount >= ADMIN_MAX_FAILED_ATTEMPTS ? now + ADMIN_LOCKOUT_MS : 0;
+
+    adminLoginAttempts.set(ip, { failedCount: nextIpCount, lockedUntil });
+    adminLoginAttempts.set(attemptKey, { failedCount: nextUserCount, lockedUntil });
+
+    if (lockedUntil > now) {
+      return res.status(429).json({
+        error: "5 marta xato urinish tufayli kirish 15 daqiqaga bloklandi",
+        retryAfterMs: ADMIN_LOCKOUT_MS,
+      });
+    }
+
+    return res.status(401).json({
+      error: `Login yoki parol noto'g'ri (qolgan urinishlar: ${ADMIN_MAX_FAILED_ATTEMPTS - maxCount})`,
+    });
   }
+
+  // Muvaffaqiyatli kirishda xato urinishlar hisoblagichini tozalaymiz
+  adminLoginAttempts.delete(ip);
+  adminLoginAttempts.delete(attemptKey);
 
   res.cookie(ADMIN_COOKIE, result.sessionId, {
     httpOnly: true,
@@ -1337,7 +1389,7 @@ router.post("/weather-alerts/broadcast", requireAdmin, async (req, res) => {
   try {
     const { region, alertType, customTitle, customMessage, buttonText, buttonUrl } = req.body || {};
 
-    const effectiveButtonText = (buttonText || "").trim() || "🌐 Agroz AI platformasi";
+    const effectiveButtonText = (buttonText || "").trim() || "🌐 AgrozGO platformasi";
     const effectiveButtonUrl =
       (buttonUrl || "").trim() ||
       process.env.NEXT_PUBLIC_APP_URL ||
@@ -1384,7 +1436,7 @@ router.post("/weather-alerts/broadcast", requireAdmin, async (req, res) => {
       }
     }
 
-    messageLines.push("", "📱 <i>Agroz AI — Ekin va chorva uchun aqlli tizim</i>");
+    messageLines.push("", "📱 <i>AgrozGO — Ekin va chorva uchun aqlli tizim</i>");
     const broadcastText = messageLines.join("\n");
 
     // Maqsadli Telegram foydalanuvchilarini topish
@@ -1481,7 +1533,7 @@ router.get("/messages/recipients-count", requireAdmin, async (_req, res) => {
   }
 });
 
-router.post("/messages/send", requireAdmin, async (req, res) => {
+async function handleAdminSendBroadcast(req: any, res: any) {
   try {
     const {
       targetType, // "pharmacies" | "specialists" | "users" | "all" | "direct"
@@ -1511,8 +1563,8 @@ router.post("/messages/send", requireAdmin, async (req, res) => {
     }
 
     // Pastki imzo (signature): agar berilgan bo'lsa, trim qilingan matn qo'yiladi. Bo'sh bo'lsa imzo qo'yilmaydi.
-    // Agar umuman yuborilmagan bo'lsa, standart "AgrozAI" qo'yiladi.
-    const customSig = signature !== undefined ? String(signature).trim() : "AgrozAI";
+    // Agar umuman yuborilmagan bo'lsa, standart "AgrozGO" qo'yiladi.
+    const customSig = signature !== undefined ? String(signature).trim() : "AgrozGO";
     if (customSig) {
       textLines.push("");
       textLines.push(`<i>${escapeHtml(customSig)}</i>`);
@@ -1610,7 +1662,7 @@ router.post("/messages/send", requireAdmin, async (req, res) => {
         });
       }
 
-       try {
+      try {
         const ok = await sendToTg(tgId, recType === "pharmacy" || recType === "specialist");
 
         if (ok) {
@@ -1693,54 +1745,144 @@ router.post("/messages/send", requireAdmin, async (req, res) => {
       });
     }
 
-    // Send to pharmacies (@agroz_auth_bot)
-    for (const tgId of targetPharmacies) {
-      try {
-        const ok = await sendToTg(tgId, true);
-        if (ok) sentCount++;
-        else failedCount++;
-      } catch {
-        failedCount++;
-      }
-      if (totalTarget > 10) await sleep(35);
-    }
+    const [createdBroadcast] = await db
+      .insert(broadcasts)
+      .values({
+        text: fullText,
+        target: String(targetType || "all"),
+        total: totalTarget,
+        sentCount: 0,
+        failedCount: 0,
+        status: "jarayonda",
+      })
+      .returning();
 
-    // Send to specialists (@agroz_auth_bot)
-    for (const tgId of targetSpecialists) {
-      try {
-        const ok = await sendToTg(tgId, true);
-        if (ok) sentCount++;
-        else failedCount++;
-      } catch {
-        failedCount++;
-      }
-      if (totalTarget > 10) await sleep(35);
-    }
+    const broadcastId = createdBroadcast.id;
 
-    // Send to users (@agroz_bot)
-    for (const tgId of targetUsers) {
-      try {
-        const ok = await sendToTg(tgId, false);
-        if (ok) sentCount++;
-        else failedCount++;
-      } catch {
-        failedCount++;
-      }
-      if (totalTarget > 10) await sleep(35);
-    }
-
-    return res.json({
+    // Return immediately so HTTP request does not time out on large broadcasts
+    res.json({
       ok: true,
-      sentCount,
-      failedCount,
+      broadcastId,
+      status: "jarayonda",
+      sentCount: 0,
+      failedCount: 0,
+      remaining: totalTarget,
+      total: totalTarget,
       totalTarget,
-      message: `Xabar ${sentCount} ta qabul qiluvchiga muvaffaqiyatli yetkazildi!${
-        failedCount > 0 ? ` (${failedCount} ta xatolik)` : ""
-      }`,
+      message: `Yuborish boshlandi (${totalTarget} ta qabul qiluvchi)`,
+    });
+
+    // Background job execution (~28 msg/sec = 36ms delay to respect Telegram 30 msg/sec limit)
+    setImmediate(async () => {
+      try {
+        const recipients: Array<{ tgId: number; useAuth: boolean }> = [
+          ...targetPharmacies.map((tgId) => ({ tgId, useAuth: true })),
+          ...targetSpecialists.map((tgId) => ({ tgId, useAuth: true })),
+          ...targetUsers.map((tgId) => ({ tgId, useAuth: false })),
+        ];
+
+        for (let i = 0; i < recipients.length; i++) {
+          const item = recipients[i];
+          try {
+            const ok = await sendToTg(item.tgId, item.useAuth);
+            if (ok) sentCount++;
+            else failedCount++;
+          } catch {
+            failedCount++;
+          }
+
+          if ((i + 1) % 5 === 0 || i === recipients.length - 1) {
+            await db
+              .update(broadcasts)
+              .set({ sentCount, failedCount })
+              .where(eq(broadcasts.id, broadcastId))
+              .catch(() => {});
+          }
+
+          if (i < recipients.length - 1) {
+            await sleep(36);
+          }
+        }
+
+        await db
+          .update(broadcasts)
+          .set({
+            sentCount,
+            failedCount,
+            status: "tugadi",
+          })
+          .where(eq(broadcasts.id, broadcastId));
+      } catch (bgErr) {
+        console.error(`[admin broadcast background job #${broadcastId} error]:`, bgErr);
+        await db
+          .update(broadcasts)
+          .set({
+            sentCount,
+            failedCount,
+            status: "toxtadi",
+          })
+          .where(eq(broadcasts.id, broadcastId))
+          .catch(() => {});
+      }
     });
   } catch (err: any) {
     console.error("[admin custom message broadcast error]:", err);
-    res.status(500).json({ error: err.message || "Xabar yuborishda xatolik yuz berdi" });
+    if (!res.headersSent) {
+      res.status(500).json({ error: err.message || "Xabar yuborishda xatolik yuz berdi" });
+    }
+  }
+}
+
+router.post("/messages/send", requireAdmin, handleAdminSendBroadcast);
+router.post("/broadcast/send", requireAdmin, handleAdminSendBroadcast);
+
+router.get("/broadcasts", requireAdmin, async (_req, res) => {
+  try {
+    const rows = await db
+      .select()
+      .from(broadcasts)
+      .orderBy(desc(broadcasts.createdAt))
+      .limit(20);
+    return res.json({
+      ok: true,
+      broadcasts: rows.map((row) => ({
+        ...row,
+        remaining: Math.max(0, (row.total || 0) - (row.sentCount || 0) - (row.failedCount || 0)),
+      })),
+    });
+  } catch (err: any) {
+    console.error("[admin list broadcasts error]:", err);
+    return res.status(500).json({ ok: false, error: "Ommaviy xabarlar tarixini olishda xatolik" });
+  }
+});
+
+router.get("/broadcasts/:id", requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id) || id <= 0) {
+      return res.status(400).json({ ok: false, error: "Broadcast ID noto'g'ri" });
+    }
+    const [row] = await db
+      .select()
+      .from(broadcasts)
+      .where(eq(broadcasts.id, id))
+      .limit(1);
+
+    if (!row) {
+      return res.status(404).json({ ok: false, error: "Ommaviy xabar topilmadi" });
+    }
+
+    const remaining = Math.max(0, (row.total || 0) - (row.sentCount || 0) - (row.failedCount || 0));
+    return res.json({
+      ok: true,
+      broadcast: {
+        ...row,
+        remaining,
+      },
+    });
+  } catch (err: any) {
+    console.error("[admin get broadcast status error]:", err);
+    return res.status(500).json({ ok: false, error: "Broadcast holatini olishda xatolik" });
   }
 });
 
@@ -2174,4 +2316,228 @@ router.post("/cleanup-orphans", requireAdmin, async (_req, res) => {
   }
 });
 
+// -------------------------------------------------------------
+// 15. SUPPORT / MUROJAATLAR BOSHQARUVI
+// -------------------------------------------------------------
+
+// GET /api/admin/support/tickets
+router.get("/support/tickets", requireAdmin, async (req, res) => {
+  try {
+    const statusFilter = typeof req.query.status === "string" ? req.query.status.trim() : "";
+
+    const allTickets = await db
+      .select()
+      .from(supportTickets)
+      .orderBy(desc(supportTickets.updatedAt));
+
+    const filteredTickets =
+      statusFilter && statusFilter !== "all"
+        ? allTickets.filter((t) => t.status === statusFilter)
+        : allTickets;
+
+    if (filteredTickets.length === 0) {
+      return res.json({
+        ok: true,
+        items: [],
+        counts: {
+          total: allTickets.length,
+          yangi: allTickets.filter((t) => t.status === "yangi").length,
+          javob_berildi: allTickets.filter((t) => t.status === "javob_berildi").length,
+          yopiq: allTickets.filter((t) => t.status === "yopiq").length,
+        },
+      });
+    }
+
+    const ticketIds = filteredTickets.map((t) => t.id);
+    const [allMessages, allUsers, allSpecs] = await Promise.all([
+      db
+        .select()
+        .from(supportMessages)
+        .where(inArray(supportMessages.ticketId, ticketIds))
+        .orderBy(asc(supportMessages.createdAt)),
+      db.select().from(users),
+      db.select().from(specialists),
+    ]);
+
+    const userById = new Map<number, (typeof allUsers)[0]>();
+    const userByTg = new Map<number, (typeof allUsers)[0]>();
+    for (const u of allUsers) {
+      userById.set(u.id, u);
+      if (u.telegramId) userByTg.set(Number(u.telegramId), u);
+    }
+
+    const specById = new Map<number, (typeof allSpecs)[0]>();
+    const specByTg = new Map<number, (typeof allSpecs)[0]>();
+    for (const s of allSpecs) {
+      specById.set(s.id, s);
+      if (s.telegramId) specByTg.set(Number(s.telegramId), s);
+    }
+
+    const msgMap = new Map<number, typeof allMessages>();
+    for (const m of allMessages) {
+      const list = msgMap.get(m.ticketId) ?? [];
+      list.push(m);
+      msgMap.set(m.ticketId, list);
+    }
+
+    const items = filteredTickets.map((t) => {
+      const spec =
+        (t.specialistId ? specById.get(t.specialistId) : undefined) ||
+        (t.telegramId ? specByTg.get(Number(t.telegramId)) : undefined);
+      const usr =
+        (t.userId ? userById.get(t.userId) : undefined) ||
+        (t.telegramId ? userByTg.get(Number(t.telegramId)) : undefined);
+
+      const senderName =
+        t.userType === "specialist"
+          ? spec?.organization || spec?.name || usr?.name || `Mutaxassis #${t.specialistId || t.telegramId || t.id}`
+          : usr?.name || spec?.name || `Foydalanuvchi #${t.userId || t.telegramId || t.id}`;
+      const senderPhone =
+        t.userType === "specialist" ? spec?.phone || usr?.phone || null : usr?.phone || spec?.phone || null;
+      const chatId = t.telegramId ?? spec?.telegramId ?? usr?.telegramId ?? null;
+
+      return {
+        ...t,
+        senderName,
+        senderPhone,
+        chatId: chatId ? Number(chatId) : null,
+        messages: msgMap.get(t.id) ?? [],
+      };
+    });
+
+    res.json({
+      ok: true,
+      items,
+      counts: {
+        total: allTickets.length,
+        yangi: allTickets.filter((t) => t.status === "yangi").length,
+        javob_berildi: allTickets.filter((t) => t.status === "javob_berildi").length,
+        yopiq: allTickets.filter((t) => t.status === "yopiq").length,
+      },
+    });
+  } catch (err: any) {
+    console.error("[GET /api/admin/support/tickets error]:", err);
+    res.status(500).json({ error: err.message || "Murojaatlarni yuklashda xatolik" });
+  }
+});
+
+// POST /api/admin/support/tickets/:id/reply
+router.post("/support/tickets/:id/reply", requireAdmin, async (req, res) => {
+  try {
+    const ticketId = Number(req.params.id);
+    if (!Number.isSafeInteger(ticketId) || ticketId <= 0) {
+      return res.status(400).json({ error: "Noto'g'ri murojaat ID" });
+    }
+
+    const text = String(req.body?.text || "").trim();
+    if (!text) {
+      return res.status(400).json({ error: "Javob matnini kiriting" });
+    }
+
+    const [ticket] = await db
+      .select()
+      .from(supportTickets)
+      .where(eq(supportTickets.id, ticketId))
+      .limit(1);
+
+    if (!ticket) {
+      return res.status(404).json({ error: "Murojaat topilmadi" });
+    }
+
+    const [createdMsg] = await db
+      .insert(supportMessages)
+      .values({
+        ticketId: ticket.id,
+        sender: "admin",
+        text,
+        createdAt: new Date(),
+      })
+      .returning();
+
+    const nextStatus = req.body?.closeTicket ? "yopiq" : "javob_berildi";
+    await db
+      .update(supportTickets)
+      .set({
+        status: nextStatus,
+        updatedAt: new Date(),
+      })
+      .where(eq(supportTickets.id, ticket.id));
+
+    // Telegram chat_id (telegram_id) ni bazadan aniqlaymiz va sendMessage yuboramiz
+    let chatId: number | null = ticket.telegramId ? Number(ticket.telegramId) : null;
+    if (!chatId && ticket.userId) {
+      const [u] = await db
+        .select({ telegramId: users.telegramId })
+        .from(users)
+        .where(eq(users.id, ticket.userId))
+        .limit(1);
+      if (u?.telegramId) chatId = Number(u.telegramId);
+    }
+    if (!chatId && ticket.specialistId) {
+      const [s] = await db
+        .select({ telegramId: specialists.telegramId })
+        .from(specialists)
+        .where(eq(specialists.id, ticket.specialistId))
+        .limit(1);
+      if (s?.telegramId) chatId = Number(s.telegramId);
+    }
+
+    let telegramDelivered = false;
+    if (chatId) {
+      const tgText = [
+        `💬 <b>AgrozGO Qo'llab-quvvatlash xizmati (Murojaat #${ticket.id})</b>`,
+        "",
+        escapeHtml(text),
+      ].join("\n");
+
+      try {
+        if (ticket.userType === "specialist") {
+          telegramDelivered = await sendAuthMessage(chatId, tgText);
+          if (!telegramDelivered) {
+            telegramDelivered = await sendMessage(chatId, tgText);
+          }
+        } else {
+          telegramDelivered = await sendMessage(chatId, tgText);
+          if (!telegramDelivered) {
+            telegramDelivered = await sendAuthMessage(chatId, tgText);
+          }
+        }
+      } catch (tgErr) {
+        console.warn("[admin support reply telegram error]:", tgErr);
+      }
+    }
+
+    res.json({
+      ok: true,
+      message: createdMsg,
+      status: nextStatus,
+      telegramDelivered,
+    });
+  } catch (err: any) {
+    console.error("[POST /api/admin/support/tickets/:id/reply error]:", err);
+    res.status(500).json({ error: err.message || "Javob yuborishda xatolik" });
+  }
+});
+
+// PATCH /api/admin/support/tickets/:id/status
+router.patch("/support/tickets/:id/status", requireAdmin, async (req, res) => {
+  try {
+    const ticketId = Number(req.params.id);
+    const status = String(req.body?.status || "").trim();
+    if (!Number.isSafeInteger(ticketId) || !["yangi", "javob_berildi", "yopiq"].includes(status)) {
+      return res.status(400).json({ error: "Noto'g'ri holat yoki ID" });
+    }
+
+    await db
+      .update(supportTickets)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(supportTickets.id, ticketId));
+
+    res.json({ ok: true, status });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Holatni yangilashda xatolik" });
+  }
+});
+
 export default router;
+

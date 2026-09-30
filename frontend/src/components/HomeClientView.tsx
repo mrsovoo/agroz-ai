@@ -7,6 +7,7 @@ import NotificationBell from "@/components/NotificationBell";
 import WeatherCard from "@/components/WeatherCard";
 import SpecialistCallModal from "@/components/SpecialistCallModal";
 import ProductCard from "@/components/ProductCard";
+import HomeScreenPromptBanner from "@/components/HomeScreenPromptBanner";
 import {
   loadCart,
   saveCart,
@@ -28,6 +29,7 @@ export type HomeMedicine = {
   hasPhoto?: boolean;
   photoUrl?: string | null;
   photoVersion?: string | null;
+  updatedAt?: string | null;
   pharmacyId?: number;
   pharmacyName?: string;
   pharmacyPhone?: string;
@@ -68,7 +70,7 @@ export default function HomeClientView({
         const collected: HomeMedicine[] = [];
         for (const p of items) {
           for (const m of p.medicines || []) {
-            if (m.status === "yoq") continue;
+            if (m.status === "yoq" || m.status === "qoralama" || !m.price || m.price <= 0 || !m.hasPhoto) continue;
             collected.push({
               id: m.id,
               name: m.name,
@@ -79,6 +81,7 @@ export default function HomeClientView({
               hasPhoto: Boolean(m.hasPhoto),
               photoVersion: m.photoVersion,
               photoUrl: m.hasPhoto ? `/api/medicines/${m.id}/photo` : null,
+              updatedAt: m.updatedAt ?? null,
               pharmacyId: p.id,
               pharmacyName: p.organization || p.name,
               pharmacyPhone: p.phone,
@@ -96,6 +99,7 @@ export default function HomeClientView({
   }, [initialMedicines]);
 
   const [callModalOpen, setCallModalOpen] = useState(false);
+  const [comingSoonModal, setComingSoonModal] = useState<string | null>(null);
   const [quantities, setQuantities] = useState<Record<number, number>>({});
 
   useEffect(() => {
@@ -169,6 +173,9 @@ export default function HomeClientView({
         <NotificationBell />
       </header>
 
+      {/* Telegram Mini App: Bosh ekranga qo'shish banneri */}
+      <HomeScreenPromptBanner />
+
       {/* 2. Ob-havo kartasi: 3D Quyosh + 22 °C + Toshkent */}
       <div className="mt-3.5">
         <WeatherCard showDetails={false} />
@@ -207,6 +214,7 @@ export default function HomeClientView({
                   photoVersion: med.photoVersion,
                   usage: med.usage ?? null,
                   stockUnit: med.stockUnit,
+                  updatedAt: med.updatedAt ?? null,
                   status: "bor",
                 }}
                 pharmacy={{
@@ -298,27 +306,81 @@ export default function HomeClientView({
 
       {/* 5. AI Tashxis bloki */}
       <section className="mt-4">
-        <Link
-          href="/tashxis"
-          onClick={() => haptic("light")}
-          className="flex items-center justify-between rounded-[24px] bg-[#f8f9fa] border border-neutral-100 p-3.5 shadow-2xs transition active:scale-[0.99] hover:border-neutral-200"
-        >
-          <div className="flex items-center gap-3">
-            {/* Kulrang dumaloq kvadrat icon */}
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] bg-[#71717a] text-white shadow-2xs">
-              <Sparkles size={22} />
+        <div className="rounded-[24px] bg-[#f8f9fa] border border-neutral-100 p-3.5 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {/* Kulrang dumaloq kvadrat icon */}
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] bg-[#71717a] text-white shadow-2xs">
+                <Sparkles size={22} />
+              </div>
+              <div>
+                <h3 className="text-[16px] font-black text-neutral-900 leading-tight">AgrozGO Tashxis</h3>
+                <p className="mt-0.5 text-[12px] text-neutral-500">Rasm orqali kasallikni aniqlash</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-[16px] font-black text-neutral-900 leading-tight">AI Tashxis</h3>
-              <p className="mt-0.5 text-[12px] text-neutral-500">Rasm orqali kasallikni aniqlash</p>
-            </div>
+
+            <span className="rounded-full bg-[#6b7280] px-3 py-1 text-[11px] font-bold text-white shadow-2xs">
+              Tez orada (2.0 versiyada)
+            </span>
           </div>
 
-          <span className="rounded-full bg-[#6b7280] px-3 py-1 text-[11.5px] font-medium text-white shadow-2xs">
-            Tez kunda
-          </span>
-        </Link>
+          <div className="mt-3 grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                haptic("light");
+                setComingSoonModal("Ekin tashxisi");
+              }}
+              className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-[13px] font-bold text-neutral-800 shadow-2xs transition active:scale-95 hover:bg-neutral-50"
+            >
+              <span>🌱 Ekin tashxisi</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                haptic("light");
+                setComingSoonModal("Chorva tashxisi");
+              }}
+              className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-[13px] font-bold text-neutral-800 shadow-2xs transition active:scale-95 hover:bg-neutral-50"
+            >
+              <span>🐄 Chorva tashxisi</span>
+            </button>
+          </div>
+        </div>
       </section>
+
+      {/* AI Tashxis — Tez orada (2.0 versiyada) modali */}
+      {comingSoonModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs"
+          onClick={() => setComingSoonModal(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-[#039e1e]">
+              <Sparkles size={28} />
+            </div>
+            <span className="mt-3 inline-block rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-[#039e1e]">
+              Tez orada (2.0 versiyada)
+            </span>
+            <h3 className="mt-2.5 text-lg font-black text-neutral-900">
+              {comingSoonModal} — tez kunda!
+            </h3>
+            <p className="mt-1.5 text-xs leading-relaxed text-neutral-500">
+              AgrozGO 2.0 versiyasida ekin va chorva kasalliklarini rasm orqali aniqlash xizmati ishga tushadi. Hozircha dorilar va mutaxassislar xizmatidan foydalanishingiz mumkin.
+            </p>
+            <button
+              type="button"
+              onClick={() => setComingSoonModal(null)}
+              className="mt-5 flex min-h-[44px] w-full items-center justify-center rounded-xl bg-[#039e1e] px-4 py-2.5 text-sm font-bold text-white transition active:scale-95"
+            >
+              Tushunarli
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Mutaxassis chaqirish modali — faqat real mutaxassis bo'lsa */}
       {specialist && (

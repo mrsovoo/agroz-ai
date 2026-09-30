@@ -18,6 +18,8 @@ import adminRouter from "./routes/admin.js";
 import advertisementsRouter from "./routes/advertisements.js";
 import pharmaciesRouter from "./routes/pharmacies.js";
 import geoRouter from "./routes/geo.js";
+import notificationsRouter from "./routes/notifications.js";
+import supportRouter from "./routes/support.js";
 
 import { ensureSeed } from "./lib/seed.js";
 import { ensureSchema } from "./db/migrate.js";
@@ -25,26 +27,29 @@ import { ensureSchema } from "./db/migrate.js";
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// CORS sozlamalari
-const allowedOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(",").map((s) => s.trim())
-  : ["http://localhost:3000"];
+// CORS sozlamalari — faqat ALLOWED_ORIGINS (yoki CORS_ORIGIN) ro'yxatidagi manbalarga ruxsat beriladi
+const rawAllowedOrigins = process.env.ALLOWED_ORIGINS || process.env.CORS_ORIGIN;
+const allowedOrigins = rawAllowedOrigins
+  ? rawAllowedOrigins.split(",").map((s) => s.trim()).filter(Boolean)
+  : [
+      "http://localhost:3000",
+      "http://localhost:3001",
+      "https://agroz.uz",
+      "https://www.agroz.uz",
+      "https://admin.agroz.uz",
+    ];
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (
-        !origin ||
-        allowedOrigins.includes("*") ||
-        allowedOrigins.includes(origin) ||
-        origin.endsWith(".vercel.app") ||
-        origin.endsWith(".agroz.uz") ||
-        origin === "https://agroz.uz"
-      ) {
-        callback(null, true);
-      } else {
-        callback(null, true);
+      // Server-to-server yoki bir xil origin so'rovlari (!origin)
+      if (!origin) {
+        return callback(null, true);
       }
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"), false);
     },
     credentials: true,
   })
@@ -78,6 +83,8 @@ app.use("/api/admin", adminRouter);
 app.use("/api/advertisements", advertisementsRouter);
 app.use("/api/pharmacies", pharmaciesRouter);
 app.use("/api/geo", geoRouter);
+app.use("/api/notifications", notificationsRouter);
+app.use("/api/support", supportRouter);
 
 // 404 Handler
 app.use((_req, res) => {
@@ -92,12 +99,24 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 
 // Serverni ishga tushirish
 app.listen(PORT, async () => {
-  console.log(`\n🚀 Agroz AI Backend server ishga tushdi: http://localhost:${PORT}`);
+  console.log(`\n🚀 AgrozGO Backend server ishga tushdi: http://localhost:${PORT}`);
   console.log(`📡 CORS ruxsat berilgan manbalar: ${allowedOrigins.join(", ")}`);
   console.log(`🩺 Healthcheck: http://localhost:${PORT}/api/health\n`);
 
   // Bazadagi yetishmayotgan ustun va jadvallarni avtomatik yaratish/sinxronlash
   await ensureSchema();
+
+  // Telegram Mini App launch nomini va menyu tugmasini AgrozGO deb sinxronlash
+  import("./lib/telegram-bot.js")
+    .then(({ setAgrozGoMenuButton }) => setAgrozGoMenuButton())
+    .catch(() => {});
+
+  // 30 daqiqadan ortiq "yangi" holatda qolgan buyurtmalar uchun yagona eslatma tekshiruvi (har 2 daqiqada)
+  setInterval(() => {
+    import("./lib/orders-bot.js")
+      .then(({ checkUnansweredOrderReminders }) => checkUnansweredOrderReminders())
+      .catch((err) => console.warn("[orders-reminder interval]:", err));
+  }, 2 * 60 * 1000);
 
   // Demo ma'lumotlar faqat SEED_DEMO_DATA === "true" bo'lganda kiritiladi
   if (process.env.SEED_DEMO_DATA === "true") {

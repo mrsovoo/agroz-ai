@@ -2,7 +2,7 @@ import { getCurrentUser } from "@/lib/session";
 import NotificationsView from "@/components/NotificationsView";
 
 export const metadata = {
-  title: "Bildirishnomalar — Agroz AI",
+  title: "Bildirishnomalar — AgrozGO",
   description: "Real agrometeorologik ogohlantirishlar, dehqonchilik va veterinariya tavsiyalari.",
 };
 

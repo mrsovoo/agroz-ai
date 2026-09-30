@@ -57,7 +57,7 @@ export async function sendOtpSms(phone: string, code: string): Promise<boolean> 
     form.append("mobile_phone", phone.replace(/\D/g, ""));
     form.append(
       "message",
-      `Agroz AI tasdiqlash kodi: ${code}. Kod ${OTP_TTL_MINUTES} daqiqa amal qiladi.`,
+      `AgrozGO tasdiqlash kodi: ${code}. Kod ${OTP_TTL_MINUTES} daqiqa amal qiladi.`,
     );
     form.append("from", (await getSetting(SETTING_KEYS.eskizFrom)) ?? "4546");
     const res = await fetch("https://notify.eskiz.uz/api/message/sms/send", {

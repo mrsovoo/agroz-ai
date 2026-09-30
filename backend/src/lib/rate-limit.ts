@@ -1,11 +1,54 @@
 import { createClient } from "redis";
 
 let redisClient: ReturnType<typeof createClient> | null = null;
+let redisConnectAttempted = false;
+
+// Redis ulanmaganda ishlatiladigan xotira-ichi (in-memory) cheklov xaritasi
+const memoryStore = new Map<string, { count: number; resetMs: number }>();
+
+function cleanupMemoryStore(now: number) {
+  if (memoryStore.size < 500) return;
+  for (const [k, v] of memoryStore.entries()) {
+    if (v.resetMs <= now) {
+      memoryStore.delete(k);
+    }
+  }
+}
+
+function memoryRateLimit(
+  key: string,
+  limit: number,
+  windowMs: number,
+): { allowed: boolean; remaining: number; resetMs: number } {
+  const now = Date.now();
+  cleanupMemoryStore(now);
+
+  const existing = memoryStore.get(key);
+  if (!existing || existing.resetMs <= now) {
+    const resetMs = now + windowMs;
+    memoryStore.set(key, { count: 1, resetMs });
+    return { allowed: true, remaining: Math.max(0, limit - 1), resetMs };
+  }
+
+  if (existing.count >= limit) {
+    return { allowed: false, remaining: 0, resetMs: existing.resetMs };
+  }
+
+  existing.count += 1;
+  return {
+    allowed: true,
+    remaining: Math.max(0, limit - existing.count),
+    resetMs: existing.resetMs,
+  };
+}
 
 export function getRedisClient() {
-  if (!redisClient) {
-    const url = process.env.REDIS_URL || "redis://localhost:6379";
-    redisClient = createClient({ url });
+  if (!process.env.REDIS_URL) {
+    return null;
+  }
+  if (!redisClient && !redisConnectAttempted) {
+    redisConnectAttempted = true;
+    redisClient = createClient({ url: process.env.REDIS_URL });
     redisClient.on("error", (err) => console.error("[Redis] Client error:", err));
     redisClient.connect().catch((err) => console.error("[Redis] Connect failed:", err));
   }
@@ -19,9 +62,7 @@ export async function rateLimit(
 ): Promise<{ allowed: boolean; remaining: number; resetMs: number }> {
   const client = getRedisClient();
   if (!client?.isOpen) {
-    // Fail-open: if Redis unavailable, allow request but log warning
-    console.warn("[RateLimit] Redis unavailable, allowing request (fail-open)");
-    return { allowed: true, remaining: limit, resetMs: Date.now() + windowMs };
+    return memoryRateLimit(key, limit, windowMs);
   }
 
   const now = Date.now();
@@ -55,9 +96,8 @@ export async function rateLimit(
       resetMs: now + result[2],
     };
   } catch (err) {
-    console.error("[RateLimit] Redis error:", err);
-    // Fail-open
-    return { allowed: true, remaining: limit, resetMs: now + windowMs };
+    console.error("[RateLimit] Redis error, falling back to in-memory:", err);
+    return memoryRateLimit(key, limit, windowMs);
   }
 }
 
@@ -66,5 +106,5 @@ export const RATE_LIMITS = {
   authVerifyCode: { limit: 5, windowMs: 60_000 }, // 5 per minute per phone
   authTelegram: { limit: 10, windowMs: 60_000 }, // 10 per minute per IP
   ordersCreate: { limit: 10, windowMs: 60_000 }, // 10 per minute per user
-  adminLogin: { limit: 5, windowMs: 300_000 }, // 5 per 5 min per IP
+  adminLogin: { limit: 5, windowMs: 15 * 60_000 }, // 5 attempts -> 15 min block
 } as const;
