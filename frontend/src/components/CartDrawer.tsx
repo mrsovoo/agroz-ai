@@ -150,26 +150,92 @@ export default function CartDrawer() {
   useEffect(() => {
     if (!open) return;
     setOrderPrefs(getUserOrderPrefs());
+
+    let cancelled = false;
     if (recommendedMeds.length === 0) {
       setRecLoading(true);
-      fetch(apiUrl("/api/medicines?limit=30"))
-        .then((r) => (r.ok ? r.json() : []))
-        .then((data) => {
-          if (Array.isArray(data)) {
-            setRecommendedMeds(data);
-          }
-        })
-        .catch(() => {})
-        .finally(() => setRecLoading(false));
     }
-  }, [open, recommendedMeds.length]);
+
+    async function loadRecommendedMeds() {
+      try {
+        const [specRes, medRes] = await Promise.allSettled([
+          fetch("/api/specialists?role=pharmacy"),
+          fetch(apiUrl("/api/medicines?limit=60&random=1")),
+        ]);
+
+        const medMap = new Map<number, any>();
+
+        if (specRes.status === "fulfilled" && specRes.value.ok) {
+          const specData = await specRes.value.json();
+          const items = Array.isArray(specData?.items) ? specData.items : [];
+          for (const p of items) {
+            for (const m of p.medicines || []) {
+              if (m.status === "yoq") continue;
+              medMap.set(m.id, {
+                id: m.id,
+                name: m.name,
+                type: m.type || "general",
+                usage: m.usage ?? null,
+                price: m.price ?? null,
+                stockUnit: m.stockUnit ?? "dona",
+                hasPhoto: Boolean(m.hasPhoto),
+                photoVersion: m.photoVersion ?? null,
+                pharmacyId: p.id,
+                pharmacyName: p.organization || p.name || "Agroz Dorixona",
+                pharmacyPhone: p.phone || "",
+                pharmacyAddress: p.address || null,
+              });
+            }
+          }
+        }
+
+        if (medRes.status === "fulfilled" && medRes.value.ok) {
+          const medData = await medRes.value.json();
+          if (Array.isArray(medData)) {
+            for (const m of medData) {
+              if (!medMap.has(m.id)) {
+                medMap.set(m.id, {
+                  id: m.id,
+                  name: m.name,
+                  type: m.type || "general",
+                  usage: m.usage ?? null,
+                  price: m.price ?? null,
+                  stockUnit: m.stockUnit ?? "dona",
+                  hasPhoto: Boolean(m.hasPhoto),
+                  photoVersion: m.photoVersion ?? null,
+                  pharmacyId: m.pharmacyId,
+                  pharmacyName: m.pharmacyName || "Agroz Dorixona",
+                  pharmacyPhone: m.pharmacyPhone || "",
+                  pharmacyAddress: m.pharmacyAddress || null,
+                });
+              }
+            }
+          }
+        }
+
+        if (!cancelled && medMap.size > 0) {
+          const allList = Array.from(medMap.values()).sort(() => Math.random() - 0.5);
+          setRecommendedMeds(allList);
+        }
+      } catch {
+        // ignore
+      } finally {
+        if (!cancelled) setRecLoading(false);
+      }
+    }
+
+    loadRecommendedMeds();
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   const sortedRecommendations = useMemo(() => {
     let list = [...recommendedMeds];
     if (recFilter === "crop") {
-      list = list.filter((m) => m.type === "crop");
+      list = list.filter((m) => m.type === "crop" || m.type === "general");
     } else if (recFilter === "animal") {
-      list = list.filter((m) => m.type === "animal");
+      list = list.filter((m) => m.type === "animal" || m.type === "general");
     } else {
       // Foydalanuvchi qaysi turga ko'proq buyurtma bergan bo'lsa, o'shani birinchi ko'rsatish
       if (orderPrefs.crop > orderPrefs.animal) {
@@ -224,8 +290,12 @@ export default function CartDrawer() {
     closeCart();
   }, []);
 
-  // Har safar foydalanuvchi boshqa sahifaga o'tsa savat yopiladi
+  // Har safar foydalanuvchi boshqa sahifaga o'tsa savat yopiladi (/savat sahifasidan tashqari)
   useEffect(() => {
+    if (pathname === "/savat") {
+      setOpen(true);
+      return;
+    }
     setOpen(false);
     closeCart();
   }, [pathname]);
@@ -696,33 +766,45 @@ export default function CartDrawer() {
                 </p>
               ) : (
                 <div className="space-y-2.5">
-                  {sortedRecommendations.slice(0, 12).map((m) => (
+                  {sortedRecommendations.map((m) => (
                     <div
                       key={m.id}
                       className="flex items-center gap-3 rounded-2xl border border-neutral-200/80 bg-white p-3 shadow-2xs transition hover:border-emerald-300"
                     >
-                      <Link
-                        href={`/dori/${m.id}`}
-                        onClick={close}
-                        className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-neutral-100 border border-black/5"
-                      >
+                      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-neutral-100 border border-black/5">
                         {m.hasPhoto ? (
                           <FadeImage
                             src={apiUrl(`/api/medicines/${m.id}/photo${m.photoVersion ? `?v=${m.photoVersion}` : ""}`)}
                             alt={m.name}
                             className="h-full w-full object-cover"
                             fallback={
-                              <span className="flex h-full w-full items-center justify-center text-[var(--brand-green)]">
+                              <span
+                                className={`flex h-full w-full items-center justify-center ${
+                                  m.type === "animal"
+                                    ? "bg-amber-50/70 text-amber-600"
+                                    : m.type === "crop"
+                                    ? "bg-emerald-50/70 text-[#039e1e]"
+                                    : "bg-slate-50 text-slate-500"
+                                }`}
+                              >
                                 <TypeIcon type={m.type} size={22} />
                               </span>
                             }
                           />
                         ) : (
-                          <span className="flex h-full w-full items-center justify-center text-[var(--brand-green)]">
+                          <span
+                            className={`flex h-full w-full items-center justify-center ${
+                              m.type === "animal"
+                                ? "bg-amber-50/70 text-amber-600"
+                                : m.type === "crop"
+                                ? "bg-emerald-50/70 text-[#039e1e]"
+                                : "bg-slate-50 text-slate-500"
+                            }`}
+                          >
                             <TypeIcon type={m.type} size={22} />
                           </span>
                         )}
-                      </Link>
+                      </div>
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
@@ -738,18 +820,22 @@ export default function CartDrawer() {
                             {m.type === "crop" ? "🌱 Ekin" : m.type === "animal" ? "🐄 Hayvon" : "📦 Umumiy"}
                           </span>
                         </div>
-                        <Link href={`/dori/${m.id}`} onClick={close} className="block mt-0.5">
-                          <h5 className="text-[13px] font-bold text-neutral-900 leading-snug line-clamp-1 hover:text-[var(--brand-green)]">
-                            {m.name}
-                          </h5>
-                        </Link>
+                        <h5 className="mt-0.5 text-[13px] font-bold text-neutral-900 leading-snug line-clamp-1">
+                          {m.name}
+                        </h5>
                         <p className="text-[11px] text-neutral-500 truncate mt-0.5">
                           🏪 {m.pharmacyName}
                         </p>
                         <div className="mt-1 flex items-center justify-between">
-                          <span className="text-[12.5px] font-black text-[var(--brand-green)]">
-                            {shortSum(m.price || 0)} so'm
-                          </span>
+                          {m.price != null && m.price > 0 ? (
+                            <span className="text-[12.5px] font-black text-[var(--brand-green)]">
+                              {shortSum(m.price)} so&apos;m
+                            </span>
+                          ) : (
+                            <span className="text-[11px] font-semibold text-neutral-400">
+                              Narxi ko&apos;rsatilmagan
+                            </span>
+                          )}
                           <button
                             type="button"
                             onClick={() => {
