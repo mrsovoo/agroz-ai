@@ -844,31 +844,122 @@ router.post("/webhook", async (req, res) => {
         return res.json({ ok: true });
       }
 
-      // Oddiy /start: Agar allaqachon to'liq ro'yxatdan o'tgan bo'lsa
-      if (existingUser && existingUser.phone) {
-        const registeredName = existingUser.name?.trim() || "Foydalanuvchi";
-        const locationLabel = [existingUser.region, existingUser.district].filter(Boolean).join(", ");
-        const welcomeText = [
-          `👋 <b>Assalomu alaykum, ${escapeHtml(registeredName)}!</b>`,
-          "",
-          `Siz allaqachon ro'yxatdan o'tgansiz.`,
-          "",
-          `👤 <b>Ism-familiya:</b> ${escapeHtml(registeredName)}`,
-          `📞 <b>Telefon:</b> <code>${escapeHtml(existingUser.phone)}</code>`,
-          existingUser.secondPhone ? `📞 <b>Qo'shimcha:</b> <code>${escapeHtml(existingUser.secondPhone)}</code>` : "",
-          locationLabel ? `📍 <b>Manzil:</b> ${escapeHtml(locationLabel)}` : "",
-          "",
-          `Ilovaga kirish uchun pastdagi <b>«🌿 AgrozGO ga kirish»</b> tugmasini bosing 👇`,
-        ]
-          .filter(Boolean)
-          .join("\n");
+      // Oddiy /start: Telegram ID orqali bazadan tekshiramiz
+      if (existingUser) {
+        const cleanName = (existingUser.name || "").trim();
+        const cleanPhone = (existingUser.phone || "").trim();
+        const hasValidName = cleanName.length >= 2 && cleanName.toLowerCase() !== "foydalanuvchi";
+        const hasValidPhone = cleanPhone.replace(/\D/g, "").length >= 9;
+        const hasValidRegion = Boolean(existingUser.region && existingUser.region.trim().length >= 2);
 
-        await setAgrozGoMenuButton(chatId).catch(() => {});
-        await sendMessage(chatId, welcomeText, { keyboard: registeredUserMenuKeyboard() });
-        return res.json({ ok: true });
+        // 1) Ism, telefon va manzil hammasi bor — qayta ro'yxatdan o'tkazmaymiz!
+        if (hasValidName && hasValidPhone && hasValidRegion) {
+          const locationLabel = [existingUser.region, existingUser.district].filter(Boolean).join(", ");
+          const welcomeText = [
+            `👋 <b>Assalomu alaykum, ${escapeHtml(cleanName)}!</b>`,
+            "",
+            `Sizning profilingiz Telegram ID orqali aniqlandi.`,
+            "",
+            `👤 <b>Ism-familiya:</b> ${escapeHtml(cleanName)}`,
+            `📞 <b>Telefon:</b> <code>${escapeHtml(cleanPhone)}</code>`,
+            existingUser.secondPhone
+              ? `📞 <b>Qo'shimcha:</b> <code>${escapeHtml(existingUser.secondPhone)}</code>`
+              : "",
+            locationLabel ? `📍 <b>Manzil:</b> ${escapeHtml(locationLabel)}` : "",
+            "",
+            `Ilovaga kirish uchun pastdagi <b>«🌿 AgrozGO ga kirish»</b> tugmasini bosing 👇`,
+          ]
+            .filter(Boolean)
+            .join("\n");
+
+          await setAgrozGoMenuButton(chatId).catch(() => {});
+          await sendMessage(chatId, welcomeText, { keyboard: registeredUserMenuKeyboard() });
+          return res.json({ ok: true });
+        }
+
+        // 2) Faqat ism yetishmayapti
+        if (!hasValidName) {
+          regStates.set(fromId, {
+            step: "ask_name",
+            phone: hasValidPhone ? cleanPhone : undefined,
+            region: hasValidRegion ? existingUser.region ?? undefined : undefined,
+            district: existingUser.district ?? undefined,
+            secondPhone: existingUser.secondPhone ?? undefined,
+            updatedAt: Date.now(),
+          });
+          await sendMessage(
+            chatId,
+            [
+              `👋 <b>Assalomu alaykum!</b>`,
+              `Profilingiz Telegram ID orqali topildi, faqat <b>ism-familiyangiz</b> yetishmayapti.`,
+              "",
+              `✏️ <b>Ism va familiyangizni yozing:</b>`,
+              `<i>(Masalan: Dilshod Ergashev)</i>`,
+            ].join("\n"),
+            { keyboard: { remove_keyboard: true } }
+          );
+          return res.json({ ok: true });
+        }
+
+        // 3) Ism bor, faqat telefon yetishmayapti
+        if (!hasValidPhone) {
+          regStates.set(fromId, {
+            step: "ask_phone",
+            name: cleanName,
+            region: hasValidRegion ? existingUser.region ?? undefined : undefined,
+            district: existingUser.district ?? undefined,
+            secondPhone: existingUser.secondPhone ?? undefined,
+            updatedAt: Date.now(),
+          });
+          await sendMessage(
+            chatId,
+            [
+              `👋 <b>Assalomu alaykum, ${escapeHtml(cleanName)}!</b>`,
+              `Profilingizda faqat <b>telefon raqamingiz</b> yetishmayapti.`,
+              "",
+              `📞 <b>Telefon raqamingizni yuboring yoki yozing:</b>`,
+            ].join("\n"),
+            {
+              keyboard: {
+                keyboard: [[{ text: "📱 Telefon raqamni yuborish", request_contact: true }]],
+                resize_keyboard: true,
+                one_time_keyboard: true,
+              },
+            }
+          );
+          return res.json({ ok: true });
+        }
+
+        // 4) Ism va telefon bor, faqat manzil (joylashuv) yetishmayapti
+        if (!hasValidRegion) {
+          regStates.set(fromId, {
+            step: "ask_location",
+            name: cleanName,
+            phone: cleanPhone,
+            secondPhone: existingUser.secondPhone ?? undefined,
+            updatedAt: Date.now(),
+          });
+          await sendMessage(
+            chatId,
+            [
+              `👋 <b>Assalomu alaykum, ${escapeHtml(cleanName)}!</b>`,
+              `Profilingiz Telegram ID orqali topildi. Faqat <b>manzilingiz (joylashuvingiz)</b> yetishmayapti.`,
+              "",
+              `📍 <b>Joylashuvingizni yuboring yoki viloyat/tuman nomini yozing:</b>`,
+            ].join("\n"),
+            {
+              keyboard: {
+                keyboard: [[{ text: "📍 Joylashuvni yuborish", request_location: true }]],
+                resize_keyboard: true,
+                one_time_keyboard: true,
+              },
+            }
+          );
+          return res.json({ ok: true });
+        }
       }
 
-      // Agar hali ro'yxatdan o'tmagan bo'lsa (MINI APP BERILMAYDI!)
+      // Agar hali umuman ro'yxatdan o'tmagan bo'lsa (MINI APP BERILMAYDI!)
       regStates.set(fromId, {
         step: "ask_name",
         updatedAt: Date.now(),
@@ -955,8 +1046,8 @@ router.post("/webhook", async (req, res) => {
       return res.json({ ok: true });
     }
 
-    // Agar foydalanuvchi allaqachon ro'yxatdan o'tgan bo'lsa:
-    if (existingUser && existingUser.phone) {
+    // Agar foydalanuvchi allaqachon ro'yxatdan o'tgan bo'lsa (va kamchilik maydonni to'ldirayotgan bo'lmasa):
+    if (existingUser && existingUser.phone && !regStates.has(fromId)) {
       if (text === "📦 Buyurtmalarim") {
         const cleanDigits = existingUser.phone.replace(/\D/g, "").slice(-9);
         const orderConditions = [];
@@ -1126,21 +1217,20 @@ router.post("/webhook", async (req, res) => {
       return res.json({ ok: true });
     }
 
-    // RO'YXATDAN O'TMAGAN FOYDALANUVCHI BOSQICHLARI:
+    // RO'YXATDAN O'TMAGAN FOYDALANUVCHI YOKI YETISHMAYOTGAN MAYDONNI TO'LDIRISH BOSQICHLARI:
     const regState = regStates.get(fromId) || { step: "ask_name", updatedAt: Date.now() };
 
-    // A) Agar viloyat kutilayotgan bo'lsa
     // A) Agar joylashuv (yoki manzil matni) kutilayotgan bo'lsa
     if (regState.step === "ask_location" || regState.step === "ask_region") {
       const clean = text.trim();
       const matched = REGIONS_LIST.find((r) => r.toLowerCase().includes(clean.toLowerCase())) || clean.slice(0, 100);
 
       await finalizeUserRegistration(fromId, chatId, {
-        name: regState.name || firstName || "Foydalanuvchi",
-        phone: regState.phone || "+998900000000",
+        name: regState.name || existingUser?.name || firstName || "Foydalanuvchi",
+        phone: regState.phone || existingUser?.phone || "+998900000000",
         region: matched,
-        district: regState.district,
-        secondPhone: regState.secondPhone,
+        district: regState.district || existingUser?.district || undefined,
+        secondPhone: regState.secondPhone || existingUser?.secondPhone || undefined,
         token: regState.token,
       });
       regStates.delete(fromId);
@@ -1199,6 +1289,20 @@ router.post("/webhook", async (req, res) => {
 
       const primaryPhone = `+998${digits.slice(-9)}`;
 
+      // Agar manzil (region) bazada allaqachon mavjud bo'lsa, darhol yakunlaymiz
+      if (regState.region) {
+        await finalizeUserRegistration(fromId, chatId, {
+          name: regState.name || existingUser?.name || firstName || "Foydalanuvchi",
+          phone: primaryPhone,
+          region: regState.region,
+          district: regState.district,
+          secondPhone: regState.secondPhone,
+          token: regState.token,
+        });
+        regStates.delete(fromId);
+        return res.json({ ok: true });
+      }
+
       const askLocation = [
         `📞 Telefon qabul qilindi: <code>${escapeHtml(primaryPhone)}</code>`,
         "",
@@ -1232,6 +1336,19 @@ router.post("/webhook", async (req, res) => {
       const primaryPhone = `+998${digits.slice(-9)}`;
       const chosenName = textWithoutDigits.length >= 2 ? textWithoutDigits : (firstName || "Foydalanuvchi");
 
+      if (regState.region) {
+        await finalizeUserRegistration(fromId, chatId, {
+          name: chosenName,
+          phone: primaryPhone,
+          region: regState.region,
+          district: regState.district,
+          secondPhone: regState.secondPhone,
+          token: regState.token,
+        });
+        regStates.delete(fromId);
+        return res.json({ ok: true });
+      }
+
       const askLocation = [
         `👤 Ism: <b>${escapeHtml(chosenName)}</b>`,
         `📞 Telefon: <code>${escapeHtml(primaryPhone)}</code>`,
@@ -1261,6 +1378,46 @@ router.post("/webhook", async (req, res) => {
     const enteredName = text.trim();
     if (enteredName.length < 2) {
       await sendMessage(chatId, "⚠️ Iltimos, ism va familiyangizni yozing (kamida 2 ta harf):");
+      return res.json({ ok: true });
+    }
+
+    // Agar telefon va manzil bazada allaqachon bor bo'lsa (faqat ism yetishmayotgan bo'lsa):
+    if (regState.phone && regState.region) {
+      await finalizeUserRegistration(fromId, chatId, {
+        name: enteredName,
+        phone: regState.phone,
+        region: regState.region,
+        district: regState.district,
+        secondPhone: regState.secondPhone,
+        token: regState.token,
+      });
+      regStates.delete(fromId);
+      return res.json({ ok: true });
+    }
+
+    // Agar telefon bor, faqat manzil yo'q bo'lsa:
+    if (regState.phone && !regState.region) {
+      regStates.set(fromId, {
+        ...regState,
+        step: "ask_location",
+        name: enteredName,
+        updatedAt: Date.now(),
+      });
+      await sendMessage(
+        chatId,
+        [
+          `Rahmat, <b>${escapeHtml(enteredName)}</b>!`,
+          "",
+          `📍 <b>Endi joylashuvingizni yuboring yoki manzilingizni yozing:</b>`,
+        ].join("\n"),
+        {
+          keyboard: {
+            keyboard: [[{ text: "📍 Joylashuvni yuborish", request_location: true }]],
+            resize_keyboard: true,
+            one_time_keyboard: true,
+          },
+        }
+      );
       return res.json({ ok: true });
     }
 

@@ -726,6 +726,42 @@ async function handleCommand(
   // /start va boshqa har qanday buyruq.
   const profile = await getSpecialistByTelegramId(telegramId);
   if (profile) {
+    const cleanName = (profile.name || "").trim();
+    const hasValidName = cleanName.length >= 2;
+    const hasValidPhone = Boolean(profile.phone && profile.phone.replace(/\D/g, "").length >= 9);
+    const hasValidAddress = Boolean(
+      profile.address && profile.address.trim().length >= 2 && Number.isFinite(profile.lat) && Number.isFinite(profile.lng)
+    );
+
+    if (!hasValidName) {
+      await setState(telegramId, "edit_name", {});
+      await sendAuthMessage(
+        chatId,
+        "👋 <b>Profilingiz Telegram ID orqali topildi!</b>\n\nFaqat <b>ism-familiyangiz</b> yetishmayapti. Iltimos, to'liq ism va familiyangizni yozing:",
+      );
+      return;
+    }
+
+    if (!hasValidPhone) {
+      await setState(telegramId, "edit_phone", {});
+      await sendAuthMessage(
+        chatId,
+        `👋 <b>Salom, ${escapeHtml(cleanName)}!</b>\n\nProfilingizda faqat <b>telefon raqamingiz</b> yetishmayapti. Pastdagi tugmani bosing yoki raqamingizni yozing:`,
+        { replyKeyboard: contactKeyboard() },
+      );
+      return;
+    }
+
+    if (!hasValidAddress) {
+      await setState(telegramId, "edit_loc", {});
+      await sendAuthMessage(
+        chatId,
+        `👋 <b>Salom, ${escapeHtml(cleanName)}!</b>\n\nProfilingizda faqat <b>manzilingiz (lokatsiya)</b> yetishmayapti. Pastdagi «📍 Lokatsiyani yuborish» tugmasini bosing yoki manzilingizni yozing:`,
+        { replyKeyboard: locationKeyboard() },
+      );
+      return;
+    }
+
     const keyboard = profile.isApproved
       ? profile.role === "pharmacy"
         ? approvedPharmacyMenuKeyboard()
