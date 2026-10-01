@@ -19,6 +19,7 @@ export const users = pgTable("users", {
   name: varchar("name", { length: 120 }),
   region: varchar("region", { length: 120 }),
   district: varchar("district", { length: 120 }),
+  weatherSentDate: varchar("weather_sent_date", { length: 16 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

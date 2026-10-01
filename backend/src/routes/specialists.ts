@@ -40,12 +40,15 @@ router.get("/", async (req, res) => {
       ? [medsQuery]
       : [];
 
+    const region = typeof req.query.region === "string" ? req.query.region.trim() : null;
+
     const items = await listSpecialists({
       lat: coords?.lat ?? null,
       lng: coords?.lng ?? null,
       radiusKm,
       role,
       meds,
+      region,
     });
 
     res.setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");

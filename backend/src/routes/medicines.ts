@@ -32,6 +32,17 @@ router.get("/", async (req, res) => {
       );
     }
 
+    const regionParam = typeof req.query.region === "string" ? req.query.region.trim() : null;
+    const cleanReg = regionParam
+      ? regionParam.toLowerCase().replace(/['`ʻ’]/g, "").replace(/viloyati|viloyat|shahri|shahar|tumani|tuman|region/g, "").trim()
+      : null;
+
+    const orderClause = isRandom
+      ? sql`RANDOM()`
+      : cleanReg
+      ? sql`case when lower(${specialists.address}) like ${"%" + cleanReg + "%"} then 0 else 1 end, ${specialistMedicines.id} desc`
+      : sql`${specialistMedicines.id} desc`;
+
     const rows = await db
       .select({
         id: specialistMedicines.id,
@@ -58,7 +69,7 @@ router.get("/", async (req, res) => {
       .from(specialistMedicines)
       .innerJoin(specialists, eq(specialists.id, specialistMedicines.specialistId))
       .where(and(...conditions))
-      .orderBy(isRandom ? sql`RANDOM()` : sql`${specialistMedicines.id} desc`)
+      .orderBy(orderClause)
       .limit(limit);
 
     const medicines = rows.map((r) => ({

@@ -12,6 +12,7 @@ export async function ensureSchema(): Promise<void> {
     await db.execute(sql`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS second_phone varchar(32);
       ALTER TABLE users ADD COLUMN IF NOT EXISTS district varchar(120);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS weather_sent_date varchar(16);
     `);
 
     // 2. Specialists jadvalidagi maydonlar

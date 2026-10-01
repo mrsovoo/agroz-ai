@@ -472,6 +472,7 @@ export async function listSpecialists(opts: {
   radiusKm?: unknown;
   role?: string | null;
   meds?: string[];
+  region?: string | null;
 }): Promise<SpecialistDto[]> {
   const rows = await db
     .select()
@@ -565,11 +566,59 @@ export async function listSpecialists(opts: {
     medicines: bySpecialist.get(s.id) ?? [],
   });
 
+  const REGION_COORDS_MAP: Record<string, { lat: number; lng: number }> = {
+    toshkent: { lat: 41.3111, lng: 69.2797 },
+    samarqand: { lat: 39.6542, lng: 66.9597 },
+    buxoro: { lat: 39.7747, lng: 64.4286 },
+    fargona: { lat: 40.3842, lng: 71.7843 },
+    andijon: { lat: 40.7821, lng: 72.3442 },
+    namangan: { lat: 40.9983, lng: 71.6726 },
+    qashqadaryo: { lat: 38.8606, lng: 65.7891 },
+    surxondaryo: { lat: 37.2242, lng: 67.2783 },
+    xorazm: { lat: 41.5564, lng: 60.6314 },
+    jizzax: { lat: 40.1158, lng: 67.8422 },
+    navoiy: { lat: 40.0844, lng: 65.3792 },
+    sirdaryo: { lat: 40.8373, lng: 68.6617 },
+    qoraqalpogiston: { lat: 42.4619, lng: 59.6166 },
+  };
+
+  const cleanRegionStr = (str?: string | null): string => {
+    if (!str) return "";
+    return str
+      .toLowerCase()
+      .replace(/['`ʻ’]/g, "")
+      .replace(/viloyati|viloyat|shahri|shahar|tumani|tuman|respublikasi|region/g, "")
+      .trim();
+  };
+
+  const findClosestRegionKey = (lat: number, lng: number): string => {
+    let closest = "toshkent";
+    let minD = Infinity;
+    for (const [key, c] of Object.entries(REGION_COORDS_MAP)) {
+      const d = distanceKm(lat, lng, c.lat, c.lng);
+      if (d < minD) {
+        minD = d;
+        closest = key;
+      }
+    }
+    return closest;
+  };
+
+  const userRegionKey = cleanRegionStr(opts.region) || (hasCoords ? findClosestRegionKey(opts.lat as number, opts.lng as number) : "");
+
   if (!hasCoords) {
-    // Lokatsiyasiz: reyting bo'yicha (ko'p ovozli va yuqori), keyin yangi qo'shilganlar.
+    // Lokatsiyasiz: agar foydalanuvchi viloyati ma'lum bo'lsa, shu viloyatdagi mutaxassislar oldinga chiqadi
     return filtered
-      .map((s) => withMeta(s, null, false))
-      .sort((a, b) => (b.ratingAvg ?? 0) - (a.ratingAvg ?? 0) || b.ratingCount - a.ratingCount);
+      .map((s) => {
+        const specAddr = cleanRegionStr(s.address);
+        const inUserRegion = Boolean(userRegionKey && specAddr.includes(userRegionKey));
+        return { dto: withMeta(s, null, false), inUserRegion };
+      })
+      .sort((a, b) => {
+        if (a.inUserRegion !== b.inUserRegion) return a.inUserRegion ? -1 : 1;
+        return (b.dto.ratingAvg ?? 0) - (a.dto.ratingAvg ?? 0) || b.dto.ratingCount - a.dto.ratingCount;
+      })
+      .map((x) => x.dto);
   }
 
   const lat = opts.lat as number;
@@ -578,21 +627,38 @@ export async function listSpecialists(opts: {
 
   const withDistance = filtered.map((s) => {
     const d = roundKm(distanceKm(lat, lng, s.lat, s.lng));
-    // Tajribali (5+ yil) va reytingi yaxshi (4+) mutaxassislar uchun radius kengayadi
-    // (lekin 25 km dan oshmaydi).
+
+    // Hudud bo'yicha to'liq qamrov:
+    // Agar mutaxassis/dorixona foydalanuvchi hozir turgan viloyatda bo'lsa (manzili yoki koordinatasi bo'yicha),
+    // butun viloyat hududi uchun locked = false (qulflanmaydi va to'liq ko'rinadi).
+    const specAddr = cleanRegionStr(s.address);
+    const specClosestKey = findClosestRegionKey(s.lat, s.lng);
+    const isSameProvince = Boolean(
+      userRegionKey && (
+        specAddr.includes(userRegionKey) ||
+        userRegionKey.includes(specAddr) ||
+        specClosestKey === userRegionKey
+      )
+    );
+
     const extended =
       radiusKm < 15 &&
       (s.experienceYears ?? 0) >= 5 &&
       (ratingBySpecialist.get(s.id)?.count ?? 0) > 0 &&
       (ratingBySpecialist.get(s.id)?.avg ?? 0) >= 4;
     const limit = extended ? Math.max(radiusKm * 1.5, radiusKm) : radiusKm;
-    return withMeta(s, d, d > limit);
+
+    // Agar bitta viloyatda bo'lsa — hech qachon qulflanmaydi!
+    // Boshqa viloyatda bo'lsa va radiusdan tashqarida bo'lsa — locked = true
+    const locked = isSameProvince ? false : d > limit;
+
+    return withMeta(s, d, locked);
   });
 
   const open = withDistance
     .filter((s) => !s.locked)
     .sort((a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999));
-  const locked = withDistance
+  const lockedList = withDistance
     .filter((s) => s.locked)
     .sort(
       (a, b) =>
@@ -600,7 +666,7 @@ export async function listSpecialists(opts: {
         b.ratingCount - a.ratingCount ||
         (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999),
     );
-  return [...open, ...locked];
+  return [...open, ...lockedList];
 }
 
 // ---------------------------------------------------------------------------

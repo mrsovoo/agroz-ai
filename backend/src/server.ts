@@ -158,6 +158,25 @@ app.listen(PORT, async () => {
       .catch((err) => console.warn("[orders-reminder interval]:", err));
   }, 2 * 60 * 1000);
 
+  // Har kuni ertalab (07:00 da) ro'yxatdan o'tgan fermerlarga hududiy ob-havo xabarnomasini avtomatik yuborish
+  setInterval(() => {
+    try {
+      const nowStr = new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Tashkent",
+        hour: "numeric",
+        hour12: false,
+      }).format(new Date());
+      const hour = parseInt(nowStr, 10);
+      if (hour === 7) {
+        import("./lib/weather-alerts.js")
+          .then(({ sendDailyMorningAgroWeatherBroadcast }) => sendDailyMorningAgroWeatherBroadcast())
+          .catch((err) => console.warn("[daily-weather interval error]:", err));
+      }
+    } catch (err) {
+      console.warn("[daily-weather check error]:", err);
+    }
+  }, 10 * 60 * 1000);
+
   // Demo ma'lumotlar faqat SEED_DEMO_DATA === "true" bo'lganda kiritiladi
   if (process.env.SEED_DEMO_DATA === "true") {
     try {

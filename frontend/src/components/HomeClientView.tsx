@@ -179,9 +179,9 @@ export default function HomeClientView({
       {/* Telegram Mini App: Bosh ekranga qo'shish banneri */}
       <HomeScreenPromptBanner />
 
-      {/* 2. Ob-havo kartasi: 3D Quyosh + 22 °C + Toshkent */}
+      {/* 2. Ob-havo kartasi: 3D Quyosh + 22 °C + Agro tahlil */}
       <div className="mt-3.5">
-        <WeatherCard showDetails={false} />
+        <WeatherCard />
       </div>
 
       {/* 3. Dorilar bo'limi */}

@@ -5,6 +5,7 @@ import {
   analyzeForecastAlerts,
   getSampleAgroAlerts,
   REGION_COORDINATES,
+  calculateAgroMetrics,
 } from "../lib/weather-alerts.js";
 
 const router = Router();
@@ -17,17 +18,37 @@ router.get("/", async (req, res) => {
 
   try {
     const apiRes = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,is_day&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset&wind_speed_unit=ms&timezone=auto`
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,is_day&hourly=soil_temperature_0cm&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset&forecast_days=1&wind_speed_unit=ms&timezone=auto`
     );
     if (!apiRes.ok) throw new Error("weather API error");
     const json = (await apiRes.json()) as any;
     const c = json.current ?? {};
     const d = json.daily ?? {};
+    const h = json.hourly ?? {};
 
     const tempCurrent = Math.round(c.temperature_2m ?? 22);
     const tempDay = typeof d.temperature_2m_max?.[0] === "number" ? Math.round(d.temperature_2m_max[0]) : tempCurrent;
     const tempNight = typeof d.temperature_2m_min?.[0] === "number" ? Math.round(d.temperature_2m_min[0]) : Math.round(tempCurrent - 7);
     const isDayTime = c.is_day !== undefined ? c.is_day === 1 : true;
+    const wind = Math.round((c.wind_speed_10m ?? 2) * 10) / 10;
+    const humidity = Math.round(c.relative_humidity_2m ?? 45);
+    const rain = c.precipitation ?? 0;
+
+    const hourIdx = new Date().getHours();
+    const soilTempRaw = Array.isArray(h.soil_temperature_0cm) && typeof h.soil_temperature_0cm[hourIdx] === "number"
+      ? h.soil_temperature_0cm[hourIdx]
+      : undefined;
+
+    const agro = calculateAgroMetrics({
+      temp: tempCurrent,
+      tempDay,
+      tempNight,
+      wind,
+      humidity,
+      rain,
+      soilTempRaw,
+      isDay: isDayTime,
+    });
 
     const formatTime = (iso?: string) => {
       if (!iso) return undefined;
@@ -42,9 +63,15 @@ router.get("/", async (req, res) => {
       isDay: isDayTime,
       sunrise: formatTime(d.sunrise?.[0]),
       sunset: formatTime(d.sunset?.[0]),
-      wind: Math.round((c.wind_speed_10m ?? 2) * 10) / 10,
-      humidity: Math.round(c.relative_humidity_2m ?? 45),
-      rain: c.precipitation ?? 0,
+      wind,
+      humidity,
+      rain,
+      soilTemp: agro.soilTemp,
+      sprayStatus: agro.sprayStatus,
+      sprayLabel: agro.sprayLabel,
+      sprayReason: agro.sprayReason,
+      frostRisk: agro.frostRisk,
+      agroAdvice: agro.agroAdvice,
       month,
     };
 

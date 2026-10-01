@@ -195,10 +195,13 @@ export default function MarketClient() {
   const isFavorite = (pharmacyId: number, medicineId: number) =>
     favorites.some((f) => f.pharmacyId === pharmacyId && f.medicineId === medicineId);
 
+  const [userRegion, setUserRegion] = useState<string | null>(null);
+
   // ---- Joylashuv ----
   useEffect(() => {
     const fallback = () => {
       setCoords({ lat: 41.3111, lng: 69.2797 });
+      setUserRegion("Toshkent");
       setLocError("Lokatsiya ruxsati berilmagan — Toshkent markazi bo'yicha ko'rsatilmoqda");
     };
     if (!navigator.geolocation) {
@@ -207,8 +210,16 @@ export default function MarketClient() {
     }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setCoords({ lat, lng });
         setLocError(null);
+        fetch(`/api/location?lat=${lat}&lng=${lng}`)
+          .then((r) => r.json())
+          .then((d: { region?: string | null }) => {
+            if (d?.region) setUserRegion(d.region);
+          })
+          .catch(() => {});
       },
       fallback,
       { maximumAge: 5 * 60 * 1000, timeout: 8000, enableHighAccuracy: false },
@@ -222,6 +233,9 @@ export default function MarketClient() {
       params.set("lat", String(coords.lat));
       params.set("lng", String(coords.lng));
     }
+    if (userRegion) {
+      params.set("region", userRegion);
+    }
     let cancelled = false;
     setLoading(true);
     fetch(`/api/specialists?${params.toString()}`)
@@ -229,7 +243,7 @@ export default function MarketClient() {
       .then((d: { items?: Pharmacy[] }) => {
         if (cancelled) return;
         const list = Array.isArray(d?.items) ? d.items : [];
-        // Faqat locked === false (tanlangan radius ichidagi) dorixonalarni qoldiramiz
+        // Faqat locked === false (viloyat va tanlangan radius ichidagi) dorixonalarni qoldiramiz
         setItems(
           list.filter(
             (s) => s.role === "pharmacy" && s.locked === false && (s.medicines?.length ?? 0) > 0,
@@ -245,7 +259,7 @@ export default function MarketClient() {
     return () => {
       cancelled = true;
     };
-  }, [coords, radiusKm]);
+  }, [coords, radiusKm, userRegion]);
 
   function expandRadius() {
     const nextOption = RADIUS_OPTIONS.find((r) => r > radiusKm);

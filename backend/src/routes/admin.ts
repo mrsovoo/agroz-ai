@@ -1483,6 +1483,24 @@ router.post("/weather-alerts/broadcast", requireAdmin, async (req, res) => {
   }
 });
 
+// POST /api/admin/weather/send-daily (Kunlik ertalabki agro-ob-havo xabarnomasini yuborish / test qilish)
+router.post("/weather/send-daily", requireAdmin, async (req, res) => {
+  try {
+    const force = Boolean(req.body?.force);
+    const testTelegramId = req.body?.testTelegramId ? Number(req.body.testTelegramId) : undefined;
+    const { sendDailyMorningAgroWeatherBroadcast } = await import("../lib/weather-alerts.js");
+    const result = await sendDailyMorningAgroWeatherBroadcast(force, testTelegramId);
+    res.json({
+      ok: true,
+      message: `Ertalabki ob-havo xabari yuborildi. Yuborildi: ${result.sent}, O'tkazildi: ${result.skipped}, Xatolar: ${result.failed}`,
+      ...result,
+    });
+  } catch (err: any) {
+    console.error("[admin send-daily weather error]:", err);
+    res.status(500).json({ error: err.message || "Xabar yuborishda xatolik" });
+  }
+});
+
 // -------------------------------------------------------------
 // 14. ADMIN CUSTOM MESSAGING & BROADCASTS (Dorixona, Mutaxassis, Foydalanuvchilar)
 // -------------------------------------------------------------

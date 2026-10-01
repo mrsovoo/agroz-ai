@@ -34,6 +34,11 @@ export type WeatherAlert = {
   source: "live_forecast" | "regional_station" | "simulation";
 };
 
+import { db } from "../db/index.js";
+import { users } from "../db/schema.js";
+import { eq, isNotNull } from "drizzle-orm";
+import { sendMessage, agrozGoKeyboard } from "./telegram-bot.js";
+
 export const REGION_COORDINATES: Record<string, { lat: number; lng: number }> = {
   Toshkent: { lat: 41.3111, lng: 69.2797 },
   Samarqand: { lat: 39.6542, lng: 66.9597 },
@@ -49,6 +54,20 @@ export const REGION_COORDINATES: Record<string, { lat: number; lng: number }> = 
   Sirdaryo: { lat: 40.8373, lng: 68.6617 },
   "Qoraqalpog'iston": { lat: 42.4619, lng: 59.6166 },
 };
+
+export function findRegionCoords(regionName?: string | null): { lat: number; lng: number; matchedRegion: string } {
+  if (!regionName) {
+    return { ...REGION_COORDINATES["Toshkent"], matchedRegion: "Toshkent" };
+  }
+  const clean = regionName.toLowerCase().replace(/['`ʻ’]/g, "").trim();
+  for (const [key, coords] of Object.entries(REGION_COORDINATES)) {
+    const keyClean = key.toLowerCase().replace(/['`ʻ’]/g, "");
+    if (clean.includes(keyClean) || keyClean.includes(clean)) {
+      return { ...coords, matchedRegion: key };
+    }
+  }
+  return { ...REGION_COORDINATES["Toshkent"], matchedRegion: regionName || "Toshkent" };
+}
 
 export type ForecastDaily = {
   time: string[];
@@ -358,3 +377,302 @@ export function formatAlertTelegramMessage(alert: WeatherAlert): string {
 export function formatAlertSms(alert: WeatherAlert): string {
   return `OGOHLANTIRISH (${alert.region}): ${alert.title}. Ekinlarni himoyalang, chorvani sovuq/yomg'irdan asrang. Batafsil: agroz.uz`;
 }
+
+export type AgroWeatherSnapshot = {
+  temp: number;
+  tempDay: number;
+  tempNight: number;
+  isDay: boolean;
+  wind: number;
+  humidity: number;
+  rain: number;
+  soilTemp: number;
+  sprayStatus: "good" | "moderate" | "bad";
+  sprayLabel: string;
+  sprayReason: string;
+  frostRisk: boolean;
+  agroAdvice: string;
+  region: string;
+  dateStr: string;
+};
+
+export function calculateAgroMetrics(params: {
+  temp: number;
+  tempDay: number;
+  tempNight: number;
+  wind: number;
+  humidity: number;
+  rain: number;
+  soilTempRaw?: number;
+  isDay?: boolean;
+}): {
+  soilTemp: number;
+  sprayStatus: "good" | "moderate" | "bad";
+  sprayLabel: string;
+  sprayReason: string;
+  frostRisk: boolean;
+  agroAdvice: string;
+} {
+  const { temp, tempDay, tempNight, wind, humidity, rain, soilTempRaw, isDay = true } = params;
+
+  // Tuproq harorati (0–10 sm chuqurlikda):
+  let soilTemp: number;
+  if (typeof soilTempRaw === "number" && !Number.isNaN(soilTempRaw)) {
+    soilTemp = Math.round(soilTempRaw);
+  } else {
+    // Agronomik hisob: kunduzi havoga nisbatan 2°C salqinroq, kechasi havoga nisbatan 3°C iliqroq saqlanadi
+    soilTemp = isDay ? Math.round(temp - 2) : Math.round(tempNight + 3);
+  }
+
+  const frostRisk = tempNight <= 2;
+
+  // Dori va o'g'it purkash holati (Agro Spray Window):
+  let sprayStatus: "good" | "moderate" | "bad" = "good";
+  let sprayLabel = "Dori purkash: Qulay";
+  let sprayReason = `Shamol sokin (${wind} m/s) va havo ochiq. Purkash uchun ayni qulay fursat!`;
+
+  if (rain > 0.2) {
+    sprayStatus = "bad";
+    sprayLabel = "Dori sepmang";
+    sprayReason = `Yog'ingarchilik (${rain} mm), sepilgan dori yuvilib ketadi.`;
+  } else if (wind > 5.5) {
+    sprayStatus = "bad";
+    sprayLabel = "Dori sepmang";
+    sprayReason = `Kuchli shamol (${wind} m/s), dori havoga uchib ketadi.`;
+  } else if (temp > 32) {
+    sprayStatus = "bad";
+    sprayLabel = "Dori sepmang";
+    sprayReason = `Harorat yuqori (${temp}°C), bargni kuydirish xavfi bor.`;
+  } else if (temp < 10) {
+    sprayStatus = "bad";
+    sprayLabel = "Dori sepmang";
+    sprayReason = `Harorat past (${temp}°C), dori yaxshi ta'sir qilmaydi.`;
+  } else if (wind > 3.5 || temp > 28 || temp < 14 || humidity > 85) {
+    sprayStatus = "moderate";
+    sprayLabel = "Dori purkash: Ehtiyotkorlik bilan";
+    if (wind > 3.5) {
+      sprayReason = `Shabada bor (${wind} m/s), erta tong yoki kechqurun seping.`;
+    } else if (temp > 28) {
+      sprayReason = `Kunduzi issiq (${temp}°C), kechki salqinda seping.`;
+    } else {
+      sprayReason = `Havo namligi yuqori (${humidity}%), shamol tinishini kuting.`;
+    }
+  }
+
+  // 1 qatorlik qisqa dehqonchilik tavsiyasi (agroAdvice):
+  let agroAdvice = "🌾 Ekinlarning parvarishini davom ettiring, namlik darajasini nazorat qiling.";
+  if (frostRisk) {
+    agroAdvice = `❄️ Qorasovuq xavfi (${tempNight}°C). Ko'chatlarni yoping, bog'larda tutatish qiling.`;
+  } else if (rain >= 10) {
+    agroAdvice = `🌧️ Kuchli yog'in kutilmoqda. Ariqlarni tozalang, suv to'planishining oldini oling.`;
+  } else if (temp >= 35) {
+    agroAdvice = `☀️ Jazirama: Kunduzi sug'ormang, sug'orishni erta tong yoki shomda bajaring.`;
+  } else if (sprayStatus === "good") {
+    agroAdvice = `🌿 Havo ochiq va shamol sokin. Dori va o'g'it purkash uchun ayni qulay fursat.`;
+  } else if (wind >= 7) {
+    agroAdvice = `💨 Kuchli shamol (${wind} m/s). Issiqxona va parniklarni mustahkamlang.`;
+  }
+
+  return {
+    soilTemp,
+    sprayStatus,
+    sprayLabel,
+    sprayReason,
+    frostRisk,
+    agroAdvice,
+  };
+}
+
+/**
+ * Berilgan koordinatalar bo'yicha aniq agro-ob-havo ma'lumotlarini olish.
+ */
+export async function getAgroWeatherSnapshot(
+  lat: number,
+  lng: number,
+  regionName: string = "Toshkent",
+): Promise<AgroWeatherSnapshot> {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,is_day&hourly=soil_temperature_0cm&daily=temperature_2m_max,temperature_2m_min&forecast_days=1&wind_speed_unit=ms&timezone=auto`;
+
+  let currentTemp = 22;
+  let tempDay = 24;
+  let tempNight = 14;
+  let isDay = true;
+  let wind = 2.5;
+  let humidity = 45;
+  let rain = 0;
+  let soilTempRaw: number | undefined;
+
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+    if (res.ok) {
+      const data = (await res.json()) as any;
+      const c = data.current ?? {};
+      const d = data.daily ?? {};
+      const h = data.hourly ?? {};
+
+      currentTemp = Math.round(c.temperature_2m ?? 22);
+      tempDay = typeof d.temperature_2m_max?.[0] === "number" ? Math.round(d.temperature_2m_max[0]) : currentTemp;
+      tempNight = typeof d.temperature_2m_min?.[0] === "number" ? Math.round(d.temperature_2m_min[0]) : Math.round(currentTemp - 8);
+      isDay = c.is_day !== undefined ? c.is_day === 1 : true;
+      wind = Math.round((c.wind_speed_10m ?? 2) * 10) / 10;
+      humidity = Math.round(c.relative_humidity_2m ?? 45);
+      rain = Math.round((c.precipitation ?? 0) * 10) / 10;
+
+      const hourIdx = new Date().getHours();
+      if (Array.isArray(h.soil_temperature_0cm) && typeof h.soil_temperature_0cm[hourIdx] === "number") {
+        soilTempRaw = h.soil_temperature_0cm[hourIdx];
+      }
+    }
+  } catch (err) {
+    console.warn(`[getAgroWeatherSnapshot] Open-Meteo yuklashda xatolik:`, err);
+  }
+
+  const metrics = calculateAgroMetrics({
+    temp: currentTemp,
+    tempDay,
+    tempNight,
+    wind,
+    humidity,
+    rain,
+    soilTempRaw,
+    isDay,
+  });
+
+  const nowUz = new Intl.DateTimeFormat("ru-RU", { timeZone: "Asia/Tashkent" }).format(new Date());
+
+  return {
+    temp: currentTemp,
+    tempDay,
+    tempNight,
+    isDay,
+    wind,
+    humidity,
+    rain,
+    soilTemp: metrics.soilTemp,
+    sprayStatus: metrics.sprayStatus,
+    sprayLabel: metrics.sprayLabel,
+    sprayReason: metrics.sprayReason,
+    frostRisk: metrics.frostRisk,
+    agroAdvice: metrics.agroAdvice,
+    region: regionName,
+    dateStr: nowUz,
+  };
+}
+
+/**
+ * Har kungi ertalabki agro-ob-havo xabari matni.
+ */
+export function formatDailyMorningWeatherTelegram(
+  snapshot: AgroWeatherSnapshot,
+  userName?: string | null,
+): string {
+  const greeting = userName ? `Assalomu alaykum, <b>${userName}</b>!` : "Assalomu alaykum, dehqon va chorvadorlar!";
+  const statusEmoji = snapshot.sprayStatus === "good" ? "✅" : snapshot.sprayStatus === "moderate" ? "⚠️" : "🛑";
+  const statusBadge =
+    snapshot.sprayStatus === "good"
+      ? "QULAY"
+      : snapshot.sprayStatus === "moderate"
+      ? "EHTIYOTKORLIK BILAN"
+      : "TAVSIYA ETILMAYDI";
+
+  return [
+    `🌤 ${greeting}`,
+    `📍 <b>Hudud:</b> ${snapshot.region}`,
+    `📅 <b>Bugungi agro-ob-havo xabarnomasi</b> (${snapshot.dateStr}):`,
+    "",
+    `🌡 <b>Havo harorati:</b> Kunduzi +${snapshot.tempDay}°C / Kechasi +${snapshot.tempNight}°C`,
+    `💨 <b>Shamol tezligi:</b> ${snapshot.wind} m/s`,
+    `💧 <b>Havo namligi:</b> ${snapshot.humidity}%`,
+    `🌧 <b>Yog'ingarchilik:</b> ${snapshot.rain > 0 ? `${snapshot.rain} mm` : "Kutilmaydi (0 mm)"}`,
+    `🌱 <b>Tuproq harorati (0–10 sm):</b> +${snapshot.soilTemp}°C`,
+    "",
+    `🌿 <b>Dori va o'g'it purkash holati:</b> ${statusBadge} ${statusEmoji}`,
+    `<i>${snapshot.sprayReason}</i>`,
+    "",
+    `💡 <b>Bugungi agronomik tavsiya:</b>`,
+    `${snapshot.agroAdvice}`,
+    "",
+    `📱 <i>Batafsil ob-havo tahlili, bozor va mutaxassislar AgrozGO da:</i>`,
+  ].join("\n");
+}
+
+/**
+ * Har kuni ertalab (soat 07:00 da) ro'yxatdan o'tgan barcha fermer va foydalanuvchilarga
+ * o'z hududiga mos agro-ob-havo va dehqonchilik tavsiyasini avtomatik yuborish.
+ * Takroriy yuborishning oldini oladi (kuniga 1 marta).
+ */
+export async function sendDailyMorningAgroWeatherBroadcast(
+  force: boolean = false,
+  testTelegramId?: number,
+): Promise<{ total: number; sent: number; skipped: number; failed: number }> {
+  const todayStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tashkent" }).format(new Date());
+
+  const userQuery = db
+    .select({
+      id: users.id,
+      telegramId: users.telegramId,
+      name: users.name,
+      region: users.region,
+      district: users.district,
+      weatherSentDate: users.weatherSentDate,
+    })
+    .from(users)
+    .where(isNotNull(users.telegramId));
+
+  const allUsers = await userQuery;
+  const targetUsers = testTelegramId
+    ? allUsers.filter((u) => u.telegramId === testTelegramId)
+    : allUsers;
+
+  let sent = 0;
+  let skipped = 0;
+  let failed = 0;
+
+  // Hudud bo'yicha ob-havoni keshlash (bir xil viloyat foydalanuvchilariga qayta-qayta API chaqirmaslik uchun)
+  const weatherCache = new Map<string, AgroWeatherSnapshot>();
+
+  for (const user of targetUsers) {
+    if (!user.telegramId) continue;
+
+    // Agar bugun allaqachon yuborilgan bo'lsa va majburiy (force) bo'lmasa — o'tkazib yuboramiz
+    if (!force && user.weatherSentDate === todayStr) {
+      skipped++;
+      continue;
+    }
+
+    const userRegion = user.region || "Toshkent";
+    let snapshot = weatherCache.get(userRegion);
+    if (!snapshot) {
+      const coords = findRegionCoords(userRegion);
+      snapshot = await getAgroWeatherSnapshot(coords.lat, coords.lng, coords.matchedRegion);
+      weatherCache.set(userRegion, snapshot);
+    }
+
+    const messageText = formatDailyMorningWeatherTelegram(snapshot, user.name);
+    try {
+      const ok = await sendMessage(user.telegramId, messageText, {
+        keyboard: agrozGoKeyboard(),
+      });
+
+      if (ok) {
+        sent++;
+        await db
+          .update(users)
+          .set({ weatherSentDate: todayStr })
+          .where(eq(users.id, user.id));
+      } else {
+        failed++;
+      }
+    } catch (err) {
+      console.warn(`[daily-weather] ${user.telegramId} ga yuborishda xatolik:`, err);
+      failed++;
+    }
+
+    // Telegram rate limit (soniyasiga ~25 xabar)
+    await new Promise((r) => setTimeout(r, 40));
+  }
+
+  console.log(`[daily-weather] Yakunlandi (${todayStr}): Jami: ${targetUsers.length}, Yuborildi: ${sent}, O'tkazildi: ${skipped}, Xatolik: ${failed}`);
+  return { total: targetUsers.length, sent, skipped, failed };
+}
+
