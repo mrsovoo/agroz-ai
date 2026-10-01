@@ -277,6 +277,25 @@ export default function HomeScreenPromptBanner() {
   const [visible, setVisible] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
 
+  // Botdan yoki havoladan ?add_to_home=1 bilan kirganda avtomatik qo'shish dialogini ochish
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("add_to_home") === "1" || params.get("install") === "1") {
+        const timer = window.setTimeout(async () => {
+          const res = await triggerEasyHomeScreenAdd();
+          if (res !== "native_triggered") {
+            setGuideOpen(true);
+          }
+        }, 600);
+        return () => window.clearTimeout(timer);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
 

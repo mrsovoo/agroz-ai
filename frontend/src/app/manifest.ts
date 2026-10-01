@@ -6,11 +6,15 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "AgrozGO",
     description:
       "Ekin va chorva dori vositalari platformasi, yaqin dorixonalar va mutaxassislar xaritasi.",
-    start_url: "/",
+    start_url: "/?source=pwa",
+    scope: "/",
     display: "standalone",
-    background_color: "#f2f3f5",
-    theme_color: "#fcbd00",
+    orientation: "portrait",
+    background_color: "#ffffff",
+    theme_color: "#039e1e",
     lang: "uz",
-    icons: [{ src: "/icon.svg", sizes: "any", type: "image/svg+xml" }],
+    icons: [
+      { src: "/icon.svg", sizes: "any", type: "image/svg+xml" },
+    ],
   };
 }

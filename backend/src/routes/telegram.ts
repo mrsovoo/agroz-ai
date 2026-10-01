@@ -319,14 +319,17 @@ async function finalizeUserRegistration(
     user?.secondPhone ? `📞 <b>Qo'shimcha raqam:</b> <code>${escapeHtml(user.secondPhone)}</code>` : "",
     locationLabel ? `📍 <b>Manzil:</b> ${escapeHtml(locationLabel)}` : "",
     "",
-    `Ilovaga kirish uchun pastdagi <b>«🌿 AgrozGO ga kirish»</b> tugmasini bosing 👇`,
+    `📲 <b>Ilovani telefoningiz bosh ekraniga qo'shib oling!</b>`,
+    `Shunda har safar Telegram botga kirmasdan, to'g'ridan-to'g'ri telefoningiz ekranidagi belgi (ikonka) orqali AgrozGO ilovasini ochasiz.`,
+    "",
+    `Quyidagi tugma orqali ilovani oching va bosh ekranga qo'shing 👇`,
   ]
     .filter(Boolean)
     .join("\n");
 
   await setAgrozGoMenuButton(chatId).catch(() => {});
   await setAgrozGoMenuButton().catch(() => {});
-  await sendMessage(chatId, successText, { keyboard: registeredUserMenuKeyboard() });
+  await sendMessage(chatId, successText, { keyboard: agrozGoKeyboard() || registeredUserMenuKeyboard() });
 }
 
 async function handleMainBotCallback(query: NonNullable<TelegramUpdate["callback_query"]>): Promise<void> {
@@ -867,13 +870,16 @@ router.post("/webhook", async (req, res) => {
               : "",
             locationLabel ? `📍 <b>Manzil:</b> ${escapeHtml(locationLabel)}` : "",
             "",
-            `Ilovaga kirish uchun pastdagi <b>«🌿 AgrozGO ga kirish»</b> tugmasini bosing 👇`,
+            `📲 <b>Ilovani telefoningiz bosh ekraniga qo'shib oling!</b>`,
+            `Shunda har safar Telegram botga kirmasdan, to'g'ridan-to'g'ri telefoningiz ekranidagi belgi (ikonka) orqali Web Mini Appni ochishingiz mumkin.`,
+            "",
+            `Quyidagi tugma orqali ilovani oching va bosh ekranga qo'shing 👇`,
           ]
             .filter(Boolean)
             .join("\n");
 
           await setAgrozGoMenuButton(chatId).catch(() => {});
-          await sendMessage(chatId, welcomeText, { keyboard: registeredUserMenuKeyboard() });
+          await sendMessage(chatId, welcomeText, { keyboard: agrozGoKeyboard() || registeredUserMenuKeyboard() });
           return res.json({ ok: true });
         }
 
