@@ -64,6 +64,12 @@ export async function handleFarmerUpdate(update: any) {
         text: `💬 <b>Qo'llab-quvvatlash xizmati</b>\n\nSavol yoki takliflaringiz bo'lsa, administrator bilan bog'laning:\n👉 @agroz_support\n\nAgro-do'kon va mutaxassislar uchun botimiz: @${partnerUser}`,
         parse_mode: "HTML",
       });
+      return;
+    }
+
+    if (data === "farmer:orders") {
+      await sendFarmerOrders(token, fromId, fromId);
+      return;
     }
     return;
   }
@@ -98,7 +104,7 @@ export async function handleFarmerUpdate(update: any) {
     }
 
     // users jadvalidan qidiramiz
-    const user = (await db.select().from(users).where(eq(users.phone, phone)).limit(1))[0];
+    let user = (await db.select().from(users).where(eq(users.phone, phone)).limit(1))[0];
     if (user) {
       await db.update(users).set({
         telegramId: fromId,
@@ -110,31 +116,17 @@ export async function handleFarmerUpdate(update: any) {
       return;
     }
 
-    // Foydalanuvchi topilmasa: hisob avtomatik yaratilmaydi!
-    const partnerUser = await partnerBotUsername();
-    // Hamkorlar orasida bormi tekshiramiz:
-    const spec = (await db.select().from(specialists).where(and(eq(specialists.phone, phone), eq(specialists.isActive, true), eq(specialists.isApproved, true))).limit(1))[0];
+    // Yangi foydalanuvchi bo'lsa — darhol ro'yxatdan o'tkazib ulaymiz
+    const fullName = [contact.first_name, contact.last_name].filter(Boolean).join(" ") || firstName || "Foydalanuvchi";
+    const [created] = await db.insert(users).values({
+      phone,
+      name: fullName,
+      telegramId: fromId,
+      botStartedAt: new Date(),
+      botBlocked: false,
+    }).returning();
 
-    const inlineRows: any[] = [
-      [{ text: "🌐 agroz.uz da ro'yxatdan o'tish", url: webAppUrl() }],
-    ];
-    if (spec) {
-      inlineRows.push([{ text: `🤝 Hamkorlar boti (@${partnerUser})`, url: `https://t.me/${partnerUser}` }]);
-    }
-
-    let notFoundText = `Assalomu alaykum! Telefon raqamingiz (<code>${escapeHtml(phone)}</code>) tizimda topilmadi.\n\nIltimos, avval <b>agroz.uz</b> saytida telefon raqamingiz bilan ro'yxatdan o'ting:`;
-    if (spec) {
-      notFoundText += `\n\n<i>Eslatma: Siz tizimda hamkor (${spec.organization || spec.name}) sifatida ro'yxatdan o'tgansiz. Hamkorlar botiga o'tishingiz mumkin:</i>`;
-    }
-
-    await callTelegram(token, "sendMessage", {
-      chat_id: chatId,
-      text: notFoundText,
-      parse_mode: "HTML",
-      reply_markup: {
-        inline_keyboard: inlineRows,
-      },
-    });
+    await sendFarmerGreeting(token, chatId, fromId, created.name || firstName);
     return;
   }
 
@@ -239,8 +231,14 @@ export async function handleFarmerUpdate(update: any) {
     return;
   }
 
+  // /buyurtmalar buyrug'i
+  if (command === "/buyurtmalar" || text === "📦 Mening buyurtmalarim" || text === "📦 Buyurtmalarim") {
+    await sendFarmerOrders(token, chatId, fromId);
+    return;
+  }
+
   // /yordam buyrug'i
-  if (command === "/yordam" || text === "💬 Yordam" || text === "/help") {
+  if (command === "/yordam" || text === "💬 Qo'llab-quvvatlash" || text === "💬 Yordam" || text === "/help") {
     const url = webAppUrl();
     const partnerUser = await partnerBotUsername();
     await callTelegram(token, "sendMessage", {
@@ -255,6 +253,88 @@ export async function handleFarmerUpdate(update: any) {
       },
     });
     return;
+  }
+}
+
+async function sendFarmerOrders(token: string, chatId: number, fromId: number) {
+  const url = webAppUrl();
+  const user = (await db.select().from(users).where(eq(users.telegramId, fromId)).limit(1))[0];
+  if (!user) {
+    await callTelegram(token, "sendMessage", {
+      chat_id: chatId,
+      text: "Buyurtmalaringizni ko'rish uchun avval hisobingizni ulang yoki telefon raqamingizni yuboring:",
+      reply_markup: {
+        keyboard: [[{ text: "📞 Raqamni yuborish", request_contact: true }]],
+        resize_keyboard: true,
+        one_time_keyboard: true,
+      },
+    });
+    return;
+  }
+
+  const userOrders = await db
+    .select()
+    .from(orders)
+    .where(eq(orders.userId, user.id))
+    .orderBy(desc(orders.id))
+    .limit(5);
+
+  if (userOrders.length === 0) {
+    await callTelegram(token, "sendMessage", {
+      chat_id: chatId,
+      text: "📭 <b>Sizda hozircha faol buyurtmalar mavjud emas.</b>\n\nAgrozGO ilovasi orqali yaqin agro-do'konlardan dori va vositalarni buyurtma qilishingiz mumkin 👇",
+      parse_mode: "HTML",
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "🚀 AgrozGO ilovasiga o'tish", web_app: { url } }],
+        ],
+      },
+    });
+    return;
+  }
+
+  const items = await db.select().from(orderItems);
+  const itemsMap = new Map<number, any[]>();
+  for (const it of items) {
+    const arr = itemsMap.get(it.orderId) || [];
+    arr.push(it);
+    itemsMap.set(it.orderId, arr);
+  }
+
+  for (const ord of userOrders) {
+    const ordItems = itemsMap.get(ord.id) || [];
+    const itemsText = ordItems.map((it) => `• <b>${escapeHtml(it.name)}</b> × ${it.qty} ta`).join("\n") || "Mahsulot ko'rsatilmagan";
+
+    const statusLabel =
+      ord.status === "yangi"
+        ? "🟡 Yangi (ko'rib chiqilmoqda)"
+        : ord.status === "tasdiqlandi"
+        ? "🔵 Do'kon tomonidan tasdiqlandi"
+        : ord.status === "tayyor"
+        ? "📦 Do'konda tayyor, olib ketishingiz mumkin"
+        : ord.status === "yetkazildi"
+        ? "✅ Qabul qilindi"
+        : "❌ Bekor qilingan";
+
+    const text = [
+      `📦 <b>Buyurtma #${ord.id}</b>`,
+      `Holati: <b>${statusLabel}</b>`,
+      `Summa: <b>${ord.totalSum ? ord.totalSum.toLocaleString("uz-UZ") + " so'm" : "kelishiladi"}</b>`,
+      "",
+      "<b>Mahsulotlar:</b>",
+      itemsText,
+    ].join("\n");
+
+    await callTelegram(token, "sendMessage", {
+      chat_id: chatId,
+      text,
+      parse_mode: "HTML",
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "📱 Ilovada ko'rish", web_app: { url } }],
+        ],
+      },
+    });
   }
 }
 
@@ -274,6 +354,10 @@ async function sendFarmerGreeting(token: string, chatId: number, fromId: number,
 
   const inlineRows: any[] = [
     [{ text: "🚀 AgrozGO ilovasini ochish", web_app: { url } }],
+    [
+      { text: "📦 Buyurtmalarim", callback_data: "farmer:orders" },
+      { text: "💬 Qo'llab-quvvatlash", callback_data: "support:open" },
+    ],
   ];
 
   const appStore = appStoreUrl();
@@ -285,8 +369,6 @@ async function sendFarmerGreeting(token: string, chatId: number, fromId: number,
     inlineRows.push(storeBtns);
   }
 
-  inlineRows.push([{ text: "💬 Qo'llab-quvvatlash", callback_data: "support:open" }]);
-
   // Hamkor sifatida ham bormi tekshiramiz
   const spec = (await db.select().from(specialists).where(and(or(eq(specialists.telegramId, fromId)), eq(specialists.isActive, true), eq(specialists.isApproved, true))).limit(1))[0];
   let extraText = "";
@@ -295,9 +377,17 @@ async function sendFarmerGreeting(token: string, chatId: number, fromId: number,
     inlineRows.push([{ text: `🤝 Hamkorlar boti (@${partnerUser})`, url: `https://t.me/${partnerUser}` }]);
   }
 
-  const text = `Assalomu alaykum, <b>${escapeHtml(name)}</b>! AgrozGO ga xush kelibsiz 🌱\n\nIlovani pastdagi tugma yoki chap burchakdagi <b>«AgrozGO»</b> menyu tugmasi orqali ochishingiz mumkin.${extraText}`;
+  const text = `Assalomu alaykum, <b>${escapeHtml(name)}</b>! AgrozGO ga xush kelibsiz 🌱\n\nIlovani ochish uchun pastdagi tugmani bosing:${extraText}`;
 
-  // Reply keyboardni tozalab (remove_keyboard) toza inline UI beramiz
+  // Reply keyboard: Doimiy qulay pastki menyu
+  const replyKeyboard = {
+    keyboard: [
+      [{ text: "🚀 AgrozGO", web_app: { url } }],
+      [{ text: "📦 Mening buyurtmalarim" }, { text: "💬 Qo'llab-quvvatlash" }],
+    ],
+    resize_keyboard: true,
+  };
+
   await callTelegram(token, "sendMessage", {
     chat_id: chatId,
     text,
@@ -305,6 +395,13 @@ async function sendFarmerGreeting(token: string, chatId: number, fromId: number,
     reply_markup: {
       inline_keyboard: inlineRows,
     },
+  });
+
+  // Reply menyuni ham faollashtirib qo'yamiz
+  await callTelegram(token, "sendMessage", {
+    chat_id: chatId,
+    text: "Quyidagi tugmalar orqali xizmatlardan foydalanishingiz mumkin 👇",
+    reply_markup: replyKeyboard,
   });
 }
 
@@ -328,6 +425,37 @@ export async function handlePartnerUpdate(update: any) {
 
     if (cqId) {
       await callTelegram(token, "answerCallbackQuery", { callback_query_id: cqId });
+    }
+
+    // 0) Tezkor ko'rish callbacklari
+    if (data === "o:view:recent") {
+      const spec = (await db.select().from(specialists).where(eq(specialists.telegramId, fromId)).limit(1))[0];
+      if (spec && spec.role === "pharmacy") {
+        const recentOrders = await db.select().from(orders).where(eq(orders.pharmacySpecialistId, spec.id)).orderBy(desc(orders.id)).limit(5);
+        if (recentOrders.length === 0) {
+          await callTelegram(token, "sendMessage", { chat_id: fromId, text: "📭 Hozircha do'koningizga yangi bronlar tushmagan." });
+        } else {
+          for (const ord of recentOrders) {
+            await sendPartnerOrderCard(token, fromId, ord);
+          }
+        }
+      }
+      return;
+    }
+
+    if (data === "c:view:recent") {
+      const spec = (await db.select().from(specialists).where(eq(specialists.telegramId, fromId)).limit(1))[0];
+      if (spec) {
+        const recentCalls = await db.select().from(specialistCalls).where(eq(specialistCalls.specialistId, spec.id)).orderBy(desc(specialistCalls.id)).limit(5);
+        if (recentCalls.length === 0) {
+          await callTelegram(token, "sendMessage", { chat_id: fromId, text: "📭 Hozircha chaqiruvlar mavjud emas." });
+        } else {
+          for (const c of recentCalls) {
+            await sendPartnerCallCard(token, fromId, c);
+          }
+        }
+      }
+      return;
     }
 
     // 1) Buyurtma / Bron amallari (o:confirm, o:cancel, o:ready, o:done)
@@ -616,12 +744,17 @@ export async function handlePartnerUpdate(update: any) {
   // /band va /bosh
   if (command === "/band" || text === "🔴 Bandman") {
     await db.update(specialists).set({ isBusy: true }).where(eq(specialists.id, spec.id));
+    const kabinetUrl = partnerMiniappUrl();
     await callTelegram(token, "sendMessage", {
       chat_id: chatId,
       text: "🔴 <b>Holatingiz: Band</b> deb belgilandi. Yangi chaqiruvlar qabul qilinmaydi.",
       parse_mode: "HTML",
       reply_markup: {
-        keyboard: [[{ text: "👨‍⚕️ Chaqiruvlar" }, { text: "🟢 Bo'shman" }], [{ text: "💬 Yordam" }]],
+        keyboard: [
+          [{ text: "📋 Mutaxassis kabineti", web_app: { url: kabinetUrl } }],
+          [{ text: "👨‍⚕️ Chaqiruvlar" }, { text: "🟢 Bo'shman" }],
+          [{ text: "💬 Yordam" }],
+        ],
         resize_keyboard: true,
       },
     });
@@ -630,12 +763,17 @@ export async function handlePartnerUpdate(update: any) {
 
   if (command === "/bosh" || text === "🟢 Bo'shman") {
     await db.update(specialists).set({ isBusy: false }).where(eq(specialists.id, spec.id));
+    const kabinetUrl = partnerMiniappUrl();
     await callTelegram(token, "sendMessage", {
       chat_id: chatId,
       text: "🟢 <b>Holatingiz: Bo'sh</b> deb belgilandi. Yangi chaqiruvlarni qabul qilishingiz mumkin.",
       parse_mode: "HTML",
       reply_markup: {
-        keyboard: [[{ text: "👨‍⚕️ Chaqiruvlar" }, { text: "🔴 Bandman" }], [{ text: "💬 Yordam" }]],
+        keyboard: [
+          [{ text: "📋 Mutaxassis kabineti", web_app: { url: kabinetUrl } }],
+          [{ text: "👨‍⚕️ Chaqiruvlar" }, { text: "🔴 Bandman" }],
+          [{ text: "💬 Yordam" }],
+        ],
         resize_keyboard: true,
       },
     });
@@ -659,7 +797,9 @@ async function sendPartnerGreeting(token: string, chatId: number, spec: typeof s
   const org = spec.organization || "Agro-do'kon";
   const kabinetUrl = partnerMiniappUrl();
 
-  if (spec.role === "pharmacy") {
+  const isPharmacy = spec.role === "pharmacy";
+
+  if (isPharmacy) {
     greeting = `Assalomu alaykum, <b>${escapeHtml(name)}</b>! Siz <b>${escapeHtml(org)}</b> agro-do'koni egasi sifatida ulandingiz ✅ Bronlarni shu yerda va kabinetda boshqarasiz.`;
   } else if (spec.specialty?.toLowerCase().includes("veterinar") || spec.role === "veterinarian") {
     greeting = `Assalomu alaykum, <b>${escapeHtml(name)}</b>! Siz veterinar sifatida ulandingiz ✅ Chaqiruvlarni shu yerda va kabinetda qabul qilasiz.`;
@@ -668,22 +808,26 @@ async function sendPartnerGreeting(token: string, chatId: number, spec: typeof s
   }
 
   const inlineRows = [
-    [{ text: "📋 Kabinetni ochish", web_app: { url: kabinetUrl } }],
+    [{ text: isPharmacy ? "📋 Do'kon kabinetini ochish" : "📋 Mutaxassis kabinetini ochish", web_app: { url: kabinetUrl } }],
+    [{ text: isPharmacy ? "📦 Yangi bronlar" : "👨‍⚕️ Chaqiruvlar", callback_data: isPharmacy ? "o:view:recent" : "c:view:recent" }],
   ];
 
-  const replyMenu =
-    spec.role === "pharmacy"
-      ? {
-          keyboard: [[{ text: "📦 Bronlar" }], [{ text: "💬 Yordam" }]],
-          resize_keyboard: true,
-        }
-      : {
-          keyboard: [
-            [{ text: "👨‍⚕️ Chaqiruvlar" }, { text: spec.isBusy ? "🟢 Bo'shman" : "🔴 Bandman" }],
-            [{ text: "💬 Yordam" }],
-          ],
-          resize_keyboard: true,
-        };
+  const replyMenu = isPharmacy
+    ? {
+        keyboard: [
+          [{ text: "📋 Do'kon kabineti", web_app: { url: kabinetUrl } }],
+          [{ text: "📦 Bronlar" }, { text: "💬 Yordam" }],
+        ],
+        resize_keyboard: true,
+      }
+    : {
+        keyboard: [
+          [{ text: "📋 Mutaxassis kabineti", web_app: { url: kabinetUrl } }],
+          [{ text: "👨‍⚕️ Chaqiruvlar" }, { text: spec.isBusy ? "🟢 Bo'shman" : "🔴 Bandman" }],
+          [{ text: "💬 Yordam" }],
+        ],
+        resize_keyboard: true,
+      };
 
   await callTelegram(token, "setChatMenuButton", {
     chat_id: chatId,
