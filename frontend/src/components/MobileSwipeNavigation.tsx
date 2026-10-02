@@ -11,7 +11,7 @@ import { haptic } from "@/lib/telegram";
  * - O'ngga sursa (swipe right): oldingi tabga o'tish
  * - Ichki sahifalarda chap chetdan o'ngga sursa (edge swipe): router.back()
  */
-const MAIN_TABS = ["/", "/agro-mahsulotlar", "/mutaxassislar", "/profil"];
+const MAIN_TABS = ["/", "/dorilar", "/mutaxassislar", "/profil"];
 
 export default function MobileSwipeNavigation() {
   const router = useRouter();
@@ -42,13 +42,16 @@ export default function MobileSwipeNavigation() {
         return true;
       }
 
-      // Gorizontal scroll bo'ladigan element (masalan, toifalar ro'yxati, rasm karuseli)
+      // Gorizontal scroll bo'ladigan element (faqat explicit scrollable elementlar, masalan gorizontal toifalar ro'yxati)
       let el: HTMLElement | null = target;
       while (el && el !== document.body && el !== document.documentElement) {
+        if (el.getAttribute("data-horizontal-scroll") === "true") {
+          return true;
+        }
         const style = window.getComputedStyle(el);
         const overflowX = style.overflowX;
-        const isScrollable = (overflowX === "auto" || overflowX === "scroll") && el.scrollWidth > el.clientWidth + 10;
-        if (isScrollable) {
+        // Scrollable elementda real gorizontal aylanish imkoniyati bo'lsa
+        if ((overflowX === "auto" || overflowX === "scroll") && el.scrollWidth > el.clientWidth + 24) {
           return true;
         }
         el = el.parentElement;
@@ -87,13 +90,21 @@ export default function MobileSwipeNavigation() {
       const deltaY = touch.clientY - start.y;
       const deltaTime = Date.now() - start.time;
 
-      // Tez va aniq gorizontal imo-ishora (500ms dan kam, kamida 55px va burchagi aniq gorizontal)
-      if (deltaTime > 500) return;
-      if (Math.abs(deltaX) < 55) return;
-      if (Math.abs(deltaX) < Math.abs(deltaY) * 1.8) return;
+      // Tabiiy mobil swipe (650ms dan kam, kamida 45px va gorizontal harakat vertikaldan aniq ustun)
+      if (deltaTime > 650) return;
+      if (Math.abs(deltaX) < 45) return;
+      if (Math.abs(deltaX) < Math.abs(deltaY) * 1.25) return;
 
-      const currentPath = pathname || "/";
-      const tabIndex = MAIN_TABS.indexOf(currentPath);
+      // Yo'nalishni normallashtirish (/agro-mahsulotlar -> /dorilar)
+      let normalized = pathname || "/";
+      if (normalized.endsWith("/") && normalized.length > 1) {
+        normalized = normalized.slice(0, -1);
+      }
+      if (normalized === "/agro-mahsulotlar") {
+        normalized = "/dorilar";
+      }
+
+      const tabIndex = MAIN_TABS.indexOf(normalized);
 
       // 1. Asosiy tablar orasida o'tish
       if (tabIndex !== -1) {
@@ -115,9 +126,9 @@ export default function MobileSwipeNavigation() {
         return;
       }
 
-      // 2. Ichki sahifalarda (masalan, /agro-mahsulotlar/..., /tashxis, /chat)
+      // 2. Ichki sahifalarda (masalan, /dori/..., /tashxis, /chat)
       // Chap chetdan o'ngga sursa (edge swipe, iOS/Android orqaga qaytish effekti)
-      if (deltaX > 60 && start.x < 50) {
+      if (deltaX > 50 && start.x < 60) {
         haptic("light");
         router.back();
       }
