@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { handleAuthBotUpdate } from "../lib/auth-bot-flow.js";
+import { recordDataConsent } from "../lib/consent.js";
 import { db } from "../db/index.js";
 import { users, specialists, orders, orderItems, specialistCalls, otpCodes, sessions } from "../db/schema.js";
 import { eq, and, desc, gt, isNotNull, or, sql } from "drizzle-orm";
@@ -220,6 +221,17 @@ export async function handleFarmerUpdate(update: any) {
         await callTelegram(token, "deleteMessage", { chat_id: chatId, message_id: mid }).catch(() => {});
       }
       farmerRegSessions.delete(fromId);
+    }
+
+    if (user) {
+      recordDataConsent({
+        subjectType: "user",
+        subjectId: user.id,
+        telegramId: fromId,
+        phone: user.phone || phone,
+        fullName: user.name || resolvedName,
+        consentChannel: "telegram_bot:@agrozai_bot",
+      }).catch(() => {});
     }
 
     await sendFarmerGreeting(token, chatId, fromId, user.name || resolvedName, true);
@@ -459,6 +471,17 @@ export async function handleFarmerUpdate(update: any) {
     }
     farmerRegSessions.delete(fromId);
 
+    if (user) {
+      recordDataConsent({
+        subjectType: "user",
+        subjectId: user.id,
+        telegramId: fromId,
+        phone: user.phone || phone,
+        fullName: user.name || resolvedName,
+        consentChannel: "telegram_bot:@agrozai_bot",
+      }).catch(() => {});
+    }
+
     await sendFarmerGreeting(token, chatId, fromId, user.name || resolvedName, true);
     return;
   }
@@ -559,6 +582,17 @@ export async function handleFarmerUpdate(update: any) {
       await callTelegram(token, "deleteMessage", { chat_id: chatId, message_id: mid }).catch(() => {});
     }
     farmerRegSessions.delete(fromId);
+
+    if (user) {
+      recordDataConsent({
+        subjectType: "user",
+        subjectId: user.id,
+        telegramId: fromId,
+        phone: pendingPhone,
+        fullName: user.name || resolvedName,
+        consentChannel: "telegram_bot:@agrozai_bot",
+      }).catch(() => {});
+    }
 
     await sendFarmerGreeting(token, chatId, fromId, user.name || resolvedName, true);
     return;

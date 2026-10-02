@@ -17,6 +17,7 @@ import {
   supportMessages,
   broadcasts,
   broadcastDeliveries,
+  dataConsents,
 } from "../db/schema.js";
 import { sql, eq, desc, asc, isNotNull, and, or, inArray } from "drizzle-orm";
 import { sendOrderStatusPush, sendSpecialistCallPush } from "../lib/push.js";
@@ -747,6 +748,10 @@ router.get("/specialists", requireAdmin, async (req, res) => {
         isBusy: specialists.isBusy,
         botStartedAt: specialists.botStartedAt,
         botBlocked: specialists.botBlocked,
+        consentedAt: specialists.consentedAt,
+        consentVersion: specialists.consentVersion,
+        consentChannel: specialists.consentChannel,
+        consentText: specialists.consentText,
         createdAt: specialists.createdAt,
         updatedAt: specialists.updatedAt,
       })
@@ -2137,6 +2142,10 @@ router.get("/users", requireAdmin, async (req, res) => {
         district: u.district,
         address: lastAddress,
         createdAt: u.createdAt,
+        consentedAt: u.consentedAt,
+        consentVersion: u.consentVersion,
+        consentChannel: u.consentChannel,
+        consentText: u.consentText,
         isRegistered: true,
         ordersCount,
         totalSpent,
@@ -2352,6 +2361,42 @@ router.delete("/users/:id", requireAdmin, async (req, res) => {
   } catch (err: any) {
     console.error("[admin delete user error]:", err);
     res.status(500).json({ error: err.message || "Foydalanuvchini o'chirishda xatolik" });
+  }
+});
+
+// -------------------------------------------------------------
+// 12. SHAXSIY MA'LUMOTLAR ROZILIK JURNALI (O'RQ-547 AUDIT LOG)
+// -------------------------------------------------------------
+
+// GET /api/admin/consents
+router.get("/consents", requireAdmin, async (req, res) => {
+  try {
+    const { type, search } = req.query as { type?: string; search?: string };
+
+    let rows = await db.select().from(dataConsents).orderBy(desc(dataConsents.consentedAt));
+
+    if (type && type !== "all") {
+      rows = rows.filter((r) => r.subjectType === type);
+    }
+
+    if (search && search.trim()) {
+      const q = search.trim().toLowerCase();
+      rows = rows.filter((r) =>
+        r.fullName.toLowerCase().includes(q) ||
+        r.phone.includes(q) ||
+        (r.telegramId && String(r.telegramId).includes(q)) ||
+        r.immutableHash.toLowerCase().includes(q)
+      );
+    }
+
+    res.json({
+      ok: true,
+      total: rows.length,
+      consents: rows,
+    });
+  } catch (err: any) {
+    console.error("[admin/consents error]:", err);
+    res.status(500).json({ error: err.message || "Roziliklar jurnalini yuklashda xatolik" });
   }
 });
 

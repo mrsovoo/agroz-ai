@@ -16,6 +16,10 @@ export async function ensureSchema(): Promise<void> {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS is_weather_push_enabled boolean DEFAULT true NOT NULL;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS bot_started_at timestamp;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS bot_blocked boolean DEFAULT false NOT NULL;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS consented_at timestamp;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS consent_version varchar(32) DEFAULT 'v1.0';
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS consent_channel varchar(64) DEFAULT 'telegram_farmer_bot';
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS consent_text text;
     `);
 
     // 2. Specialists jadvalidagi maydonlar
@@ -29,6 +33,29 @@ export async function ensureSchema(): Promise<void> {
       ALTER TABLE specialists ADD COLUMN IF NOT EXISTS bio varchar(500);
       ALTER TABLE specialists ADD COLUMN IF NOT EXISTS bot_started_at timestamp;
       ALTER TABLE specialists ADD COLUMN IF NOT EXISTS bot_blocked boolean DEFAULT false NOT NULL;
+      ALTER TABLE specialists ADD COLUMN IF NOT EXISTS consented_at timestamp;
+      ALTER TABLE specialists ADD COLUMN IF NOT EXISTS consent_version varchar(32) DEFAULT 'v1.0';
+      ALTER TABLE specialists ADD COLUMN IF NOT EXISTS consent_channel varchar(64) DEFAULT 'telegram_auth_bot';
+      ALTER TABLE specialists ADD COLUMN IF NOT EXISTS consent_text text;
+    `);
+
+    // 2b. Shaxsiy ma'lumotlar rozilik jurnali (O'RQ-547 bo'yicha o'zgarmas audit log)
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS data_consents (
+        id serial PRIMARY KEY NOT NULL,
+        subject_type varchar(32) NOT NULL,
+        subject_id integer NOT NULL,
+        telegram_id bigint,
+        phone varchar(32) NOT NULL,
+        full_name varchar(160) NOT NULL,
+        policy_version varchar(32) DEFAULT 'v1.0' NOT NULL,
+        consent_channel varchar(64) NOT NULL,
+        consent_statement text NOT NULL,
+        legal_basis text DEFAULT 'O''zbekiston Respublikasi O''RQ-547-sonli ''Shaxsiy ma''lumotlar to''g''risida''gi Qonuni' NOT NULL,
+        consented_at timestamp DEFAULT now() NOT NULL,
+        immutable_hash varchar(64) NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS data_consents_subject_idx ON data_consents (subject_type, subject_id);
     `);
 
     // 3. Specialist medicines (dorilar) uchun maydonlar va qoralama migratsiyasi

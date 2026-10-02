@@ -3560,6 +3560,19 @@ async function saveDraft(
     workHours: draft.workHours ?? "09:00 - 18:00",
     isApproved: true,
   });
+
+  if (saved) {
+    const { recordDataConsent } = await import("@/lib/consent");
+    await recordDataConsent({
+      subjectType: role === "pharmacy" ? "pharmacy" : "specialist",
+      subjectId: saved.id,
+      telegramId,
+      phone: draft.phone as string,
+      fullName: draft.name as string,
+      consentChannel: "telegram_bot:@agroz_auth_bot",
+    }).catch((e) => console.error("[consent] specialist error:", e));
+  }
+
   return saved
     ? {
         name: saved.name,

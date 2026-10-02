@@ -24,6 +24,12 @@ export const users = pgTable("users", {
   botStartedAt: timestamp("bot_started_at"),
   botBlocked: boolean("bot_blocked").default(false).notNull(),
 
+  /** Shaxsiy ma'lumotlarni saqlash va qayta ishlashga rozilik (O'RQ-547). */
+  consentedAt: timestamp("consented_at"),
+  consentVersion: varchar("consent_version", { length: 32 }).default("v1.0"),
+  consentChannel: varchar("consent_channel", { length: 64 }).default("telegram_farmer_bot"),
+  consentText: text("consent_text"),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -144,8 +150,37 @@ export const specialists = pgTable("specialists", {
   currentCallId: integer("current_call_id"),
   botStartedAt: timestamp("bot_started_at"),
   botBlocked: boolean("bot_blocked").default(false).notNull(),
+
+  /** Shaxsiy ma'lumotlarni saqlash va qayta ishlashga rozilik (O'RQ-547). */
+  consentedAt: timestamp("consented_at"),
+  consentVersion: varchar("consent_version", { length: 32 }).default("v1.0"),
+  consentChannel: varchar("consent_channel", { length: 64 }).default("telegram_auth_bot"),
+  consentText: text("consent_text"),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+/**
+ * Shaxsiy ma'lumotlarni saqlash va qayta ishlashga berilgan roziliklar jurnali (Audit log).
+ * O'zbekiston Respublikasining "Shaxsiy ma'lumotlar to'g'risida"gi O'RQ-547-son Qonuniga muvofiq,
+ * ushbu yozuvlar hatto admin tomonidan ham o'zgartirilishi mumkin emas (immutable).
+ */
+export const dataConsents = pgTable("data_consents", {
+  id: serial("id").primaryKey(),
+  subjectType: varchar("subject_type", { length: 32 }).notNull(), // specialist | pharmacy | user
+  subjectId: integer("subject_id").notNull(),
+  telegramId: bigint("telegram_id", { mode: "number" }),
+  phone: varchar("phone", { length: 32 }).notNull(),
+  fullName: varchar("full_name", { length: 160 }).notNull(),
+  policyVersion: varchar("policy_version", { length: 32 }).default("v1.0").notNull(),
+  consentChannel: varchar("consent_channel", { length: 64 }).notNull(),
+  consentStatement: text("consent_statement").notNull(),
+  legalBasis: text("legal_basis")
+    .default("O'zbekiston Respublikasi O'RQ-547-sonli 'Shaxsiy ma'lumotlar to'g'risida'gi Qonuni")
+    .notNull(),
+  consentedAt: timestamp("consented_at").defaultNow().notNull(),
+  immutableHash: varchar("immutable_hash", { length: 64 }).notNull(),
 });
 
 /**

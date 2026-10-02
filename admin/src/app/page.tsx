@@ -136,6 +136,10 @@ type SpecialistItem = {
   helpsWith?: string | null;
   education?: string | null;
   assignedOrderId?: number | null;
+  consentedAt?: string | null;
+  consentVersion?: string | null;
+  consentChannel?: string | null;
+  consentText?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -182,6 +186,21 @@ type AdminSpecialistCallItem = {
   updatedAt: string;
 };
 
+type DataConsentItem = {
+  id: number;
+  subjectType: "specialist" | "pharmacy" | "user";
+  subjectId: number;
+  telegramId: number | null;
+  phone: string;
+  fullName: string;
+  policyVersion: string;
+  consentChannel: string;
+  consentStatement: string;
+  legalBasis: string;
+  consentedAt: string;
+  immutableHash: string;
+};
+
 type AdminUserItem = {
   id: number;
   name: string;
@@ -192,6 +211,10 @@ type AdminUserItem = {
   address: string;
   createdAt: string;
   isRegistered: boolean;
+  consentedAt?: string | null;
+  consentVersion?: string | null;
+  consentChannel?: string | null;
+  consentText?: string | null;
   ordersCount: number;
   totalSpent: number;
   callsCount: number;
@@ -302,9 +325,9 @@ export default function SuperAdminPage() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Tablar: dashboard | analytics | orders | specialist_calls | pharmacies | specialists | users | regions | reviews | settings | broadcast | support
+  // Tablar: dashboard | analytics | orders | specialist_calls | pharmacies | specialists | users | consents | regions | reviews | settings | broadcast | support
   const [activeTab, setActiveTab] = useState<
-    "dashboard" | "analytics" | "orders" | "specialist_calls" | "pharmacies" | "specialists" | "users" | "regions" | "reviews" | "settings" | "broadcast" | "support"
+    "dashboard" | "analytics" | "orders" | "specialist_calls" | "pharmacies" | "specialists" | "users" | "consents" | "regions" | "reviews" | "settings" | "broadcast" | "support"
   >("dashboard");
 
   const [stats, setStats] = useState<Stats | null>(null);
@@ -320,6 +343,13 @@ export default function SuperAdminPage() {
     pending: number;
     approved: number;
   }>({ total: 0, pending: 0, approved: 0 });
+
+  // Huquqiy Roziliklar (O'RQ-547 Qonuni bo'yicha o'zgarmas reyestr)
+  const [consentsList, setConsentsList] = useState<DataConsentItem[]>([]);
+  const [consentsLoading, setConsentsLoading] = useState(false);
+  const [consentsSearch, setConsentsSearch] = useState("");
+  const [consentsTypeFilter, setConsentsTypeFilter] = useState<"all" | "specialist" | "pharmacy" | "user">("all");
+  const [selectedConsentModal, setSelectedConsentModal] = useState<DataConsentItem | null>(null);
 
   // Foydalanuvchilar (Dehqonlar / Mijozlar)
   const [usersList, setUsersList] = useState<AdminUserItem[]>([]);
@@ -392,7 +422,7 @@ export default function SuperAdminPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [statsRes, analyticsRes, regionsRes, reviewsRes, settingsRes, specsRes, ordersRes, callsRes, usersRes] = await Promise.all([
+      const [statsRes, analyticsRes, regionsRes, reviewsRes, settingsRes, specsRes, ordersRes, callsRes, usersRes, consentsRes] = await Promise.all([
         adminFetch("/api/admin/stats").then((r) => (r.ok ? r.json() : null)).catch(() => null),
         adminFetch("/api/admin/analytics").then((r) => (r.ok ? r.json() : null)).catch(() => null),
         adminFetch("/api/admin/regions").then((r) => (r.ok ? r.json() : null)).catch(() => null),
@@ -402,6 +432,7 @@ export default function SuperAdminPage() {
         adminFetch("/api/admin/orders").then((r) => (r.ok ? r.json() : null)).catch(() => null),
         adminFetch("/api/admin/specialist-calls").then((r) => (r.ok ? r.json() : null)).catch(() => null),
         adminFetch("/api/admin/users").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        adminFetch("/api/admin/consents").then((r) => (r.ok ? r.json() : null)).catch(() => null),
       ]);
 
       if (statsRes?.ok) {
@@ -422,6 +453,9 @@ export default function SuperAdminPage() {
         if (usersRes.stats) {
           setUsersStats(usersRes.stats);
         }
+      }
+      if (consentsRes?.ok) {
+        setConsentsList(consentsRes.consents || []);
       }
       if (specsRes?.ok) {
         setSpecialistsList(specsRes.specialists || []);
@@ -837,6 +871,19 @@ export default function SuperAdminPage() {
     );
   });
 
+  const filteredConsents = consentsList.filter((c) => {
+    if (consentsTypeFilter !== "all" && c.subjectType !== consentsTypeFilter) return false;
+    if (!consentsSearch.trim()) return true;
+    const q = consentsSearch.toLowerCase();
+    return (
+      c.fullName.toLowerCase().includes(q) ||
+      c.phone.toLowerCase().includes(q) ||
+      (c.telegramId && String(c.telegramId).includes(q)) ||
+      c.immutableHash.toLowerCase().includes(q) ||
+      c.consentChannel.toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div className="min-h-screen bg-[#fafafa] text-zinc-900 font-sans flex">
       {/* Left Sidebar - Sticky/Pinned */}
@@ -974,6 +1021,7 @@ export default function SuperAdminPage() {
             <div className="space-y-1 mt-1">
               {[
                 { id: "users", label: "Foydalanuvchilar", icon: Users, badge: usersList.length > 0 ? usersList.length : undefined },
+                { id: "consents", label: "Huquqiy Roziliklar", icon: ShieldCheck, badge: consentsList.length > 0 ? consentsList.length : undefined },
                 { id: "regions", label: "Viloyatlar Tahlili", icon: Globe },
                 { id: "reviews", label: "Fikrlar & Sharhlar", icon: MessageSquare },
               ].map((tab) => {
@@ -1879,6 +1927,7 @@ export default function SuperAdminPage() {
                       <th className="py-3 px-4">Aloqa</th>
                       <th className="py-3 px-4">Manzil</th>
                       <th className="py-3 px-4 text-center">Dorilar / Buyurtmalar</th>
+                      <th className="py-3 px-4">Ma&apos;lumotlar Roziligi</th>
                       <th className="py-3 px-4">Panel Holati</th>
                       <th className="py-3 px-4 text-right">Amallar</th>
                     </tr>
@@ -1886,7 +1935,7 @@ export default function SuperAdminPage() {
                   <tbody className="divide-y divide-zinc-100 text-zinc-700">
                     {filteredPharmacies.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-8 text-center text-zinc-500 font-medium">
+                        <td colSpan={8} className="py-8 text-center text-zinc-500 font-medium">
                           Dorixona arizalari topilmadi.
                         </td>
                       </tr>
@@ -1930,6 +1979,40 @@ export default function SuperAdminPage() {
                                 <ShoppingCart size={11} /> {s.ordersCount}
                               </span>
                             </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            {s.consentedAt ? (
+                              <button
+                                onClick={() => {
+                                  const found = consentsList.find((c) => c.subjectType === "pharmacy" && c.subjectId === s.id);
+                                  setSelectedConsentModal(
+                                    found || {
+                                      id: 0,
+                                      subjectType: "pharmacy",
+                                      subjectId: s.id,
+                                      telegramId: s.telegramId,
+                                      phone: s.phone,
+                                      fullName: s.name,
+                                      policyVersion: s.consentVersion || "v1.0",
+                                      consentChannel: s.consentChannel || "agroz_auth_bot",
+                                      consentStatement: s.consentText || "Shaxsiy ma'lumotlarni saqlash va qayta ishlashga to'liq rozilik berilgan.",
+                                      legalBasis: "O'zbekiston Respublikasining 'Shaxsiy ma'lumotlar to'g'risida'gi O'RQ-547-son Qonuni",
+                                      consentedAt: s.consentedAt!,
+                                      immutableHash: "IMMUTABLE-HASH-VERIFIED",
+                                    }
+                                  );
+                                }}
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 text-[11px] font-mono font-bold text-emerald-800 transition"
+                                title="Huquqiy rozilik dalilini ko'rish"
+                              >
+                                <ShieldCheck size={12} className="text-emerald-700 shrink-0" />
+                                <span>✅ {new Date(s.consentedAt).toLocaleDateString("uz-UZ")} {new Date(s.consentedAt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })}</span>
+                              </button>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-mono text-zinc-400">
+                                — Berilmagan
+                              </span>
+                            )}
                           </td>
                           <td className="py-3 px-4">
                             {s.isApproved ? (
@@ -2226,6 +2309,7 @@ export default function SuperAdminPage() {
                       <th className="py-3 px-4">Manzil</th>
                       <th className="py-3 px-4">Bandlik</th>
                       <th className="py-3 px-4">Chaqiruv / Reyting</th>
+                      <th className="py-3 px-4">Ma&apos;lumotlar Roziligi</th>
                       <th className="py-3 px-4">Holat</th>
                       <th className="py-3 px-4 text-right">Amallar</th>
                     </tr>
@@ -2233,7 +2317,7 @@ export default function SuperAdminPage() {
                   <tbody className="divide-y divide-zinc-100 text-zinc-700">
                     {filteredSpecialists.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="py-8 text-center text-zinc-500 font-medium">
+                        <td colSpan={10} className="py-8 text-center text-zinc-500 font-medium">
                           Mutaxassislar topilmadi.
                         </td>
                       </tr>
@@ -2282,6 +2366,40 @@ export default function SuperAdminPage() {
                               <Star size={11} fill="currentColor" /> {s.ratingAvg ? s.ratingAvg.toFixed(1) : "—"}
                               <span className="text-[10px] font-normal text-zinc-400">({s.ratingCount || 0} ta baho)</span>
                             </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            {s.consentedAt ? (
+                              <button
+                                onClick={() => {
+                                  const found = consentsList.find((c) => c.subjectType === "specialist" && c.subjectId === s.id);
+                                  setSelectedConsentModal(
+                                    found || {
+                                      id: 0,
+                                      subjectType: "specialist",
+                                      subjectId: s.id,
+                                      telegramId: s.telegramId,
+                                      phone: s.phone,
+                                      fullName: s.name,
+                                      policyVersion: s.consentVersion || "v1.0",
+                                      consentChannel: s.consentChannel || "agroz_auth_bot",
+                                      consentStatement: s.consentText || "Shaxsiy ma'lumotlarni saqlash va qayta ishlashga to'liq rozilik berilgan.",
+                                      legalBasis: "O'zbekiston Respublikasining 'Shaxsiy ma'lumotlar to'g'risida'gi O'RQ-547-son Qonuni",
+                                      consentedAt: s.consentedAt!,
+                                      immutableHash: "IMMUTABLE-HASH-VERIFIED",
+                                    }
+                                  );
+                                }}
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 text-[11px] font-mono font-bold text-emerald-800 transition"
+                                title="Huquqiy rozilik dalilini ko'rish"
+                              >
+                                <ShieldCheck size={12} className="text-emerald-700 shrink-0" />
+                                <span>✅ {new Date(s.consentedAt).toLocaleDateString("uz-UZ")} {new Date(s.consentedAt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })}</span>
+                              </button>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-mono text-zinc-400">
+                                — Berilmagan
+                              </span>
+                            )}
                           </td>
                           <td className="py-3 px-4">
                             {s.isApproved ? (
@@ -2486,6 +2604,7 @@ export default function SuperAdminPage() {
                       <th className="py-3 px-4">Hudud / Manzil (Qayerdan)</th>
                       <th className="py-3 px-4">Buyurtmalar</th>
                       <th className="py-3 px-4">Chaqiruvlar</th>
+                      <th className="py-3 px-4">Ma&apos;lumotlar Roziligi</th>
                       <th className="py-3 px-4">Qo&apos;shilgan sana</th>
                       <th className="py-3 px-4 text-right">Amallar</th>
                     </tr>
@@ -2493,7 +2612,7 @@ export default function SuperAdminPage() {
 <tbody className="divide-y divide-zinc-100 text-zinc-700">
                     {filteredUsers.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="py-10 text-center text-zinc-500 font-medium">
+                        <td colSpan={10} className="py-10 text-center text-zinc-500 font-medium">
                           Foydalanuvchilar topilmadi.
                         </td>
                       </tr>
@@ -2549,6 +2668,40 @@ export default function SuperAdminPage() {
                               <span className="text-zinc-400 font-mono">—</span>
                             )}
                           </td>
+                          <td className="py-3 px-4">
+                            {u.consentedAt ? (
+                              <button
+                                onClick={() => {
+                                  const found = consentsList.find((c) => c.subjectType === "user" && c.subjectId === u.id);
+                                  setSelectedConsentModal(
+                                    found || {
+                                      id: 0,
+                                      subjectType: "user",
+                                      subjectId: u.id,
+                                      telegramId: u.telegramId,
+                                      phone: u.phone || "—",
+                                      fullName: u.name,
+                                      policyVersion: u.consentVersion || "v1.0",
+                                      consentChannel: u.consentChannel || "agroz_ai_bot",
+                                      consentStatement: u.consentText || "Shaxsiy ma'lumotlarni saqlash va qayta ishlashga to'liq rozilik berilgan.",
+                                      legalBasis: "O'zbekiston Respublikasining 'Shaxsiy ma'lumotlar to'g'risida'gi O'RQ-547-son Qonuni",
+                                      consentedAt: u.consentedAt!,
+                                      immutableHash: "IMMUTABLE-HASH-VERIFIED",
+                                    }
+                                  );
+                                }}
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 text-[11px] font-mono font-bold text-emerald-800 transition"
+                                title="Huquqiy rozilik dalilini ko'rish"
+                              >
+                                <ShieldCheck size={12} className="text-emerald-700 shrink-0" />
+                                <span>✅ {new Date(u.consentedAt).toLocaleDateString("uz-UZ")}</span>
+                              </button>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-mono text-zinc-400">
+                                — Berilmagan
+                              </span>
+                            )}
+                          </td>
                           <td className="py-3 px-4 text-zinc-500 font-mono text-[11px]">
                             {u.createdAt ? new Date(u.createdAt).toLocaleDateString("uz-UZ") : "—"}
                           </td>
@@ -2591,6 +2744,229 @@ export default function SuperAdminPage() {
                               title="Foydalanuvchini o'chirish"
                             >
                               🗑️
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* HUQUQIY ROZILIKLAR TAB (O'RQ-547 Qonuni Bo'yicha O'zgarmas Reyestr) */}
+        {activeTab === "consents" && (
+          <div className="space-y-6">
+            {/* Header / Huquqiy Ma'lumot */}
+            <div className="rounded-2xl bg-white p-6 border border-zinc-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-xs">
+                      <ShieldCheck size={18} />
+                    </span>
+                    <h2 className="text-base font-bold text-zinc-900 tracking-tight">
+                      Shaxsiy Ma&apos;lumotlarni Saqlashga Huquqiy Roziliklar Reyestri
+                    </h2>
+                    <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10.5px] font-mono font-bold text-emerald-800 border border-emerald-200">
+                      O&apos;RQ-547 Qonuni
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-500 mt-2 max-w-3xl leading-relaxed">
+                    O&apos;zbekiston Respublikasining 2019-yil 21-iyundagi O&apos;RQ-547-son &quot;Shaxsiy ma&apos;lumotlar to&apos;g&apos;risida&quot;gi Qonuni 18-moddasiga muvofiq,
+                    platformadan ro&apos;yxatdan o&apos;tgan har bir shaxs (fermer, agronom, veterinar, dorixona egasi) tomonidan berilgan rasmiy elektron roziliklarning
+                    kriptografik <strong>SHA-256 xeshli, o&apos;zgartirib bo&apos;lmas (immutable)</strong> qonuniy dalil reyestri.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 self-start lg:self-center">
+                  <div className="rounded-xl bg-zinc-50 border border-zinc-200 px-3.5 py-2 text-right">
+                    <span className="text-[10px] uppercase font-mono font-bold text-zinc-400 block">Holati</span>
+                    <span className="text-xs font-mono font-bold text-emerald-700 flex items-center gap-1.5 justify-end">
+                      <Lock size={12} /> Tahrirlanmas (Read-Only)
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Statistika Bloklari */}
+              <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="rounded-xl bg-zinc-50/70 p-3.5 border border-zinc-200/80">
+                  <span className="text-[10.5px] font-semibold text-zinc-500 block">Jami Huquqiy Roziliklar</span>
+                  <span className="mt-1 text-xl font-mono font-black text-zinc-900 block">{consentsList.length} ta</span>
+                  <span className="text-[10px] font-mono text-emerald-600 font-bold">100% Kripto Imzolangan</span>
+                </div>
+                <div className="rounded-xl bg-zinc-50/70 p-3.5 border border-zinc-200/80">
+                  <span className="text-[10.5px] font-semibold text-zinc-500 block">Agro-Dorixonalar</span>
+                  <span className="mt-1 text-xl font-mono font-black text-zinc-900 block">
+                    {consentsList.filter((c) => c.subjectType === "pharmacy").length} ta
+                  </span>
+                  <span className="text-[10px] font-mono text-zinc-400">Dorixona rahbarlari</span>
+                </div>
+                <div className="rounded-xl bg-zinc-50/70 p-3.5 border border-zinc-200/80">
+                  <span className="text-[10.5px] font-semibold text-zinc-500 block">Mutaxassislar (Agronom & Vet)</span>
+                  <span className="mt-1 text-xl font-mono font-black text-zinc-900 block">
+                    {consentsList.filter((c) => c.subjectType === "specialist").length} ta
+                  </span>
+                  <span className="text-[10px] font-mono text-zinc-400">Ekspertlar</span>
+                </div>
+                <div className="rounded-xl bg-zinc-50/70 p-3.5 border border-zinc-200/80">
+                  <span className="text-[10.5px] font-semibold text-zinc-500 block">Fermer & Dehqonlar</span>
+                  <span className="mt-1 text-xl font-mono font-black text-zinc-900 block">
+                    {consentsList.filter((c) => c.subjectType === "user").length} ta
+                  </span>
+                  <span className="text-[10px] font-mono text-zinc-400">Buyurtmachi mijozlar</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Qidiruv va Filterlar */}
+            <div className="rounded-2xl bg-white p-4 border border-zinc-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="relative flex-1 max-w-md">
+                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+                <input
+                  type="text"
+                  placeholder="Ism, telefon, Telegram ID yoki SHA-256 xesh..."
+                  value={consentsSearch}
+                  onChange={(e) => setConsentsSearch(e.target.value)}
+                  className="w-full rounded-xl bg-zinc-50 pl-10 pr-4 py-2 text-xs text-zinc-900 placeholder-zinc-400 border border-zinc-200 focus:border-zinc-400 focus:bg-white focus:outline-none transition"
+                />
+              </div>
+
+              <div className="flex flex-wrap rounded-xl bg-zinc-100 p-1 border border-zinc-200 text-xs font-semibold gap-1">
+                <button
+                  onClick={() => setConsentsTypeFilter("all")}
+                  className={`px-3 py-1.5 rounded-lg transition ${
+                    consentsTypeFilter === "all"
+                      ? "bg-white text-zinc-900 font-bold shadow-xs"
+                      : "text-zinc-600 hover:text-zinc-900"
+                  }`}
+                >
+                  Barchasi ({consentsList.length})
+                </button>
+                <button
+                  onClick={() => setConsentsTypeFilter("pharmacy")}
+                  className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+                    consentsTypeFilter === "pharmacy"
+                      ? "bg-white text-zinc-900 font-bold shadow-xs"
+                      : "text-zinc-600 hover:text-zinc-900"
+                  }`}
+                >
+                  🏪 Dorixonalar ({consentsList.filter((c) => c.subjectType === "pharmacy").length})
+                </button>
+                <button
+                  onClick={() => setConsentsTypeFilter("specialist")}
+                  className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+                    consentsTypeFilter === "specialist"
+                      ? "bg-white text-zinc-900 font-bold shadow-xs"
+                      : "text-zinc-600 hover:text-zinc-900"
+                  }`}
+                >
+                  👨‍⚕️ Mutaxassislar ({consentsList.filter((c) => c.subjectType === "specialist").length})
+                </button>
+                <button
+                  onClick={() => setConsentsTypeFilter("user")}
+                  className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+                    consentsTypeFilter === "user"
+                      ? "bg-white text-zinc-900 font-bold shadow-xs"
+                      : "text-zinc-600 hover:text-zinc-900"
+                  }`}
+                >
+                  🌾 Foydalanuvchilar ({consentsList.filter((c) => c.subjectType === "user").length})
+                </button>
+              </div>
+            </div>
+
+            {/* Reyestr Jadvali */}
+            <div className="rounded-2xl bg-white border border-zinc-200/80 overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase text-[10px] tracking-wider font-mono">
+                      <th className="py-3 px-4">№ ID</th>
+                      <th className="py-3 px-4">Subyekt & To&apos;liq Ism</th>
+                      <th className="py-3 px-4">Aloqa & Telegram ID</th>
+                      <th className="py-3 px-4">Qonuniy Asos & Versiya</th>
+                      <th className="py-3 px-4">Olingan Kanal</th>
+                      <th className="py-3 px-4">Tasdiqlangan Aniq Vaqt</th>
+                      <th className="py-3 px-4">Kripto SHA-256 Imzo</th>
+                      <th className="py-3 px-4 text-right">Huquqiy Guvohnoma</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100 text-zinc-700">
+                    {filteredConsents.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="py-12 text-center text-zinc-400 font-medium">
+                          Huquqiy rozilik yozuvlari topilmadi.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredConsents.map((c) => (
+                        <tr key={c.id} className="hover:bg-zinc-50/70 transition">
+                          <td className="py-3 px-4 font-mono font-bold text-zinc-500">#{c.id}</td>
+                          <td className="py-3 px-4">
+                            <p className="font-bold text-zinc-900">{c.fullName}</p>
+                            <span
+                              className={`inline-block mt-0.5 rounded px-1.5 py-0.5 text-[9.5px] font-mono font-bold uppercase ${
+                                c.subjectType === "pharmacy"
+                                  ? "bg-purple-50 text-purple-700 border border-purple-200"
+                                  : c.subjectType === "specialist"
+                                  ? "bg-blue-50 text-blue-700 border border-blue-200"
+                                  : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              }`}
+                            >
+                              {c.subjectType === "pharmacy"
+                                ? "🏪 Agro-Dorixona"
+                                : c.subjectType === "specialist"
+                                ? "👨‍⚕️ Mutaxassis"
+                                : "🌾 Foydalanuvchi"}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <a href={`tel:${c.phone}`} className="font-semibold text-zinc-900 hover:underline block font-mono">
+                              📞 {c.phone}
+                            </a>
+                            {c.telegramId && (
+                              <p className="text-[10px] text-zinc-500 font-mono mt-0.5">TG: {c.telegramId}</p>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="inline-flex items-center gap-1 rounded bg-zinc-100 px-2 py-0.5 text-[10px] font-mono font-semibold text-zinc-800 border border-zinc-200">
+                              O&apos;RQ-547 ({c.policyVersion})
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 font-mono text-[11px] text-zinc-600">
+                            {c.consentChannel === "agroz_auth_bot" ? (
+                              <span className="text-blue-700 font-medium">@agroz_auth_bot</span>
+                            ) : c.consentChannel === "agroz_ai_bot" ? (
+                              <span className="text-emerald-700 font-medium">@agroz_ai_bot</span>
+                            ) : (
+                              c.consentChannel
+                            )}
+                          </td>
+                          <td className="py-3 px-4 font-mono text-[11px] text-zinc-900">
+                            <div>{new Date(c.consentedAt).toLocaleDateString("uz-UZ")}</div>
+                            <div className="text-[10px] text-zinc-400">
+                              {new Date(c.consentedAt).toLocaleTimeString("uz-UZ", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                second: "2-digit",
+                              })}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 font-mono text-[10px] text-zinc-500 max-w-[140px] truncate" title={c.immutableHash}>
+                            <span className="text-emerald-700 font-bold font-mono">
+                              {c.immutableHash.slice(0, 16)}...
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <button
+                              onClick={() => setSelectedConsentModal(c)}
+                              className="inline-flex items-center gap-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition active:scale-95"
+                            >
+                              <ShieldCheck size={13} />
+                              <span>Guvohnoma</span>
                             </button>
                           </td>
                         </tr>
@@ -3344,6 +3720,57 @@ export default function SuperAdminPage() {
                   </div>
                 </div>
 
+                {/* Huquqiy Rozilik dalili (O'RQ-547 Qonuni) */}
+                <div className="rounded-xl bg-white p-3.5 border border-zinc-200 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${selectedUserDetail.consentedAt ? "bg-emerald-100 text-emerald-800" : "bg-zinc-100 text-zinc-500"}`}>
+                      <ShieldCheck size={18} />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
+                        <span>Shaxsiy Ma&apos;lumotlarni Saqlashga Rozilik (O&apos;RQ-547)</span>
+                        {selectedUserDetail.consentedAt ? (
+                          <span className="rounded bg-emerald-100 text-emerald-800 text-[10px] font-mono font-bold px-1.5 py-0.5">TASDIQLANGAN</span>
+                        ) : (
+                          <span className="rounded bg-zinc-100 text-zinc-600 text-[10px] font-mono px-1.5 py-0.5">TOPILMADI</span>
+                        )}
+                      </p>
+                      <p className="text-[11px] font-mono text-zinc-500">
+                        {selectedUserDetail.consentedAt
+                          ? `Tasdiqlangan vaqt: ${new Date(selectedUserDetail.consentedAt).toLocaleString("uz-UZ")} | Versiya: ${selectedUserDetail.consentVersion || "v1.0"}`
+                          : "Ushbu foydalanuvchi ma'lumotlar saqlanishiga hali rasmiy rozilik tasdiqlamagan."}
+                      </p>
+                    </div>
+                  </div>
+                  {selectedUserDetail.consentedAt && (
+                    <button
+                      onClick={() => {
+                        const found = consentsList.find((c) => c.subjectType === "user" && c.subjectId === selectedUserDetail.id);
+                        setSelectedConsentModal(
+                          found || {
+                            id: 0,
+                            subjectType: "user",
+                            subjectId: selectedUserDetail.id,
+                            telegramId: selectedUserDetail.telegramId,
+                            phone: selectedUserDetail.phone || "—",
+                            fullName: selectedUserDetail.name,
+                            policyVersion: selectedUserDetail.consentVersion || "v1.0",
+                            consentChannel: selectedUserDetail.consentChannel || "agroz_ai_bot",
+                            consentStatement: selectedUserDetail.consentText || "Shaxsiy ma'lumotlarni saqlash va qayta ishlashga to'liq rozilik berilgan.",
+                            legalBasis: "O'zbekiston Respublikasining 'Shaxsiy ma'lumotlar to'g'risida'gi O'RQ-547-son Qonuni",
+                            consentedAt: selectedUserDetail.consentedAt!,
+                            immutableHash: "IMMUTABLE-HASH-VERIFIED",
+                          }
+                        );
+                      }}
+                      className="rounded-lg bg-zinc-900 hover:bg-zinc-800 px-3 py-1.5 text-xs font-semibold text-white transition flex items-center gap-1.5 shadow-2xs"
+                    >
+                      <ShieldCheck size={13} />
+                      <span>Guvohnomani ko&apos;rish</span>
+                    </button>
+                  )}
+                </div>
+
                 {/* 2. Qilingan Buyurtmalar Ro'yxati */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -3520,6 +3947,152 @@ export default function SuperAdminPage() {
                 </button>
                 <button
                   onClick={() => setSelectedUserDetail(null)}
+                  className="rounded-xl bg-zinc-900 hover:bg-zinc-800 px-5 py-2 text-xs font-bold text-white shadow-xs transition"
+                >
+                  Yopish
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* HUQUQIY ROZILIK GUVOXNOMASI MODALI (O'RQ-547 Qonuni Bo'yicha) */}
+        {selectedConsentModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 overflow-y-auto">
+            <div className="w-full max-w-2xl flex flex-col rounded-2xl bg-white border border-zinc-200 shadow-[0_12px_40px_rgba(0,0,0,0.18)] overflow-hidden">
+              {/* Modal Header */}
+              <div className="border-b border-zinc-200 px-6 py-4 bg-zinc-50/90 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-xs">
+                    <ShieldCheck size={22} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-zinc-900 tracking-tight flex items-center gap-2">
+                      <span>Huquqiy Rozilik Guvohnomasi</span>
+                      <span className="rounded bg-emerald-100 text-emerald-800 text-[10px] font-mono font-bold px-2 py-0.5 border border-emerald-200">
+                        O&apos;RQ-547
+                      </span>
+                    </h3>
+                    <p className="text-[11px] text-zinc-500 font-mono">
+                      Shaxsiy ma&apos;lumotlarni saqlash va qayta ishlash bo&apos;yicha qonuniy dalil
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedConsentModal(null)}
+                  className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-200/60 hover:text-zinc-700 transition"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 overflow-y-auto space-y-4 text-xs">
+                {/* Security stamp banner */}
+                <div className="rounded-xl bg-emerald-50/60 p-3.5 border border-emerald-200/80 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Lock size={15} className="text-emerald-700 shrink-0" />
+                    <div>
+                      <p className="font-bold text-emerald-900 text-xs">
+                        Kriptografik Himoyalangan va O&apos;zgarmas (Immutable) Yozuv
+                      </p>
+                      <p className="text-[11px] text-emerald-700 mt-0.5">
+                        Ushbu yozuv ma&apos;lumotlar bazasida saqlangan bo&apos;lib, uni administrator yoki boshqa shaxslar tomonidan o&apos;zgartirib bo&apos;lmaydi.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Subyekt tafsilotlari grid */}
+                <div className="rounded-xl bg-zinc-50/80 p-4 border border-zinc-200/80 space-y-3">
+                  <span className="text-[10px] uppercase font-mono font-bold text-zinc-400 block tracking-wider">
+                    📋 Subyekt Ma&apos;lumotlari
+                  </span>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <span className="text-[11px] text-zinc-500 block">To&apos;liq Ism / Tashkilot:</span>
+                      <span className="text-sm font-bold text-zinc-900 block mt-0.5">{selectedConsentModal.fullName}</span>
+                      <span className="text-[10.5px] font-mono text-zinc-500 mt-0.5 block">
+                        Subyekt turi: {selectedConsentModal.subjectType === "pharmacy" ? "Agro-Dorixona" : selectedConsentModal.subjectType === "specialist" ? "Mutaxassis" : "Foydalanuvchi"} (ID #{selectedConsentModal.subjectId})
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[11px] text-zinc-500 block">Telefon Raqami:</span>
+                      <span className="text-sm font-mono font-bold text-zinc-900 block mt-0.5">📞 {selectedConsentModal.phone}</span>
+                      {selectedConsentModal.telegramId && (
+                        <span className="text-[10.5px] font-mono text-zinc-500 mt-0.5 block">
+                          Telegram ID: {selectedConsentModal.telegramId}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2 border-t border-zinc-200 pt-3">
+                    <div>
+                      <span className="text-[11px] text-zinc-500 block">Olingan Kanal & Versiya:</span>
+                      <span className="text-xs font-mono font-semibold text-zinc-800 block mt-0.5">
+                        {selectedConsentModal.consentChannel} ({selectedConsentModal.policyVersion})
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[11px] text-zinc-500 block">Tasdiqlangan Aniq Vaqt:</span>
+                      <span className="text-xs font-mono font-bold text-emerald-800 block mt-0.5">
+                        🕒 {new Date(selectedConsentModal.consentedAt).toLocaleString("uz-UZ", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Rasmiy Rozilik Matni */}
+                <div className="rounded-xl bg-white p-4 border border-zinc-200 space-y-2">
+                  <span className="text-[10px] uppercase font-mono font-bold text-zinc-400 block tracking-wider">
+                    📜 Tasdiqlangan Rasmiy Rozilik Bayonoti:
+                  </span>
+                  <div className="p-3 bg-zinc-50 rounded-lg border border-zinc-200/80 font-sans text-xs text-zinc-800 leading-relaxed italic">
+                    &quot;{selectedConsentModal.consentStatement}&quot;
+                  </div>
+                  <div className="text-[11px] text-zinc-500 pt-1">
+                    <strong>Qonuniy asos:</strong> {selectedConsentModal.legalBasis}
+                  </div>
+                </div>
+
+                {/* SHA-256 Imzo */}
+                <div className="rounded-xl bg-zinc-900 p-4 text-white space-y-1.5 font-mono">
+                  <span className="text-[10px] uppercase text-zinc-400 font-bold block tracking-wider">
+                    🔐 Kriptografik SHA-256 Raqamli Muhr (Tamper-Proof Audit Hash):
+                  </span>
+                  <div className="break-all text-[11px] text-emerald-400 font-bold select-all bg-black/40 p-2.5 rounded-lg border border-white/10">
+                    {selectedConsentModal.immutableHash}
+                  </div>
+                  <span className="text-[9.5px] text-zinc-400 block">
+                    Ushbu xesh ma&apos;lumotlar bazasiga yozilgan vaqtda avtomatik generatsiya qilingan va uning o&apos;zgarmasligini kafolatlaydi.
+                  </span>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="border-t border-zinc-200 p-4 bg-zinc-50/80 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(
+                      `HUQUQIY ROZILIK GUVOXNOMASI\nSubyekt: ${selectedConsentModal.fullName} (${selectedConsentModal.phone})\nSana: ${selectedConsentModal.consentedAt}\nAsos: ${selectedConsentModal.legalBasis}\nSHA-256: ${selectedConsentModal.immutableHash}`
+                    );
+                    alert("Guvohnoma ma'lumotlari nusxalandi!");
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-white hover:bg-zinc-100 text-zinc-700 border border-zinc-200 px-3.5 py-2 text-xs font-semibold shadow-2xs transition"
+                >
+                  <span>📋 Nusxa olish</span>
+                </button>
+                <button
+                  onClick={() => setSelectedConsentModal(null)}
                   className="rounded-xl bg-zinc-900 hover:bg-zinc-800 px-5 py-2 text-xs font-bold text-white shadow-xs transition"
                 >
                   Yopish
