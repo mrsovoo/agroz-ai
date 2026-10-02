@@ -7,9 +7,11 @@
  */
 
 import { db } from "@/db";
-import { botStates, specialistCalls } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { botStates, specialistCalls, users, otpCodes } from "@/db/schema";
+import { eq, and, desc, gt } from "drizzle-orm";
 import { cleanText, normalizePhone } from "@/lib/validate";
+import { sendToUser } from "@/lib/bot-sender";
+import { farmerBotUsername } from "@/lib/settings";
 import {
   addMedicine,
   countMedicines,
@@ -175,12 +177,15 @@ type Step =
   | "edit_org"
   | "edit_spec"
   // Murojaat / Yordam matnini kutish
-  | "support_text";
+  | "support_text"
+  // Cross-bot OTP tasdiqlash (@agrozai_bot dagi foydalanuvchini tekshirish)
+  | "cross_otp";
 
 type Draft = {
   role?: SpecialistRole;
   name?: string;
   phone?: string;
+  crossOtpAttempts?: number;
   lat?: number;
   lng?: number;
   address?: string;
@@ -2538,9 +2543,105 @@ async function handleText(
         await sendAuthMessage(chatId, phoneTakenMessage(owner.name, owner.role));
         return;
       }
+
+      // Xavfsizlik tekshiruvi: ushbu raqam @agrozai_bot da boshqa Telegram ID bilan ro'yxatdan o'tganmi?
+      const existingUser = (await db.select().from(users).where(eq(users.phone, phone)).limit(1))[0];
+      if (existingUser && existingUser.telegramId && Number(existingUser.telegramId) !== telegramId) {
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        await db.delete(otpCodes).where(and(eq(otpCodes.phone, phone), eq(otpCodes.used, false)));
+        await db.insert(otpCodes).values({
+          phone,
+          code: otpCode,
+          telegramId,
+          token: `cross_farmer_to_auth_${telegramId}`,
+          used: false,
+          expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+        });
+
+        const farmerBot = (await farmerBotUsername()) || "agrozai_bot";
+        await sendToUser(
+          { id: existingUser.id, telegramId: existingUser.telegramId },
+          `⚠️ <b>Xavfsizlik ogohlantirishi!</b>\n\n` +
+          `Sizning <b>${phone}</b> raqamingiz orqali <b>@agroz_auth_bot</b> (Biznes boti)da yangi profil ochishga urinish bo'ldi.\n\n` +
+          `🔑 Tasdiqlash kodi: <code>${otpCode}</code>\n\n` +
+          `<i>Agar bu siz bo'lsangiz, ushbu kodni @agroz_auth_bot ga kiriting.\nAgar siz bo'lmasangiz, kodni HECH KIMGA bermang! Hisobingiz xavfsiz holatda.</i>`
+        ).catch(() => {});
+
+        draft.phone = phone;
+        draft.crossOtpAttempts = 0;
+        await setState(telegramId, "cross_otp", draft);
+        await sendAuthMessage(
+          chatId,
+          `🔒 <b>Xavfsizlik tekshiruvi:</b>\n\nUshbu telefon raqam (<b>${phone}</b>) <b>@${farmerBot}</b> botida ro'yxatdan o'tgan.\n\nRaqam haqiqatdan ham sizga tegishli ekanligini tasdiqlash uchun <b>@${farmerBot}</b> botingizga 6 xonali tasdiqlash kodi yuborildi.\n\nIltimos, o'sha kodni bu yerga kiriting:`
+        );
+        return;
+      }
+
       draft.phone = phone;
       await setState(telegramId, "role", draft);
       await sendAuthMessage(chatId, roleQuestion(), { inline: ROLE_KEYBOARD });
+      return;
+    }
+
+    // Cross-bot OTP tasdiqlash bosqichi
+    case "cross_otp": {
+      const cleanDigits = text.replace(/\D/g, "");
+      if (text.startsWith("/bekor") || text === "Bekor qilish" || text.startsWith("/cancel")) {
+        await clearState(telegramId);
+        await sendAuthMessage(chatId, cancelMessage());
+        return;
+      }
+
+      const farmerBot = (await farmerBotUsername()) || "agrozai_bot";
+      if (cleanDigits.length !== 6) {
+        await sendAuthMessage(
+          chatId,
+          `⚠️ Iltimos, @${farmerBot} botiga yuborilgan 6 xonali tasdiqlash kodini kiriting (Masalan: <code>123456</code>):`
+        );
+        return;
+      }
+
+      const pendingPhone = draft.phone;
+      if (!pendingPhone) {
+        await clearState(telegramId);
+        await sendAuthMessage(chatId, "Jarayon vaqti tugadi. Qaytadan /start bosing.");
+        return;
+      }
+
+      const validOtp = (await db.select().from(otpCodes).where(
+        and(
+          eq(otpCodes.phone, pendingPhone),
+          eq(otpCodes.code, cleanDigits),
+          eq(otpCodes.used, false),
+          gt(otpCodes.expiresAt, new Date())
+        )
+      ).limit(1))[0];
+
+      if (!validOtp) {
+        const attempts = ((draft.crossOtpAttempts as number) || 0) + 1;
+        draft.crossOtpAttempts = attempts;
+        if (attempts >= 3) {
+          await clearState(telegramId);
+          await sendAuthMessage(chatId, "❌ Kod 3 marta noto'g'ri kiritildi. Xavfsizlik yuzasidan jarayon bekor qilindi. Qaytadan boshlash uchun /start bosing.");
+          return;
+        }
+        await setState(telegramId, "cross_otp", draft);
+        await sendAuthMessage(chatId, `⚠️ Noto'g'ri kod. Iltimos, @${farmerBot} botiga borgan kodni to'g'ri kiriting (${3 - attempts} ta urinish qoldi):`);
+        return;
+      }
+
+      // To'g'ri kod!
+      await db.update(otpCodes).set({ used: true }).where(eq(otpCodes.id, validOtp.id));
+      const existingUser = (await db.select().from(users).where(eq(users.phone, pendingPhone)).limit(1))[0];
+      if (existingUser && existingUser.telegramId) {
+        await sendToUser(
+          { id: existingUser.id, telegramId: existingUser.telegramId },
+          `✅ <b>Muvaffaqiyatli tasdiqlandi:</b>\n\nSizning <b>${pendingPhone}</b> raqamingiz @agroz_auth_bot (Biznes boti)da tasdiqlandi.`
+        ).catch(() => {});
+      }
+
+      await setState(telegramId, "role", draft);
+      await sendAuthMessage(chatId, `✅ <b>Telefon raqamingiz tasdiqlandi!</b>\n\n${roleQuestion()}`, { inline: ROLE_KEYBOARD });
       return;
     }
 
@@ -3071,8 +3172,42 @@ async function handleContact(
 
   const draft = state.draft;
   draft.phone = phone;
-  await setState(telegramId, "location", draft);
-  await sendAuthMessage(chatId, askLocation(), { replyKeyboard: locationKeyboard() });
+
+  // Xavfsizlik tekshiruvi: ushbu raqam @agrozai_bot da boshqa Telegram ID bilan ro'yxatdan o'tganmi?
+  const existingUser = (await db.select().from(users).where(eq(users.phone, phone)).limit(1))[0];
+  if (existingUser && existingUser.telegramId && Number(existingUser.telegramId) !== telegramId) {
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    await db.delete(otpCodes).where(and(eq(otpCodes.phone, phone), eq(otpCodes.used, false)));
+    await db.insert(otpCodes).values({
+      phone,
+      code: otpCode,
+      telegramId,
+      token: `cross_farmer_to_auth_${telegramId}`,
+      used: false,
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+    });
+
+    const farmerBot = (await farmerBotUsername()) || "agrozai_bot";
+    await sendToUser(
+      { id: existingUser.id, telegramId: existingUser.telegramId },
+      `⚠️ <b>Xavfsizlik ogohlantirishi!</b>\n\n` +
+      `Sizning <b>${phone}</b> raqamingiz orqali <b>@agroz_auth_bot</b> (Biznes boti)da yangi profil ochishga urinish bo'ldi.\n\n` +
+      `🔑 Tasdiqlash kodi: <code>${otpCode}</code>\n\n` +
+      `<i>Agar bu siz bo'lsangiz, ushbu kodni @agroz_auth_bot ga kiriting.\nAgar siz bo'lmasangiz, kodni HECH KIMGA bermang! Hisobingiz xavfsiz holatda.</i>`
+    ).catch(() => {});
+
+    draft.crossOtpAttempts = 0;
+    await setState(telegramId, "cross_otp", draft);
+    await sendAuthMessage(
+      chatId,
+      `🔒 <b>Xavfsizlik tekshiruvi:</b>\n\nUshbu telefon raqam (<b>${phone}</b>) <b>@${farmerBot}</b> botida ro'yxatdan o'tgan.\n\nRaqam haqiqatdan ham sizga tegishli ekanligini tasdiqlash uchun <b>@${farmerBot}</b> botingizga 6 xonali tasdiqlash kodi yuborildi.\n\nIltimos, o'sha kodni bu yerga kiriting:`,
+      { removeKeyboard: true }
+    );
+    return;
+  }
+
+  await setState(telegramId, "role", draft);
+  await sendAuthMessage(chatId, roleQuestion(), { inline: ROLE_KEYBOARD, removeKeyboard: true });
 }
 
 async function handleLocation(
