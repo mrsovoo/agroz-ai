@@ -53,48 +53,52 @@ export default function HomeClientView({
   initialSpecialist?: HomeSpecialist | null;
 }) {
   const [medicines, setMedicines] = useState<HomeMedicine[]>(initialMedicines || []);
+  const [displayedMedicines, setDisplayedMedicines] = useState<HomeMedicine[]>(() => {
+    if (initialMedicines && initialMedicines.length > 0) {
+      return [...initialMedicines].sort(() => 0.5 - Math.random()).slice(0, 4);
+    }
+    return [];
+  });
   const [specialist] = useState<HomeSpecialist | null>(initialSpecialist || null);
 
   useEffect(() => {
-    if (initialMedicines && initialMedicines.length > 0) {
-      setMedicines(initialMedicines);
-      return;
-    }
-
-    async function loadAllFromPharmacies() {
+    // Har gal Asosiy sahifa ochilganda yoki yangilanganda 4 ta tasodifiy dorilar tanlanadi
+    async function fetchRandomMedicines() {
       try {
-        const res = await fetch("/api/specialists?role=pharmacy");
+        const res = await fetch(`/api/medicines?limit=30&random=1&_t=${Date.now()}`);
         if (!res.ok) return;
         const data = await res.json();
-        const items = Array.isArray(data?.items) ? data.items : [];
-        const collected: HomeMedicine[] = [];
-        for (const p of items) {
-          for (const m of p.medicines || []) {
-            if (m.status === "yoq") continue;
-            collected.push({
-              id: m.id,
-              name: m.name,
-              type: m.type,
-              usage: m.usage,
-              price: m.price,
-              stockUnit: m.stockUnit,
-              hasPhoto: Boolean(m.hasPhoto),
-              photoVersion: m.photoVersion,
-              photoUrl: m.hasPhoto ? `/api/medicines/${m.id}/photo` : null,
-              updatedAt: m.updatedAt ?? null,
-              pharmacyId: p.id,
-              pharmacyName: p.organization || p.name,
-              pharmacyPhone: p.phone,
-              pharmacyAddress: p.address,
-            });
-          }
-        }
-        if (collected.length > 0) {
-          setMedicines(collected);
+        if (Array.isArray(data) && data.length > 0) {
+          const list: HomeMedicine[] = data.map((m: any) => ({
+            id: m.id,
+            name: m.name,
+            type: m.type,
+            usage: m.usage,
+            price: m.price,
+            stockUnit: m.stockUnit,
+            hasPhoto: Boolean(m.hasPhoto),
+            photoVersion: m.photoVersion,
+            photoUrl: m.hasPhoto ? `/api/medicines/${m.id}/photo` : null,
+            pharmacyId: m.pharmacyId,
+            pharmacyName: m.pharmacyName,
+            pharmacyPhone: m.pharmacyPhone,
+            pharmacyAddress: m.pharmacyAddress,
+          }));
+          const shuffled = [...list].sort(() => 0.5 - Math.random());
+          setDisplayedMedicines(shuffled.slice(0, 4));
+          setMedicines(list);
+          return;
         }
       } catch {}
+
+      // Fallback
+      if (initialMedicines && initialMedicines.length > 0) {
+        const shuffled = [...initialMedicines].sort(() => 0.5 - Math.random());
+        setDisplayedMedicines(shuffled.slice(0, 4));
+      }
     }
-    loadAllFromPharmacies();
+
+    fetchRandomMedicines();
   }, [initialMedicines]);
 
   const [callModalOpen, setCallModalOpen] = useState(false);
@@ -192,14 +196,14 @@ export default function HomeClientView({
           </Link>
         </div>
 
-        {/* Dorilar kartalari (6 tagacha to'liq ko'rsatiladi) */}
-        {medicines.length === 0 ? (
+        {/* Dorilar kartalari (aniq 4 ta dorilar ko'rsatiladi va har kirganda yangilanadi) */}
+        {displayedMedicines.length === 0 ? (
           <div className="rounded-2xl border border-neutral-100 bg-[#f8f9fa] p-6 text-center text-[13px] text-neutral-400">
             Hozircha dorilar mavjud emas
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3.5">
-            {medicines.slice(0, 6).map((med, idx) => (
+            {displayedMedicines.slice(0, 4).map((med, idx) => (
               <ProductCard
                 key={med.id || idx}
                 medicine={{
@@ -216,7 +220,7 @@ export default function HomeClientView({
                 }}
                 pharmacy={{
                   id: med.pharmacyId || 1,
-                  name: med.pharmacyName || "Agroz Agro-do&apos;kon",
+                  name: med.pharmacyName || "Agroz Agro-do'kon",
                   phone: med.pharmacyPhone || "",
                   address: med.pharmacyAddress || null,
                 }}

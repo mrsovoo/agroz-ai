@@ -1,8 +1,8 @@
 import HomeClientView, { type HomeMedicine, type HomeSpecialist } from "@/components/HomeClientView";
 import { apiUrl } from "@/lib/api-config";
 
-// Edge CDN kesh: Sahifa Edge keshidan 50ms da tezkor yuklanadi va har 60 soniyada fonda yangilanadi
-export const revalidate = 60;
+// Doimiy jonli va tasodifiy yangilanish uchun
+export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   let initialMedicines: HomeMedicine[] = [];

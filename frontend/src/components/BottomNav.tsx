@@ -53,12 +53,12 @@ export default function BottomNav() {
     }
   }, [pathname]);
 
-  // Qaysi bo'limda bo'lsa, o'sha yashil, qolganlari och kulrang
+  // Qaysi bo'limda bo'lsa, o'sha yashil (#0ba324), qolganlari och kulrang
   const isSavat = pathname === "/savat" || isCartOpen;
-  const isHome = !isSavat && pathname === "/";
-  const isDorilar = !isSavat && (pathname.startsWith("/dorilar") || pathname.startsWith("/dori") || pathname.startsWith("/agro-mahsulotlar") || pathname.startsWith("/agro-mahsulot/"));
-  const isSpecialists = !isSavat && pathname.startsWith("/mutaxassislar");
-  const isProfile = !isSavat && (pathname.startsWith("/profil") || pathname.startsWith("/kirish"));
+  const isDorilar = !isSavat && Boolean(pathname?.startsWith("/dorilar") || pathname?.startsWith("/dori") || pathname?.startsWith("/agro-mahsulot"));
+  const isSpecialists = !isSavat && Boolean(pathname?.startsWith("/mutaxassislar"));
+  const isProfile = !isSavat && Boolean(pathname?.startsWith("/profil") || pathname?.startsWith("/kirish"));
+  const isHome = !isSavat && !isDorilar && !isSpecialists && !isProfile && (pathname === "/" || !pathname || pathname === "");
 
   const handleNavClick = () => {
     haptic("light");
@@ -81,8 +81,8 @@ export default function BottomNav() {
               isHome ? "text-[#0ba324]" : "text-neutral-400 hover:text-neutral-700"
             }`}
           >
-            <Home size={22} strokeWidth={isHome ? 2.6 : 2} />
-            <span>Asosiy</span>
+            <Home size={22} strokeWidth={isHome ? 2.6 : 2} className={isHome ? "text-[#0ba324]" : "text-neutral-400"} />
+            <span className={isHome ? "text-[#0ba324] font-bold" : "text-neutral-400"}>Asosiy</span>
           </Link>
         </li>
 
@@ -96,12 +96,12 @@ export default function BottomNav() {
               isDorilar ? "text-[#0ba324]" : "text-neutral-400 hover:text-neutral-700"
             }`}
           >
-            <Pill size={22} strokeWidth={isDorilar ? 2.6 : 2} />
-            <span>Dorilar</span>
+            <Pill size={22} strokeWidth={isDorilar ? 2.6 : 2} className={isDorilar ? "text-[#0ba324]" : "text-neutral-400"} />
+            <span className={isDorilar ? "text-[#0ba324] font-bold" : "text-neutral-400"}>Dorilar</span>
           </Link>
         </li>
 
-        {/* 3. Savat — bosilganda ochiladi, qaysi bo'limda bo'lsa shu yashil */}
+        {/* 3. Savat */}
         <li>
           <button
             type="button"
@@ -126,7 +126,7 @@ export default function BottomNav() {
                 </span>
               )}
             </div>
-            <span>Savat</span>
+            <span className={isSavat ? "text-[#0ba324] font-bold" : "text-neutral-400"}>Savat</span>
           </button>
         </li>
 
@@ -140,8 +140,8 @@ export default function BottomNav() {
               isSpecialists ? "text-[#0ba324]" : "text-neutral-400 hover:text-neutral-700"
             }`}
           >
-            <UsersRound size={22} strokeWidth={isSpecialists ? 2.6 : 2} />
-            <span>Mutaxassislar</span>
+            <UsersRound size={22} strokeWidth={isSpecialists ? 2.6 : 2} className={isSpecialists ? "text-[#0ba324]" : "text-neutral-400"} />
+            <span className={isSpecialists ? "text-[#0ba324] font-bold" : "text-neutral-400"}>Mutaxassislar</span>
           </Link>
         </li>
 
@@ -155,8 +155,8 @@ export default function BottomNav() {
               isProfile ? "text-[#0ba324]" : "text-neutral-400 hover:text-neutral-700"
             }`}
           >
-            <UserRound size={22} strokeWidth={isProfile ? 2.6 : 2} />
-            <span>Profil</span>
+            <UserRound size={22} strokeWidth={isProfile ? 2.6 : 2} className={isProfile ? "text-[#0ba324]" : "text-neutral-400"} />
+            <span className={isProfile ? "text-[#0ba324] font-bold" : "text-neutral-400"}>Profil</span>
           </Link>
         </li>
       </ul>

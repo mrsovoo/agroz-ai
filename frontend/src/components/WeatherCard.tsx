@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import Link from "next/link";
 import {
   Wind,
   Droplets,
@@ -12,6 +13,8 @@ import {
   MapPin,
   Leaf,
   Moon,
+  Calendar,
+  ChevronRight,
 } from "lucide-react";
 
 type AdviceScope = "crop" | "animal" | "both";
@@ -118,10 +121,31 @@ export default function WeatherCard({
       }
     };
 
+    // Agar avval saqlangan koordinatalar bo'lsa
+    let cachedLat: number | undefined;
+    let cachedLng: number | undefined;
+    try {
+      const sLat = sessionStorage.getItem("user_lat");
+      const sLng = sessionStorage.getItem("user_lng");
+      if (sLat && sLng) {
+        cachedLat = parseFloat(sLat);
+        cachedLng = parseFloat(sLng);
+      }
+    } catch {}
+
+    if (cachedLat !== undefined && cachedLng !== undefined) {
+      load(cachedLat, cachedLng);
+      return;
+    }
+
     if (typeof navigator !== "undefined" && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           setPlace("Sizning hududingiz");
+          try {
+            sessionStorage.setItem("user_lat", String(pos.coords.latitude));
+            sessionStorage.setItem("user_lng", String(pos.coords.longitude));
+          } catch {}
           load(pos.coords.latitude, pos.coords.longitude);
         },
         () => {
@@ -136,141 +160,129 @@ export default function WeatherCard({
     }
   }, [showRegion]);
 
-  const sprayBadge = (() => {
-    if (!w) return { label: "🌿 Agro-mahsulot: Qulay", bg: "bg-white/20 text-white border-white/25" };
-    if (w.sprayStatus === "bad" || w.rain > 0.2 || w.wind > 5.5) {
-      return {
-        label: "🛑 Agro-mahsulot sepmang",
-        bg: "bg-red-500/85 text-white border-red-400/50 shadow-xs",
-      };
-    }
-    if (w.sprayStatus === "moderate" || w.wind > 3.5) {
-      return {
-        label: "⚠️ Agro-mahsulot: Ehtiyotkorlik",
-        bg: "bg-amber-400/90 text-neutral-900 border-amber-300 shadow-xs",
-      };
-    }
-    return {
-      label: "🌿 Agro-mahsulot: Qulay",
-      bg: "bg-emerald-950/30 text-emerald-100 border-emerald-300/40 backdrop-blur shadow-2xs",
-    };
-  })();
-
   const currentSoilTemp = w?.soilTemp ?? (w ? Math.round(w.temp - 2) : 18);
-  const adviceText =
-    activeAlert?.title ||
-    w?.agroAdvice ||
-    w?.advice ||
-    "Shamol sokin va havo ochiq. Agro-mahsulot va o'g'it purkash uchun ayni fursat.";
 
   return (
     <div>
-      <div
-        className="relative overflow-hidden rounded-[24px] p-4 text-white shadow-[0_10px_28px_-8px_rgba(2,142,17,0.35)] transition-all"
-        style={{ background: "linear-gradient(135deg, #028e11 0%, #0ba324 50%, #4ca82b 100%)" }}
+      <Link
+        href="/ob-havo"
+        prefetch={true}
+        className="block group active:scale-[0.99] transition cursor-pointer"
+        aria-label="7 kunlik ob-havo prognozini ochish"
       >
-        {/* Yuqori qator: Joylashuv + Agro-mahsulot purkash badgi */}
-        <div className="flex items-center justify-between gap-2">
-          <p className="flex items-center gap-1.5 text-[12.5px] font-semibold text-white/95 truncate">
-            <MapPin size={13} className="shrink-0 text-white" />
-            <span className="truncate">{region || place || "Toshkent"} · Bugun</span>
-          </p>
-
-          <span
-            className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11.5px] font-bold border transition ${sprayBadge.bg}`}
-          >
-            {sprayBadge.label}
-          </span>
-        </div>
-
-        {/* O'rta qator: Asosiy harorat + 3D Quyosh */}
-        <div className="mt-1 flex items-center justify-between">
-          <div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-[44px] font-black leading-none tracking-tight">
-                {w ? (w.temp > 0 ? `+${w.temp}` : w.temp) : "+22"}
-              </span>
-              <span className="text-xl font-bold text-white/90">°C</span>
-            </div>
-
-            <p className="mt-1 flex items-center gap-2 text-[12px] font-medium text-white/90">
-              <span className="flex items-center gap-1">
-                <Sun size={12} className="text-yellow-300" />
-                Kunduzi: +{w?.tempDay ?? 26}°
-              </span>
-              <span>·</span>
-              <span className="flex items-center gap-1">
-                <Moon size={12} className="text-sky-200" />
-                Kechasi: +{w?.tempNight ?? 14}°
-              </span>
+        <div
+          className="relative overflow-hidden rounded-[24px] p-4 text-white shadow-[0_10px_28px_-8px_rgba(2,142,17,0.35)] transition-all group-hover:shadow-[0_12px_32px_-6px_rgba(2,142,17,0.45)]"
+          style={{ background: "linear-gradient(135deg, #028e11 0%, #0ba324 50%, #4ca82b 100%)" }}
+        >
+          {/* Yuqori qator: Joylashuv + 7 kunlik prognoz ko'rish tugmasi */}
+          <div className="flex items-center justify-between gap-2">
+            <p className="flex items-center gap-1.5 text-[12.5px] font-semibold text-white/95 truncate">
+              <MapPin size={13} className="shrink-0 text-white" />
+              <span className="truncate">{region || place || "Toshkent"} · Bugun</span>
             </p>
+
+            <span className="shrink-0 flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-0.5 text-[11px] font-bold text-white border border-white/25 backdrop-blur group-hover:bg-white/30 transition">
+              <Calendar size={12} className="text-yellow-300" />
+              <span>7 kunlik</span>
+              <ChevronRight size={12} />
+            </span>
           </div>
 
-          {/* Yilcham 3D Quyosh illustratsiyasi (52x52) */}
-          <div className="relative pr-1 shrink-0">
-            <svg
-              viewBox="0 0 100 100"
-              className="w-[54px] h-[54px] drop-shadow-[0_4px_10px_rgba(251,191,36,0.45)]"
-            >
-              <defs>
-                <radialGradient id="sunGradCompact" cx="35%" cy="35%" r="65%">
-                  <stop offset="0%" stopColor="#fff5a5" />
-                  <stop offset="45%" stopColor="#ffb703" />
-                  <stop offset="100%" stopColor="#fb8500" />
-                </radialGradient>
-              </defs>
-              <g fill="#ffc300">
-                <rect x="47" y="5" width="6" height="14" rx="3" />
-                <rect x="47" y="81" width="6" height="14" rx="3" />
-                <rect x="5" y="47" width="14" height="6" rx="3" />
-                <rect x="81" y="47" width="14" height="6" rx="3" />
-                <rect x="18" y="18" width="6" height="14" rx="3" transform="rotate(-45 21 25)" />
-                <rect x="76" y="76" width="6" height="14" rx="3" transform="rotate(-45 79 83)" />
-                <rect x="76" y="18" width="6" height="14" rx="3" transform="rotate(45 79 25)" />
-                <rect x="18" y="76" width="6" height="14" rx="3" transform="rotate(45 21 83)" />
-              </g>
-              <circle cx="50" cy="50" r="27" fill="url(#sunGradCompact)" />
-            </svg>
+          {/* O'rta qator: Asosiy harorat + 3D Quyosh */}
+          <div className="mt-1 flex items-center justify-between">
+            <div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-[44px] font-black leading-none tracking-tight">
+                  {w ? (w.temp > 0 ? `+${w.temp}` : w.temp) : "+22"}
+                </span>
+                <span className="text-xl font-bold text-white/90">°C</span>
+              </div>
+
+              <p className="mt-1 flex items-center gap-2 text-[12px] font-medium text-white/90">
+                <span className="flex items-center gap-1">
+                  <Sun size={12} className="text-yellow-300" />
+                  Kunduzi: +{w?.tempDay ?? 26}°
+                </span>
+                <span>·</span>
+                <span className="flex items-center gap-1">
+                  <Moon size={12} className="text-sky-200" />
+                  Kechasi: +{w?.tempNight ?? 14}°
+                </span>
+              </p>
+            </div>
+
+            {/* Yilcham 3D Quyosh illustratsiyasi (52x52) */}
+            <div className="relative pr-1 shrink-0">
+              <svg
+                viewBox="0 0 100 100"
+                className="w-[54px] h-[54px] drop-shadow-[0_4px_10px_rgba(251,191,36,0.45)]"
+              >
+                <defs>
+                  <radialGradient id="sunGradCompact" cx="35%" cy="35%" r="65%">
+                    <stop offset="0%" stopColor="#fff5a5" />
+                    <stop offset="45%" stopColor="#ffb703" />
+                    <stop offset="100%" stopColor="#fb8500" />
+                  </radialGradient>
+                </defs>
+                <g fill="#ffc300">
+                  <rect x="47" y="5" width="6" height="14" rx="3" />
+                  <rect x="47" y="81" width="6" height="14" rx="3" />
+                  <rect x="5" y="47" width="14" height="6" rx="3" />
+                  <rect x="81" y="47" width="14" height="6" rx="3" />
+                  <rect x="18" y="18" width="6" height="14" rx="3" transform="rotate(-45 21 25)" />
+                  <rect x="76" y="76" width="6" height="14" rx="3" transform="rotate(-45 79 83)" />
+                  <rect x="76" y="18" width="6" height="14" rx="3" transform="rotate(45 79 25)" />
+                  <rect x="18" y="76" width="6" height="14" rx="3" transform="rotate(45 21 83)" />
+                </g>
+                <circle cx="50" cy="50" r="27" fill="url(#sunGradCompact)" />
+              </svg>
+            </div>
+          </div>
+
+          {/* 4 ta ixcham parametr: Shamol, Namlik, Yog'in, Tuproq harorati */}
+          <div className="mt-3 grid grid-cols-4 gap-1.5 text-center">
+            <div className="rounded-xl bg-white/15 py-1.5 px-1 backdrop-blur border border-white/10">
+              <div className="flex items-center justify-center gap-0.5 text-[10.5px] opacity-85">
+                <Wind size={10} /> Shamol
+              </div>
+              <p className="text-[13px] font-extrabold mt-0.5 leading-tight">{w ? `${w.wind} m/s` : "—"}</p>
+            </div>
+
+            <div className="rounded-xl bg-white/15 py-1.5 px-1 backdrop-blur border border-white/10">
+              <div className="flex items-center justify-center gap-0.5 text-[10.5px] opacity-85">
+                <Droplets size={10} /> Namlik
+              </div>
+              <p className="text-[13px] font-extrabold mt-0.5 leading-tight">{w ? `${w.humidity}%` : "—"}</p>
+            </div>
+
+            <div className="rounded-xl bg-white/15 py-1.5 px-1 backdrop-blur border border-white/10">
+              <div className="flex items-center justify-center gap-0.5 text-[10.5px] opacity-85">
+                <CloudRain size={10} /> Yog'in
+              </div>
+              <p className="text-[13px] font-extrabold mt-0.5 leading-tight">{w ? `${w.rain} mm` : "—"}</p>
+            </div>
+
+            <div className="rounded-xl bg-white/15 py-1.5 px-1 backdrop-blur border border-white/10">
+              <div className="flex items-center justify-center gap-0.5 text-[10.5px] opacity-85">
+                <Sprout size={10} /> Tuproq
+              </div>
+              <p className="text-[13px] font-extrabold mt-0.5 leading-tight">{w ? `+${currentSoilTemp}°` : "—"}</p>
+            </div>
+          </div>
+
+          {/* Pastki qatorda 7 kunlik ob-havoni ochish taklifi */}
+          <div className="mt-2.5 flex items-center justify-between rounded-xl bg-black/20 border border-white/10 px-3 py-2 text-[12px] font-bold text-white transition group-hover:bg-black/30">
+            <span className="flex items-center gap-1.5 truncate">
+              <Sparkles size={14} className="shrink-0 text-yellow-300" />
+              <span className="truncate">7 kunlik ob-havo va quyosh chiqishi</span>
+            </span>
+            <span className="shrink-0 flex items-center gap-0.5 text-[11.5px] font-extrabold text-yellow-300">
+              Ko&apos;rish
+              <ChevronRight size={13} />
+            </span>
           </div>
         </div>
-
-        {/* 4 ta ixcham parametr: Shamol, Namlik, Yog'in, Tuproq harorati */}
-        <div className="mt-3 grid grid-cols-4 gap-1.5 text-center">
-          <div className="rounded-xl bg-white/15 py-1.5 px-1 backdrop-blur border border-white/10">
-            <div className="flex items-center justify-center gap-0.5 text-[10.5px] opacity-85">
-              <Wind size={10} /> Shamol
-            </div>
-            <p className="text-[13px] font-extrabold mt-0.5 leading-tight">{w ? `${w.wind} m/s` : "—"}</p>
-          </div>
-
-          <div className="rounded-xl bg-white/15 py-1.5 px-1 backdrop-blur border border-white/10">
-            <div className="flex items-center justify-center gap-0.5 text-[10.5px] opacity-85">
-              <Droplets size={10} /> Namlik
-            </div>
-            <p className="text-[13px] font-extrabold mt-0.5 leading-tight">{w ? `${w.humidity}%` : "—"}</p>
-          </div>
-
-          <div className="rounded-xl bg-white/15 py-1.5 px-1 backdrop-blur border border-white/10">
-            <div className="flex items-center justify-center gap-0.5 text-[10.5px] opacity-85">
-              <CloudRain size={10} /> Yog'in
-            </div>
-            <p className="text-[13px] font-extrabold mt-0.5 leading-tight">{w ? `${w.rain} mm` : "—"}</p>
-          </div>
-
-          <div className="rounded-xl bg-white/15 py-1.5 px-1 backdrop-blur border border-white/10">
-            <div className="flex items-center justify-center gap-0.5 text-[10.5px] opacity-85">
-              <Sprout size={10} /> Tuproq
-            </div>
-            <p className="text-[13px] font-extrabold mt-0.5 leading-tight">{w ? `+${currentSoilTemp}°` : "—"}</p>
-          </div>
-        </div>
-
-        {/* Pastki qisqa agro tavsiya */}
-        <div className="mt-2.5 flex items-start gap-1.5 rounded-xl bg-black/15 border border-white/10 px-2.5 py-1.5 text-[12px] font-medium leading-snug text-white/95">
-          <span className="shrink-0 mt-0.5">💡</span>
-          <span className="line-clamp-2">{adviceText}</span>
-        </div>
-      </div>
+      </Link>
 
       {/* Hudud va mavsumga qarab batafsil maslahatlar (agar showTips bo'lsa) */}
       {showTips && (

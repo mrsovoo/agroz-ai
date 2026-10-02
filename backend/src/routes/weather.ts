@@ -18,7 +18,7 @@ router.get("/", async (req, res) => {
 
   try {
     const apiRes = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,is_day&hourly=soil_temperature_0cm&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset&forecast_days=1&wind_speed_unit=ms&timezone=auto`
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,is_day&hourly=soil_temperature_0cm&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,weather_code&forecast_days=7&wind_speed_unit=ms&timezone=auto`
     );
     if (!apiRes.ok) throw new Error("weather API error");
     const json = (await apiRes.json()) as any;
@@ -56,6 +56,24 @@ router.get("/", async (req, res) => {
       return parts[1] ?? iso;
     };
 
+    const dailyForecast = Array.isArray(d.time)
+      ? d.time.map((timeStr: string, idx: number) => {
+          const maxT = typeof d.temperature_2m_max?.[idx] === "number" ? Math.round(d.temperature_2m_max[idx]) : tempCurrent;
+          const minT = typeof d.temperature_2m_min?.[idx] === "number" ? Math.round(d.temperature_2m_min[idx]) : Math.round(maxT - 7);
+          return {
+            date: timeStr,
+            tempMax: maxT,
+            tempMin: minT,
+            sunrise: formatTime(d.sunrise?.[idx]),
+            sunset: formatTime(d.sunset?.[idx]),
+            rainSum: typeof d.precipitation_sum?.[idx] === "number" ? d.precipitation_sum[idx] : 0,
+            rainProb: typeof d.precipitation_probability_max?.[idx] === "number" ? d.precipitation_probability_max[idx] : 0,
+            windMax: typeof d.wind_speed_10m_max?.[idx] === "number" ? Math.round(d.wind_speed_10m_max[idx] * 10) / 10 : 2,
+            weatherCode: d.weather_code?.[idx] ?? 0,
+          };
+        })
+      : [];
+
     const snapshot = {
       temp: tempCurrent,
       tempDay,
@@ -73,6 +91,7 @@ router.get("/", async (req, res) => {
       frostRisk: agro.frostRisk,
       agroAdvice: agro.agroAdvice,
       month,
+      daily: dailyForecast,
     };
 
     res.setHeader("Cache-Control", "public, s-maxage=900, stale-while-revalidate=1800");
