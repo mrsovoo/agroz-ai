@@ -54,7 +54,11 @@ export default function AdminBroadcastCenter() {
   const [buttonText, setButtonText] = useState("");
   const [buttonUrl, setButtonUrl] = useState("");
   const [imageUrl, setImageUrl] = useState("");
-  const [signature, setSignature] = useState("AgrozAI");
+  const [signature, setSignature] = useState("AgrozGO");
+
+  const [testTelegramId, setTestTelegramId] = useState("");
+  const [sendingTest, setSendingTest] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const [counts, setCounts] = useState<RecipientCounts>({
     pharmacies: 0,
@@ -75,6 +79,8 @@ export default function AdminBroadcastCenter() {
 
   useEffect(() => {
     fetchCounts();
+    const saved = typeof window !== "undefined" ? localStorage.getItem("agroz_test_telegram_id") : null;
+    if (saved) setTestTelegramId(saved);
   }, []);
 
   async function fetchCounts() {
@@ -108,8 +114,64 @@ export default function AdminBroadcastCenter() {
     }
   }
 
-  async function handleSendMessage(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSendTest() {
+    if (!message.trim() || !testTelegramId.trim()) return;
+    setSendingTest(true);
+    setResult(null);
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("agroz_test_telegram_id", testTelegramId.trim());
+    }
+
+    const token =
+      typeof window !== "undefined"
+        ? localStorage.getItem("agroz_admin_session") || "super-admin-session"
+        : "super-admin-session";
+
+    try {
+      const res = await fetch("/api/admin/messages/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-session": token,
+          "x-super-admin": "true",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          targetType: targetAudience,
+          testTelegramId: Number(testTelegramId.trim()),
+          title: title.trim() || undefined,
+          message: message.trim() || undefined,
+          buttonText: buttonText.trim() || undefined,
+          buttonUrl: buttonUrl.trim() || undefined,
+          imageUrl: imageUrl.trim() || undefined,
+          signature: signature.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setResult({
+          ok: true,
+          message: data.message || "Sinov xabari muvaffaqiyatli yuborildi!",
+        });
+      } else {
+        setResult({
+          ok: false,
+          error: data.error || "Sinov xabarini yuborishda xatolik yuz berdi",
+        });
+      }
+    } catch {
+      setResult({
+        ok: false,
+        error: "Tarmoq xatosi tufayli sinov xabari yuborilmadi",
+      });
+    } finally {
+      setSendingTest(false);
+    }
+  }
+
+  async function executeSendMessage() {
     if (!message.trim()) return;
 
     setSending(true);
@@ -169,6 +231,12 @@ export default function AdminBroadcastCenter() {
     } finally {
       setSending(false);
     }
+  }
+
+  function handleSendMessage(e: React.FormEvent) {
+    e.preventDefault();
+    if (!message.trim()) return;
+    setShowConfirmModal(true);
   }
 
   const currentCount =
@@ -337,7 +405,7 @@ export default function AdminBroadcastCenter() {
                     </span>
                   </div>
                   <span className="text-xs font-bold text-slate-900">Foydalanuvchilar</span>
-                  <span className="text-[10px] text-slate-500 mt-0.5">Dehqon va fermerlar</span>
+                  <span className="text-[10px] text-slate-500 mt-0.5">@agrozai_bot (Dehqonlar)</span>
                 </button>
 
                 {/* Barchaga (Hamma) */}
@@ -365,7 +433,7 @@ export default function AdminBroadcastCenter() {
                     </span>
                   </div>
                   <span className="text-xs font-bold text-slate-900">Barchaga (Hamma)</span>
-                  <span className="text-[10px] text-slate-500 mt-0.5">Umumiy tarqatish</span>
+                  <span className="text-[10px] text-slate-500 mt-0.5">@agrozai_bot & @agroz_auth_bot</span>
                 </button>
               </div>
 
@@ -551,6 +619,34 @@ export default function AdminBroadcastCenter() {
                 </div>
               )}
 
+              {/* Sinov xabari yuborish (Test Send) */}
+              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/70 p-3.5 space-y-2">
+                <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  🧪 Menga sinov yuborish (Test)
+                </span>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={testTelegramId}
+                    onChange={(e) => setTestTelegramId(e.target.value)}
+                    placeholder="Telegram ID raqamingiz (masalan: 123456789)"
+                    className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <button
+                    type="button"
+                    disabled={sendingTest || !testTelegramId.trim() || !message.trim()}
+                    onClick={handleSendTest}
+                    className="rounded-lg bg-slate-800 hover:bg-slate-900 px-3.5 py-2 text-xs font-bold text-white transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 shrink-0"
+                  >
+                    {sendingTest ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                    Sinov yuborish
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-500">
+                  Ommaviy yuborishdan oldin xabar Telegramda qanday borishini o&apos;z profilingizda tekshirib ko&apos;ring.
+                </p>
+              </div>
+
               {/* Yuborish tugmasi */}
               <button
                 type="submit"
@@ -603,7 +699,7 @@ export default function AdminBroadcastCenter() {
                       <p className="text-[10px] text-slate-400">
                         {targetAudience === "pharmacies" || targetAudience === "specialists"
                           ? "@agroz_auth_bot"
-                          : "@agroz_bot"}
+                          : "@agrozai_bot"}
                       </p>
                     </div>
                   </div>
@@ -662,6 +758,59 @@ export default function AdminBroadcastCenter() {
 
       {/* REJIM 2: Ob-havo ogohlantirishlari (Existing Weather Alerts) */}
       {activeMode === "weather" && <AdminWeatherAlertsBroadcast />}
+
+      {/* Tasdiqlash modali */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                <AlertTriangle size={20} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">
+                  Ommaviy xabarni tasdiqlash
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Ushbu amal barcha belgilangan qabul qiluvchilarga yuboriladi
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-xl bg-slate-50 p-3.5 text-xs text-slate-700 space-y-1.5 border border-slate-200">
+              <p>
+                <b>Auditoriya:</b> {audienceLabel}
+              </p>
+              <p>
+                <b>Qabul qiluvchilar soni:</b> <span className="font-bold text-emerald-700">{currentCount} ta</span>
+              </p>
+              <p>
+                <b>Bot:</b> {targetAudience === "pharmacies" || targetAudience === "specialists" ? "@agroz_auth_bot" : "@agrozai_bot"}
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(false)}
+                className="rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+              >
+                Bekor qilish
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowConfirmModal(false);
+                  executeSendMessage();
+                }}
+                className="rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-md hover:bg-emerald-700 transition"
+              >
+                Ha, {currentCount} kishiga yuborilsin
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -21,6 +21,8 @@ export const users = pgTable("users", {
   district: varchar("district", { length: 120 }),
   weatherSentDate: varchar("weather_sent_date", { length: 16 }),
   isWeatherPushEnabled: boolean("is_weather_push_enabled").default(true).notNull(),
+  botStartedAt: timestamp("bot_started_at"),
+  botBlocked: boolean("bot_blocked").default(false).notNull(),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -140,9 +142,10 @@ export const specialists = pgTable("specialists", {
   isBusy: boolean("is_busy").default(false).notNull(),
   /** Ayni paytda bajarayotgan chaqiruvi ID si. */
   currentCallId: integer("current_call_id"),
+  botStartedAt: timestamp("bot_started_at"),
+  botBlocked: boolean("bot_blocked").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  isWeatherPushEnabled: boolean("is_weather_push_enabled").default(true).notNull(),
 });
 
 /**
@@ -340,11 +343,24 @@ export const supportMessages = pgTable("support_messages", {
 export const broadcasts = pgTable("broadcasts", {
   id: serial("id").primaryKey(),
   text: text("text").notNull(),
+  buttonText: varchar("button_text", { length: 100 }),
+  buttonUrl: text("button_url"),
   target: varchar("target", { length: 40 }).notNull().default("all"),
   total: integer("total").notNull().default(0),
   sentCount: integer("sent_count").notNull().default(0),
   failedCount: integer("failed_count").notNull().default(0),
   status: varchar("status", { length: 20 }).notNull().default("jarayonda"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const broadcastDeliveries = pgTable("broadcast_deliveries", {
+  id: serial("id").primaryKey(),
+  broadcastId: integer("broadcast_id").notNull(),
+  recipientType: varchar("recipient_type", { length: 20 }).notNull(), // user | specialist
+  recipientId: integer("recipient_id").notNull(),
+  telegramId: bigint("telegram_id", { mode: "number" }),
+  status: varchar("status", { length: 20 }).notNull().default("sent"), // sent | failed | blocked
+  error: text("error"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

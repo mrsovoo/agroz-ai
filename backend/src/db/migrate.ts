@@ -13,6 +13,9 @@ export async function ensureSchema(): Promise<void> {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS second_phone varchar(32);
       ALTER TABLE users ADD COLUMN IF NOT EXISTS district varchar(120);
       ALTER TABLE users ADD COLUMN IF NOT EXISTS weather_sent_date varchar(16);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS is_weather_push_enabled boolean DEFAULT true NOT NULL;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS bot_started_at timestamp;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS bot_blocked boolean DEFAULT false NOT NULL;
     `);
 
     // 2. Specialists jadvalidagi maydonlar
@@ -24,6 +27,8 @@ export async function ensureSchema(): Promise<void> {
       ALTER TABLE specialists ADD COLUMN IF NOT EXISTS experience_years integer;
       ALTER TABLE specialists ADD COLUMN IF NOT EXISTS education varchar(300);
       ALTER TABLE specialists ADD COLUMN IF NOT EXISTS bio varchar(500);
+      ALTER TABLE specialists ADD COLUMN IF NOT EXISTS bot_started_at timestamp;
+      ALTER TABLE specialists ADD COLUMN IF NOT EXISTS bot_blocked boolean DEFAULT false NOT NULL;
     `);
 
     // 3. Specialist medicines (dorilar) uchun maydonlar va qoralama migratsiyasi
@@ -114,6 +119,8 @@ export async function ensureSchema(): Promise<void> {
       CREATE TABLE IF NOT EXISTS broadcasts (
         id serial PRIMARY KEY NOT NULL,
         text text NOT NULL,
+        button_text varchar(100),
+        button_url text,
         target varchar(40) DEFAULT 'all' NOT NULL,
         total integer DEFAULT 0 NOT NULL,
         sent_count integer DEFAULT 0 NOT NULL,
@@ -121,7 +128,20 @@ export async function ensureSchema(): Promise<void> {
         status varchar(20) DEFAULT 'jarayonda' NOT NULL,
         created_at timestamp DEFAULT now() NOT NULL
       );
+      ALTER TABLE broadcasts ADD COLUMN IF NOT EXISTS button_text varchar(100);
+      ALTER TABLE broadcasts ADD COLUMN IF NOT EXISTS button_url text;
       UPDATE broadcasts SET status = 'toxtadi' WHERE status = 'jarayonda';
+
+      CREATE TABLE IF NOT EXISTS broadcast_deliveries (
+        id serial PRIMARY KEY NOT NULL,
+        broadcast_id integer NOT NULL,
+        recipient_type varchar(20) NOT NULL,
+        recipient_id integer NOT NULL,
+        telegram_id bigint,
+        status varchar(20) DEFAULT 'sent' NOT NULL,
+        error text,
+        created_at timestamp DEFAULT now() NOT NULL
+      );
     `);
 
     // 9. Push bildirishnomalar tokenlari (Android / iOS)

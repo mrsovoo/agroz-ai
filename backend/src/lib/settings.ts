@@ -87,12 +87,24 @@ function eqKey(key: string) {
 /** Env fallback — DB'da yozuv bo'lmasa ishlatiladi. */
 export function envFallback(key: SettingKey): string | null {
   const envMap: Record<SettingKey, string | undefined> = {
-    [SETTING_KEYS.telegramBotToken]: process.env.TELEGRAM_BOT_TOKEN,
-    [SETTING_KEYS.telegramBotUsername]: process.env.TELEGRAM_BOT_USERNAME || process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "agroz_bot",
-    [SETTING_KEYS.telegramAuthBotToken]: process.env.TELEGRAM_AUTH_BOT_TOKEN,
-    [SETTING_KEYS.telegramAuthBotUsername]: process.env.TELEGRAM_AUTH_BOT_USERNAME || process.env.NEXT_PUBLIC_TELEGRAM_AUTH_BOT_USERNAME || "agroz_auth_bot",
-    [SETTING_KEYS.telegramWebhookSecret]: process.env.TELEGRAM_WEBHOOK_SECRET,
-    [SETTING_KEYS.telegramAuthWebhookSecret]: process.env.TELEGRAM_AUTH_WEBHOOK_SECRET,
+    [SETTING_KEYS.telegramBotToken]:
+      process.env.FARMER_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN,
+    [SETTING_KEYS.telegramBotUsername]:
+      process.env.FARMER_BOT_USERNAME ||
+      process.env.TELEGRAM_BOT_USERNAME ||
+      process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ||
+      "agrozai_bot",
+    [SETTING_KEYS.telegramAuthBotToken]:
+      process.env.PARTNER_BOT_TOKEN || process.env.TELEGRAM_AUTH_BOT_TOKEN,
+    [SETTING_KEYS.telegramAuthBotUsername]:
+      process.env.PARTNER_BOT_USERNAME ||
+      process.env.TELEGRAM_AUTH_BOT_USERNAME ||
+      process.env.NEXT_PUBLIC_TELEGRAM_AUTH_BOT_USERNAME ||
+      "agroz_auth_bot",
+    [SETTING_KEYS.telegramWebhookSecret]:
+      process.env.FARMER_WEBHOOK_SECRET || process.env.TELEGRAM_WEBHOOK_SECRET,
+    [SETTING_KEYS.telegramAuthWebhookSecret]:
+      process.env.PARTNER_WEBHOOK_SECRET || process.env.TELEGRAM_AUTH_WEBHOOK_SECRET,
     [SETTING_KEYS.openaiApiKey]: process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY,
     [SETTING_KEYS.openaiBaseUrl]: process.env.OPENAI_BASE_URL || (process.env.GEMINI_API_KEY ? "https://generativelanguage.googleapis.com/v1beta/openai/" : undefined),
     [SETTING_KEYS.aiModel]: process.env.AI_MODEL,
@@ -188,9 +200,9 @@ export type SettingsStatus = {
 };
 
 const LABELS: Record<SettingKey, string> = {
-  [SETTING_KEYS.telegramBotToken]: "Asosiy bot tokeni (TELEGRAM_BOT_TOKEN)",
-  [SETTING_KEYS.telegramBotUsername]: "Mijoz boti username (@agroz_bot)",
-  [SETTING_KEYS.telegramAuthBotToken]: "Auth bot tokeni (@agroz_auth_bot)",
+  [SETTING_KEYS.telegramBotToken]: "Fermerlar boti tokeni (FARMER_BOT_TOKEN / TELEGRAM_BOT_TOKEN)",
+  [SETTING_KEYS.telegramBotUsername]: "Fermerlar boti username (@agrozai_bot)",
+  [SETTING_KEYS.telegramAuthBotToken]: "Hamkorlar boti tokeni (@agroz_auth_bot)",
   [SETTING_KEYS.telegramAuthBotUsername]: "Auth bot username (@agroz_auth_bot)",
   [SETTING_KEYS.telegramWebhookSecret]: "Webhook maxfiy kaliti (asosiy bot)",
   [SETTING_KEYS.telegramAuthWebhookSecret]: "Webhook maxfiy kaliti (auth bot)",
@@ -257,6 +269,46 @@ export async function telegramWebhookSecret(): Promise<string | null> {
 }
 export async function telegramAuthWebhookSecret(): Promise<string | null> {
   return getSetting(SETTING_KEYS.telegramAuthWebhookSecret);
+}
+
+export async function farmerBotToken(): Promise<string | null> {
+  return telegramBotToken();
+}
+export async function farmerBotUsername(): Promise<string> {
+  const val = await getSetting(SETTING_KEYS.telegramBotUsername);
+  return (val || "agrozai_bot").replace(/^@/, "");
+}
+export async function farmerWebhookSecret(): Promise<string | null> {
+  return telegramWebhookSecret();
+}
+
+export async function partnerBotToken(): Promise<string | null> {
+  return telegramAuthBotToken();
+}
+export async function partnerBotUsername(): Promise<string> {
+  const val = await getSetting(SETTING_KEYS.telegramAuthBotUsername);
+  return (val || "agroz_auth_bot").replace(/^@/, "");
+}
+export async function partnerWebhookSecret(): Promise<string | null> {
+  return telegramAuthWebhookSecret();
+}
+
+export function webAppUrl(): string {
+  const raw = process.env.WEB_APP_URL || process.env.NEXT_PUBLIC_APP_URL || "https://agroz.uz";
+  return raw.replace(/\/+$/, "");
+}
+
+export function partnerMiniappUrl(): string {
+  const raw = process.env.PARTNER_MINIAPP_URL || `${webAppUrl()}/admin/panel`;
+  return raw.replace(/\/+$/, "");
+}
+
+export function appStoreUrl(): string | null {
+  return process.env.APP_STORE_URL?.trim() || null;
+}
+
+export function googlePlayUrl(): string | null {
+  return process.env.GOOGLE_PLAY_URL?.trim() || null;
 }
 export async function aiApiKey(): Promise<string | null> {
   return getSetting(SETTING_KEYS.openaiApiKey);

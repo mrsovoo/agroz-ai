@@ -16,9 +16,11 @@ import {
   supportTickets,
   supportMessages,
   broadcasts,
+  broadcastDeliveries,
 } from "../db/schema.js";
 import { sql, eq, desc, asc, isNotNull, and, or, inArray } from "drizzle-orm";
 import { sendOrderStatusPush, sendSpecialistCallPush } from "../lib/push.js";
+import { sendToSpecialist, sendToUser } from "../lib/bot-sender.js";
 import {
   adminEnabled,
   adminLogin,
@@ -634,7 +636,7 @@ router.get("/telegram", requireAdmin, async (_req, res) => {
       appUrl: process.env.NEXT_PUBLIC_APP_URL || null,
       main: {
         ...mainStatus,
-        configuredUsername: botUsername || mainStatus.username || "agroz_bot",
+        configuredUsername: botUsername || mainStatus.username || "agrozai_bot",
       },
       auth: {
         ...authStatus,
@@ -680,11 +682,11 @@ function getSettingLabel(key: string): string {
     case SETTING_KEYS.defaultRadiusKm:
       return "Qidiruv radiusi (km) — Standart: 5 km";
     case SETTING_KEYS.telegramBotToken:
-      return "Mijoz (Dehqon) boti tokeni (TELEGRAM_BOT_TOKEN)";
+      return "Fermerlar boti tokeni (FARMER_BOT_TOKEN / TELEGRAM_BOT_TOKEN)";
     case SETTING_KEYS.telegramBotUsername:
-      return "Mijoz (Dehqon) boti username (@agroz_bot)";
+      return "Fermerlar boti username (@agrozai_bot)";
     case SETTING_KEYS.telegramAuthBotToken:
-      return "Mutaxassis va dorixona boti tokeni (TELEGRAM_AUTH_BOT_TOKEN)";
+      return "Hamkorlar boti tokeni (PARTNER_BOT_TOKEN / TELEGRAM_AUTH_BOT_TOKEN)";
     case SETTING_KEYS.telegramAuthBotUsername:
       return "Mutaxassis va dorixona boti username (@agroz_auth_bot)";
     case SETTING_KEYS.openaiApiKey:
@@ -743,6 +745,8 @@ router.get("/specialists", requireAdmin, async (req, res) => {
         isActive: specialists.isActive,
         isApproved: specialists.isApproved,
         isBusy: specialists.isBusy,
+        botStartedAt: specialists.botStartedAt,
+        botBlocked: specialists.botBlocked,
         createdAt: specialists.createdAt,
         updatedAt: specialists.updatedAt,
       })
@@ -802,6 +806,14 @@ router.get("/specialists", requireAdmin, async (req, res) => {
 
     let result = allSpecs.map((s) => {
       const r = ratingMap.get(s.id);
+      const botStatus: "active" | "never_started" | "blocked" | "no_telegram" = !s.telegramId
+        ? "no_telegram"
+        : s.botBlocked
+        ? "blocked"
+        : s.botStartedAt
+        ? "active"
+        : "never_started";
+
       return {
         ...s,
         medicinesCount: medMap.get(s.id) ?? 0,
@@ -810,6 +822,7 @@ router.get("/specialists", requireAdmin, async (req, res) => {
         ratingAvg: r ? Math.round(r.avg * 10) / 10 : null,
         ratingCount: r?.count ?? 0,
         isBusy: s.isBusy ?? false,
+        botStatus,
       };
     });
 
@@ -826,6 +839,13 @@ router.get("/specialists", requireAdmin, async (req, res) => {
     const pendingCount = allSpecs.filter((s) => !s.isApproved).length;
     const approvedCount = allSpecs.filter((s) => s.isApproved).length;
 
+    const botStats = {
+      active: allSpecs.filter((s) => Boolean(s.telegramId) && !s.botBlocked && Boolean(s.botStartedAt)).length,
+      neverStarted: allSpecs.filter((s) => Boolean(s.telegramId) && !s.botBlocked && !s.botStartedAt).length,
+      blocked: allSpecs.filter((s) => Boolean(s.telegramId) && Boolean(s.botBlocked)).length,
+      noTelegram: allSpecs.filter((s) => !s.telegramId).length,
+    };
+
     res.json({
       ok: true,
       specialists: result,
@@ -833,6 +853,7 @@ router.get("/specialists", requireAdmin, async (req, res) => {
         total: allSpecs.length,
         pending: pendingCount,
         approved: approvedCount,
+        botStats,
       },
     });
   } catch (err: any) {
@@ -1588,6 +1609,8 @@ async function handleAdminSendBroadcast(req: any, res: any) {
       directRecipient, // { recipientType: "pharmacy" | "specialist" | "user", id?: number, telegramId?: number }
     } = req.body || {};
 
+    const testTelegramId = req.body?.testTelegramId ? Number(req.body.testTelegramId) : undefined;
+
     if (!message || typeof message !== "string" || !message.trim()) {
       if (!imageUrl || typeof imageUrl !== "string" || !imageUrl.trim()) {
         return res.status(400).json({ error: "Xabar matnini yoki rasm URL-ni kiriting" });
@@ -1612,6 +1635,23 @@ async function handleAdminSendBroadcast(req: any, res: any) {
     }
     const fullText = textLines.join("\n");
 
+    const photoUrl: string | undefined =
+      imageUrl && typeof imageUrl === "string" && /^https?:\/\//i.test(imageUrl.trim())
+        ? imageUrl.trim()
+        : undefined;
+
+    // Uzunlik chegaralari tekshiruvi (Telegram qoidasi: rasm sarlavhasi <= 1024, oddiy xabar <= 4096)
+    if (photoUrl && fullText.length > 1024) {
+      return res.status(400).json({
+        error: `Rasm bilan yuboriladigan xabar 1024 belgidan oshmasligi kerak (hozirda: ${fullText.length} ta belgi)`,
+      });
+    }
+    if (!photoUrl && fullText.length > 4096) {
+      return res.status(400).json({
+        error: `Xabar matni 4096 belgidan oshmasligi kerak (hozirda: ${fullText.length} ta belgi)`,
+      });
+    }
+
     let inlineKeyboard: any = undefined;
     if (buttonText && buttonText.trim() && buttonUrl && buttonUrl.trim()) {
       let validUrl = buttonUrl.trim();
@@ -1630,45 +1670,68 @@ async function handleAdminSendBroadcast(req: any, res: any) {
       };
     }
 
-    const photoUrl: string | undefined =
-      imageUrl && typeof imageUrl === "string" && /^https?:\/\//i.test(imageUrl.trim())
-        ? imageUrl.trim()
-        : undefined;
-
-    async function sendToTg(tgId: number, useAuth: boolean): Promise<boolean> {
-      if (photoUrl) {
-        if (useAuth) {
-          return await sendAuthPhoto(
-            tgId,
-            photoUrl,
-            fullText,
-            inlineKeyboard ? { inline: inlineKeyboard } : undefined
-          );
+    async function sendToTg(tgId: number, useAuth: boolean): Promise<{ ok: boolean; error?: string }> {
+      try {
+        let ok = false;
+        if (photoUrl) {
+          if (useAuth) {
+            ok = await sendAuthPhoto(
+              tgId,
+              photoUrl,
+              fullText,
+              inlineKeyboard ? { inline: inlineKeyboard } : undefined
+            );
+          } else {
+            ok = await sendPhoto(
+              tgId,
+              photoUrl,
+              fullText,
+              inlineKeyboard ? { keyboard: inlineKeyboard } : undefined
+            );
+          }
+        } else {
+          if (useAuth) {
+            ok = await sendAuthMessage(
+              tgId,
+              fullText,
+              inlineKeyboard ? { inline: inlineKeyboard } : undefined
+            );
+          } else {
+            ok = await sendMessage(
+              tgId,
+              fullText,
+              inlineKeyboard ? { keyboard: inlineKeyboard } : undefined
+            );
+          }
         }
-        return await sendPhoto(
-          tgId,
-          photoUrl,
-          fullText,
-          inlineKeyboard ? { keyboard: inlineKeyboard } : undefined
-        );
+        return { ok };
+      } catch (err: any) {
+        return { ok: false, error: err?.message };
       }
-      if (useAuth) {
-        return await sendAuthMessage(
-          tgId,
-          fullText,
-          inlineKeyboard ? { inline: inlineKeyboard } : undefined
-        );
-      }
-      return await sendMessage(
-        tgId,
-        fullText,
-        inlineKeyboard ? { keyboard: inlineKeyboard } : undefined
-      );
     }
 
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     let sentCount = 0;
     let failedCount = 0;
+
+    // SINOV YUBORISH (TEST SEND)
+    if (testTelegramId) {
+      const isAuthTarget = targetType === "pharmacies" || targetType === "specialists";
+      const sendResult = await sendToTg(testTelegramId, isAuthTarget);
+      if (sendResult.ok) {
+        return res.json({
+          ok: true,
+          isTest: true,
+          message: `Sinov xabari muvaffaqiyatli yuborildi (${isAuthTarget ? "@agroz_auth_bot" : "@agrozai_bot"} orqali ID: ${testTelegramId})`,
+        });
+      } else {
+        return res.status(400).json({
+          ok: false,
+          isTest: true,
+          error: `Sinov xabarini yuborib bo'lmadi: ${sendResult.error || "Telegram xatosi"}`,
+        });
+      }
+    }
 
     // DIRECT 1-to-1 MESSAGE
     if (targetType === "direct") {
@@ -1699,14 +1762,14 @@ async function handleAdminSendBroadcast(req: any, res: any) {
 
       if (!tgId) {
         return res.status(400).json({
-          error: "Foydalanuvchining Telegram profili (@agroz_auth_bot yoki @agroz_bot) ulanmagan.",
+          error: "Foydalanuvchining Telegram profili (@agroz_auth_bot yoki @agrozai_bot) ulanmagan.",
         });
       }
 
       try {
-        const ok = await sendToTg(tgId, recType === "pharmacy" || recType === "specialist");
+        const resSend = await sendToTg(tgId, recType === "pharmacy" || recType === "specialist");
 
-        if (ok) {
+        if (resSend.ok) {
           sentCount = 1;
         } else {
           failedCount = 1;
@@ -1791,6 +1854,8 @@ async function handleAdminSendBroadcast(req: any, res: any) {
       .values({
         text: fullText,
         target: String(targetType || "all"),
+        buttonText: buttonText ? buttonText.trim() : null,
+        buttonUrl: buttonUrl ? buttonUrl.trim() : null,
         total: totalTarget,
         sentCount: 0,
         failedCount: 0,
@@ -1813,7 +1878,7 @@ async function handleAdminSendBroadcast(req: any, res: any) {
       message: `Yuborish boshlandi (${totalTarget} ta qabul qiluvchi)`,
     });
 
-    // Background job execution (~28 msg/sec = 36ms delay to respect Telegram 30 msg/sec limit)
+    // Background job execution (~18 msg/sec = 55ms delay to stay well within Telegram 20-30 msg/sec limit)
     setImmediate(async () => {
       try {
         const recipients: Array<{ tgId: number; useAuth: boolean }> = [
@@ -1824,13 +1889,33 @@ async function handleAdminSendBroadcast(req: any, res: any) {
 
         for (let i = 0; i < recipients.length; i++) {
           const item = recipients[i];
+          let deliveryOk = false;
+          let deliveryError: string | null = null;
           try {
-            const ok = await sendToTg(item.tgId, item.useAuth);
-            if (ok) sentCount++;
+            const sendRes = await sendToTg(item.tgId, item.useAuth);
+            deliveryOk = sendRes.ok;
+            deliveryError = sendRes.error || null;
+            if (deliveryOk) sentCount++;
             else failedCount++;
-          } catch {
+          } catch (err: any) {
+            deliveryOk = false;
+            deliveryError = err?.message || "Xatolik";
             failedCount++;
           }
+
+          // Yetkazilganlik tarixiga yozish
+          await db
+            .insert(broadcastDeliveries)
+            .values({
+              broadcastId,
+              recipientType: item.useAuth ? "specialist" : "user",
+              recipientId: item.tgId,
+              telegramId: item.tgId,
+              status: deliveryOk ? "sent" : "failed",
+              error: deliveryError,
+              createdAt: new Date(),
+            })
+            .catch(() => {});
 
           if ((i + 1) % 5 === 0 || i === recipients.length - 1) {
             await db
@@ -1841,7 +1926,7 @@ async function handleAdminSendBroadcast(req: any, res: any) {
           }
 
           if (i < recipients.length - 1) {
-            await sleep(36);
+            await sleep(55);
           }
         }
 
@@ -2035,6 +2120,14 @@ router.get("/users", requireAdmin, async (req, res) => {
         lastAddress = userCalls[0].address;
       }
 
+      const botStatus: "active" | "never_started" | "blocked" | "no_telegram" = !u.telegramId
+        ? "no_telegram"
+        : u.botBlocked
+        ? "blocked"
+        : u.botStartedAt
+        ? "active"
+        : "never_started";
+
       return {
         id: u.id,
         name: u.name || "Noma'lum foydalanuvchi",
@@ -2048,6 +2141,7 @@ router.get("/users", requireAdmin, async (req, res) => {
         ordersCount,
         totalSpent,
         callsCount,
+        botStatus,
         orders: userOrders,
         specialistCalls: userCalls,
       };
@@ -2151,6 +2245,7 @@ router.get("/users", requireAdmin, async (req, res) => {
         ordersCount: data.orders.length,
         totalSpent,
         callsCount: data.calls.length,
+        botStatus: "no_telegram",
         orders: data.orders,
         specialistCalls: data.calls,
       });
@@ -2188,6 +2283,12 @@ router.get("/users", requireAdmin, async (req, res) => {
       activeBuyersCount: enrichedUsers.filter((u) => u.ordersCount > 0).length,
       activeCallersCount: enrichedUsers.filter((u) => u.callsCount > 0).length,
       totalOrdersSum: enrichedUsers.reduce((sum, u) => sum + u.totalSpent, 0),
+      botStats: {
+        active: enrichedUsers.filter((u) => u.botStatus === "active").length,
+        neverStarted: enrichedUsers.filter((u) => u.botStatus === "never_started").length,
+        blocked: enrichedUsers.filter((u) => u.botStatus === "blocked").length,
+        noTelegram: enrichedUsers.filter((u) => u.botStatus === "no_telegram").length,
+      },
     };
 
     res.json({

@@ -17,7 +17,7 @@ export type InlineKeyboard = {
 };
 
 export type ReplyKeyboard = {
-  keyboard: { text: string; request_contact?: boolean; request_location?: boolean; web_app?: { url: string } }[][];
+  keyboard?: { text: string; request_contact?: boolean; request_location?: boolean; web_app?: { url: string } }[][];
   resize_keyboard?: boolean;
   one_time_keyboard?: boolean;
   remove_keyboard?: boolean;
@@ -95,59 +95,28 @@ export function botChatLink(botUsername: string | null): string | null {
 
 let botNameSynced = false;
 
-/** Mini App tugmasi: faqat HTTPS manzilda ishlaydi. */
+/** Fermerlar boti uchun toza inline menyu */
+export function farmerGreetingKeyboard(): InlineKeyboard {
+  const url = appBaseUrl() || "https://agroz.uz";
+  return {
+    inline_keyboard: [
+      [{ text: "🌐 AgrozGO ni ochish", web_app: { url } }],
+      [{ text: "💬 Qo'llab-quvvatlash", callback_data: "support:open" }],
+    ],
+  };
+}
+
 export function miniAppKeyboard(): InlineKeyboard | undefined {
-  const url = appBaseUrl();
-  if (!url || !url.startsWith("https://")) return undefined;
-  const installUrl = `${url}?add_to_home=1`;
-  return {
-    inline_keyboard: [
-      [{ text: "📲 Bosh ekranga qo'shish", web_app: { url: installUrl } }],
-      [{ text: "🌿 AgrozGO ga kirish", web_app: { url } }],
-    ],
-  };
+  return farmerGreetingKeyboard();
 }
 
-/** AgrozGO tugmasi: Mini Appga kirish uchun maxsus inline keyboard */
 export function agrozGoKeyboard(): InlineKeyboard | undefined {
-  const url = appBaseUrl() || "https://agroz.uz";
-  const installUrl = `${url}?add_to_home=1`;
-  if (!url.startsWith("https://")) {
-    return {
-      inline_keyboard: [
-        [{ text: "📲 Bosh ekranga qo'shish va ochish", url: installUrl }],
-        [{ text: "🌿 AgrozGO ga kirish", url }],
-      ],
-    };
-  }
-  return {
-    inline_keyboard: [
-      [{ text: "📲 Bosh ekranga qo'shish va ochish", web_app: { url: installUrl } }],
-      [{ text: "🌿 AgrozGO ga kirish", web_app: { url } }],
-    ],
-  };
+  return farmerGreetingKeyboard();
 }
 
-/** Ro'yxatdan to'liq o'tgan foydalanuvchi uchun asosiy doimiy Reply menyu */
 export function registeredUserMenuKeyboard(): ReplyKeyboard {
-  const url = appBaseUrl() || "https://agroz.uz";
-  const installUrl = `${url}?add_to_home=1`;
-  const webAppBtn = url.startsWith("https://")
-    ? { text: "🌿 AgrozGO ga kirish", web_app: { url } }
-    : { text: "🌿 AgrozGO ga kirish" };
-  const addHomeBtn = url.startsWith("https://")
-    ? { text: "📲 Bosh ekranga qo'shish", web_app: { url: installUrl } }
-    : { text: "📲 Bosh ekranga qo'shish" };
-
   return {
-    keyboard: [
-      [webAppBtn],
-      [addHomeBtn],
-      [{ text: "📦 Buyurtmalarim" }, { text: "👨‍⚕️ Chaqiruvlarim" }],
-      [{ text: "👤 Ma'lumotlarim" }, { text: "💬 Yordam" }],
-      [{ text: "🗑 Profilni o'chirish" }],
-    ],
-    resize_keyboard: true,
+    remove_keyboard: true,
   };
 }
 
@@ -157,8 +126,7 @@ export async function setAgrozGoMenuButton(chatId?: number): Promise<boolean> {
     botNameSynced = true;
     callBot("setMyName", { name: "AgrozGO" }).catch(() => {});
   }
-  const url = appBaseUrl();
-  if (!url || !url.startsWith("https://")) return false;
+  const url = appBaseUrl() || "https://agroz.uz";
   const payload: Record<string, unknown> = {
     menu_button: {
       type: "web_app",
@@ -179,22 +147,8 @@ export function authBotUsername(): string {
   return fromEnv || "agroz_auth_bot";
 }
 
-/** Salomlashish uchun: Mini App + Bosh ekranga qo'shish + sayt tugmalari. */
 export function greetingKeyboard(): InlineKeyboard | undefined {
-  const url = appBaseUrl() || "https://agroz.uz";
-  const installUrl = `${url}?add_to_home=1`;
-  const rows: InlineKeyboard["inline_keyboard"] = [];
-  if (url.startsWith("https://")) {
-    rows.push([{ text: "📲 Bosh ekranga qo'shish va ochish", web_app: { url: installUrl } }]);
-    rows.push([{ text: "🌿 AgrozGO ga kirish", web_app: { url } }]);
-  } else {
-    rows.push([{ text: "📲 Bosh ekranga qo'shish va ochish", url: installUrl }]);
-    rows.push([{ text: "🌿 AgrozGO ga kirish", url }]);
-  }
-  rows.push([
-    { text: "📋 Mutaxassis / Dorixona ro'yxati", url: `https://t.me/${authBotUsername()}` },
-  ]);
-  return { inline_keyboard: rows };
+  return farmerGreetingKeyboard();
 }
 
 // ---------------------------------------------------------------------------
