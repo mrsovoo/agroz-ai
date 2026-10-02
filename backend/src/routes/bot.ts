@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
 import { users, specialists, orders, orderItems, specialistCalls, otpCodes, sessions } from "../db/schema.js";
-import { eq, and, desc, isNotNull, or } from "drizzle-orm";
+import { eq, and, desc, isNotNull, or, sql } from "drizzle-orm";
 import {
   farmerBotToken,
   farmerBotUsername,
@@ -195,7 +195,7 @@ export async function handleFarmerUpdate(update: any) {
       return;
     }
 
-    // 3) Foydalanuvchi topilmadi -> Chat menu tugmasini sozlaymiz va raqam so'raymiz
+    // 3) Foydalanuvchi topilmadi -> Chat menu tugmasini sozlaymiz va ro'yxatdan o'tishni so'raymiz
     const url = webAppUrl();
     await callTelegram(token, "setChatMenuButton", {
       chat_id: chatId,
@@ -206,25 +206,25 @@ export async function handleFarmerUpdate(update: any) {
       },
     }).catch(() => {});
 
-    const askContactText = `Assalomu alaykum, <b>${escapeHtml(firstName)}</b>! AgrozGO ga xush kelibsiz 🌱\n\nIlovadan to'liq foydalanish va buyurtmalaringizni boshqarish uchun pastdagi <b>«📞 Raqamni yuborish»</b> tugmasini bosing:`;
+    const askContactText = `Assalomu alaykum, <b>${escapeHtml(firstName)}</b>! AgrozGO ga xush kelibsiz 🌱\n\nRo'yxatdan o'tish uchun pastdagi <b>«📞 Ro'yxatdan o'tish (Raqamni yuborish)»</b> tugmasini bosing:`;
     await callTelegram(token, "sendMessage", {
       chat_id: chatId,
       text: askContactText,
       parse_mode: "HTML",
       reply_markup: {
-        keyboard: [[{ text: "📞 Raqamni yuborish", request_contact: true }]],
+        keyboard: [[{ text: "📞 Ro'yxatdan o'tish (Raqamni yuborish)", request_contact: true }]],
         resize_keyboard: true,
         one_time_keyboard: true,
       },
     });
 
-    // Qo'shimcha ravishda to'g'ridan-to'g'ri ochish tugmasini ham yuboramiz
+    // To'g'ridan-to'g'ri ilovaga kirish tugmasi
     await callTelegram(token, "sendMessage", {
       chat_id: chatId,
-      text: "Yoki AgrozGO ilovasini to'g'ridan-to'g'ri oching 👇",
+      text: "Yoki AgrozGO ilovasiga to'g'ridan-to'g'ri kiring 👇",
       reply_markup: {
         inline_keyboard: [
-          [{ text: "🚀 AgrozGO ilovasini ochish", web_app: { url } }],
+          [{ text: "🚀 Kirish (AgrozGO ilovasi)", web_app: { url } }],
         ],
       },
     });
@@ -232,28 +232,136 @@ export async function handleFarmerUpdate(update: any) {
   }
 
   // /buyurtmalar buyrug'i
-  if (command === "/buyurtmalar" || text === "📦 Mening buyurtmalarim" || text === "📦 Buyurtmalarim") {
+  if (command === "/buyurtmalar" || text === "📦 Buyurtmalar" || text === "📦 Mening buyurtmalarim" || text === "📦 Buyurtmalarim") {
     await sendFarmerOrders(token, chatId, fromId);
     return;
   }
 
+  // /chaqiruvlar buyrug'i (Mutaxassis chaqiruvlari)
+  if (command === "/chaqiruvlar" || text === "👨‍⚕️ Chaqiruvlar" || text === "Chaqiruvlar") {
+    await sendFarmerCalls(token, chatId, fromId);
+    return;
+  }
+
+  // /obhavo buyrug'i (Hududiy agro-ob-havo ma'lumotlari)
+  if (command === "/obhavo" || text === "🌤 Ob-havo" || text === "Ob-havo" || text === "Ob havo") {
+    await sendFarmerWeather(token, chatId, fromId);
+    return;
+  }
+
   // /yordam buyrug'i
-  if (command === "/yordam" || text === "💬 Qo'llab-quvvatlash" || text === "💬 Yordam" || text === "/help") {
+  if (command === "/yordam" || text === "💬 Qo'llab-quvvatlash" || text === "Qo'llab-quvvatlash" || text === "Qo'llab quvvatlash" || text === "💬 Yordam" || text === "/help") {
     const url = webAppUrl();
-    const partnerUser = await partnerBotUsername();
     await callTelegram(token, "sendMessage", {
       chat_id: chatId,
-      text: `🌱 <b>AgrozGO — Fermer va dehqonlar uchun qulay raqamli platforma.</b>\n\n• Ilovani ochish uchun quyidagi tugmani yoki pastki chap burchakdagi <b>«AgrozGO»</b> menyu tugmasini bosing.\n• Mahsulotlarni buyurtma qilish va mutaxassis ko'rigiga yozilish uchun ilovadan foydalaning.\n• Savollaringiz bo'lsa, @agroz_support ga yozing.\n• Agro-do'kon va mutaxassislar boti: @${partnerUser}`,
+      text: `🌱 <b>AgrozGO — Fermer va dehqonlar uchun qulay raqamli platforma.</b>\n\n• Ilovani ochish uchun quyidagi tugmani yoki chat menyusidagi <b>«AgrozGO»</b> tugmasini bosing.\n• Dori va o'g'itlarni buyurtma qilish, agronom va veterinar chaqirish uchun ilovadan foydalaning.\n• Savollaringiz yoki takliflaringiz bo'lsa: @agroz_support`,
       parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: [
           [{ text: "🚀 AgrozGO ilovasini ochish", web_app: { url } }],
-          [{ text: "💬 Qo'llab-quvvatlash", callback_data: "support:open" }],
+          [{ text: "💬 Qo'llab-quvvatlash", url: "https://t.me/agroz_support" }],
         ],
       },
     });
     return;
   }
+}
+
+async function sendFarmerCalls(token: string, chatId: number, fromId: number) {
+  const url = webAppUrl();
+  const user = (await db.select().from(users).where(eq(users.telegramId, fromId)).limit(1))[0];
+  if (!user || !user.phone) {
+    await callTelegram(token, "sendMessage", {
+      chat_id: chatId,
+      text: "Chaqiruvlaringizni ko'rish uchun avval hisobingizni ulang yoki telefon raqamingizni yuboring:",
+      reply_markup: {
+        keyboard: [[{ text: "📞 Raqamni yuborish", request_contact: true }]],
+        resize_keyboard: true,
+        one_time_keyboard: true,
+      },
+    });
+    return;
+  }
+
+  const cleanDigits = user.phone.replace(/\D/g, "").slice(-9);
+  const rawCalls = await db
+    .select()
+    .from(specialistCalls)
+    .where(sql`RIGHT(REPLACE(${specialistCalls.customerPhone}, ' ', ''), 9) = ${cleanDigits}`)
+    .orderBy(desc(specialistCalls.id))
+    .limit(5);
+
+  if (rawCalls.length === 0) {
+    await callTelegram(token, "sendMessage", {
+      chat_id: chatId,
+      text: "📭 <b>Sizda hozircha mutaxassis chaqiruvlari mavjud emas.</b>\n\nAgrozGO ilovasi orqali tajribali agronom yoki veterinarlarni dalangizga yoki fermangizga chaqirishingiz mumkin 👇",
+      parse_mode: "HTML",
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "👨‍⚕️ Mutaxassislarni ko'rish", web_app: { url } }],
+        ],
+      },
+    });
+    return;
+  }
+
+  const allSpecs = await db.select().from(specialists);
+  const specMap = new Map<number, (typeof allSpecs)[0]>();
+  for (const s of allSpecs) specMap.set(s.id, s);
+
+  for (const call of rawCalls) {
+    const spec = specMap.get(call.specialistId);
+    const statusLabel =
+      call.status === "yangi"
+        ? "🟡 Yangi (mutaxassis ko'rib chiqmoqda)"
+        : call.status === "qabul_qilindi"
+        ? "🔵 Qabul qilingan (mutaxassis yo'lda yoki bog'lanadi)"
+        : call.status === "bajarildi"
+        ? "✅ Yakunlangan"
+        : "❌ Rad etilgan";
+
+    const text = [
+      `👨‍⚕️ <b>Chaqiruv #${call.id}</b>`,
+      `Mutaxassis: <b>${escapeHtml(spec?.name || "Mutaxassis")}</b> (${escapeHtml(spec?.specialty || "Agro mutaxassis")})`,
+      spec?.phone ? `Telefon: <code>${escapeHtml(spec.phone)}</code>` : "",
+      `Holati: <b>${statusLabel}</b>`,
+      call.address ? `Manzil: ${escapeHtml(call.address)}` : "",
+      `Muammo: ${escapeHtml(call.problem)}`,
+    ].filter(Boolean).join("\n");
+
+    await callTelegram(token, "sendMessage", {
+      chat_id: chatId,
+      text,
+      parse_mode: "HTML",
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "📱 Ilovada ochish", web_app: { url } }],
+        ],
+      },
+    });
+  }
+}
+
+async function sendFarmerWeather(token: string, chatId: number, fromId: number) {
+  const url = webAppUrl();
+  const user = (await db.select().from(users).where(eq(users.telegramId, fromId)).limit(1))[0];
+  const userRegion = user?.region || "Toshkent";
+
+  const { findRegionCoords, getAgroWeatherSnapshot, formatDailyMorningWeatherTelegram } = await import("../lib/weather-alerts.js");
+  const coords = findRegionCoords(userRegion);
+  const snapshot = await getAgroWeatherSnapshot(coords.lat, coords.lng, coords.matchedRegion);
+  const messageText = formatDailyMorningWeatherTelegram(snapshot, user?.name);
+
+  await callTelegram(token, "sendMessage", {
+    chat_id: chatId,
+    text: messageText,
+    parse_mode: "HTML",
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "🌤 AgrozGO da to'liq ko'rish", web_app: { url } }],
+      ],
+    },
+  });
 }
 
 async function sendFarmerOrders(token: string, chatId: number, fromId: number) {
@@ -340,7 +448,6 @@ async function sendFarmerOrders(token: string, chatId: number, fromId: number) {
 
 async function sendFarmerGreeting(token: string, chatId: number, fromId: number, name: string) {
   const url = webAppUrl();
-  const partnerUser = await partnerBotUsername();
 
   // Telegram Menu tugmasini "AgrozGO" deb sozlaymiz (foydalanuvchi so'raganidek bitta toza launch menu)
   await callTelegram(token, "setChatMenuButton", {
@@ -352,38 +459,20 @@ async function sendFarmerGreeting(token: string, chatId: number, fromId: number,
     },
   }).catch(() => {});
 
-  const inlineRows: any[] = [
-    [{ text: "🚀 AgrozGO ilovasini ochish", web_app: { url } }],
-    [
-      { text: "📦 Buyurtmalarim", callback_data: "farmer:orders" },
-      { text: "💬 Qo'llab-quvvatlash", callback_data: "support:open" },
+  const text = `Assalomu alaykum, <b>${escapeHtml(name)}</b>! AgrozGO ga xush kelibsiz 🌱\n\nIlovani ochish uchun quyidagi kirish tugmasini bosing:`;
+
+  // Xabardagi tugma: sof ilovaga kirish tugmasi
+  const inlineMarkup = {
+    inline_keyboard: [
+      [{ text: "🚀 Kirish (AgrozGO ilovasi)", web_app: { url } }],
     ],
-  ];
+  };
 
-  const appStore = appStoreUrl();
-  const googlePlay = googlePlayUrl();
-  const storeBtns: any[] = [];
-  if (appStore) storeBtns.push({ text: "🍏 App Store", url: appStore });
-  if (googlePlay) storeBtns.push({ text: "🤖 Google Play", url: googlePlay });
-  if (storeBtns.length > 0) {
-    inlineRows.push(storeBtns);
-  }
-
-  // Hamkor sifatida ham bormi tekshiramiz
-  const spec = (await db.select().from(specialists).where(and(or(eq(specialists.telegramId, fromId)), eq(specialists.isActive, true), eq(specialists.isApproved, true))).limit(1))[0];
-  let extraText = "";
-  if (spec) {
-    extraText = `\n\n💼 <i>Siz hamkor (${escapeHtml(spec.organization || spec.name)}) sifatida ham ro'yxatdan o'tgansiz. Hamkorlar boti: @${partnerUser}</i>`;
-    inlineRows.push([{ text: `🤝 Hamkorlar boti (@${partnerUser})`, url: `https://t.me/${partnerUser}` }]);
-  }
-
-  const text = `Assalomu alaykum, <b>${escapeHtml(name)}</b>! AgrozGO ga xush kelibsiz 🌱\n\nIlovani ochish uchun pastdagi tugmani bosing:${extraText}`;
-
-  // Reply keyboard: Doimiy qulay pastki menyu
+  // Reply keyboard: Buyurtmalar, Chaqiruvlar, Qo'llab-quvvatlash, Ob-havo
   const replyKeyboard = {
     keyboard: [
-      [{ text: "🚀 AgrozGO", web_app: { url } }],
-      [{ text: "📦 Mening buyurtmalarim" }, { text: "💬 Qo'llab-quvvatlash" }],
+      [{ text: "📦 Buyurtmalar" }, { text: "👨‍⚕️ Chaqiruvlar" }],
+      [{ text: "💬 Qo'llab-quvvatlash" }, { text: "🌤 Ob-havo" }],
     ],
     resize_keyboard: true,
   };
@@ -392,15 +481,14 @@ async function sendFarmerGreeting(token: string, chatId: number, fromId: number,
     chat_id: chatId,
     text,
     parse_mode: "HTML",
-    reply_markup: {
-      inline_keyboard: inlineRows,
-    },
+    reply_markup: inlineMarkup,
   });
 
   // Reply menyuni ham faollashtirib qo'yamiz
   await callTelegram(token, "sendMessage", {
     chat_id: chatId,
-    text: "Quyidagi tugmalar orqali xizmatlardan foydalanishingiz mumkin 👇",
+    text: "Kerakli bo'limni tanlang yoki pastki chap burchakdagi <b>AgrozGO</b> menyusidan ilovani oching 👇",
+    parse_mode: "HTML",
     reply_markup: replyKeyboard,
   });
 }
