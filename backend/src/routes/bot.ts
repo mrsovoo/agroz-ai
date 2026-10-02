@@ -17,13 +17,14 @@ import {
 import { sendToSpecialist, sendToUser } from "../lib/bot-sender.js";
 import { verifyInitData } from "../lib/tg-auth.js";
 import { cleanText, normalizePhone } from "../lib/validate.js";
+import { purgeUserAccount } from "../lib/user-auth.js";
 import { escapeHtml } from "../lib/tg-escape.js";
 import { randomBytes } from "node:crypto";
 
 const router = Router();
 const API_BASE = "https://api.telegram.org";
 
-async function callTelegram(token: string, method: string, payload: Record<string, unknown>) {
+async function callTelegram(token: string, method: string, payload: Record<string, unknown>): Promise<any> {
   try {
     const res = await fetch(`${API_BASE}/bot${token}/${method}`, {
       method: "POST",
@@ -39,6 +40,24 @@ async function callTelegram(token: string, method: string, payload: Record<strin
 // ---------------------------------------------------------------------------
 // 1. FERMERLAR BOTI (@agrozai_bot)
 // ---------------------------------------------------------------------------
+
+interface FarmerRegState {
+  step: "name" | "phone";
+  name?: string;
+  msgIds: number[];
+  startedAt: number;
+}
+
+const farmerRegSessions = new Map<number, FarmerRegState>();
+
+function cleanOldFarmerSessions() {
+  const now = Date.now();
+  for (const [id, s] of farmerRegSessions.entries()) {
+    if (now - s.startedAt > 30 * 60 * 1000) {
+      farmerRegSessions.delete(id);
+    }
+  }
+}
 
 export async function handleFarmerUpdate(update: any) {
   const token = await farmerBotToken();
@@ -58,10 +77,9 @@ export async function handleFarmerUpdate(update: any) {
     }
 
     if (data === "support:open") {
-      const partnerUser = await partnerBotUsername();
       await callTelegram(token, "sendMessage", {
         chat_id: fromId,
-        text: `💬 <b>Qo'llab-quvvatlash xizmati</b>\n\nSavol yoki takliflaringiz bo'lsa, administrator bilan bog'laning:\n👉 @agroz_support\n\nAgro-do'kon va mutaxassislar uchun botimiz: @${partnerUser}`,
+        text: `💬 <b>Qo'llab-quvvatlash xizmati</b>\n\nSavol yoki takliflaringiz bo'lsa, administrator bilan bog'laning:\n👉 @agroz_support`,
         parse_mode: "HTML",
       });
       return;
@@ -71,6 +89,57 @@ export async function handleFarmerUpdate(update: any) {
       await sendFarmerOrders(token, fromId, fromId);
       return;
     }
+
+    if (data === "farmer:delete_account") {
+      await callTelegram(token, "sendMessage", {
+        chat_id: fromId,
+        text: "⚠️ <b>Haqiqatan ham hisobingizni o'chirmoqchimisiz?</b>\n\nProfilingiz o'chirilsa, barcha shaxsiy ma'lumotlaringiz, buyurtmalaringiz va chaqiruvlaringiz to'liq o'chiriladi.",
+        parse_mode: "HTML",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: "✅ Ha, o'chirish", callback_data: "farmer:delete_account:confirm" },
+              { text: "❌ Bekor qilish", callback_data: "farmer:delete_account:cancel" },
+            ],
+          ],
+        },
+      });
+      return;
+    }
+
+    if (data === "farmer:delete_account:cancel") {
+      if (callbackQuery.message?.message_id) {
+        await callTelegram(token, "editMessageText", {
+          chat_id: callbackQuery.message.chat.id,
+          message_id: callbackQuery.message.message_id,
+          text: "Amal bekor qilindi. Profilingiz saqlanib qoldi.",
+        });
+      }
+      return;
+    }
+
+    if (data === "farmer:delete_account:confirm") {
+      const user = (await db.select().from(users).where(eq(users.telegramId, fromId)).limit(1))[0];
+      if (user) {
+        await purgeUserAccount(user.id);
+      }
+      if (callbackQuery.message?.message_id) {
+        await callTelegram(token, "editMessageText", {
+          chat_id: callbackQuery.message.chat.id,
+          message_id: callbackQuery.message.message_id,
+          text: "🗑 Profilingiz va barcha ma'lumotlaringiz muvaffaqiyatli o'chirildi.\n\nQayta foydalanish uchun /start bosing.",
+        });
+      }
+      await callTelegram(token, "sendMessage", {
+        chat_id: fromId,
+        text: "Xizmatimizdan foydalanganingiz uchun rahmat!",
+        reply_markup: {
+          remove_keyboard: true,
+        },
+      });
+      return;
+    }
+
     return;
   }
 
@@ -84,49 +153,73 @@ export async function handleFarmerUpdate(update: any) {
 
   // Kontakt kelganda
   if (message.contact) {
+    const regSession = farmerRegSessions.get(fromId);
     const contact = message.contact;
     if (contact.user_id && contact.user_id !== fromId) {
-      await callTelegram(token, "sendMessage", {
+      const warnRes = await callTelegram(token, "sendMessage", {
         chat_id: chatId,
         text: "⚠️ Iltimos, faqat o'zingizning telefon raqamingizni pastdagi tugma orqali yuboring.",
       });
+      if (regSession) {
+        regSession.msgIds.push(message.message_id);
+        if (warnRes?.result?.message_id) regSession.msgIds.push(warnRes.result.message_id);
+      }
       return;
     }
 
     const rawPhone = contact.phone_number || "";
     const phone = normalizePhone(rawPhone);
     if (!phone) {
-      await callTelegram(token, "sendMessage", {
+      const warnRes = await callTelegram(token, "sendMessage", {
         chat_id: chatId,
         text: "⚠️ Telefon raqam formati noto'g'ri. Iltimos, qayta urinib ko'ring.",
       });
+      if (regSession) {
+        regSession.msgIds.push(message.message_id);
+        if (warnRes?.result?.message_id) regSession.msgIds.push(warnRes.result.message_id);
+      }
       return;
     }
 
-    // users jadvalidan qidiramiz
-    let user = (await db.select().from(users).where(eq(users.phone, phone)).limit(1))[0];
+    if (regSession) {
+      regSession.msgIds.push(message.message_id);
+    }
+
+    const resolvedName =
+      regSession?.name ||
+      [contact.first_name, contact.last_name].filter(Boolean).join(" ") ||
+      firstName ||
+      "Foydalanuvchi";
+
+    let user = (await db.select().from(users).where(or(eq(users.phone, phone), eq(users.telegramId, fromId))).limit(1))[0];
     if (user) {
       await db.update(users).set({
         telegramId: fromId,
+        phone: user.phone || phone,
+        name: regSession?.name || user.name || resolvedName,
         botStartedAt: new Date(),
         botBlocked: false,
       }).where(eq(users.id, user.id));
-
-      await sendFarmerGreeting(token, chatId, fromId, user.name || firstName);
-      return;
+    } else {
+      const [created] = await db.insert(users).values({
+        phone,
+        name: resolvedName,
+        telegramId: fromId,
+        botStartedAt: new Date(),
+        botBlocked: false,
+      }).returning();
+      user = created;
     }
 
-    // Yangi foydalanuvchi bo'lsa — darhol ro'yxatdan o'tkazib ulaymiz
-    const fullName = [contact.first_name, contact.last_name].filter(Boolean).join(" ") || firstName || "Foydalanuvchi";
-    const [created] = await db.insert(users).values({
-      phone,
-      name: fullName,
-      telegramId: fromId,
-      botStartedAt: new Date(),
-      botBlocked: false,
-    }).returning();
+    // Ro'yxatdan o'tish jarayonidagi barcha oraliq xabarlarni o'chiramiz
+    if (regSession && regSession.msgIds.length > 0) {
+      for (const mid of regSession.msgIds) {
+        await callTelegram(token, "deleteMessage", { chat_id: chatId, message_id: mid }).catch(() => {});
+      }
+      farmerRegSessions.delete(fromId);
+    }
 
-    await sendFarmerGreeting(token, chatId, fromId, created.name || firstName);
+    await sendFarmerGreeting(token, chatId, fromId, user.name || resolvedName, true);
     return;
   }
 
@@ -136,6 +229,8 @@ export async function handleFarmerUpdate(update: any) {
 
   // /start buyrug'i
   if (command === "/start" || command.startsWith("/start@")) {
+    cleanOldFarmerSessions();
+
     // 1) Saytdan avtorizatsiya orqali kelgan bo'lsa (start auth_<token>)
     if (payload && payload.startsWith("auth_")) {
       const row = (await db.select().from(otpCodes).where(eq(otpCodes.token, payload)).limit(1))[0];
@@ -148,7 +243,6 @@ export async function handleFarmerUpdate(update: any) {
         }
 
         if (!user && cleanPhone) {
-          // Saytdan kiritilgan ism bo'lsa o'qiymiz
           let prefillName: string | null = null;
           try {
             if (row.code && row.code.startsWith("{")) {
@@ -182,20 +276,32 @@ export async function handleFarmerUpdate(update: any) {
           deliveredAt: new Date(),
         }).where(eq(otpCodes.id, row.id));
 
-        await sendFarmerGreeting(token, chatId, fromId, user?.name || firstName);
+        farmerRegSessions.delete(fromId);
+        await sendFarmerGreeting(token, chatId, fromId, user?.name || firstName, false);
         return;
       }
     }
 
-    // 2) from.id bo'yicha users.telegram_id qidiramiz
+    // 2) fromId bo'yicha foydalanuvchi bazada bor-yo'qligini tekshiramiz
     const user = (await db.select().from(users).where(eq(users.telegramId, fromId)).limit(1))[0];
-    if (user) {
+    if (user && user.phone) {
       await db.update(users).set({ botStartedAt: new Date(), botBlocked: false }).where(eq(users.id, user.id));
-      await sendFarmerGreeting(token, chatId, fromId, user.name || firstName);
+      farmerRegSessions.delete(fromId);
+      await sendFarmerGreeting(token, chatId, fromId, user.name || firstName, false);
       return;
     }
 
-    // 3) Foydalanuvchi topilmadi -> Chat menu tugmasini sozlaymiz va ro'yxatdan o'tishni so'raymiz
+    // 3) Yangi (ro'yxatdan o'tmagan) foydalanuvchi:
+    // Eski chala sessiya bo'lsa xabarlarini tozalaymiz
+    const oldSession = farmerRegSessions.get(fromId);
+    if (oldSession) {
+      for (const mid of oldSession.msgIds) {
+        await callTelegram(token, "deleteMessage", { chat_id: chatId, message_id: mid }).catch(() => {});
+      }
+      farmerRegSessions.delete(fromId);
+    }
+
+    // AgrozGO launch menyu tugmasini sozlab qo'yamiz
     const url = webAppUrl();
     await callTelegram(token, "setChatMenuButton", {
       chat_id: chatId,
@@ -206,28 +312,109 @@ export async function handleFarmerUpdate(update: any) {
       },
     }).catch(() => {});
 
-    const askContactText = `Assalomu alaykum, <b>${escapeHtml(firstName)}</b>! AgrozGO ga xush kelibsiz 🌱\n\nRo'yxatdan o'tish uchun pastdagi <b>«📞 Ro'yxatdan o'tish (Raqamni yuborish)»</b> tugmasini bosing:`;
-    await callTelegram(token, "sendMessage", {
+    // Sof salomlashuv va ism so'rash (tagida hech qanday kirish havolalari yo'q)
+    const promptRes = await callTelegram(token, "sendMessage", {
       chat_id: chatId,
-      text: askContactText,
+      text: "Assalomu alaykum! AgrozGO ga xush kelibsiz 🌱\n\nRo'yxatdan o'tish uchun ism va familiyangizni kiriting:",
+      reply_markup: {
+        remove_keyboard: true,
+      },
+    });
+
+    const msgIds: number[] = [message.message_id];
+    if (promptRes?.result?.message_id) {
+      msgIds.push(promptRes.result.message_id);
+    }
+
+    farmerRegSessions.set(fromId, {
+      step: "name",
+      msgIds,
+      startedAt: Date.now(),
+    });
+    return;
+  }
+
+  // Ro'yxatdan o'tish jarayoni (ism kiritish bosqichi)
+  const regSession = farmerRegSessions.get(fromId);
+  if (regSession && regSession.step === "name") {
+    const cleanName = cleanText(text, 100);
+    if (!cleanName || cleanName.length < 2) {
+      const errRes = await callTelegram(token, "sendMessage", {
+        chat_id: chatId,
+        text: "⚠️ Iltimos, ism va familiyangizni to'liq kiriting:",
+      });
+      regSession.msgIds.push(message.message_id);
+      if (errRes?.result?.message_id) regSession.msgIds.push(errRes.result.message_id);
+      return;
+    }
+
+    regSession.name = cleanName;
+    regSession.step = "phone";
+    regSession.msgIds.push(message.message_id);
+
+    const phonePrompt = await callTelegram(token, "sendMessage", {
+      chat_id: chatId,
+      text: `Rahmat, <b>${escapeHtml(cleanName)}</b>! Endi pastdagi «📞 Raqamni yuborish» tugmasini bosing:`,
       parse_mode: "HTML",
       reply_markup: {
-        keyboard: [[{ text: "📞 Ro'yxatdan o'tish (Raqamni yuborish)", request_contact: true }]],
+        keyboard: [[{ text: "📞 Raqamni yuborish", request_contact: true }]],
         resize_keyboard: true,
         one_time_keyboard: true,
       },
     });
+    if (phonePrompt?.result?.message_id) {
+      regSession.msgIds.push(phonePrompt.result.message_id);
+    }
+    return;
+  }
 
-    // To'g'ridan-to'g'ri ilovaga kirish tugmasi
-    await callTelegram(token, "sendMessage", {
-      chat_id: chatId,
-      text: "Yoki AgrozGO ilovasiga to'g'ridan-to'g'ri kiring 👇",
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: "🚀 Kirish (AgrozGO ilovasi)", web_app: { url } }],
-        ],
-      },
-    });
+  // Ro'yxatdan o'tish jarayoni (telefon raqamni matn ko'rinishida yozish bosqichi)
+  if (regSession && regSession.step === "phone") {
+    const phone = normalizePhone(text);
+    if (!phone) {
+      const invalidRes = await callTelegram(token, "sendMessage", {
+        chat_id: chatId,
+        text: "⚠️ Iltimos, pastdagi «📞 Raqamni yuborish» tugmasini bosing yoki telefon raqamingizni to'liq formatda kiriting (masalan: +998901234567):",
+        reply_markup: {
+          keyboard: [[{ text: "📞 Raqamni yuborish", request_contact: true }]],
+          resize_keyboard: true,
+          one_time_keyboard: true,
+        },
+      });
+      regSession.msgIds.push(message.message_id);
+      if (invalidRes?.result?.message_id) regSession.msgIds.push(invalidRes.result.message_id);
+      return;
+    }
+
+    regSession.msgIds.push(message.message_id);
+
+    const resolvedName = regSession.name || firstName || "Foydalanuvchi";
+    let user = (await db.select().from(users).where(or(eq(users.phone, phone), eq(users.telegramId, fromId))).limit(1))[0];
+    if (user) {
+      await db.update(users).set({
+        telegramId: fromId,
+        phone: user.phone || phone,
+        name: regSession.name || user.name || resolvedName,
+        botStartedAt: new Date(),
+        botBlocked: false,
+      }).where(eq(users.id, user.id));
+    } else {
+      const [created] = await db.insert(users).values({
+        phone,
+        name: resolvedName,
+        telegramId: fromId,
+        botStartedAt: new Date(),
+        botBlocked: false,
+      }).returning();
+      user = created;
+    }
+
+    for (const mid of regSession.msgIds) {
+      await callTelegram(token, "deleteMessage", { chat_id: chatId, message_id: mid }).catch(() => {});
+    }
+    farmerRegSessions.delete(fromId);
+
+    await sendFarmerGreeting(token, chatId, fromId, user.name || resolvedName, true);
     return;
   }
 
@@ -249,12 +436,18 @@ export async function handleFarmerUpdate(update: any) {
     return;
   }
 
+  // /malumotlarim buyrug'i (Profil ma'lumotlari)
+  if (command === "/malumotlarim" || command === "/profil" || text === "👤 Ma'lumotlarim" || text === "Ma'lumotlarim") {
+    await sendFarmerProfile(token, chatId, fromId);
+    return;
+  }
+
   // /yordam buyrug'i
   if (command === "/yordam" || text === "💬 Qo'llab-quvvatlash" || text === "Qo'llab-quvvatlash" || text === "Qo'llab quvvatlash" || text === "💬 Yordam" || text === "/help") {
     const url = webAppUrl();
     await callTelegram(token, "sendMessage", {
       chat_id: chatId,
-      text: `🌱 <b>AgrozGO — Fermer va dehqonlar uchun qulay raqamli platforma.</b>\n\n• Ilovani ochish uchun quyidagi tugmani yoki chat menyusidagi <b>«AgrozGO»</b> tugmasini bosing.\n• Dori va o'g'itlarni buyurtma qilish, agronom va veterinar chaqirish uchun ilovadan foydalaning.\n• Savollaringiz yoki takliflaringiz bo'lsa: @agroz_support`,
+      text: `🌱 <b>AgrozGO — Fermer va dehqonlar uchun qulay raqamli platforma.</b>\n\n• Ilovani ochish uchun quyidagi tugmani yoki chat menyusidagi <b>«AgrozGO»</b> tugmasini bosing.\n• Dori va vositalarni buyurtma qilish, agronom va veterinar chaqirish uchun ilovadan foydalaning.\n• Savollaringiz yoki takliflaringiz bo'lsa: @agroz_support`,
       parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: [
@@ -446,7 +639,13 @@ async function sendFarmerOrders(token: string, chatId: number, fromId: number) {
   }
 }
 
-async function sendFarmerGreeting(token: string, chatId: number, fromId: number, name: string) {
+async function sendFarmerGreeting(
+  token: string,
+  chatId: number,
+  fromId: number,
+  name: string,
+  isJustRegistered: boolean = false
+) {
   const url = webAppUrl();
 
   // Telegram Menu tugmasini "AgrozGO" deb sozlaymiz (foydalanuvchi so'raganidek bitta toza launch menu)
@@ -459,7 +658,9 @@ async function sendFarmerGreeting(token: string, chatId: number, fromId: number,
     },
   }).catch(() => {});
 
-  const text = `Assalomu alaykum, <b>${escapeHtml(name)}</b>! AgrozGO ga xush kelibsiz 🌱\n\nIlovani ochish uchun quyidagi kirish tugmasini bosing:`;
+  const text = isJustRegistered
+    ? `Muvaffaqiyatli ro'yxatdan o'tdingiz, <b>${escapeHtml(name)}</b>! 🌱\n\nIlovani ochish uchun quyidagi kirish tugmasini bosing:`
+    : `Assalomu alaykum, <b>${escapeHtml(name)}</b>! AgrozGO ga xush kelibsiz 🌱\n\nIlovani ochish uchun quyidagi kirish tugmasini bosing:`;
 
   // Xabardagi tugma: sof ilovaga kirish tugmasi
   const inlineMarkup = {
@@ -468,11 +669,12 @@ async function sendFarmerGreeting(token: string, chatId: number, fromId: number,
     ],
   };
 
-  // Reply keyboard: Buyurtmalar, Chaqiruvlar, Qo'llab-quvvatlash, Ob-havo
+  // Reply keyboard: Buyurtmalar, Chaqiruvlar, Ob-havo, Ma'lumotlarim, Qo'llab-quvvatlash
   const replyKeyboard = {
     keyboard: [
       [{ text: "📦 Buyurtmalar" }, { text: "👨‍⚕️ Chaqiruvlar" }],
-      [{ text: "💬 Qo'llab-quvvatlash" }, { text: "🌤 Ob-havo" }],
+      [{ text: "🌤 Ob-havo" }, { text: "👤 Ma'lumotlarim" }],
+      [{ text: "💬 Qo'llab-quvvatlash" }],
     ],
     resize_keyboard: true,
   };
@@ -490,6 +692,40 @@ async function sendFarmerGreeting(token: string, chatId: number, fromId: number,
     text: "Kerakli bo'limni tanlang yoki pastki chap burchakdagi <b>AgrozGO</b> menyusidan ilovani oching 👇",
     parse_mode: "HTML",
     reply_markup: replyKeyboard,
+  });
+}
+
+async function sendFarmerProfile(token: string, chatId: number, fromId: number) {
+  const url = webAppUrl();
+  const user = (await db.select().from(users).where(eq(users.telegramId, fromId)).limit(1))[0];
+  if (!user) {
+    await callTelegram(token, "sendMessage", {
+      chat_id: chatId,
+      text: "Ma'lumotlaringizni ko'rish uchun avval ro'yxatdan o'ting. Buning uchun /start buyrug'ini bosing.",
+    });
+    return;
+  }
+
+  const regionDistrict = [user.region, user.district].filter(Boolean).join(", ") || "Kiritilmagan";
+  const profileDetails = [
+    `👤 <b>Sizning ma'lumotlaringiz:</b>`,
+    ``,
+    `📛 <b>Ism:</b> ${escapeHtml(user.name || "Kiritilmagan")}`,
+    `📞 <b>Telefon:</b> <code>${escapeHtml(user.phone || "Kiritilmagan")}</code>`,
+    user.secondPhone ? `📞 <b>Qo'shimcha tel:</b> <code>${escapeHtml(user.secondPhone)}</code>` : "",
+    `📍 <b>Hudud:</b> ${escapeHtml(regionDistrict)}`,
+  ].filter(Boolean).join("\n");
+
+  await callTelegram(token, "sendMessage", {
+    chat_id: chatId,
+    text: profileDetails,
+    parse_mode: "HTML",
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "✏️ Tahrirlash", web_app: { url: `${url}/profil` } }],
+        [{ text: "🗑 Profilni o'chirish", callback_data: "farmer:delete_account" }],
+      ],
+    },
   });
 }
 
