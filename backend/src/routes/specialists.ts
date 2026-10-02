@@ -28,10 +28,8 @@ router.get("/", async (req, res) => {
     const coords = parseCoords(latRaw, lngRaw);
     const roleParam = (req.query.role as string) || undefined;
     const role = (!roleParam || roleParam === "all") ? null : roleParam;
-    const defaultRadius = role === "pharmacy" 
-      ? await pharmacyRadiusKmSetting() 
-      : await specialistRadiusKmSetting();
-    const radiusKm = clampRadiusKm(req.query.radius, defaultRadius);
+    const defaultRadius = role === "pharmacy" ? 1000 : await specialistRadiusKmSetting();
+    const radiusKm = role === "pharmacy" ? 1000 : clampRadiusKm(req.query.radius, defaultRadius);
 
     const medsQuery = req.query.med;
     const meds = Array.isArray(medsQuery)

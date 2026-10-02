@@ -13,7 +13,7 @@ import {
 
 const links = [
   { href: "/", label: "Asosiy" },
-  { href: "/agro-mahsulotlar", label: "Agro-mahsulotlar" },
+  { href: "/dorilar", label: "Dorilar" },
   { href: "/mutaxassislar", label: "Mutaxassislar" },
   { href: "/xarita", label: "Xarita" },
   { href: "/yangiliklar", label: "Maslahatlar" },
@@ -53,8 +53,13 @@ export default function WebTopNav() {
     };
   }, []);
 
-  const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : pathname.startsWith(href.split("?")[0]);
+  const isActive = (href: string) => {
+    if (href === "/") return pathname === "/";
+    if (href === "/dorilar") {
+      return pathname.startsWith("/dorilar") || pathname.startsWith("/dori") || pathname.startsWith("/agro-mahsulotlar");
+    }
+    return pathname.startsWith(href.split("?")[0]);
+  };
 
   return (
     <header className="web-top-nav">

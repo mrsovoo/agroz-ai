@@ -648,9 +648,8 @@ export async function listSpecialists(opts: {
       (ratingBySpecialist.get(s.id)?.avg ?? 0) >= 4;
     const limit = extended ? Math.max(radiusKm * 1.5, radiusKm) : radiusKm;
 
-    // Agar bitta viloyatda bo'lsa — hech qachon qulflanmaydi!
-    // Boshqa viloyatda bo'lsa va radiusdan tashqarida bo'lsa — locked = true
-    const locked = isSameProvince ? false : d > limit;
+    // Agro-do'konlar uchun locked hech qachon true bo'lmaydi (barcha dorilar ko'rinadi)
+    const locked = s.role === "pharmacy" ? false : (isSameProvince ? false : d > limit);
 
     return withMeta(s, d, locked);
   });

@@ -114,7 +114,7 @@ function typeBadge(type: string): { label: string; bg: string; color: string } {
 export default function MarketClient() {
   const [items, setItems] = useState<Pharmacy[]>([]);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [radiusKm, setRadiusKm] = useState<number>(15);
+  const [radiusKm, setRadiusKm] = useState<number>(1000);
   const [loading, setLoading] = useState(true);
   const [locError, setLocError] = useState<string | null>(null);
 
@@ -243,10 +243,10 @@ export default function MarketClient() {
       .then((d: { items?: Pharmacy[] }) => {
         if (cancelled) return;
         const list = Array.isArray(d?.items) ? d.items : [];
-        // Faqat locked === false (viloyat va tanlangan radius ichidagi) agro-do&apos;konlarni qoldiramiz
+        // Barcha faol agro-do'konlar va ularning dorilarini to'liq ko'rsatamiz
         setItems(
           list.filter(
-            (s) => s.role === "pharmacy" && s.locked === false && (s.medicines?.length ?? 0) > 0,
+            (s) => s.role === "pharmacy" && (s.medicines?.length ?? 0) > 0,
           ),
         );
       })
@@ -542,28 +542,11 @@ export default function MarketClient() {
           ) : (
             <>
               <p className="mt-3.5 text-[17px] font-bold text-neutral-900">
-                Bu radiusda agro-do&apos;kon topilmadi. Radiusni kengaytirasizmi?
+                Hozircha dorilar ro&apos;yxati mavjud emas
               </p>
               <p className="mt-1.5 text-[13.5px] leading-relaxed text-neutral-500 max-w-md mx-auto">
-                Hozirgi qidiruv radiusi: <b>{radiusKm >= 1000 ? "Butun O'zbekiston" : `${radiusKm} km`}</b>. Uzoqroqdagi agro-do&apos;konlar va agro-mahsulotlarni ko&apos;rish uchun radiusni kengaytiring.
+                Yaqin orada agro-do&apos;konlar tomonidan yangi mahsulotlar joylashtiriladi.
               </p>
-              {radiusKm < 1000 && (
-                <button
-                  type="button"
-                  onClick={expandRadius}
-                  className="mt-4 inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-[#039e1e] px-5 py-2.5 text-[13.5px] font-bold text-white hover:bg-[#028518] active:scale-95 transition shadow-xs"
-                >
-                  <MapPin size={16} />
-                  <span>
-                    Radiusni kengaytirish (
-                    {(() => {
-                      const next = RADIUS_OPTIONS.find((r) => r > radiusKm) ?? 1000;
-                      return next >= 1000 ? "Barchasi" : `${next} km`;
-                    })()}
-                    )
-                  </span>
-                </button>
-              )}
             </>
           )}
         </div>
