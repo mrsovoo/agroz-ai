@@ -15,9 +15,7 @@ router.get("/", async (req, res) => {
     const isRandom = req.query.random === "1" || req.query.shuffle === "1";
 
     const conditions = [
-      eq(specialistMedicines.status, "bor"),
-      sql`${specialistMedicines.price} is not null and ${specialistMedicines.price} > 0`,
-      sql`(${specialistMedicines.photoFileId} is not null or ${specialistMedicines.photoData} is not null)`,
+      ne(specialistMedicines.status, "yoq"),
       eq(specialists.isActive, true),
     ];
     if (type === "crop" || type === "animal") {

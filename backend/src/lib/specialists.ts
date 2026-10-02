@@ -493,8 +493,7 @@ export async function listSpecialists(opts: {
   const bySpecialist = new Map<number, MedicineDto[]>();
   for (const m of medicineRows) {
     const hasPhoto = Boolean(m.photoFileId || m.photoData);
-    const hasPrice = typeof m.price === "number" && m.price > 0;
-    if (m.status === "yoq" || m.status === "qoralama" || !hasPhoto || !hasPrice) {
+    if (m.status === "yoq") {
       continue;
     }
     const list = bySpecialist.get(m.specialistId) ?? [];
