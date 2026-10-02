@@ -157,7 +157,7 @@ export default function ProductCard({
   }
 
   const router = useRouter();
-  const href = linkHref ?? `/agro-mahsulot/${medicine.id}`;
+  const href = linkHref ?? `/dori/${medicine.id}`;
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Agar foydalanuvchi tugmani (savatga qo'shish, ayirish va h.k.) bosgan bo'lsa, sahifaga o'tmaydi

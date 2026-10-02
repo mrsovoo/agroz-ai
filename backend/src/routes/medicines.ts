@@ -158,9 +158,7 @@ router.get("/:id", async (req, res) => {
       .limit(1);
 
     const r = rows[0];
-    const hasValidPhoto = Boolean(r?.photoFileId || r?.photoData);
-    const hasValidPrice = typeof r?.price === "number" && r.price > 0;
-    if (!r || r.status !== "bor" || !hasValidPhoto || !hasValidPrice) {
+    if (!r || r.status === "yoq") {
       return res.status(404).json({ error: "Dori topilmadi" });
     }
 
@@ -214,9 +212,7 @@ router.get("/:id", async (req, res) => {
       .innerJoin(specialists, eq(specialists.id, specialistMedicines.specialistId))
       .where(
         and(
-          eq(specialistMedicines.status, "bor"),
-          sql`${specialistMedicines.price} is not null and ${specialistMedicines.price} > 0`,
-          sql`(${specialistMedicines.photoFileId} is not null or ${specialistMedicines.photoData} is not null)`,
+          ne(specialistMedicines.status, "yoq"),
           eq(specialists.isActive, true),
           ne(specialistMedicines.id, medicine.id),
         )

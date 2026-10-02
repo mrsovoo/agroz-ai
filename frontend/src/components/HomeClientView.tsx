@@ -70,7 +70,7 @@ export default function HomeClientView({
         const collected: HomeMedicine[] = [];
         for (const p of items) {
           for (const m of p.medicines || []) {
-            if (m.status === "yoq" || m.status === "qoralama" || !m.price || m.price <= 0 || !m.hasPhoto) continue;
+            if (m.status === "yoq") continue;
             collected.push({
               id: m.id,
               name: m.name,
@@ -125,7 +125,7 @@ export default function HomeClientView({
     const cart = loadCart();
     const pharmacy: CartStorePharmacy = {
       id: med.pharmacyId || 1,
-      name: med.pharmacyName || "Agroz Agro-do&apos;kon",
+      name: med.pharmacyName || "Agroz Agro-do'kon",
       phone: med.pharmacyPhone || "+998901234567",
       address: med.pharmacyAddress || "Toshkent",
     };
@@ -178,10 +178,10 @@ export default function HomeClientView({
         <WeatherCard />
       </div>
 
-      {/* 3. Agro-mahsulotlar bo'limi */}
+      {/* 3. Dorilar bo'limi */}
       <section className="mt-6">
         <div className="flex items-center justify-between mb-3 px-0.5">
-          <h2 className="text-[20px] font-black tracking-tight text-neutral-900">Agro-mahsulotlar</h2>
+          <h2 className="text-[20px] font-black tracking-tight text-neutral-900">Dorilar</h2>
           <Link
             href="/dorilar"
             className="text-[14px] font-bold text-[#039e1e] hover:underline active:opacity-80 transition inline-flex items-center gap-1"
@@ -192,14 +192,14 @@ export default function HomeClientView({
           </Link>
         </div>
 
-        {/* 2 yoki 4 ta agro-mahsulot kartalari (har kirishda random aylanadi) yoki bo'sh holat */}
+        {/* Dorilar kartalari (6 tagacha to'liq ko'rsatiladi) */}
         {medicines.length === 0 ? (
           <div className="rounded-2xl border border-neutral-100 bg-[#f8f9fa] p-6 text-center text-[13px] text-neutral-400">
-            Hozircha agro-mahsulotlar mavjud emas
+            Hozircha dorilar mavjud emas
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3.5">
-            {medicines.slice(0, 4).map((med, idx) => (
+            {medicines.slice(0, 6).map((med, idx) => (
               <ProductCard
                 key={med.id || idx}
                 medicine={{
