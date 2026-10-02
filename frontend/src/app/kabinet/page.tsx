@@ -4,6 +4,11 @@ import { useEffect, useState } from "react";
 import { Package, PhoneCall, CheckCircle2, XCircle, Clock, AlertCircle, RefreshCw, Power } from "lucide-react";
 import { haptic } from "@/lib/telegram";
 
+/** Backend URL — Vercel rewrites ishlamasa ham backend'ga to'g'ridan-to'g'ri boradi */
+const BACKEND =
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") ||
+  process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/+$/, "") ||
+  "https://agroz-ai-backend-production.up.railway.app";
 type PartnerOrder = {
   id: number;
   pharmacySpecialistId: number;
@@ -67,8 +72,8 @@ export default function PartnerKabinetPage() {
       };
 
       const [ordersRes, callsRes] = await Promise.allSettled([
-        fetch("/api/bot/partner/orders", { headers }),
-        fetch("/api/bot/partner/calls", { headers }),
+        fetch(`${BACKEND}/api/bot/partner/orders`, { headers }),
+        fetch(`${BACKEND}/api/bot/partner/calls`, { headers }),
       ]);
 
       if (ordersRes.status === "fulfilled" && ordersRes.value.ok) {
@@ -107,7 +112,7 @@ export default function PartnerKabinetPage() {
     haptic("medium");
     setActionBusyId(orderId);
     try {
-      const res = await fetch(`/api/bot/partner/orders/${orderId}/action`, {
+      const res = await fetch(`${BACKEND}/api/bot/partner/orders/${orderId}/action`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -133,7 +138,7 @@ export default function PartnerKabinetPage() {
     haptic("medium");
     setActionBusyId(callId);
     try {
-      const res = await fetch(`/api/bot/partner/calls/${callId}/action`, {
+      const res = await fetch(`${BACKEND}/api/bot/partner/calls/${callId}/action`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -159,7 +164,7 @@ export default function PartnerKabinetPage() {
     haptic("medium");
     const next = !isBusy;
     try {
-      const res = await fetch("/api/bot/partner/busy", {
+      const res = await fetch(`${BACKEND}/api/bot/partner/busy`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
