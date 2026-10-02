@@ -203,8 +203,18 @@ export async function handleFarmerUpdate(update: any) {
       return;
     }
 
-    // 3) Foydalanuvchi topilmadi -> Raqam so'raymiz
-    const askContactText = `Assalomu alaykum, <b>${escapeHtml(firstName)}</b>! AgrozGO ga xush kelibsiz 🌱\n\nTizimda hisobingizni aniqlash uchun pastdagi <b>«📞 Raqamni yuborish»</b> tugmasini bosing:`;
+    // 3) Foydalanuvchi topilmadi -> Chat menu tugmasini sozlaymiz va raqam so'raymiz
+    const url = webAppUrl();
+    await callTelegram(token, "setChatMenuButton", {
+      chat_id: chatId,
+      menu_button: {
+        type: "web_app",
+        text: "AgrozGO",
+        web_app: { url },
+      },
+    }).catch(() => {});
+
+    const askContactText = `Assalomu alaykum, <b>${escapeHtml(firstName)}</b>! AgrozGO ga xush kelibsiz 🌱\n\nIlovadan to'liq foydalanish va buyurtmalaringizni boshqarish uchun pastdagi <b>«📞 Raqamni yuborish»</b> tugmasini bosing:`;
     await callTelegram(token, "sendMessage", {
       chat_id: chatId,
       text: askContactText,
@@ -215,18 +225,31 @@ export async function handleFarmerUpdate(update: any) {
         one_time_keyboard: true,
       },
     });
+
+    // Qo'shimcha ravishda to'g'ridan-to'g'ri ochish tugmasini ham yuboramiz
+    await callTelegram(token, "sendMessage", {
+      chat_id: chatId,
+      text: "Yoki AgrozGO ilovasini to'g'ridan-to'g'ri oching 👇",
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "🚀 AgrozGO ilovasini ochish", web_app: { url } }],
+        ],
+      },
+    });
     return;
   }
 
   // /yordam buyrug'i
   if (command === "/yordam" || text === "💬 Yordam" || text === "/help") {
+    const url = webAppUrl();
     const partnerUser = await partnerBotUsername();
     await callTelegram(token, "sendMessage", {
       chat_id: chatId,
-      text: `🌱 <b>AgrozGO — Fermer va dehqonlar uchun qulay raqamli platforma.</b>\n\n• Ilovani ochish uchun pastki chap burchakdagi <b>«AgrozGO»</b> menyu tugmasini bosing.\n• Mahsulotlarni buyurtma qilish va mutaxassis ko'rigiga yozilish uchun ilovadan foydalaning.\n• Savollaringiz bo'lsa, @agroz_support ga yozing.\n• Agro-do'kon va mutaxassislar boti: @${partnerUser}`,
+      text: `🌱 <b>AgrozGO — Fermer va dehqonlar uchun qulay raqamli platforma.</b>\n\n• Ilovani ochish uchun quyidagi tugmani yoki pastki chap burchakdagi <b>«AgrozGO»</b> menyu tugmasini bosing.\n• Mahsulotlarni buyurtma qilish va mutaxassis ko'rigiga yozilish uchun ilovadan foydalaning.\n• Savollaringiz bo'lsa, @agroz_support ga yozing.\n• Agro-do'kon va mutaxassislar boti: @${partnerUser}`,
       parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: [
+          [{ text: "🚀 AgrozGO ilovasini ochish", web_app: { url } }],
           [{ text: "💬 Qo'llab-quvvatlash", callback_data: "support:open" }],
         ],
       },
@@ -249,7 +272,9 @@ async function sendFarmerGreeting(token: string, chatId: number, fromId: number,
     },
   }).catch(() => {});
 
-  const inlineRows: any[] = [];
+  const inlineRows: any[] = [
+    [{ text: "🚀 AgrozGO ilovasini ochish", web_app: { url } }],
+  ];
 
   const appStore = appStoreUrl();
   const googlePlay = googlePlayUrl();
@@ -270,7 +295,7 @@ async function sendFarmerGreeting(token: string, chatId: number, fromId: number,
     inlineRows.push([{ text: `🤝 Hamkorlar boti (@${partnerUser})`, url: `https://t.me/${partnerUser}` }]);
   }
 
-  const text = `Assalomu alaykum, <b>${escapeHtml(name)}</b>! AgrozGO ga xush kelibsiz 🌱\n\nIlovani pastki chap burchakdagi <b>«AgrozGO»</b> menyu tugmasi orqali ochishingiz mumkin.${extraText}`;
+  const text = `Assalomu alaykum, <b>${escapeHtml(name)}</b>! AgrozGO ga xush kelibsiz 🌱\n\nIlovani pastdagi tugma yoki chap burchakdagi <b>«AgrozGO»</b> menyu tugmasi orqali ochishingiz mumkin.${extraText}`;
 
   // Reply keyboardni tozalab (remove_keyboard) toza inline UI beramiz
   await callTelegram(token, "sendMessage", {

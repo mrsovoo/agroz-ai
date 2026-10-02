@@ -24,7 +24,6 @@ const nextConfig: NextConfig = {
     const rawUrl = (process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_URL || "").trim();
 
     // Agar to'liq http:// yoki https:// URL berilmagan bo'lsa:
-    // Production / Vercel build vaqtida Invalid Rewrite xatosi bermasligi uchun empty array qaytaramiz.
     if (!rawUrl || !/^https?:\/\//i.test(rawUrl)) {
       if (process.env.NODE_ENV === "development") {
         return [
@@ -34,7 +33,13 @@ const nextConfig: NextConfig = {
           },
         ];
       }
-      return [];
+      // Production / Vercel: Railway backend'ga fallback
+      return [
+        {
+          source: "/api/:path*",
+          destination: "https://agroz-ai-backend-production.up.railway.app/api/:path*",
+        },
+      ];
     }
 
     let cleanUrl = rawUrl.replace(/\/+$/, "");
