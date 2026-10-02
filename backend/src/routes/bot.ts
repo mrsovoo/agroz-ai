@@ -2,8 +2,8 @@ import { Router } from "express";
 import { handleAuthBotUpdate } from "../lib/auth-bot-flow.js";
 import { recordDataConsent } from "../lib/consent.js";
 import { db } from "../db/index.js";
-import { users, specialists, orders, orderItems, specialistCalls, otpCodes, sessions } from "../db/schema.js";
-import { eq, and, desc, gt, isNotNull, or, sql } from "drizzle-orm";
+import { users, specialists, orders, orderItems, specialistCalls, specialistMedicines, specialistRatings, otpCodes, sessions } from "../db/schema.js";
+import { eq, and, desc, gt, isNotNull, or, ne, sql } from "drizzle-orm";
 import {
   farmerBotToken,
   farmerBotUsername,
@@ -17,6 +17,7 @@ import {
   googlePlayUrl,
 } from "../lib/settings.js";
 import { sendToSpecialist, sendToUser } from "../lib/bot-sender.js";
+import { addMedicine } from "../lib/specialists.js";
 import { verifyInitData } from "../lib/tg-auth.js";
 import { cleanText, normalizePhone } from "../lib/validate.js";
 import { purgeUserAccount } from "../lib/user-auth.js";
@@ -1540,9 +1541,75 @@ router.post("/partner/init", async (req, res) => {
     }
 
     const spec = (await db.select().from(specialists).where(eq(specialists.telegramId, telegramId)).limit(1))[0];
-    if (!spec || !spec.isActive || !spec.isApproved) {
-      return res.status(403).json({ ok: false, error: "Hamkor profili topilmadi yoki faol emas" });
+    if (!spec || !spec.isActive) {
+      return res.status(404).json({ ok: false, error: "Hamkor profili topilmadi yoki faol emas" });
     }
+
+    if (!spec.isApproved) {
+      return res.json({
+        ok: true,
+        partner: {
+          id: spec.id,
+          name: spec.name,
+          role: spec.role,
+          organization: spec.organization,
+          specialty: spec.specialty,
+          phone: spec.phone,
+          address: spec.address,
+          workHours: spec.workHours,
+          experienceYears: spec.experienceYears,
+          bio: spec.bio,
+          education: spec.education,
+          helpsWith: spec.helpsWith,
+          lat: spec.lat,
+          lng: spec.lng,
+          isBusy: spec.isBusy,
+          isApproved: false,
+          consentedAt: spec.consentedAt,
+          consentVersion: spec.consentVersion,
+          rating: { avg: null, count: 0 },
+          stats: { totalOrders: 0, totalCalls: 0, pendingOrders: 0, pendingCalls: 0, activeCalls: 0, completedCalls: 0 },
+        },
+      });
+    }
+
+    // Rating
+    const ratingRes = await db
+      .select({
+        avg: sql<number | null>`avg(${specialistRatings.stars})::float`,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(specialistRatings)
+      .where(eq(specialistRatings.specialistId, spec.id));
+    const ratingAvg = ratingRes[0]?.avg ? Number(ratingRes[0].avg) : null;
+    const ratingCount = ratingRes[0]?.count ? Number(ratingRes[0].count) : 0;
+
+    // Stats
+    const totalOrdersRes = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(orders)
+      .where(eq(orders.pharmacySpecialistId, spec.id));
+    const pendingOrdersRes = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(orders)
+      .where(and(eq(orders.pharmacySpecialistId, spec.id), eq(orders.status, "yangi")));
+
+    const totalCallsRes = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(specialistCalls)
+      .where(eq(specialistCalls.specialistId, spec.id));
+    const pendingCallsRes = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(specialistCalls)
+      .where(and(eq(specialistCalls.specialistId, spec.id), eq(specialistCalls.status, "yangi")));
+    const activeCallsRes = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(specialistCalls)
+      .where(and(eq(specialistCalls.specialistId, spec.id), eq(specialistCalls.status, "qabul_qilindi")));
+    const completedCallsRes = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(specialistCalls)
+      .where(and(eq(specialistCalls.specialistId, spec.id), eq(specialistCalls.status, "bajarildi")));
 
     return res.json({
       ok: true,
@@ -1553,7 +1620,30 @@ router.post("/partner/init", async (req, res) => {
         organization: spec.organization,
         specialty: spec.specialty,
         phone: spec.phone,
+        address: spec.address,
+        workHours: spec.workHours,
+        experienceYears: spec.experienceYears,
+        bio: spec.bio,
+        education: spec.education,
+        helpsWith: spec.helpsWith,
+        lat: spec.lat,
+        lng: spec.lng,
         isBusy: spec.isBusy,
+        isApproved: true,
+        consentedAt: spec.consentedAt,
+        consentVersion: spec.consentVersion,
+        rating: {
+          avg: ratingAvg,
+          count: ratingCount,
+        },
+        stats: {
+          totalOrders: Number(totalOrdersRes[0]?.count || 0),
+          pendingOrders: Number(pendingOrdersRes[0]?.count || 0),
+          totalCalls: Number(totalCallsRes[0]?.count || 0),
+          pendingCalls: Number(pendingCallsRes[0]?.count || 0),
+          activeCalls: Number(activeCallsRes[0]?.count || 0),
+          completedCalls: Number(completedCallsRes[0]?.count || 0),
+        },
       },
     });
   } catch (err: any) {
@@ -1583,7 +1673,7 @@ router.get("/partner/orders", async (req, res) => {
       .from(orders)
       .where(eq(orders.pharmacySpecialistId, spec.id))
       .orderBy(desc(orders.id))
-      .limit(30);
+      .limit(50);
 
     const items = await db.select().from(orderItems);
     const itemsMap = new Map<number, any[]>();
@@ -1596,11 +1686,133 @@ router.get("/partner/orders", async (req, res) => {
     const enriched = rows.map((r) => ({
       ...r,
       items: itemsMap.get(r.id) || [],
-      // mijoz telefoni faqat tasdiqlangan/tayyor/yetkazilgan holatda to'liq chiqadi
-      customerPhone: r.status === "yangi" ? null : r.customerPhone,
+      customerPhone: r.customerPhone,
     }));
 
     res.json({ ok: true, orders: enriched });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// GET /api/bot/partner/medicines (dorixona dorilari)
+router.get("/partner/medicines", async (req, res) => {
+  try {
+    const initData = String(req.headers["x-telegram-init-data"] || req.query.initData || "");
+    const token = await partnerBotToken();
+    if (!token || !initData || !verifyInitData(initData, token, 24 * 60 * 60)) {
+      return res.status(401).json({ ok: false, error: "Avtorizatsiya talab etiladi" });
+    }
+
+    const params = new URLSearchParams(initData);
+    const tgUser = JSON.parse(params.get("user") || "{}");
+    const spec = (await db.select().from(specialists).where(eq(specialists.telegramId, Number(tgUser.id))).limit(1))[0];
+    if (!spec || spec.role !== "pharmacy") {
+      return res.status(403).json({ ok: false, error: "Faqat agro-do'kon egalari uchun" });
+    }
+
+    const rows = await db
+      .select()
+      .from(specialistMedicines)
+      .where(and(eq(specialistMedicines.specialistId, spec.id), ne(specialistMedicines.status, "yoq")))
+      .orderBy(desc(specialistMedicines.id));
+
+    res.json({ ok: true, medicines: rows });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// POST /api/bot/partner/medicines (yangi dori qo'shish)
+router.post("/partner/medicines", async (req, res) => {
+  try {
+    const initData = String(req.headers["x-telegram-init-data"] || req.body?.initData || "");
+    const token = await partnerBotToken();
+    if (!token || !initData || !verifyInitData(initData, token, 24 * 60 * 60)) {
+      return res.status(401).json({ ok: false, error: "Avtorizatsiya talab etiladi" });
+    }
+
+    const params = new URLSearchParams(initData);
+    const tgUser = JSON.parse(params.get("user") || "{}");
+    const spec = (await db.select().from(specialists).where(eq(specialists.telegramId, Number(tgUser.id))).limit(1))[0];
+    if (!spec || spec.role !== "pharmacy") {
+      return res.status(403).json({ ok: false, error: "Faqat dorixona rahbarlari dori qo'sha oladi" });
+    }
+
+    const { name, type, usage, price, stock, stockUnit } = req.body || {};
+    const cleanName = cleanText(name, 150);
+    if (!cleanName) {
+      return res.status(400).json({ ok: false, error: "Dori nomi kiritilishi shart" });
+    }
+
+    const medicine = await addMedicine({
+      specialistId: spec.id,
+      name: cleanName,
+      photoFileId: null,
+      type: type === "animal" || type === "crop" ? type : "general",
+      usage: usage ? cleanText(usage, 300) : null,
+      price: Number(price) > 0 ? Number(price) : null,
+      stock: Number(stock) >= 0 ? Number(stock) : 10,
+      stockUnit: cleanText(stockUnit, 20) || "dona",
+    });
+
+    res.json({ ok: true, medicine });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// PATCH /api/bot/partner/medicines/:id (tahrirlash yoki mavjudligini o'zgartirish)
+router.patch("/partner/medicines/:id", async (req, res) => {
+  try {
+    const initData = String(req.headers["x-telegram-init-data"] || req.body?.initData || "");
+    const token = await partnerBotToken();
+    if (!token || !initData || !verifyInitData(initData, token, 24 * 60 * 60)) {
+      return res.status(401).json({ ok: false, error: "Avtorizatsiya talab etiladi" });
+    }
+
+    const medId = Number(req.params.id);
+    const params = new URLSearchParams(initData);
+    const tgUser = JSON.parse(params.get("user") || "{}");
+    const spec = (await db.select().from(specialists).where(eq(specialists.telegramId, Number(tgUser.id))).limit(1))[0];
+    if (!spec) return res.status(403).json({ ok: false, error: "Hamkor topilmadi" });
+
+    const med = (await db.select().from(specialistMedicines).where(eq(specialistMedicines.id, medId)).limit(1))[0];
+    if (!med || med.specialistId !== spec.id) {
+      return res.status(403).json({ ok: false, error: "Dori topilmadi yoki sizga tegishli emas" });
+    }
+
+    const { status, price, stock, usage } = req.body || {};
+    const updates: Record<string, any> = { updatedAt: new Date() };
+    if (status === "bor" || status === "yoq") updates.status = status;
+    if (price !== undefined) updates.price = Number(price) > 0 ? Number(price) : null;
+    if (stock !== undefined) updates.stock = Number(stock) >= 0 ? Number(stock) : 0;
+    if (usage !== undefined) updates.usage = usage ? cleanText(usage, 300) : null;
+
+    await db.update(specialistMedicines).set(updates).where(eq(specialistMedicines.id, medId));
+    res.json({ ok: true, medicine: { ...med, ...updates } });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// DELETE /api/bot/partner/medicines/:id (dorini o'chirish)
+router.delete("/partner/medicines/:id", async (req, res) => {
+  try {
+    const initData = String(req.headers["x-telegram-init-data"] || req.query.initData || "");
+    const token = await partnerBotToken();
+    if (!token || !initData || !verifyInitData(initData, token, 24 * 60 * 60)) {
+      return res.status(401).json({ ok: false, error: "Avtorizatsiya talab etiladi" });
+    }
+
+    const medId = Number(req.params.id);
+    const params = new URLSearchParams(initData);
+    const tgUser = JSON.parse(params.get("user") || "{}");
+    const spec = (await db.select().from(specialists).where(eq(specialists.telegramId, Number(tgUser.id))).limit(1))[0];
+    if (!spec) return res.status(403).json({ ok: false, error: "Hamkor topilmadi" });
+
+    await db.delete(specialistMedicines).where(and(eq(specialistMedicines.id, medId), eq(specialistMedicines.specialistId, spec.id)));
+    res.json({ ok: true });
   } catch (err: any) {
     res.status(500).json({ ok: false, error: err.message });
   }
@@ -1672,11 +1884,11 @@ router.get("/partner/calls", async (req, res) => {
       .from(specialistCalls)
       .where(eq(specialistCalls.specialistId, spec.id))
       .orderBy(desc(specialistCalls.id))
-      .limit(30);
+      .limit(50);
 
     const enriched = rows.map((c) => ({
       ...c,
-      customerPhone: c.status === "yangi" ? null : c.customerPhone,
+      customerPhone: c.customerPhone,
     }));
 
     res.json({ ok: true, calls: enriched });
