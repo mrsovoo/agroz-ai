@@ -174,7 +174,7 @@ export default function ProductCard({
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-xs border border-emerald-100/80">
             <Sprout size={28} className="text-[#039e1e]" />
           </div>
-          <span className="text-[11px] font-bold text-emerald-900/80 tracking-tight">Ekin agro-mahsulotsi</span>
+          <span className="text-[11px] font-bold text-emerald-900/80 tracking-tight">Ekin dorisi</span>
         </div>
       );
     }
@@ -193,7 +193,7 @@ export default function ProductCard({
         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-xs border border-neutral-200/60">
           <Pill size={28} className="text-neutral-500" />
         </div>
-        <span className="text-[11px] font-bold text-neutral-600 tracking-tight">Agro agro-mahsulot</span>
+        <span className="text-[11px] font-bold text-neutral-600 tracking-tight">Agro dori</span>
       </div>
     );
   };

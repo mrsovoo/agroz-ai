@@ -267,10 +267,10 @@ export default function NearbyHelp({
         </div>
       )}
 
-      {/* Tavsiya etilgan agro-mahsulotlar (tashxis natijasidan) — agro-mahsulot bor agro-do&apos;konlar oldinda */}
+      {/* Tavsiya etilgan dorilar (tashxis natijasidan) */}
       {medicines.length > 0 && (
         <p className="ios-section-title mt-5 flex items-center gap-1.5">
-          <Pill size={14} /> Tavsiya etilgan agro-mahsulotlar: {medicines.join(", ")}
+          <Pill size={14} /> Tavsiya etilgan dorilar: {medicines.join(", ")}
         </p>
       )}
 
@@ -444,7 +444,7 @@ export default function NearbyHelp({
               <span>
                 {lowConfidence
                   ? `AI ishonchi ${confidence}% — 80% dan past. Aniq tashxis uchun mutaxassisga murojaat qiling.`
-                  : "Holat jiddiy yoki kerakli agro-mahsulot yaqin atrofda topilmadi — mutaxassisga murojaat qilishni tavsiya qilamiz."}
+                  : "Holat jiddiy yoki kerakli dori yaqin atrofda topilmadi — mutaxassisga murojaat qilishni tavsiya qilamiz."}
               </span>
             </p>
           )}

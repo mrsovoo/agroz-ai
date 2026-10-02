@@ -259,7 +259,7 @@ export default async function MedicineDetail({ medicine }: { medicine: MedicineD
               Tavsif
             </p>
             <p className="mt-1 text-[14px] leading-relaxed text-[var(--brand-ink)]">
-              {medicine.usage ?? "Bu agro-mahsulot uchun tavsif kiritilmagan."}
+              {medicine.usage ?? "Bu dori uchun tavsif kiritilmagan."}
             </p>
           </div>
 

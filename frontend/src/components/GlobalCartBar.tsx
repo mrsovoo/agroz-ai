@@ -52,7 +52,7 @@ export default function GlobalCartBar() {
           </div>
           <div className="text-left">
             <p className="text-[14px] font-extrabold leading-tight">
-              {totalQty} ta agro-mahsulot savatda
+              {totalQty} ta dori savatda
             </p>
             <p className="text-[12px] font-medium text-neutral-300">
               {totalSum > 0 ? `${shortSum(totalSum)} so'm` : "Narx kelishiladi"} • {cart.pharmacy.name}

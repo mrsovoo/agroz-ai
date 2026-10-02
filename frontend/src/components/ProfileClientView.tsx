@@ -483,7 +483,7 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
             href="/dorilar"
             className="text-[13px] font-semibold text-[#039e1e] hover:underline"
           >
-            Agro-mahsulotlar katalogi &rarr;
+            Dorilar katalogi &rarr;
           </Link>
         </div>
 

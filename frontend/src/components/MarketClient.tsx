@@ -453,9 +453,9 @@ export default function MarketClient() {
 
   return (
     <div className="min-h-screen bg-white px-4 pt-3 pb-24 text-neutral-900">
-      {/* 1. Header: Agro-mahsulotlar + Heart (Sevimlilar) tugmasi */}
+      {/* 1. Header: Dorilar + Heart (Sevimlilar) tugmasi */}
       <div className="flex items-center justify-between pt-1 pb-2">
-        <h1 className="text-[28px] font-black tracking-tight text-neutral-900">Agro-mahsulotlar</h1>
+        <h1 className="text-[28px] font-black tracking-tight text-neutral-900">Dorilar</h1>
         <button
           onClick={() => setFavsOpen(true)}
           className="relative flex h-11 w-11 items-center justify-center rounded-full bg-white border border-neutral-200/90 shadow-2xs transition active:scale-95 hover:bg-neutral-50"
@@ -527,7 +527,7 @@ export default function MarketClient() {
           {query ? (
             <>
               <p className="mt-3.5 text-[17px] font-bold text-neutral-900">
-                «{query}» bo&apos;yicha agro-mahsulot topilmadi
+                «{query}» bo&apos;yicha dori topilmadi
               </p>
               <p className="mt-1.5 text-[13.5px] leading-relaxed text-neutral-500 max-w-md mx-auto">
                 Qidiruv so&apos;zini tekshirib ko&apos;ring, boshqa bo&apos;limga o&apos;ting yoki qidiruvni tozalang.
@@ -545,7 +545,7 @@ export default function MarketClient() {
                 Hozircha dorilar ro&apos;yxati mavjud emas
               </p>
               <p className="mt-1.5 text-[13.5px] leading-relaxed text-neutral-500 max-w-md mx-auto">
-                Yaqin orada agro-do&apos;konlar tomonidan yangi mahsulotlar joylashtiriladi.
+                Yaqin orada agro-do&apos;konlar tomonidan yangi dorilar joylashtiriladi.
               </p>
             </>
           )}
@@ -595,7 +595,7 @@ export default function MarketClient() {
                 <Heart size={30} className="text-[var(--brand-muted)]" />
                 <p className="text-[15px] font-bold text-[var(--brand-ink)]">Ro&apos;yxat bo&apos;sh</p>
                 <p className="text-[13px] leading-relaxed text-[var(--brand-muted)]">
-                  Agro-mahsulotlar kartochkasidagi ❤️ belgisini bosib, keyinroq uchun saqlab qo&apos;ying.
+                  Dorilar kartochkasidagi ❤️ belgisini bosib, keyinroq uchun saqlab qo&apos;ying.
                 </p>
               </div>
             ) : (
@@ -804,7 +804,7 @@ export default function MarketClient() {
                 <ShoppingCart size={32} className="text-[var(--brand-muted)]" />
                 <p className="text-[15px] font-bold text-[var(--brand-ink)]">Savat bo&apos;sh</p>
                 <p className="text-[13px] text-[var(--brand-muted)]">
-                  Agro-mahsulotlardagi «Savatga» tugmasini bosing
+                  Dorilardagi «Savatga» tugmasini bosing
                 </p>
                 <button onClick={() => setCartOpen(false)} className="ios-btn secondary mt-2 w-full">
                   <X size={17} /> Yopish
@@ -1026,7 +1026,7 @@ export default function MarketClient() {
                         </div>
                       )}
                       <p className="text-[11px] leading-relaxed text-[var(--brand-muted)]">
-                        💡 Buyurtma berganingizdan so&apos;ng, agro-do&apos;kon xodimi agro-mahsulotlarni tayyorlab qo&apos;yadi va siz istalgan vaqtda borib olib ketishingiz mumkin.
+                        💡 Buyurtma berganingizdan so&apos;ng, agro-do&apos;kon xodimi dorilarni tayyorlab qo&apos;yadi va siz istalgan vaqtda borib olib ketishingiz mumkin.
                       </p>
                     </div>
                   ) : (

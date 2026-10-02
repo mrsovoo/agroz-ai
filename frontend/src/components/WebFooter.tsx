@@ -5,7 +5,7 @@ const columns = [
   {
     title: "Xizmatlar",
     links: [
-      { href: "/agro-mahsulotlar", label: "Agro-mahsulotlar" },
+      { href: "/dorilar", label: "Dorilar" },
       { href: "/xarita", label: "Xarita" },
       { href: "/mutaxassislar", label: "Mutaxassislar" },
       { href: "/yangiliklar", label: "Maslahatlar" },
@@ -41,7 +41,7 @@ export default function WebFooter() {
           <div>
             <strong>AgrozGO</strong>
             <p>
-              Ekin va chorva agro-mahsulotlar platformasi, yaqin agro-do&apos;konlar va mutaxassislar.
+              Ekin va chorva dorilari platformasi, yaqin agro-do&apos;konlar va mutaxassislar.
             </p>
           </div>
         </div>

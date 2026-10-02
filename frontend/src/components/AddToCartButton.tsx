@@ -48,7 +48,7 @@ export default function AddToCartButton({
     const cart = loadCart();
     if (cart && cart.pharmacy.id !== pharmacy.id) {
       if (
-        !confirm(`Savatda boshqa agro-do&apos;kon (${cart.pharmacy.name}) agro-mahsulotlari bor. Yangi agro-do&apos;kon agro-mahsulotlari savatni almashtiradi. Davom etamizmi?`)
+        !confirm(`Savatda boshqa agro-do'kon (${cart.pharmacy.name}) dorilari bor. Yangi agro-do'kon dorilari savatni almashtiradi. Davom etamizmi?`)
       ) {
         return;
       }

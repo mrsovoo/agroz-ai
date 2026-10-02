@@ -271,8 +271,8 @@ export default function CartDrawer() {
       };
     }
     return {
-      title: "✨ Tavsiya etilgan agro-mahsulotlar",
-      desc: "Platformadagi mavjud va mashhur agro-mahsulotlar",
+      title: "✨ Tavsiya etilgan dorilar",
+      desc: "Platformadagi mavjud va mashhur dorilar",
     };
   }, [orderPrefs]);
 
@@ -482,7 +482,7 @@ export default function CartDrawer() {
 
     const selectedLines = cart.lines.filter((l) => selectedIds.has(l.medicine.id));
     if (selectedLines.length === 0) {
-      setError("Buyurtma berish uchun kamida bitta agro-mahsulot tanlang");
+      setError("Buyurtma berish uchun kamida bitta dori tanlang");
       return;
     }
 
@@ -595,7 +595,7 @@ export default function CartDrawer() {
               </h2>
               {cart && (
                 <p className="text-[12px] font-medium text-neutral-500">
-                  {cart.pharmacy.name} ({cart.lines.length} xil agro-mahsulot)
+                  {cart.pharmacy.name} ({cart.lines.length} xil dori)
                 </p>
               )}
             </div>
@@ -623,20 +623,20 @@ export default function CartDrawer() {
         {/* Agar savat bo'sh bo'lsa (yoki buyurtma qabul qilingan bo'lsa) */}
         {!cart || cart.lines.length === 0 ? (
           <div className="flex-1 min-h-0 overflow-y-auto px-5 py-6 space-y-6">
-            {/* 1. Savat bo'sh holati va "Agro-mahsulotlarni ko'rish" tugmasi (Foydalanuvchi yuborgan rasmga 1:1) */}
+            {/* 1. Savat bo'sh holati va "Dorilarni ko'rish" tugmasi */}
             <div className="flex flex-col items-center justify-center py-4 text-center">
               <h3 className="text-[20px] font-black text-neutral-900 tracking-tight">
                 Savatingiz bo&apos;sh
               </h3>
               <p className="mt-1 text-[13.5px] text-neutral-500 font-medium">
-                Agro-mahsulotlarni tanlab, buyurtma bering.
+                Dorilarni tanlab, buyurtma bering.
               </p>
               <Link
                 href="/dorilar"
                 onClick={close}
                 className="mt-4 inline-flex items-center justify-center rounded-full border border-[#22c55e] px-7 py-2 text-[14px] font-bold text-[#22c55e] hover:bg-[#22c55e]/10 active:scale-95 transition shadow-2xs"
               >
-                Agro-mahsulotlarni ko&apos;rish
+                Dorilarni ko&apos;rish
               </Link>
             </div>
 
@@ -764,7 +764,7 @@ export default function CartDrawer() {
                 </div>
               ) : sortedRecommendations.length === 0 ? (
                 <p className="text-center py-6 text-xs text-neutral-400">
-                  Bu toifada agro-mahsulotlar topilmadi.
+                  Bu toifada dorilar topilmadi.
                 </p>
               ) : (
                 <div className="space-y-2.5">
@@ -1011,7 +1011,7 @@ export default function CartDrawer() {
               <div className="flex items-center justify-between border-t border-black/5 pt-3">
                 <div>
                   <span className="text-[13px] font-bold text-neutral-600">Tanlanganlar hisobi:</span>
-                  <p className="text-[11px] text-neutral-400">{selectedCount} dona agro-mahsulot</p>
+                  <p className="text-[11px] text-neutral-400">{selectedCount} dona dori</p>
                 </div>
                 <span className="text-[18px] font-black text-[var(--brand-green)]">
                   {selectedTotal > 0 ? `${shortSum(selectedTotal)} so'm` : "0 so'm"}
@@ -1077,7 +1077,7 @@ export default function CartDrawer() {
                           <span>🎉</span> Bepul Yetkazib Berish!
                         </div>
                         <p className="mt-0.5 text-[11.5px] text-emerald-700 leading-relaxed">
-                          Savatdagi agro-mahsulotlar soni <b>{selectedTotalCount} ta</b> ({deliveryConfig.minOrderQty} tadan ko&apos;p). Buyurtmangiz agro-do&apos;kon tomonidan <b>bepul</b> yetkazib beriladi!
+                          Savatdagi dorilar soni <b>{selectedTotalCount} ta</b> ({deliveryConfig.minOrderQty} tadan ko&apos;p). Buyurtmangiz agro-do&apos;kon tomonidan <b>bepul</b> yetkazib beriladi!
                         </p>
                       </div>
                     ) : (
@@ -1089,7 +1089,7 @@ export default function CartDrawer() {
                           Masofaga qarab har 1 km uchun <b>{deliveryConfig.pricePerKm.toLocaleString("uz-UZ")} so&apos;m</b> to&apos;lanadi.
                         </p>
                         <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-blue-100/80 px-2.5 py-1.5 text-[11.5px] font-semibold text-blue-900">
-                          <span>💡</span> Yana <b>{deliveryConfig.minOrderQty - selectedTotalCount} ta</b> agro-mahsulot qo&apos;shsangiz, yetkazib berish <b>mutlaqo BEPUL</b> bo&apos;ladi!
+                          <span>💡</span> Yana <b>{deliveryConfig.minOrderQty - selectedTotalCount} ta</b> dori qo&apos;shsangiz, yetkazib berish <b>mutlaqo BEPUL</b> bo&apos;ladi!
                         </div>
                       </div>
                     );
@@ -1220,7 +1220,7 @@ export default function CartDrawer() {
                   )}
                   <span>
                     {selectedLines.length === 0
-                      ? "Agro-mahsulotni tanlang"
+                      ? "Dorini tanlang"
                       : `Buyurtma berish (${shortSum(selectedTotal)} so'm)`}
                   </span>
                 </button>

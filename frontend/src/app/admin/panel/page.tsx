@@ -2567,7 +2567,7 @@ export default function AdminPanelPage() {
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div className="flex items-center justify-between mb-3 border-b border-slate-200 pb-2.5">
                   <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                    💊 Eng Talabgir va Ko&apos;p Sotilgan Agro-mahsulotlar
+                    💊 Eng Talabgir va Ko&apos;p Sotilgan Dorilar
                   </h4>
                   <span className="text-[11px] text-slate-400">Buyurtmalar kesimida</span>
                 </div>
@@ -2576,7 +2576,7 @@ export default function AdminPanelPage() {
                     <table className="w-full text-left text-xs text-slate-700">
                       <thead className="border-b border-slate-200 text-[11px] font-bold uppercase text-slate-400">
                         <tr>
-                          <th className="pb-2">Agro-mahsulot nomi</th>
+                          <th className="pb-2">Dori nomi</th>
                           <th className="pb-2">Agro-do&apos;kon</th>
                           <th className="pb-2">Sotilgan miqdor</th>
                           <th className="pb-2">Umumiy tushum</th>
@@ -2699,7 +2699,7 @@ export default function AdminPanelPage() {
                     Fermer va Mijozlarning Fikrlari & Izohlari
                   </h3>
                   <p className="text-xs text-slate-400">
-                    Agro-mahsulotlar va mutaxassislar bo&apos;yicha yozilgan sharhlarni nazorat qilish
+                    Dorilar va mutaxassislar bo&apos;yicha yozilgan sharhlarni nazorat qilish
                   </p>
                 </div>
 
@@ -3308,7 +3308,7 @@ export default function AdminPanelPage() {
                       {selectedPharmacyForMeds.org || selectedPharmacyForMeds.name}
                     </h3>
                     <p className="text-xs text-slate-500 font-medium">
-                      Agro-do&apos;kon assortimenti va agro-mahsulotlar ro&apos;yxati ({pharmacyMedicines.length} ta agro-mahsulot)
+                      Agro-do&apos;kon assortimenti va dorilar ro&apos;yxati ({pharmacyMedicines.length} ta dori)
                     </p>
                   </div>
                 </div>
@@ -3327,7 +3327,7 @@ export default function AdminPanelPage() {
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
-                    placeholder="Agro-mahsulot nomi yoki qo'llanilishi bo'yicha izlash..."
+                    placeholder="Dori nomi yoki qo'llanilishi bo'yicha izlash..."
                     value={medicineSearch}
                     onChange={(e) => setMedicineSearch(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-xs text-slate-800 placeholder-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none"
@@ -3335,11 +3335,11 @@ export default function AdminPanelPage() {
                 </div>
               </div>
 
-              {/* Agro-mahsulotlar jadvali */}
+              {/* Dorilar jadvali */}
               {loadingMedicines ? (
                 <div className="py-16 text-center text-xs text-slate-400">
                   <RefreshCw className="animate-spin mx-auto mb-2 text-emerald-500" size={24} />
-                  Agro-mahsulotlar yuklanmoqda...
+                  Dorilar yuklanmoqda...
                 </div>
               ) : (() => {
                 const list = pharmacyMedicines.filter((m) => {
@@ -3356,7 +3356,7 @@ export default function AdminPanelPage() {
                   return (
                     <div className="rounded-2xl border border-dashed border-slate-200 p-12 text-center text-xs text-slate-400">
                       <Package size={32} className="mx-auto mb-2 text-slate-300" />
-                      {medicineSearch ? "Qidiruv bo'yicha agro-mahsulot topilmadi" : "Ushbu agro-do&apos;kon hali birorta ham agro-mahsulot kiritmagan"}
+                      {medicineSearch ? "Qidiruv bo'yicha dori topilmadi" : "Ushbu agro-do&apos;kon hali birorta ham dori kiritmagan"}
                     </div>
                   );
                 }
@@ -3366,7 +3366,7 @@ export default function AdminPanelPage() {
                     <table className="w-full text-left text-xs text-slate-700">
                       <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase text-slate-500">
                         <tr>
-                          <th className="py-3 px-4">Agro-mahsulot nomi</th>
+                          <th className="py-3 px-4">Dori nomi</th>
                           <th className="py-3 px-4">Turi / Guruhi</th>
                           <th className="py-3 px-4">Qo&apos;llanishi</th>
                           <th className="py-3 px-4">Narxi</th>
@@ -3410,7 +3410,7 @@ export default function AdminPanelPage() {
               {/* Modal pastki qismi */}
               <div className="flex items-center justify-between border-t border-slate-100 pt-4 mt-4">
                 <span className="text-xs text-slate-400">
-                  Jami: <b>{pharmacyMedicines.length}</b> ta agro-mahsulot
+                  Jami: <b>{pharmacyMedicines.length}</b> ta dori
                 </span>
                 <button
                   onClick={() => setSelectedPharmacyForMeds(null)}
@@ -3510,7 +3510,7 @@ export default function AdminPanelPage() {
 
                   {selectedUserDetail.orders.length === 0 ? (
                     <div className="rounded-xl border border-dashed border-slate-200 p-4 text-center text-xs text-slate-400">
-                      Ushbu foydalanuvchi hali agro-mahsulot buyurtma qilmagan.
+                      Ushbu foydalanuvchi hali dori buyurtma qilmagan.
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -3556,7 +3556,7 @@ export default function AdminPanelPage() {
                             <table className="w-full text-left text-[11px]">
                               <thead>
                                 <tr className="bg-slate-100 text-slate-500 font-mono border-b border-slate-200">
-                                  <th className="py-1.5 px-3">Agro-mahsulot nomi</th>
+                                  <th className="py-1.5 px-3">Dori nomi</th>
                                   <th className="py-1.5 px-3 text-center">Soni</th>
                                   <th className="py-1.5 px-3 text-right">Narxi</th>
                                 </tr>

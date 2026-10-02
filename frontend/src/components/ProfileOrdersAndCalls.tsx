@@ -167,7 +167,7 @@ export default function ProfileOrdersAndCalls({ userPhone }: { userPhone?: strin
             Mening Buyurtmalarim
           </h2>
           <p className="text-[12.5px] text-neutral-500 font-medium">
-            Agro-mahsulotlar va mutaxassis chaqiruvlari tarixi
+            Dorilar va mutaxassis chaqiruvlari tarixi
           </p>
         </div>
         <button
@@ -190,7 +190,7 @@ export default function ProfileOrdersAndCalls({ userPhone }: { userPhone?: strin
           }`}
         >
           <Pill size={15} />
-          <span>Agro-mahsulotlar ({orders.length})</span>
+          <span>Dorilar ({orders.length})</span>
         </button>
         <button
           onClick={() => setActiveTab("specialists")}
@@ -205,7 +205,7 @@ export default function ProfileOrdersAndCalls({ userPhone }: { userPhone?: strin
         </button>
       </div>
 
-      {/* Tab 1: Agro-mahsulotlar */}
+      {/* Tab 1: Dorilar */}
       {activeTab === "medicines" && (
         <div className="space-y-3">
           {orders.length === 0 ? (
@@ -214,14 +214,14 @@ export default function ProfileOrdersAndCalls({ userPhone }: { userPhone?: strin
                 <ShoppingBag size={26} />
               </div>
               <h3 className="text-[16px] font-bold text-neutral-800">
-                Hozircha agro-mahsulot buyurtma qilinmagan
+                Hozircha dori buyurtma qilinmagan
               </h3>
               <p className="mt-1 text-[13px] text-neutral-500 max-w-xs mx-auto">
-                Katalogdan kerakli o&apos;g&apos;it, vaksina yoki agro-mahsulotlarni savatga qo&apos;shib buyurtma bering.
+                Katalogdan kerakli dorilarni savatga qo&apos;shib buyurtma bering.
               </p>
               <Link href="/dorilar" className="inline-block mt-4">
                 <button className="rounded-xl bg-[var(--brand-green)] px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:brightness-105 active:scale-95 transition">
-                  Agro-mahsulotlar bozoriga o&apos;tish →
+                  Dorilar katalogiga o&apos;tish →
                 </button>
               </Link>
             </div>

@@ -674,7 +674,7 @@ export default function MapClient() {
                   )}
                   {p.stock.every((s) => s.status !== "bor") && (
                     <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-500">
-                      Izlangan agro-mahsulot yo'q
+                      Izlangan dori yo&apos;q
                     </span>
                   )}
                 </div>
@@ -776,7 +776,7 @@ export default function MapClient() {
             </span>
             <p className="mt-3 text-[16px] font-black text-[var(--brand-ink)]">
               {meds.length > 0
-                ? `Bu agro-mahsulotlar ${radiusKm} km ichida topilmadi`
+                ? `Bu dorilar ${radiusKm} km ichida topilmadi`
                 : `${radiusKm} km ichida hozircha ma'lumot yo'q`}
             </p>
             <p className="mt-1.5 text-[13.5px] leading-relaxed text-[var(--brand-muted)]">

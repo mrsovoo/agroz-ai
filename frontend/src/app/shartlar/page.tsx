@@ -51,7 +51,7 @@ export default function TermsOfServicePage() {
           </p>
           <ul className="space-y-1.5 text-[14px] text-neutral-600 list-disc pl-5 leading-relaxed">
             <li>O&apos;simlik kasalliklari va zararkunandalarini AI orqali aniqlash va agronomik tavsiyalar olish;</li>
-            <li>Yaqin atrofdagi agro-agro-do&apos;konlardan kerakli agro va veterinariya mahsulotlarini qidirish va yetkazib berish xizmatidan foydalanish;</li>
+            <li>Yaqin atrofdagi agro-do&apos;konlardan kerakli agro va veterinariya mahsulotlarini qidirish va yetkazib berish xizmatidan foydalanish;</li>
             <li>Agro-mutaxassislar bilan maslahatlashish va qo&apos;ng&apos;iroq qilish imkoniyati;</li>
             <li>Hududiy ob-havo ma&apos;lumotlari va ekinlarni himoya qilish bo&apos;yicha agrometeorologik tavsiyalar.</li>
           </ul>

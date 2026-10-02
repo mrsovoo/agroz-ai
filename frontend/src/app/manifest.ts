@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "AgrozGO — Dehqon va chorvador yordamchisi",
     short_name: "AgrozGO",
     description:
-      "Ekin va chorva agro-mahsulotlar platformasi, yaqin agro-do&apos;konlar va mutaxassislar xaritasi.",
+      "Ekin va chorva dorilari platformasi, yaqin agro-do'konlar va mutaxassislar xaritasi.",
     start_url: "/?source=pwa",
     scope: "/",
     display: "standalone",

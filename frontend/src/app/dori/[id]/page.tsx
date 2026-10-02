@@ -9,12 +9,12 @@ type Props = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const medicine = await getMedicineDetail(Number(id)).catch(() => null);
-  if (!medicine) return { title: "Mahsulot topilmadi" };
+  if (!medicine) return { title: "Dori topilmadi" };
   return {
-    title: `${medicine.name} — Agro-mahsulotlar`,
+    title: `${medicine.name} — Dorilar`,
     description:
       medicine.usage ??
-      `${medicine.name} — ${medicine.pharmacyName} agro-do&apos;konsida. AgrozGO orqali buyurtma bering.`,
+      `${medicine.name} — ${medicine.pharmacyName} dorixonasida. AgrozGO orqali buyurtma bering.`,
   };
 }
 

@@ -51,7 +51,7 @@ export default function PrivacyPolicyPage() {
               <b>Shaxsiy ma&apos;lumotlar:</b> Ism, familiya va telefon raqami (hisob yaratish va buyurtmalarni yetkazish uchun).
             </li>
             <li>
-              <b>Geolokatsiya (Aniq va taxminiy joylashuv):</b> Foydalanuvchiga eng yaqin agro-agro-do&apos;konlar, mutaxassislar va o&apos;z hududiga mos ob-havo ma&apos;lumotlari hamda agrometeorologik tavsiyalarni ko&apos;rsatish uchun.
+              <b>Geolokatsiya (Aniq va taxminiy joylashuv):</b> Foydalanuvchiga eng yaqin agro-do&apos;konlar, mutaxassislar va o&apos;z hududiga mos ob-havo ma&apos;lumotlari hamda agrometeorologik tavsiyalarni ko&apos;rsatish uchun.
             </li>
             <li>
               <b>Kamera va Rasmlar:</b> O&apos;simlik barglari, zararkunandalar va kasalliklarini sun&apos;iy intellekt (AI) orqali tahlil qilish uchun yuklangan fotosuratlar.
@@ -76,7 +76,7 @@ export default function PrivacyPolicyPage() {
           </p>
           <ul className="space-y-1.5 text-[14px] text-neutral-600 list-disc pl-5 leading-relaxed">
             <li>Agro-tashxis (AI diagnoz) natijalarini va dastlabki maslahatlarni taqdim etish;</li>
-            <li>Yaqin agro-agro-do&apos;konlar orqali agro va veterinariya mahsulotlarini yetkazib berishni tashkil qilish;</li>
+            <li>Yaqin agro-do&apos;konlar orqali agro va veterinariya mahsulotlarini yetkazib berishni tashkil qilish;</li>
             <li>Real vaqt rejimida buyurtma holati haqida push-bildirishnomalar yuborish;</li>
             <li>Hududiy ob-havo ma&apos;lumotlari va agrometeorologik tavsiyalar berish;</li>
             <li>Foydalanuvchilarni autentifikatsiya qilish va xavfsizligini ta&apos;minlash.</li>

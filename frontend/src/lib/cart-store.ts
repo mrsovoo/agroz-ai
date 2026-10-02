@@ -223,7 +223,7 @@ export function addItemToCart(
   if (current && current.pharmacy.id !== pharmacy.id) {
     if (
       !confirm(
-        `Savatda boshqa agro-do&apos;kon (${current.pharmacy.name}) agro-mahsulotlari bor. Yangi agro-do&apos;kon agro-mahsulotlari savatni almashtiradi. Davom etamizmi?`,
+        `Savatda boshqa agro-do'kon (${current.pharmacy.name}) dorilari bor. Yangi agro-do'kon dorilari savatni almashtiradi. Davom etamizmi?`,
       )
     ) {
       return false;

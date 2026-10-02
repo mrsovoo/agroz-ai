@@ -22,7 +22,7 @@ function metadataBase(): URL | undefined {
 }
 
 const DESCRIPTION =
-  "Ekin va chorva agro-mahsulotlar platformasi, yaqin agro-do&apos;konlar va mutaxassislar xaritasi.";
+  "Ekin va chorva dorilari platformasi, yaqin agro-do&apos;konlar va mutaxassislar xaritasi.";
 
 export const metadata: Metadata = {
   metadataBase: metadataBase(),

@@ -97,7 +97,7 @@ export default function ProfileTelegramAutoAuth() {
             Botda hali ro&apos;yxatdan o&apos;tmadingiz
           </h2>
           <p className="text-[14px] leading-relaxed text-slate-600">
-            Platformadan to&apos;liq foydalanish va agro-mahsulotlarga buyurtma berish uchun avval botimizda ism va telefon raqamingizni tasdiqlang.
+            Platformadan to&apos;liq foydalanish va dorilarga buyurtma berish uchun avval botimizda ism va telefon raqamingizni tasdiqlang.
           </p>
           <div className="w-full max-w-sm space-y-2.5 pt-2">
             <Link href="/kirish" className="block w-full">

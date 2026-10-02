@@ -58,11 +58,11 @@ export default function HomeMedicinesShowcase({
               <Pill size={16} />
             </span>
             <h2 className="text-[20px] font-black tracking-tight text-neutral-900 web:text-[24px]">
-              Agro-mahsulotlar katalogi
+              Dorilar katalogi
             </h2>
           </div>
           <p className="mt-0.5 text-[13px] text-neutral-500 font-medium">
-            Sertifikatlangan agro-mahsulotlar, fungitsidlar, vaksinalar va o&apos;g&apos;itlar
+            Sertifikatlangan dorilar, fungitsidlar, vaksinalar va o&apos;g&apos;itlar
           </p>
         </div>
 
@@ -71,7 +71,7 @@ export default function HomeMedicinesShowcase({
             href="/dorilar"
             className="inline-flex items-center gap-1.5 text-[13.5px] font-bold text-[var(--brand-green)] hover:underline self-start sm:self-auto"
           >
-            <span>Barcha agro-mahsulotlar ({allItems.length})</span>
+            <span>Barcha dorilar ({allItems.length})</span>
             <span>→</span>
           </Link>
         )}
@@ -135,7 +135,7 @@ export default function HomeMedicinesShowcase({
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Agro-mahsulot nomi yoki agro-do&apos;kon..."
+                placeholder="Dori nomi yoki agro-do&apos;kon..."
                 className="w-full rounded-xl border border-black/8 bg-white py-2 pl-9 pr-4 text-[13px] font-medium text-neutral-800 placeholder-neutral-400 shadow-2xs focus:border-[var(--brand-green)] focus:outline-none"
               />
             </div>
@@ -173,7 +173,7 @@ export default function HomeMedicinesShowcase({
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-100 text-neutral-400 mb-2">
                 <Search size={22} />
               </div>
-              <p className="text-[16px] font-bold text-neutral-800">Agro-mahsulot vositasi topilmadi</p>
+              <p className="text-[16px] font-bold text-neutral-800">Dori vositasi topilmadi</p>
               <p className="text-[13px] text-neutral-500 mt-1 max-w-sm">
                 Boshqa nom bilan qidirib ko&apos;ring yoki toifani o&apos;zgartiring
               </p>
@@ -186,12 +186,12 @@ export default function HomeMedicinesShowcase({
             </div>
           )}
 
-          {/* Barcha agro-mahsulotlarga o'tish */}
+          {/* Barcha dorilarga o'tish */}
           <div className="mt-5">
             <Link href="/dorilar" className="block">
               <button className="ios-btn yellow flex w-full items-center justify-center gap-2 py-3.5 text-[15px] font-bold shadow-xs hover:brightness-105 active:scale-[0.99] transition">
                 <Store size={18} />
-                <span>Barcha agro-mahsulotlar katalogiga o&apos;tish ({allItems.length} ta agro-mahsulot)</span>
+                <span>Barcha dorilar katalogiga o&apos;tish ({allItems.length} ta dori)</span>
               </button>
             </Link>
           </div>
@@ -205,11 +205,11 @@ export default function HomeMedicinesShowcase({
             <Store size={28} />
           </div>
           <p className="text-[17px] font-bold text-[var(--brand-ink)]">
-            Agro-mahsulotlar katalogi shakllantirilmoqda
+            Dorilar katalogi shakllantirilmoqda
           </p>
           <p className="text-[13px] text-neutral-600 mt-1.5 leading-relaxed max-w-sm">
-            Hozircha agro-mahsulotlar ro&apos;yxatdan o&apos;tish jarayonida. Siz agro-agro-do&apos;kon egasimisiz?
-            Agro-mahsulotlaringizni birinchilardan bo&apos;lib qo&apos;shing!
+            Hozircha dorilar ro&apos;yxatdan o&apos;tish jarayonida. Siz agro-do&apos;kon egasimisiz?
+            Dorilaringizni birinchilardan bo&apos;lib qo&apos;shing!
           </p>
           <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-2">
             <a

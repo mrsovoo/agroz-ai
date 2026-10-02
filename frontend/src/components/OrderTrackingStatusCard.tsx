@@ -73,7 +73,7 @@ export default function OrderTrackingStatusCard({
 
   const itemsSummary = items && items.length > 0
     ? items.map((i) => `${i.name} x${i.qty}`).join(", ")
-    : "Agro-mahsulotlar";
+    : "Dorilar";
 
   return (
     <div className="w-full space-y-3.5 text-neutral-900">
