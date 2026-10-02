@@ -1,5 +1,5 @@
 /**
- * Dori vositalari sharhlari va reytinglari ombori.
+ * Agro-mahsulotlar sharhlari va reytinglari ombori.
  * Standart/demo sharhlar yo'q: yangi loyiha 0 data bilan boshlanadi.
  */
 

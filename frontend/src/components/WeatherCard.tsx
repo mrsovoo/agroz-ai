@@ -137,21 +137,21 @@ export default function WeatherCard({
   }, [showRegion]);
 
   const sprayBadge = (() => {
-    if (!w) return { label: "🌿 Dori: Qulay", bg: "bg-white/20 text-white border-white/25" };
+    if (!w) return { label: "🌿 Agro-mahsulot: Qulay", bg: "bg-white/20 text-white border-white/25" };
     if (w.sprayStatus === "bad" || w.rain > 0.2 || w.wind > 5.5) {
       return {
-        label: "🛑 Dori sepmang",
+        label: "🛑 Agro-mahsulot sepmang",
         bg: "bg-red-500/85 text-white border-red-400/50 shadow-xs",
       };
     }
     if (w.sprayStatus === "moderate" || w.wind > 3.5) {
       return {
-        label: "⚠️ Dori: Ehtiyotkorlik",
+        label: "⚠️ Agro-mahsulot: Ehtiyotkorlik",
         bg: "bg-amber-400/90 text-neutral-900 border-amber-300 shadow-xs",
       };
     }
     return {
-      label: "🌿 Dori: Qulay",
+      label: "🌿 Agro-mahsulot: Qulay",
       bg: "bg-emerald-950/30 text-emerald-100 border-emerald-300/40 backdrop-blur shadow-2xs",
     };
   })();
@@ -161,7 +161,7 @@ export default function WeatherCard({
     activeAlert?.title ||
     w?.agroAdvice ||
     w?.advice ||
-    "Shamol sokin va havo ochiq. Dori va o'g'it purkash uchun ayni fursat.";
+    "Shamol sokin va havo ochiq. Agro-mahsulot va o'g'it purkash uchun ayni fursat.";
 
   return (
     <div>
@@ -169,7 +169,7 @@ export default function WeatherCard({
         className="relative overflow-hidden rounded-[24px] p-4 text-white shadow-[0_10px_28px_-8px_rgba(2,142,17,0.35)] transition-all"
         style={{ background: "linear-gradient(135deg, #028e11 0%, #0ba324 50%, #4ca82b 100%)" }}
       >
-        {/* Yuqori qator: Joylashuv + Dori purkash badgi */}
+        {/* Yuqori qator: Joylashuv + Agro-mahsulot purkash badgi */}
         <div className="flex items-center justify-between gap-2">
           <p className="flex items-center gap-1.5 text-[12.5px] font-semibold text-white/95 truncate">
             <MapPin size={13} className="shrink-0 text-white" />

@@ -20,11 +20,26 @@ import pharmaciesRouter from "./routes/pharmacies.js";
 import geoRouter from "./routes/geo.js";
 import notificationsRouter from "./routes/notifications.js";
 import supportRouter from "./routes/support.js";
+import pushRouter from "./routes/push.js";
 
 import { ensureSeed } from "./lib/seed.js";
 import { ensureSchema } from "./db/migrate.js";
 
+// Production xavfsizlik tekshiruvi (kuchsiz admin parol bilan ishga tushishni taqiqlash)
+if (process.env.NODE_ENV === "production") {
+  const adminPass = process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWOR || "";
+  if (!adminPass || adminPass.trim() === "admin123" || adminPass.trim().length < 8) {
+    console.error("\n❌ [XAVFSIZLIK XATOSI]: Production rejimida ADMIN_PASSWORD 'admin123' yoki 8 belgidan kam bo'lishi mumkin emas!");
+    console.error("Iltimos, server muhitida kuchli ADMIN_PASSWORD o'rnating.\n");
+    process.exit(1);
+  }
+}
+
+import { startCronJobs } from "./cron.js";
+
 const app = express();
+startCronJobs();
+app.set("trust proxy", 1);
 const PORT = process.env.PORT || 4000;
 
 // CORS sozlamalari — ALLOWED_ORIGINS, CORS_ORIGIN, APP_URL hamda loyiha domenlariga ruxsat beriladi
@@ -125,6 +140,7 @@ app.use("/api/pharmacies", pharmaciesRouter);
 app.use("/api/geo", geoRouter);
 app.use("/api/notifications", notificationsRouter);
 app.use("/api/support", supportRouter);
+app.use("/api/push", pushRouter);
 
 // 404 Handler
 app.use((_req, res) => {

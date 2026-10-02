@@ -57,7 +57,7 @@ export default function ProductCardActions({
     if (cart && cart.pharmacy.id !== pharmacy.id) {
       if (
         !confirm(
-          `Savatda boshqa dorixona (${cart.pharmacy.name}) dorilari bor. Yangi dorixona dorilari savatni almashtiradi. Davom etamizmi?`,
+          `Savatda boshqa agro-do&apos;kon (${cart.pharmacy.name}) agro-mahsulotlari bor. Yangi agro-do&apos;kon agro-mahsulotlari savatni almashtiradi. Davom etamizmi?`,
         )
       ) {
         return;
@@ -84,7 +84,7 @@ export default function ProductCardActions({
           onClick={() => {
             setNotified(true);
             alert(
-              `Xabarnoma olindi! "${medicine.name}" dori vositasi dorixonaga kelganda sizga Telegram orqali xabar yuboriladi.`,
+              `Xabarnoma olindi! "${medicine.name}" agro-mahsulot vositasi agro-do&apos;konga kelganda sizga Telegram orqali xabar yuboriladi.`,
             );
           }}
           className={`flex flex-1 items-center justify-center gap-2 rounded-2xl py-3.5 text-[14.5px] font-bold border transition active:scale-[0.98] ${

@@ -209,7 +209,7 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
   }, [calls, loadSpecialists]);
 
   const visible = useMemo(() => {
-    // Faqat haqiqiy mutaxassislar (dorixonalar butunlay chiqarib tashlangan)
+    // Faqat haqiqiy mutaxassislar (agro-do&apos;konlar butunlay chiqarib tashlangan)
     const specsOnly = items.filter((s) => s.role === "specialist");
     if (role === "all") return specsOnly;
     if (role === "agronom") {
@@ -340,7 +340,7 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
       ) : (
         <ul className="space-y-3.5">
           {listToDisplay.map((s) => {
-            const specialtyText = s.specialty || (s.role === "pharmacy" ? "Dorixona egasi" : "Veterinar");
+            const specialtyText = s.specialty || (s.role === "pharmacy" ? "Agro-do&apos;kon egasi" : "Veterinar");
             const expText = s.experienceYears
               ? s.experienceYears >= 10
                 ? "10+ yil"

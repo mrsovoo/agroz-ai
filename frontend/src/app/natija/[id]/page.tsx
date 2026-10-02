@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function ResultPage() {
-  redirect("/dorilar");
+  redirect("/agro-mahsulotlar");
 }

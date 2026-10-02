@@ -6,12 +6,12 @@ import { haptic } from "@/lib/telegram";
 
 /**
  * Mobil ilovadek (Native App) surish (swipe) navigatsiyasi:
- * Asosiy tablar: / -> /dorilar -> /mutaxassislar -> /profil
+ * Asosiy tablar: / -> /agro-mahsulotlar -> /mutaxassislar -> /profil
  * - Chapga sursa (swipe left): keyingi tabga o'tish
  * - O'ngga sursa (swipe right): oldingi tabga o'tish
  * - Ichki sahifalarda chap chetdan o'ngga sursa (edge swipe): router.back()
  */
-const MAIN_TABS = ["/", "/dorilar", "/mutaxassislar", "/profil"];
+const MAIN_TABS = ["/", "/agro-mahsulotlar", "/mutaxassislar", "/profil"];
 
 export default function MobileSwipeNavigation() {
   const router = useRouter();
@@ -115,7 +115,7 @@ export default function MobileSwipeNavigation() {
         return;
       }
 
-      // 2. Ichki sahifalarda (masalan, /dorilar/..., /tashxis, /chat)
+      // 2. Ichki sahifalarda (masalan, /agro-mahsulotlar/..., /tashxis, /chat)
       // Chap chetdan o'ngga sursa (edge swipe, iOS/Android orqaga qaytish effekti)
       if (deltaX > 60 && start.x < 50) {
         haptic("light");

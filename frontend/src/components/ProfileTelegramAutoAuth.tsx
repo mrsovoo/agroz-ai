@@ -97,7 +97,7 @@ export default function ProfileTelegramAutoAuth() {
             Botda hali ro&apos;yxatdan o&apos;tmadingiz
           </h2>
           <p className="text-[14px] leading-relaxed text-slate-600">
-            Platformadan to&apos;liq foydalanish va dorilarga buyurtma berish uchun avval botimizda ism va telefon raqamingizni tasdiqlang.
+            Platformadan to&apos;liq foydalanish va agro-mahsulotlarga buyurtma berish uchun avval botimizda ism va telefon raqamingizni tasdiqlang.
           </p>
           <div className="w-full max-w-sm space-y-2.5 pt-2">
             <Link href="/kirish" className="block w-full">
@@ -128,7 +128,7 @@ export default function ProfileTelegramAutoAuth() {
           <Sprout size={32} />
         </div>
         <p className="text-[15px] leading-relaxed text-[var(--brand-ink)]">
-          Yaqin dorixonalarni ko&apos;rish, mutaxassislar bilan bog&apos;lanish va savatingizni boshqarish uchun profilingizga kiring.
+          Yaqin agro-do&apos;konlarni ko&apos;rish, mutaxassislar bilan bog&apos;lanish va savatingizni boshqarish uchun profilingizga kiring.
         </p>
         <div className="w-full max-w-sm space-y-2.5 pt-2">
           <Link href="/kirish" className="block w-full">

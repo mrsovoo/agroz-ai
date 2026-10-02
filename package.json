@@ -7,7 +7,8 @@
   "workspaces": [
     "frontend",
     "admin",
-    "backend"
+    "backend",
+    "mobile"
   ],
   "scripts": {
     "dev": "npm run dev:all",
@@ -20,6 +21,11 @@
     "build:frontend": "npm run build --workspace=frontend",
     "build:admin": "npm run build --workspace=admin",
     "build:backend": "npm run build --workspace=backend",
+    "mobile:sync": "npm run sync --workspace=mobile",
+    "mobile:android": "npm run open:android --workspace=mobile",
+    "mobile:ios": "npm run open:ios --workspace=mobile",
+    "mobile:build:android": "npm run build:android --workspace=mobile",
+    "mobile:bundle:android": "npm run build:android:bundle --workspace=mobile",
     "vercel-build": "npm run build:frontend",
     "typecheck": "npm run typecheck:frontend && npm run typecheck:admin && npm run typecheck:backend",
     "typecheck:all": "npm run typecheck:frontend && npm run typecheck:admin && npm run typecheck:backend",

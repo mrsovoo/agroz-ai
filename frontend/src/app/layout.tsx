@@ -8,7 +8,6 @@ import WebFooter from "@/components/WebFooter";
 import WebTopNav from "@/components/WebTopNav";
 import CartDrawer from "@/components/CartDrawer";
 import MobileSwipeNavigation from "@/components/MobileSwipeNavigation";
-import GeoLocationBlocker from "@/components/GeoLocationBlocker";
 
 /** Next'ning absolute URL'lar uchun asosiy manzili (OG rasm va h.k.). */
 function metadataBase(): URL | undefined {
@@ -23,7 +22,7 @@ function metadataBase(): URL | undefined {
 }
 
 const DESCRIPTION =
-  "Ekin va chorva dori vositalari platformasi, yaqin dorixonalar va mutaxassislar xaritasi.";
+  "Ekin va chorva agro-mahsulotlar platformasi, yaqin agro-do&apos;konlar va mutaxassislar xaritasi.";
 
 export const metadata: Metadata = {
   metadataBase: metadataBase(),
@@ -104,7 +103,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <WebFooter />
         <CartDrawer />
         <BottomNav />
-        <GeoLocationBlocker />
       </body>
     </html>
   );

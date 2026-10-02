@@ -56,7 +56,7 @@ export default function BottomNav() {
   // Qaysi bo'limda bo'lsa, o'sha yashil, qolganlari och kulrang
   const isSavat = pathname === "/savat" || isCartOpen;
   const isHome = !isSavat && pathname === "/";
-  const isDorilar = !isSavat && (pathname.startsWith("/dorilar") || pathname.startsWith("/dori/"));
+  const isAgroMahsulotlar = !isSavat && (pathname.startsWith("/agro-mahsulotlar") || pathname.startsWith("/agro-mahsulot/"));
   const isSpecialists = !isSavat && pathname.startsWith("/mutaxassislar");
   const isProfile = !isSavat && (pathname.startsWith("/profil") || pathname.startsWith("/kirish"));
 
@@ -86,18 +86,18 @@ export default function BottomNav() {
           </Link>
         </li>
 
-        {/* 2. Dorilar */}
+        {/* 2. Agro-mahsulotlar */}
         <li>
           <Link
             href="/dorilar"
             prefetch={true}
             onClick={handleNavClick}
             className={`flex flex-col items-center gap-1 py-1 text-[11px] font-bold transition-all active:scale-90 ${
-              isDorilar ? "text-[#0ba324]" : "text-neutral-400 hover:text-neutral-700"
+              isAgroMahsulotlar ? "text-[#0ba324]" : "text-neutral-400 hover:text-neutral-700"
             }`}
           >
-            <Pill size={22} strokeWidth={isDorilar ? 2.6 : 2} />
-            <span>Dorilar</span>
+            <Pill size={22} strokeWidth={isAgroMahsulotlar ? 2.6 : 2} />
+            <span>Agro-mahsulotlar</span>
           </Link>
         </li>
 

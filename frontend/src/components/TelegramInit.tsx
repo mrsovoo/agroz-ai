@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { getTelegram, isTelegramUserAgent, onTelegramReady } from "@/lib/telegram";
+import { initNativeApp, isNativeApp } from "@/lib/capacitor";
 
 /** Keng ekranmi — globals.css'dagi media query bilan aynan bir xil shart. */
 function isWideScreen(): boolean {
@@ -10,16 +11,19 @@ function isWideScreen(): boolean {
 }
 
 /**
- * Telegram Mini App muhitini ishga tushiradi:
- * - ready() / expand() / brend ranglari
- * - layout klassini ikki tomonga ham tuzatadi (birinchi kadrda skript qo'ygan
- *   klass noto'g'ri bo'lib qolsa):
- *     Telegram aniqlandi        → mobil ilova ko'rinishi
- *     Telegram yo'q + keng ekran → web sayt ko'rinishi
+ * Telegram Mini App va Native Mobil Ilova (Capacitor) muhitini ishga tushiradi
  */
 export default function TelegramInit() {
   useEffect(() => {
     const root = document.documentElement;
+
+    // 1. Agar native ilovada (Capacitor Android / iOS) bo'lsak:
+    if (isNativeApp()) {
+      root.classList.add("is-telegram");
+      root.classList.remove("is-web");
+      initNativeApp().catch((err) => console.debug("[NativeInit] error:", err));
+      return;
+    }
 
     const stopWaiting = onTelegramReady((tg) => {
       root.classList.add("is-telegram");

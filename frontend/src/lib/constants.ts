@@ -43,7 +43,7 @@ export const RADIUS_OPTIONS = [5, 15, 30, 50, 100, 1000] as const;
 export const CONFIDENCE_THRESHOLD = 80;
 
 /**
- * `@agroz_auth_bot` — mutaxassis va dorixona egalarini ro'yxatdan o'tkazuvchi bot.
+ * `@agroz_auth_bot` — mutaxassis va agro-do&apos;kon egalarini ro'yxatdan o'tkazuvchi bot.
  * Client komponentlarda ham kerak, shuning uchun `NEXT_PUBLIC_` o'zgaruvchisidan
  * o'qiladi (build paytida kodga singdiriladi).
  */

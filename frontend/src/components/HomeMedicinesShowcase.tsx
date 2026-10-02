@@ -58,11 +58,11 @@ export default function HomeMedicinesShowcase({
               <Pill size={16} />
             </span>
             <h2 className="text-[20px] font-black tracking-tight text-neutral-900 web:text-[24px]">
-              Dori vositalari katalogi
+              Agro-mahsulotlar katalogi
             </h2>
           </div>
           <p className="mt-0.5 text-[13px] text-neutral-500 font-medium">
-            Sertifikatlangan dori vositalari, fungitsidlar, vaksinalar va o&apos;g&apos;itlar
+            Sertifikatlangan agro-mahsulotlar, fungitsidlar, vaksinalar va o&apos;g&apos;itlar
           </p>
         </div>
 
@@ -71,7 +71,7 @@ export default function HomeMedicinesShowcase({
             href="/dorilar"
             className="inline-flex items-center gap-1.5 text-[13.5px] font-bold text-[var(--brand-green)] hover:underline self-start sm:self-auto"
           >
-            <span>Barcha dorilar ({allItems.length})</span>
+            <span>Barcha agro-mahsulotlar ({allItems.length})</span>
             <span>→</span>
           </Link>
         )}
@@ -135,7 +135,7 @@ export default function HomeMedicinesShowcase({
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Dori nomi yoki dorixona..."
+                placeholder="Agro-mahsulot nomi yoki agro-do&apos;kon..."
                 className="w-full rounded-xl border border-black/8 bg-white py-2 pl-9 pr-4 text-[13px] font-medium text-neutral-800 placeholder-neutral-400 shadow-2xs focus:border-[var(--brand-green)] focus:outline-none"
               />
             </div>
@@ -173,7 +173,7 @@ export default function HomeMedicinesShowcase({
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-100 text-neutral-400 mb-2">
                 <Search size={22} />
               </div>
-              <p className="text-[16px] font-bold text-neutral-800">Dori vositasi topilmadi</p>
+              <p className="text-[16px] font-bold text-neutral-800">Agro-mahsulot vositasi topilmadi</p>
               <p className="text-[13px] text-neutral-500 mt-1 max-w-sm">
                 Boshqa nom bilan qidirib ko&apos;ring yoki toifani o&apos;zgartiring
               </p>
@@ -186,30 +186,30 @@ export default function HomeMedicinesShowcase({
             </div>
           )}
 
-          {/* Barcha dorilarga o'tish */}
+          {/* Barcha agro-mahsulotlarga o'tish */}
           <div className="mt-5">
             <Link href="/dorilar" className="block">
               <button className="ios-btn yellow flex w-full items-center justify-center gap-2 py-3.5 text-[15px] font-bold shadow-xs hover:brightness-105 active:scale-[0.99] transition">
                 <Store size={18} />
-                <span>Barcha dorilar katalogiga o&apos;tish ({allItems.length} ta dori)</span>
+                <span>Barcha agro-mahsulotlar katalogiga o&apos;tish ({allItems.length} ta agro-mahsulot)</span>
               </button>
             </Link>
           </div>
         </>
       )}
 
-      {/* Bo'sh holat: hali hech qanday dorixona ro'yxatdan o'tmagan */}
+      {/* Bo'sh holat: hali hech qanday agro-do&apos;kon ro'yxatdan o'tmagan */}
       {allItems.length === 0 && (
         <div className="mt-4 flex flex-col items-center justify-center rounded-3xl bg-white p-6 sm:p-10 text-center border border-black/5 shadow-xs">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--brand-green-soft)] text-[var(--brand-green)] mb-3">
             <Store size={28} />
           </div>
           <p className="text-[17px] font-bold text-[var(--brand-ink)]">
-            Dorilar katalogi shakllantirilmoqda
+            Agro-mahsulotlar katalogi shakllantirilmoqda
           </p>
           <p className="text-[13px] text-neutral-600 mt-1.5 leading-relaxed max-w-sm">
-            Hozircha dorilar ro&apos;yxatdan o&apos;tish jarayonida. Siz agro-dorixona egasimisiz?
-            Dorilaringizni birinchilardan bo&apos;lib qo&apos;shing!
+            Hozircha agro-mahsulotlar ro&apos;yxatdan o&apos;tish jarayonida. Siz agro-agro-do&apos;kon egasimisiz?
+            Agro-mahsulotlaringizni birinchilardan bo&apos;lib qo&apos;shing!
           </p>
           <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-2">
             <a
@@ -219,7 +219,7 @@ export default function HomeMedicinesShowcase({
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-green)] px-5 py-2.5 text-[13px] font-bold text-white shadow-xs hover:brightness-105 active:scale-95 transition"
             >
               <Sparkles size={16} />
-              <span>Dorixonani qo&apos;shish</span>
+              <span>Agro-do&apos;konni qo&apos;shish</span>
             </a>
             <a
               href={AUTH_BOT_URL}

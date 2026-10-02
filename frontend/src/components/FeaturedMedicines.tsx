@@ -3,7 +3,7 @@ import ProductCard from "@/components/ProductCard";
 import { apiUrl } from "@/lib/api-config";
 
 /**
- * Bosh sahifadagi «Agro Bozor» bloki — so'nggi qo'shilgan 4 ta mavjud dori.
+ * Bosh sahifadagi «Agro Bozor» bloki — so'nggi qo'shilgan 4 ta mavjud agro-mahsulot.
  * Backend API (/api/specialists) orqali yuklanadi.
  */
 export default async function FeaturedMedicines() {
@@ -63,7 +63,7 @@ export default async function FeaturedMedicines() {
   return (
     <div className="mt-7 web:mt-10">
       <div className="flex items-end justify-between">
-        <p className="ios-section-title m-0">Dorilar</p>
+        <p className="ios-section-title m-0">Agro-mahsulotlar</p>
         <a
           href="/dorilar"
           className="flex items-center gap-1 text-[13px] font-bold text-[var(--brand-green)]"
@@ -99,7 +99,7 @@ export default async function FeaturedMedicines() {
 
       <a href="/dorilar" className="mt-3 block">
         <button className="ios-btn yellow w-full" style={{ padding: "15px", fontSize: 15 }}>
-          <Pill size={17} /> Barcha dorilarni ko&apos;rish — buyurtma berish
+          <Pill size={17} /> Barcha agro-mahsulotlarni ko&apos;rish — buyurtma berish
         </button>
       </a>
     </div>

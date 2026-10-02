@@ -39,7 +39,7 @@ export default function OrderTrackingStatusCard({
 }: OrderTrackingProps) {
   // 4 ta bosqich:
   // 1: Yuborildi (yangi)
-  // 2: Dorixona qabul qildi (tasdiqlandi)
+  // 2: Agro-do&apos;kon qabul qildi (tasdiqlandi)
   // 3: Yo'lda (yolda)
   // 4: Yetkazildi (yetkazildi)
   const isPickup = deliveryType === "pickup";
@@ -66,14 +66,14 @@ export default function OrderTrackingStatusCard({
 
   const steps: { num: 1 | 2 | 3 | 4; label: string }[] = [
     { num: 1, label: "Yuborildi" },
-    { num: 2, label: "Dorixona qabul qildi" },
+    { num: 2, label: "Agro-do&apos;kon qabul qildi" },
     { num: 3, label: step3Label },
     { num: 4, label: step4Label },
   ];
 
   const itemsSummary = items && items.length > 0
     ? items.map((i) => `${i.name} x${i.qty}`).join(", ")
-    : "Dori vositalari";
+    : "Agro-mahsulotlar";
 
   return (
     <div className="w-full space-y-3.5 text-neutral-900">
@@ -92,7 +92,7 @@ export default function OrderTrackingStatusCard({
           <AlertCircle size={20} className="shrink-0" />
           <div>
             <p className="text-[14px] font-bold">Buyurtma bekor qilingan</p>
-            <p className="text-[12px] opacity-80 mt-0.5">Dorixona bilan bog&apos;lanib ma&apos;lumot olishingiz mumkin.</p>
+            <p className="text-[12px] opacity-80 mt-0.5">Agro-do&apos;kon bilan bog&apos;lanib ma&apos;lumot olishingiz mumkin.</p>
           </div>
         </div>
       ) : (
@@ -146,10 +146,10 @@ export default function OrderTrackingStatusCard({
         </div>
       )}
 
-      {/* Dorixona egasi botiga kelgan xabar bloki (rasmga 1:1) */}
+      {/* Agro-do&apos;kon egasi botiga kelgan xabar bloki (rasmga 1:1) */}
       <div className="pt-1">
         <p className="text-[12px] font-bold text-neutral-500 uppercase tracking-wider mb-1.5">
-          Dorixona egasi botiga kelgan xabar (real):
+          Agro-do&apos;kon egasi botiga kelgan xabar (real):
         </p>
 
         <div className="rounded-[20px] bg-[#f0f4f9] p-4 text-neutral-900 border border-neutral-200/90 shadow-2xs">
@@ -172,7 +172,7 @@ export default function OrderTrackingStatusCard({
           <p className="mt-1.5 text-[12.5px] text-neutral-600">
             <span className="font-semibold text-neutral-800">Manzil:</span>{" "}
             {isPickup ? (
-              <span>{pharmacyName ? `${pharmacyName} (Olib ketish)` : "Dorixonadan olib ketish"}</span>
+              <span>{pharmacyName ? `${pharmacyName} (Olib ketish)` : "Agro-do&apos;kondan olib ketish"}</span>
             ) : (
               <span>{customerAddress || "Toshkent viloyati, Zangiota tumani"}</span>
             )}

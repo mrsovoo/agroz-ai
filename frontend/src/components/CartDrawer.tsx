@@ -1,5 +1,7 @@
 "use client";
 
+const DELIVERY_ENABLED = false;
+
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -61,7 +63,7 @@ export default function CartDrawer() {
   const [open, setOpen] = useState(false);
   const [cart, setCart] = useState<CartStoreState>(null);
 
-  // Tanlangan dorilar (id'lar to'plami) — mijoz faqat tanlanganlarini buyurtma qiladi
+  // Tanlangan agro-mahsulotlar (id'lar to'plami) — mijoz faqat tanlanganlarini buyurtma qiladi
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   // Ro'yxatdan o'tgan foydalanuvchi ma'lumotlari (ism, telefon profil orqali olinadi)
@@ -141,7 +143,7 @@ export default function CartDrawer() {
     return list;
   }, [userOrders, successOrder]);
 
-  // Tavsiya etilgan dorilar va xaridor buyurtma statistikasi
+  // Tavsiya etilgan agro-mahsulotlar va xaridor buyurtma statistikasi
   const [recommendedMeds, setRecommendedMeds] = useState<any[]>([]);
   const [recLoading, setRecLoading] = useState(false);
   const [recFilter, setRecFilter] = useState<"all" | "crop" | "animal">("all");
@@ -181,7 +183,7 @@ export default function CartDrawer() {
                 hasPhoto: Boolean(m.hasPhoto),
                 photoVersion: m.photoVersion ?? null,
                 pharmacyId: p.id,
-                pharmacyName: p.organization || p.name || "Agroz Dorixona",
+                pharmacyName: p.organization || p.name || "Agroz Agro-do&apos;kon",
                 pharmacyPhone: p.phone || "",
                 pharmacyAddress: p.address || null,
               });
@@ -204,7 +206,7 @@ export default function CartDrawer() {
                   hasPhoto: Boolean(m.hasPhoto),
                   photoVersion: m.photoVersion ?? null,
                   pharmacyId: m.pharmacyId,
-                  pharmacyName: m.pharmacyName || "Agroz Dorixona",
+                  pharmacyName: m.pharmacyName || "Agroz Agro-do&apos;kon",
                   pharmacyPhone: m.pharmacyPhone || "",
                   pharmacyAddress: m.pharmacyAddress || null,
                 });
@@ -269,8 +271,8 @@ export default function CartDrawer() {
       };
     }
     return {
-      title: "✨ Tavsiya etilgan dori vositalari",
-      desc: "Platformadagi mavjud va mashhur dori vositalari",
+      title: "✨ Tavsiya etilgan agro-mahsulotlar",
+      desc: "Platformadagi mavjud va mashhur agro-mahsulotlar",
     };
   }, [orderPrefs]);
 
@@ -300,7 +302,7 @@ export default function CartDrawer() {
     closeCart();
   }, [pathname]);
 
-  // Savat va tanlangan dorilarni sinxronlash
+  // Savat va tanlangan agro-mahsulotlarni sinxronlash
   useEffect(() => {
     const sync = () => {
       const c = loadCart();
@@ -416,7 +418,7 @@ export default function CartDrawer() {
     });
   }, [open, pathname]);
 
-  // Bitta dorini tanlash / bekor qilish
+  // Bitta agro-mahsulotni tanlash / bekor qilish
   function toggleSelect(medId: number) {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -480,7 +482,7 @@ export default function CartDrawer() {
 
     const selectedLines = cart.lines.filter((l) => selectedIds.has(l.medicine.id));
     if (selectedLines.length === 0) {
-      setError("Buyurtma berish uchun kamida bitta dori tanlang");
+      setError("Buyurtma berish uchun kamida bitta agro-mahsulot tanlang");
       return;
     }
 
@@ -544,7 +546,7 @@ export default function CartDrawer() {
       recordOrderItems(selectedLines.map((l) => ({ type: l.medicine.type })));
       setOrderPrefs(getUserOrderPrefs());
 
-      // Faqat buyurtma qilingan dorilarni savatdan o'chiramiz
+      // Faqat buyurtma qilingan agro-mahsulotlarni savatdan o'chiramiz
       const remaining = cart.lines.filter((l) => !selectedIds.has(l.medicine.id));
       if (remaining.length > 0) {
         const nextCart = { pharmacy: cart.pharmacy, lines: remaining };
@@ -563,7 +565,7 @@ export default function CartDrawer() {
 
   if (!open) return null;
 
-  // Faqat tanlangan dorilar hisoblanadi
+  // Faqat tanlangan agro-mahsulotlar hisoblanadi
   const selectedLines = cart?.lines.filter((l) => selectedIds.has(l.medicine.id)) ?? [];
   const selectedTotal = selectedLines.reduce(
     (s, l) => s + (l.medicine.price ?? 0) * l.qty,
@@ -593,7 +595,7 @@ export default function CartDrawer() {
               </h2>
               {cart && (
                 <p className="text-[12px] font-medium text-neutral-500">
-                  {cart.pharmacy.name} ({cart.lines.length} xil dori)
+                  {cart.pharmacy.name} ({cart.lines.length} xil agro-mahsulot)
                 </p>
               )}
             </div>
@@ -621,20 +623,20 @@ export default function CartDrawer() {
         {/* Agar savat bo'sh bo'lsa (yoki buyurtma qabul qilingan bo'lsa) */}
         {!cart || cart.lines.length === 0 ? (
           <div className="flex-1 min-h-0 overflow-y-auto px-5 py-6 space-y-6">
-            {/* 1. Savat bo'sh holati va "Dorilarni ko'rish" tugmasi (Foydalanuvchi yuborgan rasmga 1:1) */}
+            {/* 1. Savat bo'sh holati va "Agro-mahsulotlarni ko'rish" tugmasi (Foydalanuvchi yuborgan rasmga 1:1) */}
             <div className="flex flex-col items-center justify-center py-4 text-center">
               <h3 className="text-[20px] font-black text-neutral-900 tracking-tight">
                 Savatingiz bo&apos;sh
               </h3>
               <p className="mt-1 text-[13.5px] text-neutral-500 font-medium">
-                Dorilarni tanlab, buyurtma bering.
+                Agro-mahsulotlarni tanlab, buyurtma bering.
               </p>
               <Link
                 href="/dorilar"
                 onClick={close}
                 className="mt-4 inline-flex items-center justify-center rounded-full border border-[#22c55e] px-7 py-2 text-[14px] font-bold text-[#22c55e] hover:bg-[#22c55e]/10 active:scale-95 transition shadow-2xs"
               >
-                Dorilarni ko&apos;rish
+                Agro-mahsulotlarni ko&apos;rish
               </Link>
             </div>
 
@@ -755,14 +757,14 @@ export default function CartDrawer() {
                 ))}
               </div>
 
-              {/* Tavsiya dorilar ro'yxati */}
+              {/* Tavsiya agro-mahsulotlar ro'yxati */}
               {recLoading ? (
                 <div className="flex items-center justify-center py-8 text-neutral-400">
                   <Loader2 size={24} className="animate-spin" />
                 </div>
               ) : sortedRecommendations.length === 0 ? (
                 <p className="text-center py-6 text-xs text-neutral-400">
-                  Bu toifada dori vositalari topilmadi.
+                  Bu toifada agro-mahsulotlar topilmadi.
                 </p>
               ) : (
                 <div className="space-y-2.5">
@@ -876,7 +878,7 @@ export default function CartDrawer() {
           /* Mahsulotlar va Buyurtma Formasi */
           <form onSubmit={handleSubmit} className="flex flex-1 min-h-0 flex-col overflow-hidden">
             <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4">
-              {/* Dorixona ma'lumoti */}
+              {/* Agro-do&apos;kon ma'lumoti */}
               <div className="rounded-2xl bg-neutral-50 p-3.5 border border-black/5">
                 <div className="flex items-center gap-2 text-[13px] font-extrabold text-neutral-900">
                   <Store size={15} className="text-[var(--brand-green)]" />
@@ -890,7 +892,7 @@ export default function CartDrawer() {
                 )}
               </div>
 
-              {/* Dori tanlash paneli (Select all) */}
+              {/* Agro-mahsulot tanlash paneli (Select all) */}
               <div className="flex items-center justify-between border-b border-black/5 pb-2">
                 <button
                   type="button"
@@ -913,7 +915,7 @@ export default function CartDrawer() {
                 </span>
               </div>
 
-              {/* Dori vositalari ro'yxati */}
+              {/* Agro-mahsulotlar ro'yxati */}
               <ul className="space-y-2.5">
                 {cart.lines.map((line) => {
                   const isSelected = selectedIds.has(line.medicine.id);
@@ -1009,7 +1011,7 @@ export default function CartDrawer() {
               <div className="flex items-center justify-between border-t border-black/5 pt-3">
                 <div>
                   <span className="text-[13px] font-bold text-neutral-600">Tanlanganlar hisobi:</span>
-                  <p className="text-[11px] text-neutral-400">{selectedCount} dona dori</p>
+                  <p className="text-[11px] text-neutral-400">{selectedCount} dona agro-mahsulot</p>
                 </div>
                 <span className="text-[18px] font-black text-[var(--brand-green)]">
                   {selectedTotal > 0 ? `${shortSum(selectedTotal)} so'm` : "0 so'm"}
@@ -1017,7 +1019,7 @@ export default function CartDrawer() {
               </div>
 
               {/* Yetkazib berish usuli: Olib ketish / Yetkazib berish */}
-              <div className="space-y-1.5 pt-2">
+              {DELIVERY_ENABLED ? (<div className="space-y-1.5 pt-2">
                 <label className="text-[11.5px] font-bold text-neutral-500 uppercase tracking-wider">
                   Yetkazib berish usuli:
                 </label>
@@ -1034,7 +1036,7 @@ export default function CartDrawer() {
                     <span className="text-xl">🏬</span>
                     <div>
                       <p className="text-[13.5px] font-black text-neutral-900 leading-tight">Olib ketish</p>
-                      <p className="text-[11px] font-medium text-neutral-500 mt-0.5">Dorixonadan (bepul)</p>
+                      <p className="text-[11px] font-medium text-neutral-500 mt-0.5">Agro-do&apos;kondan (bepul)</p>
                     </div>
                   </button>
 
@@ -1057,7 +1059,7 @@ export default function CartDrawer() {
 
                 {deliveryType === "pickup" ? (
                   <div className="mt-2 rounded-xl bg-amber-50/70 border border-amber-200/60 p-2.5 text-[12px] text-amber-900">
-                    💡 Buyurtma tasdiqlangach, dorixonaga borib o&apos;zingiz olib ketasiz.
+                    💡 Buyurtma tasdiqlangach, agro-do&apos;konga borib o&apos;zingiz olib ketasiz.
                     {cart.pharmacy.address && (
                       <span className="block font-semibold mt-0.5">Manzil: {cart.pharmacy.address}</span>
                     )}
@@ -1075,7 +1077,7 @@ export default function CartDrawer() {
                           <span>🎉</span> Bepul Yetkazib Berish!
                         </div>
                         <p className="mt-0.5 text-[11.5px] text-emerald-700 leading-relaxed">
-                          Savatdagi dorilar soni <b>{selectedTotalCount} ta</b> ({deliveryConfig.minOrderQty} tadan ko&apos;p). Buyurtmangiz dorixona tomonidan <b>bepul</b> yetkazib beriladi!
+                          Savatdagi agro-mahsulotlar soni <b>{selectedTotalCount} ta</b> ({deliveryConfig.minOrderQty} tadan ko&apos;p). Buyurtmangiz agro-do&apos;kon tomonidan <b>bepul</b> yetkazib beriladi!
                         </p>
                       </div>
                     ) : (
@@ -1087,7 +1089,7 @@ export default function CartDrawer() {
                           Masofaga qarab har 1 km uchun <b>{deliveryConfig.pricePerKm.toLocaleString("uz-UZ")} so&apos;m</b> to&apos;lanadi.
                         </p>
                         <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-blue-100/80 px-2.5 py-1.5 text-[11.5px] font-semibold text-blue-900">
-                          <span>💡</span> Yana <b>{deliveryConfig.minOrderQty - selectedTotalCount} ta</b> dori qo&apos;shsangiz, yetkazib berish <b>mutlaqo BEPUL</b> bo&apos;ladi!
+                          <span>💡</span> Yana <b>{deliveryConfig.minOrderQty - selectedTotalCount} ta</b> agro-mahsulot qo&apos;shsangiz, yetkazib berish <b>mutlaqo BEPUL</b> bo&apos;ladi!
                         </div>
                       </div>
                     );
@@ -1095,7 +1097,16 @@ export default function CartDrawer() {
                 )}
               </div>
 
-              {/* Buyurtmachi ma'lumotlari (profil orqali avtomatik) */}
+              ) : (
+    <div className="mt-2 rounded-xl bg-amber-50/70 border border-amber-200/60 p-2.5 text-[12px] text-amber-900">
+      💡 Buyurtma tasdiqlangach, agro-do&apos;konga borib o'zingiz olib ketasiz.
+      {cart.pharmacy.address && (
+        <span className="block font-semibold mt-0.5">Manzil: {cart.pharmacy.address}</span>
+      )}
+    </div>
+  )}
+
+  {/* Buyurtmachi ma'lumotlari (profil orqali avtomatik) */}
               <div className="space-y-3 pt-2">
                 <div>
                   <label className="block text-[11.5px] font-bold text-neutral-500 uppercase tracking-wider mb-1.5">
@@ -1209,7 +1220,7 @@ export default function CartDrawer() {
                   )}
                   <span>
                     {selectedLines.length === 0
-                      ? "Dorini tanlang"
+                      ? "Agro-mahsulotni tanlang"
                       : `Buyurtma berish (${shortSum(selectedTotal)} so'm)`}
                   </span>
                 </button>

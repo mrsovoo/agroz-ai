@@ -20,6 +20,8 @@ export const users = pgTable("users", {
   region: varchar("region", { length: 120 }),
   district: varchar("district", { length: 120 }),
   weatherSentDate: varchar("weather_sent_date", { length: 16 }),
+  isWeatherPushEnabled: boolean("is_weather_push_enabled").default(true).notNull(),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -140,6 +142,7 @@ export const specialists = pgTable("specialists", {
   currentCallId: integer("current_call_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  isWeatherPushEnabled: boolean("is_weather_push_enabled").default(true).notNull(),
 });
 
 /**
@@ -343,6 +346,18 @@ export const broadcasts = pgTable("broadcasts", {
   failedCount: integer("failed_count").notNull().default(0),
   status: varchar("status", { length: 20 }).notNull().default("jarayonda"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+/**
+ * Push bildirishnomalar tokenlari (Android FCM va iOS APNs/FCM).
+ */
+export const pushTokens = pgTable("push_tokens", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  token: text("token").notNull().unique(),
+  platform: varchar("platform", { length: 20 }).notNull().default("unknown"), // android | ios | web
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 import { advertisements } from "./advertisements.js";

@@ -18,6 +18,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { getTelegram, onTelegramReady, type TelegramUser } from "@/lib/telegram";
+import { isNativeApp } from "@/lib/capacitor";
 import { OTP_LENGTH, OTP_TTL_MINUTES } from "@/lib/constants";
 
 type DeliveryMode = "telegram" | "bot" | "sms" | "dev";
@@ -83,8 +84,9 @@ export default function LoginPage() {
 
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [isNative, setIsNative] = useState(false);
 
-  // Polling tozalash
+  // Polling tozalash va native ilova tekshiruvi
   useEffect(() => {
     try {
       const savedName = localStorage.getItem("agroz_customer_name");
@@ -92,6 +94,12 @@ export default function LoginPage() {
       if (savedName) setName(savedName);
       if (savedPhone) setPhoneInput(savedPhone);
     } catch {}
+
+    // Native mobil ilovada (App Store / Google Play) Telegram initData bo'lmagani uchun SMS OTP'ni asosiy qilish
+    if (isNativeApp()) {
+      setIsNative(true);
+      setAuthMethod("phone");
+    }
 
     return () => {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
@@ -397,22 +405,24 @@ export default function LoginPage() {
         <div className="ios-card p-5 shadow-lg web:p-7">
           {/* Kirish usullari tablari */}
           <div className="mb-5 flex rounded-xl bg-slate-100 p-1">
-            <button
-              type="button"
-              onClick={() => {
-                setAuthMethod("telegram");
-                setError(null);
-                setWaitingBot(false);
-              }}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-bold transition ${
-                authMethod === "telegram"
-                  ? "bg-white text-sky-600 shadow-sm"
-                  : "text-slate-500 hover:text-slate-800"
-              }`}
-            >
-              <Send size={15} />
-              <span>Telegram orqali</span>
-            </button>
+            {!isNative && (
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMethod("telegram");
+                  setError(null);
+                  setWaitingBot(false);
+                }}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-bold transition ${
+                  authMethod === "telegram"
+                    ? "bg-white text-sky-600 shadow-sm"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                <Send size={15} />
+                <span>Telegram orqali</span>
+              </button>
+            )}
 
             <button
               type="button"
@@ -639,7 +649,7 @@ export default function LoginPage() {
                       <span>Ism va telefoningizni kiriting</span>
                     </div>
                     <p className="mt-0.5 text-[11.5px] leading-relaxed text-emerald-800">
-                      Mutaxassislar va dorixonalar siz bilan bog&apos;lana olishi uchun ishlayotgan telefon raqamingizni yozing.
+                      Mutaxassislar va agro-do&apos;konlar siz bilan bog&apos;lana olishi uchun ishlayotgan telefon raqamingizni yozing.
                     </p>
                   </div>
 

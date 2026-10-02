@@ -188,7 +188,7 @@ export default function SpecialistCallModal({
 
   if (!isOpen || !specialist) return null;
 
-  const specialistTitle = specialist.specialty || (specialist.role === "pharmacy" ? "Dorixona egasi" : "Agronom");
+  const specialistTitle = specialist.specialty || (specialist.role === "pharmacy" ? "Agro-do&apos;kon egasi" : "Agronom");
 
   return (
     <div className="fixed inset-0 z-[110] flex justify-center bg-neutral-50 overflow-y-auto animate-in fade-in duration-200">

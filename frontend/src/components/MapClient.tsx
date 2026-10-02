@@ -26,7 +26,7 @@ type Stock = { medicine: string; status: string; price: number | null };
 type Medicine = { id: number; name: string; status: string; hasPhoto: boolean; photoVersion?: string | null };
 
 type Place = {
-  /** Dorixona id'lari bilan to'qnashmasligi uchun mutaxassislar manfiy id oladi. */
+  /** Agro-do&apos;kon id'lari bilan to'qnashmasligi uchun mutaxassislar manfiy id oladi. */
   id: number;
   name: string;
   kind: string;
@@ -42,15 +42,15 @@ type Place = {
   ratingAvg?: number | null;
   ratingCount?: number;
   stock: Stock[];
-  /** Dorixona egasi bot orqali qo'shgan dorilar (rasmi bilan). */
+  /** Agro-do&apos;kon egasi bot orqali qo'shgan agro-mahsulotlar (rasmi bilan). */
   medicines: Medicine[];
 };
 
 /** Filtr tugmalari va xarita sarlavhasi bir joyda — nomlar chalkashmasligi uchun. */
 const KINDS: { v: string; l: string; title: string }[] = [
   { v: "all", l: "Hammasi", title: "Xarita" },
-  { v: "agro", l: "Agro", title: "Agro dorixonalar" },
-  { v: "vet", l: "Veterinar", title: "Veterinariya dorixonalari" },
+  { v: "agro", l: "Agro", title: "Agro agro-do&apos;konlar" },
+  { v: "vet", l: "Veterinar", title: "Veterinariya agro-do&apos;konlari" },
   { v: "specialist", l: "Mutaxassis", title: "Mutaxassislar" },
 ];
 
@@ -155,7 +155,7 @@ export default function MapClient() {
     );
   }, []);
 
-  // ---- Fetch dorixonalar + mutaxassislar ----
+  // ---- Fetch agro-do&apos;konlar + mutaxassislar ----
   // Ikkisi bitta xaritada ko'rsatiladi; filtrlar esa client tomonda qo'llanadi.
   useEffect(() => {
     const pharmacyParams = new URLSearchParams();
@@ -168,7 +168,7 @@ export default function MapClient() {
       }
     }
     meds.forEach((m) => pharmacyParams.append("med", m));
-    // Mutaxassislar so'roviga faqat specialist roliga egalarini so'raymiz (dorixonalar qayta tushmasligi uchun)
+    // Mutaxassislar so'roviga faqat specialist roliga egalarini so'raymiz (agro-do&apos;konlar qayta tushmasligi uchun)
     specialistParams.set("role", "specialist");
 
     // Eski so'rov javobi yangisini bosib ketmasligi uchun "cancelled" bayrog'i.
@@ -187,7 +187,7 @@ export default function MapClient() {
       .then(([pharmacies, specialists]) => {
         if (cancelled) return;
 
-        // 1. Dorixonalar faqat /api/pharmacies dan olinadi (1 ta ro'yxatdan o'tgan dorixona faqat 1 marta chiqadi)
+        // 1. Agro-do&apos;konlar faqat /api/pharmacies dan olinadi (1 ta ro'yxatdan o'tgan agro-do&apos;kon faqat 1 marta chiqadi)
         const mappedPharmacies: Place[] = pharmacies.map((p) => {
           const dist = typeof p.distanceKm === "number" && Number.isFinite(p.distanceKm)
             ? p.distanceKm
@@ -197,7 +197,7 @@ export default function MapClient() {
 
           return {
             ...p,
-            name: p.name || "Dorixona",
+            name: p.name || "Agro-do&apos;kon",
             phone: p.phone || "",
             address: p.address || "",
             distanceKm: dist,
@@ -272,7 +272,7 @@ export default function MapClient() {
         : places.filter(
             (p) =>
               p.kind === kind ||
-              // "Umumiy dorixona" ikkala filtrda (agro ham, vet ham) ko'rinadi.
+              // "Umumiy agro-do&apos;kon" ikkala filtrda (agro ham, vet ham) ko'rinadi.
               ((kind === "agro" || kind === "vet") && p.kind === "general"),
           ),
     [places, kind],
@@ -355,8 +355,8 @@ export default function MapClient() {
       items.forEach((p) => {
         if (typeof p.lat !== "number" || typeof p.lng !== "number") return;
         
-        // Sariq "bor" belgisi: eski dorixona omborida ham, dorixona egasi bot orqali
-        // qo'shgan va qidirilayotgan dorilarda ham ishlaydi.
+        // Sariq "bor" belgisi: eski agro-do&apos;kon omborida ham, agro-do&apos;kon egasi bot orqali
+        // qo'shgan va qidirilayotgan agro-mahsulotlarda ham ishlaydi.
         const hasWanted =
           meds.length > 0 &&
           (p.stock.some((s) => s.status === "bor") ||
@@ -495,9 +495,9 @@ export default function MapClient() {
         {/* Xaritadagi belgilar izohi — nima ko'rinayotganini tushuntiradi */}
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 px-1 text-[11.5px] font-bold text-[var(--brand-muted)]">
           {[
-            { c: "#028e11", l: "Agro dorixona", show: true },
-            { c: "#b45309", l: "Veterinariya dorixonasi", show: true },
-            { c: "#0d9488", l: "Umumiy dorixona", show: true },
+            { c: "#028e11", l: "Agro agro-do&apos;kon", show: true },
+            { c: "#b45309", l: "Veterinariya agro-do&apos;konsi", show: true },
+            { c: "#0d9488", l: "Umumiy agro-do&apos;kon", show: true },
             { c: "#2563eb", l: "Mutaxassis", show: true },
           ]
             .filter((x) => x.show)
@@ -674,13 +674,13 @@ export default function MapClient() {
                   )}
                   {p.stock.every((s) => s.status !== "bor") && (
                     <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-500">
-                      Izlangan dori yo'q
+                      Izlangan agro-mahsulot yo'q
                     </span>
                   )}
                 </div>
               )}
 
-              {/* Dorixona egasi bot orqali qo'shgan dorilar — rasmi bilan */}
+              {/* Agro-do&apos;kon egasi bot orqali qo'shgan agro-mahsulotlar — rasmi bilan */}
               {p.medicines.length > 0 && (
                 <div className="mt-2.5 flex gap-2 overflow-x-auto pb-1">
                   {p.medicines.slice(0, 8).map((m) => (
@@ -776,7 +776,7 @@ export default function MapClient() {
             </span>
             <p className="mt-3 text-[16px] font-black text-[var(--brand-ink)]">
               {meds.length > 0
-                ? `Bu dorilar ${radiusKm} km ichida topilmadi`
+                ? `Bu agro-mahsulotlar ${radiusKm} km ichida topilmadi`
                 : `${radiusKm} km ichida hozircha ma'lumot yo'q`}
             </p>
             <p className="mt-1.5 text-[13.5px] leading-relaxed text-[var(--brand-muted)]">

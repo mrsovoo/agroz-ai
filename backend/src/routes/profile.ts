@@ -6,7 +6,7 @@ import { cleanText } from "../lib/validate.js";
 
 const router = Router();
 
-import { getUserFromReq } from "../lib/user-auth.js";
+import { getUserFromReq, purgeUserAccount } from "../lib/user-auth.js";
 
 // GET /api/profile
 router.get("/", async (req, res) => {
@@ -41,12 +41,15 @@ router.post("/", async (req, res) => {
     const name = cleanText(body.name, 120);
     const region = cleanText(body.region, 120);
     const district = cleanText(body.district, 120);
+    const isWeatherPushEnabled = typeof body.isWeatherPushEnabled === "boolean" ? body.isWeatherPushEnabled : undefined;
+
 
     const updated = await db
       .update(users)
       .set({
         name: name ?? user.name,
         region: region ?? user.region,
+        isWeatherPushEnabled: isWeatherPushEnabled ?? user.isWeatherPushEnabled,
         district: district ?? user.district,
       })
       .where(eq(users.id, user.id))
@@ -66,11 +69,8 @@ router.delete("/", async (req, res) => {
       return res.status(401).json({ error: "Avval tizimga kiring" });
     }
 
-    // Barcha sessionlarni o'chirish
-    await db.delete(sessions).where(eq(sessions.userId, user.id)).catch(() => {});
-
-    // Foydalanuvchini o'chirish
-    await db.delete(users).where(eq(users.id, user.id)).catch(() => {});
+    // Foydalanuvchiga tegishli barcha ma'lumotlarni to'liq tozalash/anonimlashtirish
+    await purgeUserAccount(user.id);
 
     // Foydalanuvchining Telegram botiga bildirishnoma yuborish
     if (user.telegramId) {

@@ -13,7 +13,7 @@ import {
 
 const links = [
   { href: "/", label: "Asosiy" },
-  { href: "/dorilar", label: "Dorilar" },
+  { href: "/agro-mahsulotlar", label: "Agro-mahsulotlar" },
   { href: "/mutaxassislar", label: "Mutaxassislar" },
   { href: "/xarita", label: "Xarita" },
   { href: "/yangiliklar", label: "Maslahatlar" },

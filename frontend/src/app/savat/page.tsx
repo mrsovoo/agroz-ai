@@ -17,7 +17,7 @@ export default function SavatPage() {
       </div>
       <h1 className="text-[22px] font-black text-neutral-900">Savat bo&apos;limi</h1>
       <p className="text-[14px] text-neutral-500 mt-1 max-w-xs">
-        Savatingiz ochiq. Quyidagi tugma orqali dori vositalarini buyurtma qilishingiz mumkin.
+        Savatingiz ochiq. Quyidagi tugma orqali agro-mahsulotlarni buyurtma qilishingiz mumkin.
       </p>
       <div className="mt-5 flex gap-2">
         <button
@@ -30,7 +30,7 @@ export default function SavatPage() {
           href="/dorilar"
           className="rounded-2xl border border-neutral-200 bg-white px-5 py-2.5 text-[13.5px] font-bold text-neutral-700 hover:bg-neutral-50"
         >
-          Dorilar katalogi
+          Agro-mahsulotlar katalogi
         </Link>
       </div>
     </div>

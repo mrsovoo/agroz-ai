@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import AgrozLogo from "@/components/AgrozLogo";
 import NotificationBell from "@/components/NotificationBell";
 import WeatherCard from "@/components/WeatherCard";
@@ -56,6 +57,8 @@ export default function HomeClientView({
   const [medicines, setMedicines] = useState<HomeMedicine[]>(initialMedicines || []);
   const [specialist] = useState<HomeSpecialist | null>(initialSpecialist || null);
 
+  const router = useRouter();
+
   useEffect(() => {
     if (initialMedicines && initialMedicines.length > 0) {
       setMedicines([...initialMedicines].sort(() => Math.random() - 0.5));
@@ -99,7 +102,6 @@ export default function HomeClientView({
   }, [initialMedicines]);
 
   const [callModalOpen, setCallModalOpen] = useState(false);
-  const [comingSoonModal, setComingSoonModal] = useState<string | null>(null);
   const [quantities, setQuantities] = useState<Record<number, number>>({});
 
   useEffect(() => {
@@ -127,7 +129,7 @@ export default function HomeClientView({
     const cart = loadCart();
     const pharmacy: CartStorePharmacy = {
       id: med.pharmacyId || 1,
-      name: med.pharmacyName || "Agroz Dorixona",
+      name: med.pharmacyName || "Agroz Agro-do&apos;kon",
       phone: med.pharmacyPhone || "+998901234567",
       address: med.pharmacyAddress || "Toshkent",
     };
@@ -184,10 +186,10 @@ export default function HomeClientView({
         <WeatherCard />
       </div>
 
-      {/* 3. Dorilar bo'limi */}
+      {/* 3. Agro-mahsulotlar bo'limi */}
       <section className="mt-6">
         <div className="flex items-center justify-between mb-3 px-0.5">
-          <h2 className="text-[20px] font-black tracking-tight text-neutral-900">Dorilar</h2>
+          <h2 className="text-[20px] font-black tracking-tight text-neutral-900">Agro-mahsulotlar</h2>
           <Link
             href="/dorilar"
             className="text-[14px] font-bold text-[#039e1e] hover:underline active:opacity-80 transition inline-flex items-center gap-1"
@@ -198,10 +200,10 @@ export default function HomeClientView({
           </Link>
         </div>
 
-        {/* 2 yoki 4 ta dori kartalari (har kirishda random aylanadi) yoki bo'sh holat */}
+        {/* 2 yoki 4 ta agro-mahsulot kartalari (har kirishda random aylanadi) yoki bo'sh holat */}
         {medicines.length === 0 ? (
           <div className="rounded-2xl border border-neutral-100 bg-[#f8f9fa] p-6 text-center text-[13px] text-neutral-400">
-            Hozircha dorilar mavjud emas
+            Hozircha agro-mahsulotlar mavjud emas
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3.5">
@@ -222,7 +224,7 @@ export default function HomeClientView({
                 }}
                 pharmacy={{
                   id: med.pharmacyId || 1,
-                  name: med.pharmacyName || "Agroz Dorixona",
+                  name: med.pharmacyName || "Agroz Agro-do&apos;kon",
                   phone: med.pharmacyPhone || "",
                   address: med.pharmacyAddress || null,
                 }}
@@ -322,9 +324,6 @@ export default function HomeClientView({
               </div>
             </div>
 
-            <span className="rounded-full bg-[#6b7280] px-3 py-1 text-[11px] font-bold text-white shadow-2xs">
-              Tez orada (2.0 versiyada)
-            </span>
           </div>
 
           <div className="mt-3 grid grid-cols-2 gap-2.5">
@@ -332,7 +331,7 @@ export default function HomeClientView({
               type="button"
               onClick={() => {
                 haptic("light");
-                setComingSoonModal("Ekin tashxisi");
+                router.push("/tashxis/crop");
               }}
               className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-[13px] font-bold text-neutral-800 shadow-2xs transition active:scale-95 hover:bg-neutral-50"
             >
@@ -342,7 +341,7 @@ export default function HomeClientView({
               type="button"
               onClick={() => {
                 haptic("light");
-                setComingSoonModal("Chorva tashxisi");
+                router.push("/tashxis/animal");
               }}
               className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-[13px] font-bold text-neutral-800 shadow-2xs transition active:scale-95 hover:bg-neutral-50"
             >
@@ -352,53 +351,6 @@ export default function HomeClientView({
         </div>
       </section>
 
-      {/* AI Tashxis — Tez orada (2.0 versiyada) modali */}
-      {comingSoonModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs"
-          onClick={() => setComingSoonModal(null)}
-        >
-          <div
-            className="w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-[#039e1e]">
-              <Sparkles size={28} />
-            </div>
-            <span className="mt-3 inline-block rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-[#039e1e]">
-              Tez orada (2.0 versiyada)
-            </span>
-            <h3 className="mt-2.5 text-lg font-black text-neutral-900">
-              {comingSoonModal} — tez kunda!
-            </h3>
-            <p className="mt-1.5 text-xs leading-relaxed text-neutral-500">
-              AgrozGO 2.0 versiyasida ekin va chorva kasalliklarini rasm orqali aniqlash xizmati ishga tushadi. Hozircha dorilar va mutaxassislar xizmatidan foydalanishingiz mumkin.
-            </p>
-            <button
-              type="button"
-              onClick={() => setComingSoonModal(null)}
-              className="mt-5 flex min-h-[44px] w-full items-center justify-center rounded-xl bg-[#039e1e] px-4 py-2.5 text-sm font-bold text-white transition active:scale-95"
-            >
-              Tushunarli
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Mutaxassis chaqirish modali — faqat real mutaxassis bo'lsa */}
-      {specialist && (
-        <SpecialistCallModal
-          specialist={{
-            id: specialist.id,
-            name: specialist.name,
-            phone: specialist.phone,
-            specialty: specialist.specialty,
-          }}
-          isOpen={callModalOpen}
-          onClose={() => setCallModalOpen(false)}
-          onSuccess={() => setCallModalOpen(false)}
-        />
-      )}
     </div>
   );
 }

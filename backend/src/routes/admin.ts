@@ -18,6 +18,7 @@ import {
   broadcasts,
 } from "../db/schema.js";
 import { sql, eq, desc, asc, isNotNull, and, or, inArray } from "drizzle-orm";
+import { sendOrderStatusPush, sendSpecialistCallPush } from "../lib/push.js";
 import {
   adminEnabled,
   adminLogin,
@@ -1081,10 +1082,21 @@ router.post("/orders/:id/status", requireAdmin, async (req, res) => {
   try {
     const orderId = Number(req.params.id);
     const { status } = req.body || {};
-    if (!Number.isSafeInteger(orderId) || !["yangi", "tasdiqlandi", "yetkazildi", "bekor"].includes(status)) {
+    if (!Number.isSafeInteger(orderId) || !["yangi", "tasdiqlandi", "yolda", "yetkazildi", "bekor"].includes(status)) {
       return res.status(400).json({ error: "Holat noto'g'ri" });
     }
+    const [existingOrder] = await db
+      .select({ userId: orders.userId })
+      .from(orders)
+      .where(eq(orders.id, orderId))
+      .limit(1);
+
     await db.update(orders).set({ status }).where(eq(orders.id, orderId));
+
+    if (existingOrder?.userId) {
+      sendOrderStatusPush(existingOrder.userId, orderId, status).catch(() => {});
+    }
+
     res.json({ ok: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Server xatosi" });
@@ -1142,7 +1154,18 @@ router.post("/specialist-calls/:id/status", requireAdmin, async (req, res) => {
     if (!Number.isSafeInteger(callId) || !["yangi", "qabul_qilindi", "bajarildi", "bekor"].includes(status)) {
       return res.status(400).json({ error: "Holat noto'g'ri" });
     }
+    const [existingCall] = await db
+      .select({ customerPhone: specialistCalls.customerPhone })
+      .from(specialistCalls)
+      .where(eq(specialistCalls.id, callId))
+      .limit(1);
+
     await db.update(specialistCalls).set({ status, updatedAt: new Date() }).where(eq(specialistCalls.id, callId));
+
+    if (existingCall?.customerPhone) {
+      sendSpecialistCallPush(existingCall.customerPhone, callId, status).catch(() => {});
+    }
+
     res.json({ ok: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Server xatosi" });

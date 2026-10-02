@@ -19,7 +19,7 @@ export type CartStoreMedicine = {
 
 export type CartStorePharmacy = {
   id: number;
-  /** Dorixona nomi (organization yoki shaxsiy ism). */
+  /** Agro-do&apos;kon nomi (organization yoki shaxsiy ism). */
   name: string;
   phone: string;
   address?: string | null;
@@ -53,7 +53,7 @@ export function loadCart(): CartStoreState {
 
     const fallbackPharmacy: CartStorePharmacy = {
       id: Number(parsed.pharmacy?.id || 1),
-      name: String(parsed.pharmacy?.name ?? "Agro Dorixona").slice(0, 200),
+      name: String(parsed.pharmacy?.name ?? "Agro Agro-do&apos;kon").slice(0, 200),
       phone: String(parsed.pharmacy?.phone ?? "+998 90 123 45 67").slice(0, 32),
       address: parsed.pharmacy?.address ? String(parsed.pharmacy.address).slice(0, 300) : null,
     };
@@ -223,7 +223,7 @@ export function addItemToCart(
   if (current && current.pharmacy.id !== pharmacy.id) {
     if (
       !confirm(
-        `Savatda boshqa dorixona (${current.pharmacy.name}) dorilari bor. Yangi dorixona dorilari savatni almashtiradi. Davom etamizmi?`,
+        `Savatda boshqa agro-do&apos;kon (${current.pharmacy.name}) agro-mahsulotlari bor. Yangi agro-do&apos;kon agro-mahsulotlari savatni almashtiradi. Davom etamizmi?`,
       )
     ) {
       return false;

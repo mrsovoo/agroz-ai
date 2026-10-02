@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
-import { otpCodes, sessions, users } from "../db/schema.js";
+import { otpCodes, sessions, users, orders, orderItems, specialists } from "../db/schema.js";
 import { and, eq, lt, or, sql } from "drizzle-orm";
 import { randomBytes, randomInt } from "node:crypto";
 import { normalizePhone } from "../lib/validate.js";
@@ -18,11 +18,22 @@ import { verifyInitData } from "../lib/tg-auth.js";
 import { BOT_OTP_TTL_MINUTES, OTP_LENGTH, OTP_TTL_MINUTES } from "../lib/constants.js";
 import { telegramBotToken } from "../lib/settings.js";
 import { rateLimit, RATE_LIMITS } from "../lib/rate-limit.js";
+import { purgeUserAccount } from "../lib/user-auth.js";
 
 const router = Router();
 
+function getDemoConfig(): { phone: string; otp: string } | null {
+  const p = process.env.DEMO_PHONE ? normalizePhone(process.env.DEMO_PHONE) : null;
+  const o = process.env.DEMO_OTP ? process.env.DEMO_OTP.trim() : null;
+  if (p && o) {
+    return { phone: p, otp: o };
+  }
+  return null;
+}
+
 function devOtpEnabled(): boolean {
-  return process.env.NODE_ENV !== "production" || process.env.OTP_DEV_MODE === "true";
+  if (process.env.NODE_ENV === "production") return false;
+  return process.env.OTP_DEV_MODE === "true";
 }
 
 async function telegramIdFromInitData(initData: unknown): Promise<number | null> {
@@ -55,7 +66,9 @@ async function findUserByTelegramId(fromId: number): Promise<typeof users.$infer
 }
 
 // POST /api/auth/request-code
-router.post("/request-code", async (req, res) => {
+import { reqCodeIpLimiter, reqCodePhoneLimiter, verifyCodeLimiter } from "./auth-rate-limits.js";
+
+router.post("/request-code", reqCodeIpLimiter, reqCodePhoneLimiter, async (req, res) => {
   try {
     const body = req.body || {};
     const phone = normalizePhone(body.phone ?? "");
@@ -70,6 +83,12 @@ router.post("/request-code", async (req, res) => {
         error: "Juda ko'p so'rov. Biroz kuting.",
         retryAfterMs: rl.resetMs - Date.now(),
       });
+    }
+
+    // Do'kon tekshiruvchisi (App Store / Google Play reviewer) uchun maxsus demo raqam
+    const demo = getDemoConfig();
+    if (demo && phone === demo.phone) {
+      return res.json({ ok: true, method: "demo" });
     }
 
     const min = 10 ** (OTP_LENGTH - 1);
@@ -135,7 +154,7 @@ router.post("/request-code", async (req, res) => {
 });
 
 // POST /api/auth/verify
-router.post("/verify", async (req, res) => {
+router.post("/verify", verifyCodeLimiter, async (req, res) => {
   try {
     const body = req.body || {};
     const phone = normalizePhone(body.phone ?? "");
@@ -154,18 +173,23 @@ router.post("/verify", async (req, res) => {
       });
     }
 
-    const rows = await db
-      .select()
-      .from(otpCodes)
-      .where(and(eq(otpCodes.phone, phone), eq(otpCodes.used, false)))
-      .orderBy(otpCodes.id);
+    const demo = getDemoConfig();
+    const isDemo = Boolean(demo && phone === demo.phone && code === demo.otp);
 
-    const match = rows.reverse().find((r) => r.code === code && r.expiresAt > new Date());
-    if (!match) {
-      return res.status(400).json({ error: "Kod noto'g'ri yoki muddati o'tgan" });
+    if (!isDemo) {
+      const rows = await db
+        .select()
+        .from(otpCodes)
+        .where(and(eq(otpCodes.phone, phone), eq(otpCodes.used, false)))
+        .orderBy(otpCodes.id);
+
+      const match = rows.reverse().find((r) => r.code === code && r.expiresAt > new Date());
+      if (!match) {
+        return res.status(400).json({ error: "Kod noto'g'ri yoki muddati o'tgan" });
+      }
+
+      await db.update(otpCodes).set({ used: true }).where(eq(otpCodes.id, match.id));
     }
-
-    await db.update(otpCodes).set({ used: true }).where(eq(otpCodes.id, match.id));
 
     let user = (await db.select().from(users).where(eq(users.phone, phone)).limit(1))[0];
     if (!user) {
@@ -173,11 +197,60 @@ router.post("/verify", async (req, res) => {
         .insert(users)
         .values({
           phone,
-          name: body.name || null,
-          region: body.region || null,
+          name: isDemo ? "Do'kon Sinovchisi (Reviewer)" : body.name || null,
+          region: body.region || (isDemo ? "Toshkent shahri" : null),
         })
         .returning();
       user = created[0];
+    }
+
+    // Do'kon tekshiruvchisiga sinov buyurtmasi biriktirilganini ta'minlash
+    if (isDemo && user) {
+      try {
+        const existingOrders = await db.select({ id: orders.id }).from(orders).where(eq(orders.userId, user.id)).limit(1);
+        if (existingOrders.length === 0) {
+          const ph = (await db.select({ id: specialists.id }).from(specialists).limit(1))[0];
+          const pharmacyId = ph?.id || 1;
+          const [demoOrder] = await db
+            .insert(orders)
+            .values({
+              userId: user.id,
+              pharmacySpecialistId: pharmacyId,
+              customerName: user.name || "Do'kon Sinovchisi",
+              customerPhone: user.phone || phone,
+              deliveryType: "pickup",
+              customerAddress: "Toshkent shahri, Yunusobod tumani, 4-mavze",
+              totalSum: 145000,
+              status: "tasdiqlandi",
+              note: "Do'kon tekshiruvi uchun namuna buyurtma",
+            })
+            .returning();
+
+          if (demoOrder) {
+            await db
+              .insert(orderItems)
+              .values([
+                {
+                  orderId: demoOrder.id,
+                  medicineId: 1,
+                  name: "Topaz 100 EC (agro vosita)",
+                  price: 65000,
+                  qty: 1,
+                },
+                {
+                  orderId: demoOrder.id,
+                  medicineId: 2,
+                  name: "Fitosporin-M biohimoya",
+                  price: 80000,
+                  qty: 1,
+                },
+              ])
+              .catch(() => {});
+          }
+        }
+      } catch (seedErr) {
+        console.warn("[verify:demo] Could not seed sample reviewer order:", seedErr);
+      }
     }
 
     const sessionId = randomBytes(32).toString("hex");
@@ -520,6 +593,45 @@ router.post("/logout", async (req, res) => {
     res.clearCookie("agroai_session", { path: "/" });
     res.clearCookie("agroz_session", { path: "/" });
     res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
+
+// DELETE /api/auth/delete-account — Apple App Store talabi bo'yicha hisobni to'liq o'chirish
+router.all(["/delete-account", "/account/delete"], async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const cookieHeader = req.headers.cookie || "";
+    const cookieSession = cookieHeader
+      .split(";")
+      .find((c: string) => c.trim().startsWith("agroai_session=") || c.trim().startsWith("agroz_session="))
+      ?.split("=")[1];
+
+    const sessionId =
+      (req as any).cookies?.["agroai_session"] ||
+      (req as any).cookies?.["agroz_session"] ||
+      authHeader?.replace("Bearer ", "") ||
+      req.headers["x-session-id"] ||
+      cookieSession;
+
+    if (!sessionId || typeof sessionId !== "string") {
+      return res.status(401).json({ error: "Avval tizimga kiring" });
+    }
+
+    const [session] = await db
+      .select({ userId: sessions.userId })
+      .from(sessions)
+      .where(eq(sessions.id, sessionId))
+      .limit(1);
+
+    if (session?.userId) {
+      await purgeUserAccount(session.userId);
+    }
+
+    res.clearCookie("agroai_session", { path: "/" });
+    res.clearCookie("agroz_session", { path: "/" });
+    res.json({ ok: true, message: "Hisob muvaffaqiyatli o'chirildi" });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Server xatosi" });
   }

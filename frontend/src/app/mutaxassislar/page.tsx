@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Mutaxassislar",
   description:
-    "AgrozGO orqali ro'yxatdan o'tgan mutaxassislar va dorixona egalari — 5 km radius ichida.",
+    "AgrozGO orqali ro'yxatdan o'tgan mutaxassislar va agro-do&apos;kon egalari — 5 km radius ichida.",
 };
 
 export default async function SpecialistsPage({

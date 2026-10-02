@@ -11,10 +11,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const medicine = await getMedicineDetail(Number(id)).catch(() => null);
   if (!medicine) return { title: "Mahsulot topilmadi" };
   return {
-    title: `${medicine.name} — Dorilar`,
+    title: `${medicine.name} — Agro-mahsulotlar`,
     description:
       medicine.usage ??
-      `${medicine.name} — ${medicine.pharmacyName} dorixonasida. AgrozGO orqali buyurtma bering.`,
+      `${medicine.name} — ${medicine.pharmacyName} agro-do&apos;konsida. AgrozGO orqali buyurtma bering.`,
   };
 }
 

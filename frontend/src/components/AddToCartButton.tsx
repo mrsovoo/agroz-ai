@@ -3,7 +3,7 @@
 /**
  * Bosh sahifa kartochkasidagi «Savatga» tugmasi — umumiy localStorage
  * savatiga yozadi (Agro Bozor bilan bir xil savat, event orqali sinxron).
- * Boshqa dorixona dorilari savatda bo'lsa tasdiqlash so'raydi.
+ * Boshqa agro-do&apos;kon agro-mahsulotlari savatda bo'lsa tasdiqlash so'raydi.
  */
 
 import { useEffect, useState } from "react";
@@ -48,7 +48,7 @@ export default function AddToCartButton({
     const cart = loadCart();
     if (cart && cart.pharmacy.id !== pharmacy.id) {
       if (
-        !confirm(`Savatda boshqa dorixona (${cart.pharmacy.name}) dorilari bor. Yangi dorixona dorilari savatni almashtiradi. Davom etamizmi?`)
+        !confirm(`Savatda boshqa agro-do&apos;kon (${cart.pharmacy.name}) agro-mahsulotlari bor. Yangi agro-do&apos;kon agro-mahsulotlari savatni almashtiradi. Davom etamizmi?`)
       ) {
         return;
       }

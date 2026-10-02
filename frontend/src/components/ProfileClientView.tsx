@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronRight, LogOut, Check } from "lucide-react";
+import { ChevronRight, LogOut, Check, Trash2, Shield, FileText } from "lucide-react";
 import OrderTrackingStatusCard from "@/components/OrderTrackingStatusCard";
 import SupportTicketsPanel from "@/components/SupportTicketsPanel";
 import { AddToHomeScreenButton } from "@/components/HomeScreenPromptBanner";
@@ -11,6 +11,7 @@ import { getTelegramUser } from "@/lib/telegram";
 import { apiUrl, apiFetch } from "@/lib/api-config";
 import { loadLastOrder } from "@/lib/cart-store";
 import { getSpecialistCalls } from "@/lib/specialist-calls";
+import { unregisterPushTokenOnBackend } from "@/lib/capacitor";
 
 type UserProfile = {
   id?: number;
@@ -31,6 +32,8 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
   const [expandedCallId, setExpandedCallId] = useState<string | number | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   // Profil va real aktivliklarni (buyurtmalar, chaqiruvlar) yuklash
   useEffect(() => {
@@ -125,17 +128,47 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
   const handleConfirmLogout = async () => {
     setIsLoggingOut(true);
     try {
-      await apiFetch("/api/profile", {
-        method: "DELETE",
+      await unregisterPushTokenOnBackend().catch(() => {});
+      await apiFetch("/api/auth/logout", {
+        method: "POST",
       });
     } catch {}
 
     try {
-      // 1. Mahalliy barcha saqlangan ma'lumotlar va amallarni to'liq tozalash
+      localStorage.removeItem("agroz_session");
+      localStorage.removeItem("agroz_user");
+      sessionStorage.clear();
+      if (typeof document !== "undefined") {
+        document.cookie = "agroai_session=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;";
+        document.cookie = "agroz_session=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;";
+      }
+    } catch {}
+
+    try {
+      const tg = (window as any).Telegram?.WebApp;
+      if (tg && typeof tg.close === "function") {
+        tg.close();
+      }
+    } catch {}
+
+    window.location.href = "/kirish";
+  };
+
+  const handleConfirmDeleteAccount = async () => {
+    setIsDeletingAccount(true);
+    try {
+      await unregisterPushTokenOnBackend().catch(() => {});
+      await apiFetch("/api/profile", {
+        method: "DELETE",
+      });
+      await apiFetch("/api/auth/delete-account", {
+        method: "DELETE",
+      }).catch(() => {});
+    } catch {}
+
+    try {
       localStorage.clear();
       sessionStorage.clear();
-
-      // 2. Cookie fayllarini tozalash
       if (typeof document !== "undefined") {
         const cookies = document.cookie.split(";");
         for (const cookie of cookies) {
@@ -146,7 +179,6 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
       }
     } catch {}
 
-    // 3. Telegram Mini App oynasini darhol yopish
     try {
       const tg = (window as any).Telegram?.WebApp;
       if (tg && typeof tg.close === "function") {
@@ -154,8 +186,7 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
       }
     } catch {}
 
-    // 4. Ilovani bosh holatga to'liq yangilab ochish
-    window.location.href = "/";
+    window.location.href = "/kirish";
   };
 
   return (
@@ -408,22 +439,65 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
       {/* 5. Yordam / Bog'lanish (Support Tickets) bo'limi */}
       <SupportTicketsPanel />
 
-      {/* 6. Pastki qo'shimcha amallar (Chiqish) */}
-      <div className="mt-9 pt-4 border-t border-neutral-200/80 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => setShowLogoutConfirm(true)}
-          className="flex items-center gap-2 text-[14px] font-medium text-neutral-500 hover:text-red-500 transition"
-        >
-          <LogOut size={16} />
-          <span>Tizimdan chiqish</span>
-        </button>
-        <Link
-          href="/dorilar"
-          className="text-[13px] font-semibold text-[#039e1e] hover:underline"
-        >
-          Dorilar katalogi &rarr;
-        </Link>
+      {/* 6. Huquqiy ma'lumotlar va maxfiylik (Apple / Google talabi) */}
+      <div className="mt-8 pt-4 border-t border-neutral-200/80">
+        <h4 className="text-[12px] font-semibold text-neutral-400 uppercase tracking-wider mb-2.5">
+          Qoidalar va Maxfiylik
+        </h4>
+        <div className="bg-white rounded-2xl border border-neutral-200/70 overflow-hidden divide-y divide-neutral-100">
+          <Link
+            href="/maxfiylik"
+            className="flex items-center justify-between p-3.5 hover:bg-neutral-50 transition text-neutral-700"
+          >
+            <div className="flex items-center gap-3">
+              <Shield size={18} className="text-emerald-600" />
+              <span className="text-[14px] font-medium">Maxfiylik siyosati</span>
+            </div>
+            <ChevronRight size={16} className="text-neutral-400" />
+          </Link>
+          <Link
+            href="/shartlar"
+            className="flex items-center justify-between p-3.5 hover:bg-neutral-50 transition text-neutral-700"
+          >
+            <div className="flex items-center gap-3">
+              <FileText size={18} className="text-emerald-600" />
+              <span className="text-[14px] font-medium">Foydalanish shartlari</span>
+            </div>
+            <ChevronRight size={16} className="text-neutral-400" />
+          </Link>
+        </div>
+      </div>
+
+      {/* 7. Profil amallari: Chiqish va Hisobni o'chirish */}
+      <div className="mt-6 pt-4 border-t border-neutral-200/80 flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => setShowLogoutConfirm(true)}
+            className="flex items-center gap-2 text-[14px] font-medium text-neutral-600 hover:text-neutral-900 transition"
+          >
+            <LogOut size={16} />
+            <span>Tizimdan chiqish</span>
+          </button>
+          <Link
+            href="/dorilar"
+            className="text-[13px] font-semibold text-[#039e1e] hover:underline"
+          >
+            Agro-mahsulotlar katalogi &rarr;
+          </Link>
+        </div>
+
+        {/* Apple App Store majburiy talabi: Hisobni o'chirish (Delete Account) */}
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={() => setShowDeleteConfirm(true)}
+            className="flex items-center gap-2 text-[13.5px] font-medium text-red-600 hover:text-red-700 hover:bg-red-50/70 px-2.5 py-1.5 rounded-lg -ml-2.5 transition"
+          >
+            <Trash2 size={15} />
+            <span>Hisobni butunlay o&apos;chirish</span>
+          </button>
+        </div>
       </div>
 
       {/* Tizimdan chiqishni tasdiqlash modali */}
@@ -436,7 +510,7 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
             className="w-full max-w-[380px] rounded-[24px] bg-white p-6 shadow-xl border border-neutral-100 text-center animate-in zoom-in-95 duration-150"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-100 text-red-600 mb-4">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 mb-4">
               <LogOut size={26} className="stroke-[2.2]" />
             </div>
 
@@ -445,7 +519,7 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
             </h3>
 
             <p className="mt-2 text-[14px] text-neutral-500 leading-relaxed">
-              Profildan chiqish bo&apos;ladi va barcha mahalliy ma&apos;lumotlar hamda amallar o&apos;chiriladi. Shuni tasdiqlaysizmi?
+              Profildan chiqiladi va keyingi safar qayta tizimga kirishingiz kerak bo&apos;ladi.
             </p>
 
             <div className="mt-6 grid grid-cols-2 gap-3">
@@ -461,9 +535,53 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
                 type="button"
                 disabled={isLoggingOut}
                 onClick={handleConfirmLogout}
-                className="rounded-xl bg-red-600 py-3 text-[14.5px] font-bold text-white hover:bg-red-700 active:scale-95 transition shadow-xs disabled:opacity-50"
+                className="rounded-xl bg-neutral-800 py-3 text-[14.5px] font-bold text-white hover:bg-neutral-900 active:scale-95 transition shadow-xs disabled:opacity-50"
               >
                 {isLoggingOut ? "Chiqilmoqda..." : "Ha, chiqish"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hisobni butunlay o'chirish (Account Deletion) modali - Apple App Store Guideline 5.1.1 */}
+      {showDeleteConfirm && (
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={() => !isDeletingAccount && setShowDeleteConfirm(false)}
+        >
+          <div
+            className="w-full max-w-[380px] rounded-[24px] bg-white p-6 shadow-xl border border-red-100 text-center animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-100 text-red-600 mb-4">
+              <Trash2 size={26} className="stroke-[2.2]" />
+            </div>
+
+            <h3 className="text-[19px] font-bold text-neutral-900 tracking-tight">
+              Hisobni o&apos;chirishni tasdiqlaysizmi?
+            </h3>
+
+            <p className="mt-2 text-[13.5px] text-neutral-600 leading-relaxed text-left bg-red-50/60 p-3 rounded-xl border border-red-100">
+              ⚠️ <b>Diqqat:</b> Hisobingiz o&apos;chirilganda buyurtmalar tarixi, qishloq xo&apos;jalik tahlillari va barcha shaxsiy ma&apos;lumotlaringiz tizimdan butunlay o&apos;chiriladi. Bu amalni ortga qaytarib bo&apos;lmaydi.
+            </p>
+
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                disabled={isDeletingAccount}
+                onClick={() => setShowDeleteConfirm(false)}
+                className="rounded-xl border border-neutral-300 py-3 text-[14.5px] font-bold text-neutral-700 hover:bg-neutral-100 active:scale-95 transition disabled:opacity-50"
+              >
+                Bekor qilish
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingAccount}
+                onClick={handleConfirmDeleteAccount}
+                className="rounded-xl bg-red-600 py-3 text-[14.5px] font-bold text-white hover:bg-red-700 active:scale-95 transition shadow-xs disabled:opacity-50"
+              >
+                {isDeletingAccount ? "O'chirilmoqda..." : "Ha, o'chirish"}
               </button>
             </div>
           </div>

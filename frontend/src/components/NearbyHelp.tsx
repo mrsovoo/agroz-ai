@@ -64,7 +64,7 @@ type Specialist = {
   medicines: Medicine[];
 };
 
-/** Dorixona kartasi — bot orqali ro'yxatdan o'tgan va eski (seed) dorixonalar uchun umumiy. */
+/** Agro-do&apos;kon kartasi — bot orqali ro'yxatdan o'tgan va eski (seed) agro-do&apos;konlar uchun umumiy. */
 type PharmacyEntry = {
   key: string;
   name: string;
@@ -130,7 +130,7 @@ export default function NearbyHelp({
     let cancelled = false;
     setLoading(true);
 
-    // Tashxis bo'yicha tavsiya etilgan dorilar — dorixonalar shu dorilar bilan qidiriladi.
+    // Tashxis bo'yicha tavsiya etilgan agro-mahsulotlar — agro-do&apos;konlar shu agro-mahsulotlar bilan qidiriladi.
     const p = new URLSearchParams({ lat: String(coords.lat), lng: String(coords.lng), kind });
     medicines.forEach((m) => p.append("med", m));
     const s = new URLSearchParams({ lat: String(coords.lat), lng: String(coords.lng) });
@@ -141,7 +141,7 @@ export default function NearbyHelp({
         .then((r) => r.json())
         .then((d: { items?: Pharmacy[] }) => (Array.isArray(d?.items) ? d.items : []))
         .catch(() => [] as Pharmacy[]),
-      // Bot orqali ro'yxatdan o'tgan mutaxassis va dorixona egalari (dorilari bilan).
+      // Bot orqali ro'yxatdan o'tgan mutaxassis va agro-do&apos;kon egalari (agro-mahsulotlari bilan).
       fetch(`/api/specialists?${s.toString()}`)
         .then((r) => r.json())
         .then((d: { items?: Specialist[] }) => (Array.isArray(d?.items) ? d.items : []))
@@ -162,7 +162,7 @@ export default function NearbyHelp({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [coords, kind, medsKey]);
 
-  // Ro'yxatdan o'tgan dorixona egalari + eski dorixonalar — bitta ro'yxatda.
+  // Ro'yxatdan o'tgan agro-do&apos;kon egalari + eski agro-do&apos;konlar — bitta ro'yxatda.
   const pharmacyEntries: PharmacyEntry[] = useMemo(() => {
     const registered = specialists
       .filter((s) => s.role === "pharmacy")
@@ -207,7 +207,7 @@ export default function NearbyHelp({
   }, [specialists, pharmacies]);
 
   const topPharmacies = pharmacyEntries.slice(0, 4);
-  // Mutaxassislar ro'yxati — dorixona egalarisiz; masofadan ham ko'rinadi (locked).
+  // Mutaxassislar ro'yxati — agro-do&apos;kon egalarisiz; masofadan ham ko'rinadi (locked).
   const topSpecialists = specialists.filter((s) => s.role !== "pharmacy").slice(0, 4);
 
   const anyMedicineAvailable = pharmacyEntries.some(
@@ -216,8 +216,8 @@ export default function NearbyHelp({
   );
   const lowConfidence = confidence !== null && confidence < CONFIDENCE_THRESHOLD;
 
-  // Mutaxassis qachon kerak: AI ishonchi past, holat jiddiy, dorixona topilmadi
-  // yoki tavsiya etilgan dorilarning birortasi ham yaqin atrofda yo'q.
+  // Mutaxassis qachon kerak: AI ishonchi past, holat jiddiy, agro-do&apos;kon topilmadi
+  // yoki tavsiya etilgan agro-mahsulotlarning birortasi ham yaqin atrofda yo'q.
   const needsSpecialist =
     lowConfidence ||
     severity === "yuqori" ||
@@ -267,16 +267,16 @@ export default function NearbyHelp({
         </div>
       )}
 
-      {/* Tavsiya etilgan dorilar (tashxis natijasidan) — dori bor dorixonalar oldinda */}
+      {/* Tavsiya etilgan agro-mahsulotlar (tashxis natijasidan) — agro-mahsulot bor agro-do&apos;konlar oldinda */}
       {medicines.length > 0 && (
         <p className="ios-section-title mt-5 flex items-center gap-1.5">
-          <Pill size={14} /> Tavsiya etilgan dorilar: {medicines.join(", ")}
+          <Pill size={14} /> Tavsiya etilgan agro-mahsulotlar: {medicines.join(", ")}
         </p>
       )}
 
-      {/* Yaqin dorixonalar */}
+      {/* Yaqin agro-do&apos;konlar */}
       <p className="ios-section-title mt-3 flex items-center gap-1.5">
-        <MapPin size={14} /> Dorixonalar ({topPharmacies.length > 0 ? "yaqin atrof" : "5 km"})
+        <MapPin size={14} /> Agro-do&apos;konlar ({topPharmacies.length > 0 ? "yaqin atrof" : "5 km"})
       </p>
       <section className="ios-card">
         {loading ? (
@@ -286,10 +286,10 @@ export default function NearbyHelp({
         ) : topPharmacies.length === 0 ? (
           <div className="p-4">
             <p className="text-[14px] font-bold text-[var(--brand-ink)]">
-              Hozircha ro&apos;yxatdan o&apos;tgan dorixona yo&apos;q
+              Hozircha ro&apos;yxatdan o&apos;tgan agro-do&apos;kon yo&apos;q
             </p>
             <p className="mt-1 text-[13px] leading-relaxed text-[var(--brand-muted)]">
-              Ushbu hududda hozircha ro&apos;yxatdan o&apos;tgan dorixonalar mavjud emas.
+              Ushbu hududda hozircha ro&apos;yxatdan o&apos;tgan agro-do&apos;konlar mavjud emas.
             </p>
           </div>
         ) : (
@@ -338,7 +338,7 @@ export default function NearbyHelp({
                   </div>
                 </div>
 
-                {/* Bot orqali qo'shilgan dorilar — rasmi bilan */}
+                {/* Bot orqali qo'shilgan agro-mahsulotlar — rasmi bilan */}
                 {p.medicines.length > 0 && (
                   <div className="mt-2.5 flex gap-2 overflow-x-auto pb-1">
                     {p.medicines.slice(0, 6).map((m) => (
@@ -444,7 +444,7 @@ export default function NearbyHelp({
               <span>
                 {lowConfidence
                   ? `AI ishonchi ${confidence}% — 80% dan past. Aniq tashxis uchun mutaxassisga murojaat qiling.`
-                  : "Holat jiddiy yoki kerakli dori yaqin atrofda topilmadi — mutaxassisga murojaat qilishni tavsiya qilamiz."}
+                  : "Holat jiddiy yoki kerakli agro-mahsulot yaqin atrofda topilmadi — mutaxassisga murojaat qilishni tavsiya qilamiz."}
               </span>
             </p>
           )}

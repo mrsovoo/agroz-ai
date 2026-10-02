@@ -47,9 +47,9 @@ export function weatherLevel({ temp, wind, rain, humidity }: WeatherInput): Weat
 
 /** Bitta qatorlik qisqa maslahat (ob-havo kartochkasida ko'rinadi). */
 export function shortAdvice({ temp, wind, rain, humidity }: WeatherInput): string {
-  if (wind >= 8) return "Bugun dori sepmang — kuchli shamol, preparatlar havoga uchib ketadi.";
+  if (wind >= 8) return "Bugun agro-mahsulot sepmang — kuchli shamol, preparatlar havoga uchib ketadi.";
   if (rain > 0.3) return "Yomg'ir bor — purkash samarasiz, yomg'irdan keyin 1 kun kuting.";
-  if (wind >= 5) return "O'rtacha shabada — dori sepishda shamol yo'nalishiga va tomchilashiga e'tibor bering.";
+  if (wind >= 5) return "O'rtacha shabada — agro-mahsulot sepishda shamol yo'nalishiga va tomchilashiga e'tibor bering.";
   if (temp >= 35)
     return "Jazirama issiq — hayvonlarga soya va toza suv bering, purkashni kechqurun qiling.";
   if (temp <= 3) return "Sovuq — ekinlarni sovuqdan himoya qiling, molxonani isiting.";
@@ -153,7 +153,7 @@ export function locationAdvice(w: WeatherInput): AdviceItem[] {
       id: "wind",
       scope: "both",
       title: "Shamol kuchli",
-      body: "Purkashni kechiktiring — shamol 5 m/s dan oshsa dori yerga tushadi va zararli bo'ladi.",
+      body: "Purkashni kechiktiring — shamol 5 m/s dan oshsa agro-mahsulot yerga tushadi va zararli bo'ladi.",
     });
   }
   if (w.rain > 0.3) {

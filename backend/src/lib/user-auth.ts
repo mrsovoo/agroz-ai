@@ -1,5 +1,15 @@
 import { db } from "../db/index.js";
-import { sessions, users } from "../db/schema.js";
+import {
+  sessions,
+  users,
+  pushTokens,
+  diagnoses,
+  notificationReads,
+  supportTickets,
+  supportMessages,
+  specialistCalls,
+  orders,
+} from "../db/schema.js";
 import { eq, sql } from "drizzle-orm";
 
 /**
@@ -74,4 +84,61 @@ export async function getUserFromReq(req: any): Promise<typeof users.$inferSelec
   }
 
   return null;
+}
+
+/**
+ * Apple App Store (Guideline 5.1.1(v)) va Google Play talablari bo'yicha
+ * foydalanuvchiga tegishli barcha ma'lumotlarni to'liq tozalash va anonimlashtirish.
+ */
+export async function purgeUserAccount(userId: number): Promise<void> {
+  try {
+    // 1. Push bildirishnoma tokenlari
+    await db.delete(pushTokens).where(eq(pushTokens.userId, userId)).catch(() => {});
+
+    // 2. AI tashxis tarixi
+    await db.delete(diagnoses).where(eq(diagnoses.userId, userId)).catch(() => {});
+
+    // 3. Bildirishnomalar o'qilganlik holatlari
+    await db.delete(notificationReads).where(eq(notificationReads.userId, userId)).catch(() => {});
+
+    // 4. Qo'llab-quvvatlash ticketlari va xabarlari
+    const userTickets = await db
+      .select({ id: supportTickets.id })
+      .from(supportTickets)
+      .where(eq(supportTickets.userId, userId))
+      .catch(() => []);
+    for (const t of userTickets) {
+      await db.delete(supportMessages).where(eq(supportMessages.ticketId, t.id)).catch(() => {});
+    }
+    await db.delete(supportTickets).where(eq(supportTickets.userId, userId)).catch(() => {});
+
+    // 5. Mutaxassis chaqiruvlari (foydalanuvchi telefoni orqali bog'langan bo'lsa)
+    const [u] = await db.select({ phone: users.phone }).from(users).where(eq(users.id, userId)).limit(1);
+    if (u?.phone) {
+      await db.delete(specialistCalls).where(eq(specialistCalls.customerPhone, u.phone)).catch(() => {});
+    }
+
+    // 6. Buyurtmalar: Qonuniy hisob-kitob/buxgalteriya audit talablari sababli tranzaksiya
+    // kvitansiyasi saqlanadi, biroq foydalanuvchining shaxsiy ma'lumotlari butunlay anonimlashtiriladi.
+    await db
+      .update(orders)
+      .set({
+        userId: null,
+        customerName: "O'chirilgan hisob",
+        customerPhone: "000000000",
+        customerAddress: null,
+        note: null,
+      })
+      .where(eq(orders.userId, userId))
+      .catch(() => {});
+
+    // 7. Barcha aktiv sessiyalar
+    await db.delete(sessions).where(eq(sessions.userId, userId)).catch(() => {});
+
+    // 8. Foydalanuvchi hisobining o'zi
+    await db.delete(users).where(eq(users.id, userId)).catch(() => {});
+  } catch (err) {
+    console.error(`[purgeUserAccount] Error deleting user #${userId}:`, err);
+    throw err;
+  }
 }

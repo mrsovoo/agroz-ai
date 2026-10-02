@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Xarita",
   description:
-    "GPS bo'yicha eng yaqin agro va veterinariya dorixonalari hamda mutaxassislar — 5 km radius.",
+    "GPS bo'yicha eng yaqin agro va veterinariya agro-do&apos;konlari hamda mutaxassislar — 5 km radius.",
 };
 
 export default function MapPage() {

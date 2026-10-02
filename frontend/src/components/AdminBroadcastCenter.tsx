@@ -182,7 +182,7 @@ export default function AdminBroadcastCenter() {
 
   const audienceLabel =
     targetAudience === "pharmacies"
-      ? "Dorixona egalari"
+      ? "Agro-do&apos;kon egalari"
       : targetAudience === "specialists"
       ? "Mutaxassislar (Agronom & Veterinar)"
       : targetAudience === "users"
@@ -234,7 +234,7 @@ export default function AdminBroadcastCenter() {
                   Telegram Xabarlar Markazi
                 </h2>
                 <p className="mt-1 text-xs text-slate-500">
-                  Dorixona egalari, mutaxassislar yoki oddiy foydalanuvchilarga bot orqali rasmiy xabar yuborish
+                  Agro-do&apos;kon egalari, mutaxassislar yoki oddiy foydalanuvchilarga bot orqali rasmiy xabar yuborish
                 </p>
               </div>
 
@@ -256,7 +256,7 @@ export default function AdminBroadcastCenter() {
               </label>
 
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {/* Dorixonalar */}
+                {/* Agro-do&apos;konlar */}
                 <button
                   type="button"
                   onClick={() => setTargetAudience("pharmacies")}
@@ -280,7 +280,7 @@ export default function AdminBroadcastCenter() {
                       {counts.pharmacies} ta
                     </span>
                   </div>
-                  <span className="text-xs font-bold text-slate-900">Dorixona egalari</span>
+                  <span className="text-xs font-bold text-slate-900">Agro-do&apos;kon egalari</span>
                   <span className="text-[10px] text-slate-500 mt-0.5">@agroz_auth_bot</span>
                 </button>
 
@@ -414,7 +414,7 @@ export default function AdminBroadcastCenter() {
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Masalan: Hurmatli dorixona egalari diqqatiga!"
+                  placeholder="Masalan: Hurmatli agro-do&apos;kon egalari diqqatiga!"
                   className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                 />
               </div>

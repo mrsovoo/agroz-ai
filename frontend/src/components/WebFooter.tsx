@@ -5,7 +5,7 @@ const columns = [
   {
     title: "Xizmatlar",
     links: [
-      { href: "/dorilar", label: "Dorilar" },
+      { href: "/agro-mahsulotlar", label: "Agro-mahsulotlar" },
       { href: "/xarita", label: "Xarita" },
       { href: "/mutaxassislar", label: "Mutaxassislar" },
       { href: "/yangiliklar", label: "Maslahatlar" },
@@ -17,6 +17,13 @@ const columns = [
       { href: "/profil", label: "Profil va tarix" },
       { href: "/kirish", label: "Kirish" },
       { href: "/api/health", label: "Tizim holati" },
+    ],
+  },
+  {
+    title: "Qoidalar",
+    links: [
+      { href: "/maxfiylik", label: "Maxfiylik siyosati" },
+      { href: "/shartlar", label: "Foydalanish shartlari" },
     ],
   },
 ];
@@ -34,7 +41,7 @@ export default function WebFooter() {
           <div>
             <strong>AgrozGO</strong>
             <p>
-              Ekin va chorva dori vositalari platformasi, yaqin dorixonalar va mutaxassislar.
+              Ekin va chorva agro-mahsulotlar platformasi, yaqin agro-do&apos;konlar va mutaxassislar.
             </p>
           </div>
         </div>

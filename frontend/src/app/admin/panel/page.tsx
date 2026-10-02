@@ -363,7 +363,7 @@ export default function AdminPanelPage() {
   const [adEditing, setAdEditing] = useState(false);
   const [adFormOpen, setAdFormOpen] = useState(false);
 
-  // Dorixonalar va Mutaxassislar
+  // Agro-do&apos;konlar va Mutaxassislar
   const [pharmacies, setPharmacies] = useState<AdminSpecialist[]>([]);
   const [specialistsList, setSpecialistsList] = useState<AdminSpecialist[]>([]);
   const [pharmacySearch, setPharmacySearch] = useState("");
@@ -380,7 +380,7 @@ export default function AdminPanelPage() {
   const [callSearch, setCallSearch] = useState("");
   const [callFilter, setCallFilter] = useState<"all" | "yangi" | "qabul_qilindi" | "bajarildi" | "bekor">("all");
 
-  // Dorixona dorilarini ko'rish modali
+  // Agro-do&apos;kon agro-mahsulotlarini ko'rish modali
   const [selectedPharmacyForMeds, setSelectedPharmacyForMeds] = useState<{
     id: number;
     name: string;
@@ -390,7 +390,7 @@ export default function AdminPanelPage() {
   const [loadingMedicines, setLoadingMedicines] = useState(false);
   const [medicineSearch, setMedicineSearch] = useState("");
 
-  // To'g'ridan-to'g'ri xabar yuborish modali (Dorixona yoki Mutaxassisga)
+  // To'g'ridan-to'g'ri xabar yuborish modali (Agro-do&apos;kon yoki Mutaxassisga)
   const [directMsgModal, setDirectMsgModal] = useState<{
     open: boolean;
     type: "pharmacy" | "specialist" | "user";
@@ -612,9 +612,9 @@ export default function AdminPanelPage() {
     return new Intl.NumberFormat("uz-UZ").format(num) + " so'm";
   }
 
-  // Mutaxassislar va Dorixonalar boshqaruvi
+  // Mutaxassislar va Agro-do&apos;konlar boshqaruvi
   async function handleApproveSpecialist(id: number) {
-    if (!confirm("Ushbu arizani tasdiqlamoqchimisiz? Tasdiqlangach, Telegram orqali mutaxassis/dorixonaga boshqaruv paneli avtomatik yetkaziladi.")) return;
+    if (!confirm("Ushbu arizani tasdiqlamoqchimisiz? Tasdiqlangach, Telegram orqali mutaxassis/agro-do&apos;konga boshqaruv paneli avtomatik yetkaziladi.")) return;
     setBusy(true);
     setNotice(null);
     try {
@@ -659,7 +659,7 @@ export default function AdminPanelPage() {
   }
 
   async function handleDeleteSpecialist(id: number, name: string) {
-    if (!confirm(`Haqiqatan ham "${name}"ni butunlay o'chirmoqchimisiz? Unga tegishli barcha dorilar, reytinglar va ma'lumotlar o'chiriladi.`)) return;
+    if (!confirm(`Haqiqatan ham "${name}"ni butunlay o'chirmoqchimisiz? Unga tegishli barcha agro-mahsulotlar, reytinglar va ma'lumotlar o'chiriladi.`)) return;
     setBusy(true);
     setNotice(null);
     try {
@@ -1039,7 +1039,7 @@ export default function AdminPanelPage() {
               { id: "users", label: "Foydalanuvchilar", icon: Users, count: usersList.length },
               { id: "orders", label: "Buyurtmalar", icon: ShoppingCart, count: ordersList.filter((o) => o.status === "yangi").length },
               { id: "calls", label: "Chaqiruvlar", icon: Activity, count: callsList.filter((c) => c.status === "yangi").length },
-              { id: "pharmacies", label: "Dorixonalar", icon: Store, count: pharmacies.length },
+              { id: "pharmacies", label: "Agro-do&apos;konlar", icon: Store, count: pharmacies.length },
               { id: "specialists", label: "Mutaxassislar", icon: Sparkles, count: specialistsList.length },
               { id: "regions", label: "Viloyatlar Tahlili", icon: Globe },
               { id: "reviews", label: "Mijozlar Fikrlari", icon: MessageSquare, count: reviews.length },
@@ -1142,10 +1142,10 @@ export default function AdminPanelPage() {
                 <div>
                   <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                     <Store className="text-emerald-500" size={20} />
-                    Dorixonalar Boshqaruvi
+                    Agro-do&apos;konlar Boshqaruvi
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
-                    Platformadagi barcha hamkor dorixonalar va ularning dori vositalari nazorati
+                    Platformadagi barcha hamkor agro-do&apos;konlar va ularning agro-mahsulotlar nazorati
                   </p>
                 </div>
                 <button
@@ -1160,16 +1160,16 @@ export default function AdminPanelPage() {
               {/* Metrika kartalari */}
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-6">
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Jami Dorixonalar</p>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Jami Agro-do&apos;konlar</p>
                   <p className="mt-1 text-2xl font-black text-slate-900">{pharmacies.length} ta</p>
                   <p className="mt-1 text-[11px] text-slate-400">Ro&apos;yxatdan o&apos;tgan</p>
                 </div>
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3.5">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">💊 Kiritilgan Dorilar</p>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">💊 Kiritilgan Agro-mahsulotlar</p>
                   <p className="mt-1 text-2xl font-black text-emerald-800">
                     {pharmacies.reduce((sum, p) => sum + (p.medicinesCount || 0), 0)} ta
                   </p>
-                  <p className="mt-1 text-[11px] text-emerald-600 font-semibold">Barcha dorixonalarda</p>
+                  <p className="mt-1 text-[11px] text-emerald-600 font-semibold">Barcha agro-do&apos;konlarda</p>
                 </div>
                 <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3.5">
                   <p className="text-[11px] font-bold uppercase tracking-wider text-amber-700">📦 Jami Buyurtmalar</p>
@@ -1190,14 +1190,14 @@ export default function AdminPanelPage() {
               {/* Qidiruv */}
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
                 <span className="text-xs font-semibold text-slate-500">
-                  Jami dorixonalar: <b>{pharmacies.length} ta</b>
+                  Jami agro-do&apos;konlar: <b>{pharmacies.length} ta</b>
                 </span>
 
                 <div className="relative min-w-[260px] flex-1 sm:max-w-md">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
-                    placeholder="Dorixona nomi, mas'ul shaxs yoki telefon..."
+                    placeholder="Agro-do&apos;kon nomi, mas'ul shaxs yoki telefon..."
                     value={pharmacySearch}
                     onChange={(e) => setPharmacySearch(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-xs text-slate-800 placeholder-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none"
@@ -1206,7 +1206,7 @@ export default function AdminPanelPage() {
               </div>
             </div>
 
-            {/* Dorixonalar Ro'yxati */}
+            {/* Agro-do&apos;konlar Ro'yxati */}
             {(() => {
               const filtered = pharmacies.filter((p) => {
                 if (pharmacySearch.trim()) {
@@ -1225,9 +1225,9 @@ export default function AdminPanelPage() {
                 return (
                   <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-12 text-center">
                     <Store size={36} className="mx-auto mb-3 text-slate-300" />
-                    <h4 className="text-sm font-bold text-slate-800">Dorixonalar topilmadi</h4>
+                    <h4 className="text-sm font-bold text-slate-800">Agro-do&apos;konlar topilmadi</h4>
                     <p className="mt-1 text-xs text-slate-400">
-                      {pharmacySearch ? "Qidiruv so'rovi bo'yicha hech narsa chiqmadi" : "Hozircha dorixonalar mavjud emas"}
+                      {pharmacySearch ? "Qidiruv so'rovi bo'yicha hech narsa chiqmadi" : "Hozircha agro-do&apos;konlar mavjud emas"}
                     </p>
                   </div>
                 );
@@ -1257,7 +1257,7 @@ export default function AdminPanelPage() {
                         </div>
 
                         <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">
-                          #{p.id} Dorixona
+                          #{p.id} Agro-do&apos;kon
                         </span>
                       </div>
 
@@ -1307,7 +1307,7 @@ export default function AdminPanelPage() {
                       {/* Statistika ko'rsatkichlari */}
                       <div className="grid grid-cols-3 gap-2 py-1 mb-3 text-center">
                         <div className="rounded-xl bg-slate-50 p-2">
-                          <p className="text-[10px] uppercase font-bold text-slate-400">Dorilar</p>
+                          <p className="text-[10px] uppercase font-bold text-slate-400">Agro-mahsulotlar</p>
                           <p className="text-sm font-black text-teal-700">{p.medicinesCount} ta</p>
                         </div>
                         <div className="rounded-xl bg-slate-50 p-2">
@@ -1337,7 +1337,7 @@ export default function AdminPanelPage() {
                             className="flex items-center gap-1.5 rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-xs font-bold text-teal-800 hover:bg-teal-100 active:scale-95 transition"
                           >
                             <Package size={14} />
-                            Dorilar ({p.medicinesCount})
+                            Agro-mahsulotlar ({p.medicinesCount})
                           </button>
 
                           <button
@@ -1356,7 +1356,7 @@ export default function AdminPanelPage() {
                               });
                             }}
                             className="flex items-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-bold text-sky-800 hover:bg-sky-100 active:scale-95 transition"
-                            title="Ushbu dorixona egasiga Telegram orqali xabar yuborish"
+                            title="Ushbu agro-do&apos;kon egasiga Telegram orqali xabar yuborish"
                           >
                             <Send size={13} />
                             Xabar
@@ -1366,7 +1366,7 @@ export default function AdminPanelPage() {
                         <button
                           onClick={() => handleDeleteSpecialist(p.id, p.organization || p.name)}
                           disabled={busy}
-                          title="Dorixonani butunlay o'chirish"
+                          title="Agro-do&apos;konni butunlay o'chirish"
                           className="flex items-center justify-center rounded-xl p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 transition"
                         >
                           <Trash2 size={16} />
@@ -1683,7 +1683,7 @@ export default function AdminPanelPage() {
                     {usersStats.activeBuyersCount}
                   </span>
                   <p className="text-[11px] text-slate-500 mt-1">
-                    Dori vositalariga buyurtma bergan dehqonlar
+                    Agro-mahsulotlarga buyurtma bergan dehqonlar
                   </p>
                 </div>
               </div>
@@ -1888,7 +1888,7 @@ export default function AdminPanelPage() {
                     Barcha Buyurtmalar Boshqaruvi
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
-                    Dorixonalarga tushgan dori buyurtmalari, buyurtma tarkibi va yetkazib berish holati
+                    Agro-do&apos;konlarga tushgan agro-mahsulot buyurtmalari, buyurtma tarkibi va yetkazib berish holati
                   </p>
                 </div>
                 <button
@@ -1958,7 +1958,7 @@ export default function AdminPanelPage() {
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
-                    placeholder="Mijoz, dorixona yoki ID..."
+                    placeholder="Mijoz, agro-do&apos;kon yoki ID..."
                     value={orderSearch}
                     onChange={(e) => setOrderSearch(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs text-slate-800 placeholder-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none"
@@ -2046,18 +2046,18 @@ export default function AdminPanelPage() {
 
                       <div className="grid gap-3 sm:grid-cols-2 text-xs text-slate-600 mb-3">
                         <div>
-                          <p className="text-slate-400 text-[11px]">Bajaruvchi dorixona:</p>
+                          <p className="text-slate-400 text-[11px]">Bajaruvchi agro-do&apos;kon:</p>
                           <p className="font-bold text-slate-900">
-                            {o.pharmacyOrg || o.pharmacyName || "Dorixona belgilanmagan"}
+                            {o.pharmacyOrg || o.pharmacyName || "Agro-do&apos;kon belgilanmagan"}
                           </p>
                           {o.pharmacyPhone && <p className="text-slate-500">{o.pharmacyPhone}</p>}
                         </div>
                         <div>
                           <p className="text-slate-400 text-[11px]">{o.deliveryType === "pickup" ? "Qabul qilish usuli:" : "Yetkazish manzili:"}</p>
-                          <p className="font-medium text-slate-800">{o.deliveryType === "pickup" ? "Dorixonadan olib ketish" : (o.customerAddress || "Ko'rsatilmagan")}</p>
+                          <p className="font-medium text-slate-800">{o.deliveryType === "pickup" ? "Agro-do&apos;kondan olib ketish" : (o.customerAddress || "Ko'rsatilmagan")}</p>
                           {o.deliveryType && (
                             <span className="inline-block mt-1 rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700">
-                              {o.deliveryType === "pickup" ? "🏪 Dorixonadan olib ketish" : "🚚 Yetkazib berish"}
+                              {o.deliveryType === "pickup" ? "🏪 Agro-do&apos;kondan olib ketish" : "🚚 Yetkazib berish"}
                             </span>
                           )}
                         </div>
@@ -2067,7 +2067,7 @@ export default function AdminPanelPage() {
                       {o.items && o.items.length > 0 && (
                         <div className="rounded-xl bg-slate-50 p-3 mb-3">
                           <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-                            Buyurtma tarkibi ({o.items.length} ta dori):
+                            Buyurtma tarkibi ({o.items.length} ta agro-mahsulot):
                           </p>
                           <div className="space-y-1.5">
                             {o.items.map((it, idx) => (
@@ -2326,7 +2326,7 @@ export default function AdminPanelPage() {
 
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="flex items-center justify-between text-slate-400 mb-2">
-                  <span className="text-[11px] font-bold uppercase tracking-wider">Dorixonalar</span>
+                  <span className="text-[11px] font-bold uppercase tracking-wider">Agro-do&apos;konlar</span>
                   <Store size={16} className="text-emerald-400" />
                 </div>
                 <p className="text-2xl font-black text-slate-900">{stats.pharmacies}</p>
@@ -2337,11 +2337,11 @@ export default function AdminPanelPage() {
 
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="flex items-center justify-between text-slate-400 mb-2">
-                  <span className="text-[11px] font-bold uppercase tracking-wider">Dorilar turi</span>
+                  <span className="text-[11px] font-bold uppercase tracking-wider">Agro-mahsulotlar turi</span>
                   <Package size={16} className="text-teal-400" />
                 </div>
                 <p className="text-2xl font-black text-slate-900">{stats.medicines}</p>
-                <p className="text-[11px] text-slate-400 mt-1">Barcha dorixonalar</p>
+                <p className="text-[11px] text-slate-400 mt-1">Barcha agro-do&apos;konlar</p>
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -2478,7 +2478,7 @@ export default function AdminPanelPage() {
                     Platforma Bo&apos;yicha Chuqur Analitika
                   </h3>
                   <p className="text-xs text-slate-400">
-                    Kasalliklar tendensiyasi, dorilar talabi va mutaxassislar bandlik darajasi
+                    Kasalliklar tendensiyasi, agro-mahsulotlar talabi va mutaxassislar bandlik darajasi
                   </p>
                 </div>
                 <span className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-400">
@@ -2563,11 +2563,11 @@ export default function AdminPanelPage() {
                 </div>
               </div>
 
-              {/* Eng ko'p sotilgan va talabgir dorilar */}
+              {/* Eng ko'p sotilgan va talabgir agro-mahsulotlar */}
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div className="flex items-center justify-between mb-3 border-b border-slate-200 pb-2.5">
                   <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                    💊 Eng Talabgir va Ko&apos;p Sotilgan Dorilar
+                    💊 Eng Talabgir va Ko&apos;p Sotilgan Agro-mahsulotlar
                   </h4>
                   <span className="text-[11px] text-slate-400">Buyurtmalar kesimida</span>
                 </div>
@@ -2576,8 +2576,8 @@ export default function AdminPanelPage() {
                     <table className="w-full text-left text-xs text-slate-700">
                       <thead className="border-b border-slate-200 text-[11px] font-bold uppercase text-slate-400">
                         <tr>
-                          <th className="pb-2">Dori nomi</th>
-                          <th className="pb-2">Dorixona</th>
+                          <th className="pb-2">Agro-mahsulot nomi</th>
+                          <th className="pb-2">Agro-do&apos;kon</th>
                           <th className="pb-2">Sotilgan miqdor</th>
                           <th className="pb-2">Umumiy tushum</th>
                           <th className="pb-2">Qoldiq</th>
@@ -2622,7 +2622,7 @@ export default function AdminPanelPage() {
                     O&apos;zbekiston Viloyatlari Kesimida Statistika
                   </h3>
                   <p className="text-xs text-slate-400">
-                    Qaysi viloyatda qancha foydalanuvchi, dorixona, mutaxassis va buyurtmalar hajmi
+                    Qaysi viloyatda qancha foydalanuvchi, agro-do&apos;kon, mutaxassis va buyurtmalar hajmi
                   </p>
                 </div>
                 <span className="rounded-xl border border-slate-300 bg-slate-100 px-3 py-1 text-xs font-bold text-emerald-400">
@@ -2662,7 +2662,7 @@ export default function AdminPanelPage() {
                         <p className="font-bold text-slate-900">{reg.users} ta</p>
                       </div>
                       <div>
-                        <span className="text-[11px] text-slate-400">Dorixonalar:</span>
+                        <span className="text-[11px] text-slate-400">Agro-do&apos;konlar:</span>
                         <p className="font-bold text-emerald-400">{reg.pharmacies} ta</p>
                       </div>
                       <div>
@@ -2699,7 +2699,7 @@ export default function AdminPanelPage() {
                     Fermer va Mijozlarning Fikrlari & Izohlari
                   </h3>
                   <p className="text-xs text-slate-400">
-                    Dori vositalari va mutaxassislar bo&apos;yicha yozilgan sharhlarni nazorat qilish
+                    Agro-mahsulotlar va mutaxassislar bo&apos;yicha yozilgan sharhlarni nazorat qilish
                   </p>
                 </div>
 
@@ -2711,7 +2711,7 @@ export default function AdminPanelPage() {
                       type="text"
                       value={reviewSearch}
                       onChange={(e) => setReviewSearch(e.target.value)}
-                      placeholder="Qidiruv (ism, dorixona, izoh)..."
+                      placeholder="Qidiruv (ism, agro-do&apos;kon, izoh)..."
                       className="rounded-xl border border-slate-300 bg-slate-100 pl-8 pr-3 py-1.5 text-xs text-slate-900 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
                     />
                   </div>
@@ -2753,7 +2753,7 @@ export default function AdminPanelPage() {
                                 : "bg-teal-500/20 text-teal-400"
                             }`}
                           >
-                            {rev.type === "order" ? "📦 Buyurtma / Dorixona" : "👨‍⚕️ Mutaxassis"}
+                            {rev.type === "order" ? "📦 Buyurtma / Agro-do&apos;kon" : "👨‍⚕️ Mutaxassis"}
                           </span>
 
                           <div className="flex items-center gap-0.5 text-amber-400">
@@ -2777,7 +2777,7 @@ export default function AdminPanelPage() {
                             <p className="text-[11px] text-slate-400">{rev.customerPhone}</p>
                           )}
                           <p className="mt-1 text-[11px] text-emerald-400">
-                            Manzil / Dorixona: <b>{rev.targetName}</b>
+                            Manzil / Agro-do&apos;kon: <b>{rev.targetName}</b>
                           </p>
                         </div>
 
@@ -2819,7 +2819,7 @@ export default function AdminPanelPage() {
                 </h3>
               </div>
               <p className="text-xs text-slate-400 mb-4 leading-relaxed">
-                Ushbu parametr platforma bo&apos;ylab dorixonalar va mutaxassislarni qidirishning yagona standart radiusini (km) belgilaydi. Standart tavsiya etilgan qiymat: <b>5 km</b>.
+                Ushbu parametr platforma bo&apos;ylab agro-do&apos;konlar va mutaxassislarni qidirishning yagona standart radiusini (km) belgilaydi. Standart tavsiya etilgan qiymat: <b>5 km</b>.
               </p>
 
               <div className="flex flex-wrap items-center gap-3">
@@ -2957,7 +2957,7 @@ export default function AdminPanelPage() {
               <div className="space-y-3">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
-                    Mutaxassis & Dorixona Boti (@agroz_auth_bot) Tokeni
+                    Mutaxassis & Agro-do&apos;kon Boti (@agroz_auth_bot) Tokeni
                   </label>
                   <input
                     type="password"
@@ -3308,7 +3308,7 @@ export default function AdminPanelPage() {
                       {selectedPharmacyForMeds.org || selectedPharmacyForMeds.name}
                     </h3>
                     <p className="text-xs text-slate-500 font-medium">
-                      Dorixona assortimenti va dori vositalari ro&apos;yxati ({pharmacyMedicines.length} ta dori)
+                      Agro-do&apos;kon assortimenti va agro-mahsulotlar ro&apos;yxati ({pharmacyMedicines.length} ta agro-mahsulot)
                     </p>
                   </div>
                 </div>
@@ -3327,7 +3327,7 @@ export default function AdminPanelPage() {
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
-                    placeholder="Dori nomi yoki qo'llanilishi bo'yicha izlash..."
+                    placeholder="Agro-mahsulot nomi yoki qo'llanilishi bo'yicha izlash..."
                     value={medicineSearch}
                     onChange={(e) => setMedicineSearch(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-xs text-slate-800 placeholder-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none"
@@ -3335,11 +3335,11 @@ export default function AdminPanelPage() {
                 </div>
               </div>
 
-              {/* Dorilar jadvali */}
+              {/* Agro-mahsulotlar jadvali */}
               {loadingMedicines ? (
                 <div className="py-16 text-center text-xs text-slate-400">
                   <RefreshCw className="animate-spin mx-auto mb-2 text-emerald-500" size={24} />
-                  Dorilar yuklanmoqda...
+                  Agro-mahsulotlar yuklanmoqda...
                 </div>
               ) : (() => {
                 const list = pharmacyMedicines.filter((m) => {
@@ -3356,7 +3356,7 @@ export default function AdminPanelPage() {
                   return (
                     <div className="rounded-2xl border border-dashed border-slate-200 p-12 text-center text-xs text-slate-400">
                       <Package size={32} className="mx-auto mb-2 text-slate-300" />
-                      {medicineSearch ? "Qidiruv bo'yicha dori topilmadi" : "Ushbu dorixona hali birorta ham dori kiritmagan"}
+                      {medicineSearch ? "Qidiruv bo'yicha agro-mahsulot topilmadi" : "Ushbu agro-do&apos;kon hali birorta ham agro-mahsulot kiritmagan"}
                     </div>
                   );
                 }
@@ -3366,7 +3366,7 @@ export default function AdminPanelPage() {
                     <table className="w-full text-left text-xs text-slate-700">
                       <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase text-slate-500">
                         <tr>
-                          <th className="py-3 px-4">Dori nomi</th>
+                          <th className="py-3 px-4">Agro-mahsulot nomi</th>
                           <th className="py-3 px-4">Turi / Guruhi</th>
                           <th className="py-3 px-4">Qo&apos;llanishi</th>
                           <th className="py-3 px-4">Narxi</th>
@@ -3410,7 +3410,7 @@ export default function AdminPanelPage() {
               {/* Modal pastki qismi */}
               <div className="flex items-center justify-between border-t border-slate-100 pt-4 mt-4">
                 <span className="text-xs text-slate-400">
-                  Jami: <b>{pharmacyMedicines.length}</b> ta dori
+                  Jami: <b>{pharmacyMedicines.length}</b> ta agro-mahsulot
                 </span>
                 <button
                   onClick={() => setSelectedPharmacyForMeds(null)}
@@ -3510,7 +3510,7 @@ export default function AdminPanelPage() {
 
                   {selectedUserDetail.orders.length === 0 ? (
                     <div className="rounded-xl border border-dashed border-slate-200 p-4 text-center text-xs text-slate-400">
-                      Ushbu foydalanuvchi hali dori buyurtma qilmagan.
+                      Ushbu foydalanuvchi hali agro-mahsulot buyurtma qilmagan.
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -3538,7 +3538,7 @@ export default function AdminPanelPage() {
 
                           <div className="grid gap-2 sm:grid-cols-2 text-xs">
                             <div>
-                              <p className="text-slate-500 text-[11px]">{ord.deliveryType === "pickup" ? "Dorixona:" : "Yetkazuvchi dorixona:"}</p>
+                              <p className="text-slate-500 text-[11px]">{ord.deliveryType === "pickup" ? "Agro-do&apos;kon:" : "Yetkazuvchi agro-do&apos;kon:"}</p>
                               <p className="font-semibold text-slate-900">{ord.pharmacyName}</p>
                               {ord.pharmacyPhone && (
                                 <p className="font-mono text-slate-600 text-[11px]">{ord.pharmacyPhone}</p>
@@ -3546,7 +3546,7 @@ export default function AdminPanelPage() {
                             </div>
                             <div>
                               <p className="text-slate-500 text-[11px]">{ord.deliveryType === "pickup" ? "Qabul qilish usuli:" : "Yetkazish manzili:"}</p>
-                              <p className="font-medium text-slate-800">{ord.deliveryType === "pickup" ? "Dorixonadan olib ketish" : (ord.customerAddress || "Ko'rsatilmagan")}</p>
+                              <p className="font-medium text-slate-800">{ord.deliveryType === "pickup" ? "Agro-do&apos;kondan olib ketish" : (ord.customerAddress || "Ko'rsatilmagan")}</p>
                               <p className="text-slate-500 text-[11px] mt-0.5">Turi: {ord.deliveryType === "pickup" ? "🏪 Olib ketish" : "🚚 Yetkazib berish"}</p>
                             </div>
                           </div>
@@ -3556,7 +3556,7 @@ export default function AdminPanelPage() {
                             <table className="w-full text-left text-[11px]">
                               <thead>
                                 <tr className="bg-slate-100 text-slate-500 font-mono border-b border-slate-200">
-                                  <th className="py-1.5 px-3">Dori nomi</th>
+                                  <th className="py-1.5 px-3">Agro-mahsulot nomi</th>
                                   <th className="py-1.5 px-3 text-center">Soni</th>
                                   <th className="py-1.5 px-3 text-right">Narxi</th>
                                 </tr>
@@ -3627,7 +3627,7 @@ export default function AdminPanelPage() {
                             <div className="flex items-center justify-between">
                               <span className="text-slate-500">Mutaxassis:</span>
                               <span className="font-semibold text-slate-900">
-                                {call.specialistName} ({call.specialistRole === "specialist" ? (call.specialistSpecialty || "Mutaxassis") : "Dorixona"})
+                                {call.specialistName} ({call.specialistRole === "specialist" ? (call.specialistSpecialty || "Mutaxassis") : "Agro-do&apos;kon"})
                               </span>
                             </div>
                             {call.specialistPhone && (

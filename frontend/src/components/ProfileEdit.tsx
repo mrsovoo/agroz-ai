@@ -25,10 +25,12 @@ export default function ProfileEdit({
   name,
   region,
   district,
+  isWeatherPushEnabled = true,
 }: {
   name: string | null;
   region: string | null;
   district: string | null;
+  isWeatherPushEnabled?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);

@@ -55,7 +55,7 @@ export default async function HomePage() {
         };
       }
 
-      // Dorixonalardagi barcha dorilarni ham to'liq qo'shib olish (birorta dori qolib ketmasligi uchun)
+      // Agro-do&apos;konlardagi barcha agro-mahsulotlarni ham to'liq qo'shib olish (birorta agro-mahsulot qolib ketmasligi uchun)
       for (const p of list) {
         if (Array.isArray(p.medicines)) {
           for (const m of p.medicines) {
@@ -82,7 +82,7 @@ export default async function HomePage() {
       }
     }
 
-    initialMedicines = Array.from(medMap.values()).sort(() => Math.random() - 0.5);
+    initialMedicines = Array.from(medMap.values()).sort((a, b) => b.id - a.id);
   } catch {
     // Tarmoq xatosi bo'lsa HomeClientView o'zidagi standart Bento Max va Veterinar fallback'ini ishlatadi
   }

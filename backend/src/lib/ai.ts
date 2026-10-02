@@ -176,7 +176,7 @@ export function offlineDiagnose(category: "crop" | "animal", text: string): Diag
         ? "Barg va poya kasalligi (birlamchi fitosanitar tahlil)"
         : "Umumiy holsizlik va infeksiya belgilari",
     solution:
-      "1. Kasallangan namunani ajrating yoki zararlangan joyni tozalang. 2. Yaqin agro-veterinar dorixonasiga murojaat qilib preparat tanlang. 3. Ko'rsatilgan dozada qo'llang.",
+      "1. Kasallangan namunani ajrating yoki zararlangan joyni tozalang. 2. Yaqin agro-veterinar agro-do'koniga murojaat qilib preparat tanlang. 3. Ko'rsatilgan dozada qo'llang.",
     medicines:
       category === "crop"
         ? ["Fitosporin-M", "Mis kuporosi (Bordo suyuqligi)", "Ridomil Gold"]
@@ -219,7 +219,7 @@ export async function aiDiagnose(params: {
   const model =
     configuredModel && configuredModel.startsWith("gemini-")
       ? configuredModel
-      : "gemini-3.8-flash";
+      : "gemini-2.5-flash";
 
   try {
     const ai = createGeminiClient(key);
@@ -257,7 +257,7 @@ export async function aiDiagnose(params: {
             medicines: {
               type: Type.ARRAY,
               items: { type: Type.STRING },
-              description: "O'zbekistonda mavjud dorilar ro'yxati",
+              description: "O'zbekistonda mavjud agro va veterinariya mahsulotlari ro'yxati",
             },
             severity: { type: Type.STRING, description: "past, orta yoki yuqori" },
             prevention: { type: Type.STRING, description: "Oldini olish choralari" },

@@ -124,6 +124,18 @@ export async function ensureSchema(): Promise<void> {
       UPDATE broadcasts SET status = 'toxtadi' WHERE status = 'jarayonda';
     `);
 
+    // 9. Push bildirishnomalar tokenlari (Android / iOS)
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS push_tokens (
+        id serial PRIMARY KEY NOT NULL,
+        user_id integer NOT NULL,
+        token text UNIQUE NOT NULL,
+        platform varchar(20) DEFAULT 'unknown' NOT NULL,
+        created_at timestamp DEFAULT now() NOT NULL,
+        updated_at timestamp DEFAULT now() NOT NULL
+      );
+    `);
+
     console.log("[db] ensureSchema: Barcha jadvallar va ustunlar muvaffaqiyatli tekshirildi/yaratildi.");
   } catch (err: any) {
     console.warn("[db] ensureSchema ogohlantirish (bazaga ulanish yoki migratsiya):", err?.message || err);

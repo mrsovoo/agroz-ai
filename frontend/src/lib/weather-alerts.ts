@@ -153,10 +153,10 @@ export function analyzeForecastAlerts(
           region: regionName,
           dateText: `${dayLabel} (${dateStr})`,
           description:
-            "Kuchli yog'ingarchilik paytida purkalgan dorilar va o'g'itlar yuvilib ketadi. Tuproqda suv to'planib ildiz chirishi va sel xavfi ortadi.",
+            "Kuchli yog'ingarchilik paytida purkalgan agro-mahsulotlar va o'g'itlar yuvilib ketadi. Tuproqda suv to'planib ildiz chirishi va sel xavfi ortadi.",
           actionItems: {
             crop: [
-              "Kimyoviy dori sepish va o'g'itlashni to'xtating — yomg'ir yuvib ketadi va samarasiz bo'ladi.",
+              "Kimyoviy agro-mahsulot sepish va o'g'itlashni to'xtating — yomg'ir yuvib ketadi va samarasiz bo'ladi.",
               "Dala va bog'lardagi zovur, ariq va o'qariqlarni tozalab, suv qochirish yo'llarini oching.",
               "Issiqxona tomlari va yupqa bostirmalarni tekshiring.",
             ],
@@ -190,7 +190,7 @@ export function analyzeForecastAlerts(
           actionItems: {
             crop: [
               "Issiqxona plyonka va konstruksiyalarini mahkam bog'lab, mustahkamlang.",
-              "Purkash ishlarini darhol to'xtating (dori shamolda uchib boshqa tomonga ketadi).",
+              "Purkash ishlarini darhol to'xtating (agro-mahsulot shamolda uchib boshqa tomonga ketadi).",
               "Yosh ko'chatlar va mevali novdalarga qoziq qoqib bog'lang.",
             ],
             animal: [
@@ -240,12 +240,12 @@ export function analyzeForecastAlerts(
         type: "heavy_rain",
         severity: "warning",
         title: "🌧️ Hozir kuchli yog'ingarchilik kuzatilmoqda",
-        subtitle: `${regionName}da hozirgi yog'in miqdori ${current.precipitation} mm ni tashkil qilmoqda.`,
+        subtitle: `${regionName}da hozirgi yog'in miqagro-mahsulot ${current.precipitation} mm ni tashkil qilmoqda.`,
         region: regionName,
         dateText: "Hozirgi vaqtda",
-        description: "Barglar ho'l bo'lganligi sababli dorilash samarasiz. Suv to'planishining oldini oling.",
+        description: "Barglar ho'l bo'lganligi sababli agro-mahsulotlash samarasiz. Suv to'planishining oldini oling.",
         actionItems: {
-          crop: ["Dori sepmang, o'g'itlashni to'xtating.", "Ariqlardan suv chiqib ketishini nazorat qiling."],
+          crop: ["Agro-mahsulot sepmang, o'g'itlashni to'xtating.", "Ariqlardan suv chiqib ketishini nazorat qiling."],
           animal: ["Mollarni bostirma ostiga oling."],
         },
         metrics: { rainMm: current.precipitation },
@@ -294,11 +294,11 @@ export function getSampleAgroAlerts(regionName: string = "Toshkent"): WeatherAle
       type: "heavy_rain",
       severity: "warning",
       title: `🌧️ Kuchli yomg'ir va sel xavfi (${regionName})`,
-      subtitle: `Yaqin 24 soat ichida 18-22 mm miqdorida kuchli yog'ingarchilik kutilmoqda.`,
+      subtitle: `Yaqin 24 soat ichida 18-22 mm miqagro-mahsulotda kuchli yog'ingarchilik kutilmoqda.`,
       region: regionName,
       dateText: "Kelgusi 24 soatda",
       description:
-        "Kuchli yomg'ir o'g'it va dorilarni yuvib ketadi, adirliklarda sel kelish xavfi mavjud.",
+        "Kuchli yomg'ir o'g'it va agro-mahsulotlarni yuvib ketadi, adirliklarda sel kelish xavfi mavjud.",
       actionItems: {
         crop: [
           "Hech qanday kimyoviy ishlov bermang, o'g'it sepmang — yomg'ir yuvib yuboradi.",

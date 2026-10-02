@@ -1,17 +1,17 @@
 "use client";
 
 /**
- * Agro Bozor — platformadagi barcha ro'yxatdan o'tgan dorixonalar dorilari.
+ * Agro Bozor — platformadagi barcha ro'yxatdan o'tgan agro-do&apos;konlar agro-mahsulotlari.
  *
- * • Bo'limlar: Hammasi / 🌱 Ekin uchun / 🐄 Hayvonlar uchun (dori `type` maydoni)
- * • Qidiruv: dori nomi, qo'llanishi va dorixona nomi bo'yicha
+ * • Bo'limlar: Hammasi / 🌱 Ekin uchun / 🐄 Hayvonlar uchun (agro-mahsulot `type` maydoni)
+ * • Qidiruv: agro-mahsulot nomi, qo'llanishi va agro-do&apos;kon nomi bo'yicha
  * • Radius: 5/10/25/50 km — foydalanuvchi joylashuvidan
- * • Kartochka: rasm tepada, ostida dori nomi, narxi va dorixona nomi
- * • Savat: bir vaqtda bitta dorixona dorilari; buyurtma Telegram orqali
- *   dorixona egasiga yetib boradi, holatini mijoz telefon raqami bilan kuzatadi
+ * • Kartochka: rasm tepada, ostida agro-mahsulot nomi, narxi va agro-do&apos;kon nomi
+ * • Savat: bir vaqtda bitta agro-do&apos;kon agro-mahsulotlari; buyurtma Telegram orqali
+ *   agro-do&apos;kon egasiga yetib boradi, holatini mijoz telefon raqami bilan kuzatadi
  * • ❤️ Yoqtirilganlar: brauzerda (localStorage) saqlanadi, alohida ro'yxatda
  * • Reyting: yetkazilgan buyurtmani 1–5 yulduz bilan baholash — qancha yaxshi
- *   baholansa, dorixona reytingi shuncha oshadi
+ *   baholansa, agro-do&apos;kon reytingi shuncha oshadi
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -91,7 +91,7 @@ type Pharmacy = {
   medicines: Medicine[];
 };
 
-/** Kartochka — dori + uning dorixonasi (grid'da flat ko'rsatiladi). */
+/** Kartochka — agro-mahsulot + uning agro-do&apos;konsi (grid'da flat ko'rsatiladi). */
 type Card = { pharmacy: Pharmacy; medicine: Medicine };
 
 function shortSum(value: number): string {
@@ -226,7 +226,7 @@ export default function MarketClient() {
     );
   }, []);
 
-  // ---- Dorixonalar (dorilari bilan) ----
+  // ---- Agro-do&apos;konlar (agro-mahsulotlari bilan) ----
   useEffect(() => {
     const params = new URLSearchParams({ radius: String(radiusKm), role: "pharmacy" });
     if (coords) {
@@ -243,7 +243,7 @@ export default function MarketClient() {
       .then((d: { items?: Pharmacy[] }) => {
         if (cancelled) return;
         const list = Array.isArray(d?.items) ? d.items : [];
-        // Faqat locked === false (viloyat va tanlangan radius ichidagi) dorixonalarni qoldiramiz
+        // Faqat locked === false (viloyat va tanlangan radius ichidagi) agro-do&apos;konlarni qoldiramiz
         setItems(
           list.filter(
             (s) => s.role === "pharmacy" && s.locked === false && (s.medicines?.length ?? 0) > 0,
@@ -287,7 +287,7 @@ export default function MarketClient() {
 
   const displayCards = cards;
 
-  // Yoqtirilgan kartochkalar (dorilar o'chirilgan bo'lsa ro'yxatdan tushadi).
+  // Yoqtirilgan kartochkalar (agro-mahsulotlar o'chirilgan bo'lsa ro'yxatdan tushadi).
   const favCards = useMemo<Card[]>(
     () =>
       cards.filter((c) =>
@@ -311,7 +311,7 @@ export default function MarketClient() {
     notifyCartChanged();
   }
 
-  /** Kartochkadan dori qo'shish — savatga to'g'ridan-to'g'ri qo'shiladi. */
+  /** Kartochkadan agro-mahsulot qo'shish — savatga to'g'ridan-to'g'ri qo'shiladi. */
   function addToCart(pharmacy: Pharmacy, medicine: Medicine) {
     const newPharmacy = {
       id: pharmacy.id,
@@ -453,9 +453,9 @@ export default function MarketClient() {
 
   return (
     <div className="min-h-screen bg-white px-4 pt-3 pb-24 text-neutral-900">
-      {/* 1. Header: Dorilar + Heart (Sevimlilar) tugmasi */}
+      {/* 1. Header: Agro-mahsulotlar + Heart (Sevimlilar) tugmasi */}
       <div className="flex items-center justify-between pt-1 pb-2">
-        <h1 className="text-[28px] font-black tracking-tight text-neutral-900">Dorilar</h1>
+        <h1 className="text-[28px] font-black tracking-tight text-neutral-900">Agro-mahsulotlar</h1>
         <button
           onClick={() => setFavsOpen(true)}
           className="relative flex h-11 w-11 items-center justify-center rounded-full bg-white border border-neutral-200/90 shadow-2xs transition active:scale-95 hover:bg-neutral-50"
@@ -527,7 +527,7 @@ export default function MarketClient() {
           {query ? (
             <>
               <p className="mt-3.5 text-[17px] font-bold text-neutral-900">
-                «{query}» bo&apos;yicha dori topilmadi
+                «{query}» bo&apos;yicha agro-mahsulot topilmadi
               </p>
               <p className="mt-1.5 text-[13.5px] leading-relaxed text-neutral-500 max-w-md mx-auto">
                 Qidiruv so&apos;zini tekshirib ko&apos;ring, boshqa bo&apos;limga o&apos;ting yoki qidiruvni tozalang.
@@ -542,10 +542,10 @@ export default function MarketClient() {
           ) : (
             <>
               <p className="mt-3.5 text-[17px] font-bold text-neutral-900">
-                Bu radiusda dorixona topilmadi. Radiusni kengaytirasizmi?
+                Bu radiusda agro-do&apos;kon topilmadi. Radiusni kengaytirasizmi?
               </p>
               <p className="mt-1.5 text-[13.5px] leading-relaxed text-neutral-500 max-w-md mx-auto">
-                Hozirgi qidiruv radiusi: <b>{radiusKm >= 1000 ? "Butun O'zbekiston" : `${radiusKm} km`}</b>. Uzoqroqdagi dorixonalar va dorilarni ko&apos;rish uchun radiusni kengaytiring.
+                Hozirgi qidiruv radiusi: <b>{radiusKm >= 1000 ? "Butun O'zbekiston" : `${radiusKm} km`}</b>. Uzoqroqdagi agro-do&apos;konlar va agro-mahsulotlarni ko&apos;rish uchun radiusni kengaytiring.
               </p>
               {radiusKm < 1000 && (
                 <button
@@ -612,7 +612,7 @@ export default function MarketClient() {
                 <Heart size={30} className="text-[var(--brand-muted)]" />
                 <p className="text-[15px] font-bold text-[var(--brand-ink)]">Ro&apos;yxat bo&apos;sh</p>
                 <p className="text-[13px] leading-relaxed text-[var(--brand-muted)]">
-                  Dorilar kartochkasidagi ❤️ belgisini bosib, keyinroq uchun saqlab qo&apos;ying.
+                  Agro-mahsulotlar kartochkasidagi ❤️ belgisini bosib, keyinroq uchun saqlab qo&apos;ying.
                 </p>
               </div>
             ) : (
@@ -716,7 +716,7 @@ export default function MarketClient() {
                     Buyurtma qabul qilindi!
                   </p>
                   <p className="text-[13px] leading-relaxed text-[var(--brand-muted)]">
-                    Buyurtmangiz <b>{formatOrderNumber(orderDone.orderId)}</b> raqami bilan dorixona egasiga Telegram orqali yuborildi.
+                    Buyurtmangiz <b>{formatOrderNumber(orderDone.orderId)}</b> raqami bilan agro-do&apos;kon egasiga Telegram orqali yuborildi.
                   </p>
                 </div>
 
@@ -753,10 +753,10 @@ export default function MarketClient() {
                   ) : (
                     <div className="border-b border-[var(--brand-sep)] pb-2.5">
                       <span className="block text-[11px] font-bold uppercase tracking-wider text-[var(--brand-muted)]">
-                        Dorixonadan olib ketish manzili
+                        Agro-do&apos;kondan olib ketish manzili
                       </span>
                       <p className="mt-1 text-[13px] font-semibold text-[var(--brand-ink)]">
-                        {orderDone.pharmacyAddress || "Dorixona manzili ko'rsatilmagan"}
+                        {orderDone.pharmacyAddress || "Agro-do&apos;kon manzili ko'rsatilmagan"}
                       </p>
                     </div>
                   )}
@@ -764,7 +764,7 @@ export default function MarketClient() {
                   <div className="flex items-center justify-between border-b border-[var(--brand-sep)] pb-2.5">
                     <div>
                       <span className="block text-[11px] font-bold uppercase tracking-wider text-[var(--brand-muted)]">
-                        Dorixona
+                        Agro-do&apos;kon
                       </span>
                       <p className="text-[13.5px] font-bold text-[var(--brand-ink)]">
                         {orderDone.pharmacyName}
@@ -789,7 +789,7 @@ export default function MarketClient() {
                 </div>
 
                 <p className="text-[12px] leading-relaxed text-[var(--brand-muted)] text-center">
-                  Dorixona buyurtmangizni qabul qilgach sizga aloqaga chiqishi mumkin.
+                  Agro-do&apos;kon buyurtmangizni qabul qilgach sizga aloqaga chiqishi mumkin.
                 </p>
 
                 {/* Tugmalar */}
@@ -821,7 +821,7 @@ export default function MarketClient() {
                 <ShoppingCart size={32} className="text-[var(--brand-muted)]" />
                 <p className="text-[15px] font-bold text-[var(--brand-ink)]">Savat bo&apos;sh</p>
                 <p className="text-[13px] text-[var(--brand-muted)]">
-                  Dorilardagi «Savatga» tugmasini bosing
+                  Agro-mahsulotlardagi «Savatga» tugmasini bosing
                 </p>
                 <button onClick={() => setCartOpen(false)} className="ios-btn secondary mt-2 w-full">
                   <X size={17} /> Yopish
@@ -982,7 +982,7 @@ export default function MarketClient() {
                             O&apos;zim olib ketaman
                           </p>
                           <p className="text-[11px] text-[var(--brand-muted)]">
-                            Dorixonadan olish
+                            Agro-do&apos;kondan olish
                           </p>
                         </div>
                       </button>
@@ -1025,15 +1025,15 @@ export default function MarketClient() {
                     <div className="space-y-2 rounded-2xl border border-[var(--brand-sep)] bg-[var(--brand-bg)] p-3.5">
                       <div className="flex items-center gap-1.5 text-[12.5px] font-bold text-[var(--brand-ink)]">
                         <Store size={15} className="text-[var(--brand-green)] shrink-0" />
-                        <span>Dorixonadan olib ketish manzili:</span>
+                        <span>Agro-do&apos;kondan olib ketish manzili:</span>
                       </div>
                       <p className="flex items-start gap-1.5 text-[12.5px] font-medium text-[var(--brand-ink)]">
                         <MapPin size={14} className="mt-0.5 text-[var(--brand-green)] shrink-0" />
-                        <span>{cartState.pharmacy.address || "Dorixona manzili ko'rsatilmagan"}</span>
+                        <span>{cartState.pharmacy.address || "Agro-do&apos;kon manzili ko'rsatilmagan"}</span>
                       </p>
                       {cartState.pharmacy.phone && (
                         <div className="flex items-center justify-between pt-1 border-t border-[var(--brand-sep)]">
-                          <span className="text-[11.5px] text-[var(--brand-muted)]">Dorixona telefoni:</span>
+                          <span className="text-[11.5px] text-[var(--brand-muted)]">Agro-do&apos;kon telefoni:</span>
                           <a
                             href={`tel:${cartState.pharmacy.phone.replace(/\s/g, "")}`}
                             className="inline-flex items-center gap-1 text-[12px] font-bold text-[var(--brand-green)] hover:underline"
@@ -1043,7 +1043,7 @@ export default function MarketClient() {
                         </div>
                       )}
                       <p className="text-[11px] leading-relaxed text-[var(--brand-muted)]">
-                        💡 Buyurtma berganingizdan so&apos;ng, dorixona xodimi dorilarni tayyorlab qo&apos;yadi va siz istalgan vaqtda borib olib ketishingiz mumkin.
+                        💡 Buyurtma berganingizdan so&apos;ng, agro-do&apos;kon xodimi agro-mahsulotlarni tayyorlab qo&apos;yadi va siz istalgan vaqtda borib olib ketishingiz mumkin.
                       </p>
                     </div>
                   ) : (
@@ -1081,7 +1081,7 @@ export default function MarketClient() {
                       <div className="flex items-start gap-2 rounded-xl bg-amber-50 p-2.5 text-[11.5px] leading-snug text-amber-900 border border-amber-200/60">
                         <AlertCircle size={15} className="mt-0.5 shrink-0 text-amber-600" />
                         <span>
-                          Yetkazib berish narxi va vaqti masofaga qarab dorixona kuryeri tomonidan belgilanadi va siz bilan telefon orqali kelishiladi.
+                          Yetkazib berish narxi va vaqti masofaga qarab agro-do&apos;kon kuryeri tomonidan belgilanadi va siz bilan telefon orqali kelishiladi.
                         </span>
                       </div>
                     </div>
@@ -1122,7 +1122,7 @@ export default function MarketClient() {
                   {cartBusy ? "Yuborilmoqda..." : "Buyurtma berish"}
                 </button>
                 <p className="mt-2 text-center text-[11px] leading-relaxed text-[var(--brand-muted)]">
-                  Buyurtma dorixona egasiga Telegram orqali yetib boradi. Yetkazilgach
+                  Buyurtma agro-do&apos;kon egasiga Telegram orqali yetib boradi. Yetkazilgach
                   yulduzcha bilan baholaysiz — reyting shunga qarab oshadi.
                 </p>
               </>

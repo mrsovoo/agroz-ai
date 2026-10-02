@@ -61,7 +61,7 @@ export async function getMedicineDetail(id: number): Promise<MedicineDetailData 
                 status: m.status || "bor",
                 pharmacyId: p.id,
                 pharmacyOrg: p.organization ?? null,
-                pharmacyName: p.organization || p.name || "Agroz Dorixona",
+                pharmacyName: p.organization || p.name || "Agroz Agro-do&apos;kon",
                 pharmacyPhone: p.phone || "",
                 pharmacyAddress: p.address || "",
                 workHours: p.workHours ?? "09:00 - 18:00",
@@ -124,7 +124,7 @@ export async function getSimilarMedicines(
                 status: m.status || "bor",
                 pharmacyId: p.id,
                 pharmacyOrg: p.organization ?? null,
-                pharmacyName: p.organization || p.name || "Agroz Dorixona",
+                pharmacyName: p.organization || p.name || "Agroz Agro-do&apos;kon",
                 pharmacyPhone: p.phone || "",
                 pharmacyAddress: p.address || "",
                 workHours: p.workHours ?? "09:00 - 18:00",
@@ -166,7 +166,7 @@ export default async function MedicineDetail({ medicine }: { medicine: MedicineD
         href="/dorilar"
         className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[13px] font-bold text-[var(--brand-ink)] shadow-sm active:scale-95"
       >
-        <ArrowLeft size={15} /> Dorilarga qaytish
+        <ArrowLeft size={15} /> Agro-mahsulotlarga qaytish
       </Link>
 
       {/* Mahsulot: chapda rasm, o'ngda ma'lumot (katta ekranda ustma-ust emas) */}
@@ -259,11 +259,11 @@ export default async function MedicineDetail({ medicine }: { medicine: MedicineD
               Tavsif
             </p>
             <p className="mt-1 text-[14px] leading-relaxed text-[var(--brand-ink)]">
-              {medicine.usage ?? "Bu dori uchun tavsif kiritilmagan."}
+              {medicine.usage ?? "Bu agro-mahsulot uchun tavsif kiritilmagan."}
             </p>
           </div>
 
-          {/* Dorixona */}
+          {/* Agro-do&apos;kon */}
           <div className="mt-3 rounded-2xl border border-[var(--brand-sep)] p-3.5">
             <p className="flex items-center gap-1.5 text-[15px] font-bold text-[var(--brand-ink)]">
               <Store size={15} /> {medicine.pharmacyName}
@@ -294,7 +294,7 @@ export default async function MedicineDetail({ medicine }: { medicine: MedicineD
 
           <p className="mt-2.5 flex items-center gap-1.5 text-[11.5px] leading-relaxed text-[var(--brand-muted)]">
             <ShieldCheck size={13} className="shrink-0" />
-            Buyurtma dorixona egasiga Telegram orqali yetib boradi — holatini telefon raqamingiz
+            Buyurtma agro-do&apos;kon egasiga Telegram orqali yetib boradi — holatini telefon raqamingiz
             bilan kuzatasiz.
           </p>
 
