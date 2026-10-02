@@ -57,7 +57,8 @@ export default function HomeClientView({
 
   useEffect(() => {
     if (initialMedicines && initialMedicines.length > 0) {
-      setMedicines([...initialMedicines].sort(() => Math.random() - 0.5));
+      setMedicines(initialMedicines);
+      return;
     }
 
     async function loadAllFromPharmacies() {
@@ -89,8 +90,7 @@ export default function HomeClientView({
           }
         }
         if (collected.length > 0) {
-          const shuffled = [...collected].sort(() => Math.random() - 0.5);
-          setMedicines(shuffled);
+          setMedicines(collected);
         }
       } catch {}
     }

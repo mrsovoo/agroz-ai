@@ -1,16 +1,22 @@
 import HomeClientView, { type HomeMedicine, type HomeSpecialist } from "@/components/HomeClientView";
 import { apiUrl } from "@/lib/api-config";
 
-export const dynamic = "force-dynamic";
+// Edge CDN kesh: Sahifa Edge keshidan 50ms da tezkor yuklanadi va har 60 soniyada fonda yangilanadi
+export const revalidate = 60;
 
 export default async function HomePage() {
   let initialMedicines: HomeMedicine[] = [];
   let initialSpecialist: HomeSpecialist | null = null;
 
   try {
+    const fetchOptions: RequestInit = {
+      next: { revalidate: 60 },
+      signal: AbortSignal.timeout(2000), // Server kechiksa ham foydalanuvchini kutdirmaydi
+    } as any;
+
     const [medRes, specRes] = await Promise.allSettled([
-      fetch(apiUrl("/api/medicines?limit=60&random=1"), { cache: "no-store" }),
-      fetch(apiUrl("/api/specialists"), { cache: "no-store" }),
+      fetch(apiUrl("/api/medicines?limit=60&random=1"), fetchOptions),
+      fetch(apiUrl("/api/specialists"), fetchOptions),
     ]);
 
     const medMap = new Map<number, HomeMedicine>();

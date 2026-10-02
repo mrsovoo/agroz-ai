@@ -66,9 +66,18 @@ export const viewport: Viewport = {
 const LAYOUT_DETECT_SCRIPT = `
 (function () {
   try {
+    var tg = window.Telegram && window.Telegram.WebApp;
+    if (tg) {
+      try {
+        tg.ready();
+        tg.expand();
+        if (typeof tg.disableVerticalSwipes === "function") tg.disableVerticalSwipes();
+        if (typeof tg.setHeaderColor === "function") tg.setHeaderColor("#fcbd00");
+        if (typeof tg.setBackgroundColor === "function") tg.setBackgroundColor("#f2f3f5");
+      } catch (e) {}
+    }
     var ua = navigator.userAgent || "";
     var ref = document.referrer || "";
-    var tg = window.Telegram && window.Telegram.WebApp;
     // SDK tashqi brauzerda ham yuklanadi — haqiqiy belgi: initData/user/query_id.
     var session = !!(tg && ((tg.initData && tg.initData.length) || (tg.initDataUnsafe && (tg.initDataUnsafe.user || tg.initDataUnsafe.query_id))));
     var refTelegram = /(^|\\/\\/)([a-z0-9-]+\\.)*telegram\\.(org|me|dev)\\//i.test(ref);
