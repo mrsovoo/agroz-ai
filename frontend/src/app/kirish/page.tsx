@@ -396,7 +396,7 @@ export default function LoginPage() {
             </div>
             <div className="flex items-center gap-2.5 text-sm font-semibold text-emerald-800">
               <CheckCircle2 size={19} className="text-emerald-600" />
-              <span>Savat va ekin tashxislari profilingizda saqlanadi</span>
+              <span>Savat va buyurtmalaringiz profilingizda saqlanadi</span>
             </div>
           </div>
         </div>

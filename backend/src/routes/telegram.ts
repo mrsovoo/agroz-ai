@@ -320,10 +320,7 @@ async function finalizeUserRegistration(
     user?.secondPhone ? `📞 <b>Qo'shimcha raqam:</b> <code>${escapeHtml(user.secondPhone)}</code>` : "",
     locationLabel ? `📍 <b>Manzil:</b> ${escapeHtml(locationLabel)}` : "",
     "",
-    `📲 <b>Ilovani telefoningiz bosh ekraniga qo'shib oling!</b>`,
-    `Shunda har safar Telegram botga kirmasdan, to'g'ridan-to'g'ri telefoningiz ekranidagi belgi (ikonka) orqali AgrozGO ilovasini ochasiz.`,
-    "",
-    `Quyidagi tugma orqali ilovani oching va bosh ekranga qo'shing 👇`,
+    `Ilovani ochish uchun pastki chap burchakdagi <b>«AgrozGO»</b> menyu tugmasini bosing 👇`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -521,8 +518,8 @@ async function deliverCode(chatId: number, token: string, fromId: number): Promi
   return "sent";
 }
 
-// POST /api/telegram/webhook (Asosiy / Fermerlar boti)
-router.post("/webhook", async (req, res) => {
+// POST /api/telegram va POST /api/telegram/webhook (Asosiy / Fermerlar boti)
+router.post(["/", "/webhook"], async (req, res) => {
   const secret = await telegramWebhookSecret();
   if (secret && req.headers["x-telegram-bot-api-secret-token"] !== secret) {
     return res.status(401).send("unauthorized");

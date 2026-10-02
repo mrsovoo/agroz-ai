@@ -1,3 +1,5 @@
-import DiagnosePage from "./[category]/page";
+import { redirect } from "next/navigation";
 
-export default DiagnosePage;
+export default function TashxisPage() {
+  redirect("/");
+}

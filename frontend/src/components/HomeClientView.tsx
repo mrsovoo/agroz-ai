@@ -2,13 +2,11 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import AgrozLogo from "@/components/AgrozLogo";
 import NotificationBell from "@/components/NotificationBell";
 import WeatherCard from "@/components/WeatherCard";
 import SpecialistCallModal from "@/components/SpecialistCallModal";
 import ProductCard from "@/components/ProductCard";
-import HomeScreenPromptBanner, { AddToHomeScreenButton } from "@/components/HomeScreenPromptBanner";
 import {
   loadCart,
   saveCart,
@@ -18,7 +16,7 @@ import {
   type CartStoreMedicine,
 } from "@/lib/cart-store";
 import { haptic } from "@/lib/telegram";
-import { Sparkles, Minus, Plus } from "lucide-react";
+import { Minus, Plus } from "lucide-react";
 
 export type HomeMedicine = {
   id: number;
@@ -56,8 +54,6 @@ export default function HomeClientView({
 }) {
   const [medicines, setMedicines] = useState<HomeMedicine[]>(initialMedicines || []);
   const [specialist] = useState<HomeSpecialist | null>(initialSpecialist || null);
-
-  const router = useRouter();
 
   useEffect(() => {
     if (initialMedicines && initialMedicines.length > 0) {
@@ -173,13 +169,9 @@ export default function HomeClientView({
       <header className="flex items-center justify-between py-2">
         <AgrozLogo className="h-8" />
         <div className="flex items-center gap-2">
-          <AddToHomeScreenButton variant="header" />
           <NotificationBell />
         </div>
       </header>
-
-      {/* Telegram Mini App: Bosh ekranga qo'shish banneri */}
-      <HomeScreenPromptBanner />
 
       {/* 2. Ob-havo kartasi: 3D Quyosh + 22 °C + Agro tahlil */}
       <div className="mt-3.5">
@@ -308,48 +300,6 @@ export default function HomeClientView({
           </div>
         </section>
       )}
-
-      {/* 5. AI Tashxis bloki */}
-      <section className="mt-4">
-        <div className="rounded-[24px] bg-[#f8f9fa] border border-neutral-100 p-3.5 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {/* Kulrang dumaloq kvadrat icon */}
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] bg-[#71717a] text-white shadow-2xs">
-                <Sparkles size={22} />
-              </div>
-              <div>
-                <h3 className="text-[16px] font-black text-neutral-900 leading-tight">AgrozGO Tashxis</h3>
-                <p className="mt-0.5 text-[12px] text-neutral-500">Rasm orqali kasallikni aniqlash</p>
-              </div>
-            </div>
-
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 gap-2.5">
-            <button
-              type="button"
-              onClick={() => {
-                haptic("light");
-                router.push("/tashxis/crop");
-              }}
-              className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-[13px] font-bold text-neutral-800 shadow-2xs transition active:scale-95 hover:bg-neutral-50"
-            >
-              <span>🌱 Ekin tashxisi</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                haptic("light");
-                router.push("/tashxis/animal");
-              }}
-              className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-[13px] font-bold text-neutral-800 shadow-2xs transition active:scale-95 hover:bg-neutral-50"
-            >
-              <span>🐄 Chorva tashxisi</span>
-            </button>
-          </div>
-        </div>
-      </section>
 
     </div>
   );

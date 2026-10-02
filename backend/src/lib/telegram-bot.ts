@@ -186,10 +186,7 @@ export function greetingMessage(name?: string): string {
     "• 📍 Hududingizdagi barcha dorixonalar va mutaxassislar",
     "• 🌤 Real ob-havo, dori purkash va tuproq holati",
     "",
-    "📲 <b>Ilovani telefoningiz bosh ekraniga qo'shib oling!</b>",
-    "Shunda har safar Telegram botga kirmasdan, to'g'ridan-to'g'ri telefoningiz ekranidagi belgi (ikonka) orqali Web Mini Appni ochishingiz mumkin bo'ladi.",
-    "",
-    "<b>Pastdagi tugmani bosing va ilovani bosh ekranga chiqaring 👇</b>",
+    "Ilovani ochish uchun pastki chap burchakdagi «AgrozGO» menyu tugmasini bosing 👇",
   ].join("\n");
 }
 
