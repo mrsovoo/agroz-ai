@@ -2036,7 +2036,7 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
       step = "bio";
       await setState(telegramId, step, draft);
       await answerCallbackQuery(query.id);
-      await sendAuthMessage(chatId, askBio());
+      await sendAuthMessage(chatId, askBio(draft.specialty));
       return;
     }
 
@@ -2711,7 +2711,7 @@ async function handleText(
       const years = numMatch ? parseInt(numMatch[0], 10) : 3;
       draft.experienceYears = years;
       await setState(telegramId, "bio", draft);
-      await sendAuthMessage(chatId, askBio());
+      await sendAuthMessage(chatId, askBio(draft.specialty));
       return;
     }
 

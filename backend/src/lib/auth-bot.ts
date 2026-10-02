@@ -908,13 +908,18 @@ export function askEducation(): string {
 }
 
 /** O'zi haqida qisqa ma'lumot (xizmatlar). */
-export function askBio(): string {
+export function askBio(specialty?: string): string {
+  const isVeterinar = specialty?.toLowerCase().includes("veterinar");
+  const exampleText = isVeterinar
+    ? "Chorva emlash, parvarishlash, tug'ruqqa yordam berish, kasalliklarni davolash, operatsiyalar"
+    : "Ekin kasalliklarini aniqlash, o'g'itlash va dori sepish me'yori, bog'dorchilik va issiqxona agrotexnikasi";
+
   return [
     "🛠 <b>Qanday xizmatlar ko'rsatasiz?</b>",
     "",
     "Ko'rsatadigan xizmatlaringiz va maslahat bera oladigan sohalaringizni yozib qoldiring:",
     "",
-    "Masalan: <i>Ekin kasalliklarini aniqlash, bog'dorchilik maslahati, chorva emlash, parvarishlash</i>",
+    `Masalan: <i>${exampleText}</i>`,
   ].join("\n");
 }
 
