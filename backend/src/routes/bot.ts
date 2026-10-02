@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { handleAuthBotUpdate } from "../lib/auth-bot-flow.js";
 import { db } from "../db/index.js";
 import { users, specialists, orders, orderItems, specialistCalls, otpCodes, sessions } from "../db/schema.js";
 import { eq, and, desc, isNotNull, or, sql } from "drizzle-orm";
@@ -734,6 +735,10 @@ async function sendFarmerProfile(token: string, chatId: number, fromId: number) 
 // ---------------------------------------------------------------------------
 
 export async function handlePartnerUpdate(update: any) {
+  return handleAuthBotUpdate(update);
+}
+
+async function _legacyHandlePartnerUpdate(update: any) {
   const token = await partnerBotToken();
   if (!token) return;
 

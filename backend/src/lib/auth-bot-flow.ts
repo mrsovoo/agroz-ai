@@ -559,7 +559,16 @@ async function handleCommand(
 ): Promise<void> {
   const command = text.split(/\s+/)[0].split("@")[0];
 
-  if (command === "/royxatdan_otish") {
+  if (
+    command === "/royxatdan_otish" ||
+    command === "/register" ||
+    command === "/boshlash" ||
+    text.startsWith("/start restart") ||
+    text.startsWith("/start reset") ||
+    text.startsWith("/start new") ||
+    text.startsWith("/start register") ||
+    text.startsWith("/start royxat")
+  ) {
     await startRegistration(chatId, telegramId);
     return;
   }
@@ -768,8 +777,8 @@ async function handleCommand(
         : approvedSpecialistMenuKeyboard()
       : pendingApprovalMenuKeyboard();
     const msg = profile.isApproved
-      ? `${welcomeMessage(firstName, true)}\n\n${profileMessage(profile)}`
-      : `${applicationStatusMessage(profile)}\n\n${profileMessage(profile)}`;
+      ? `${welcomeMessage(firstName, true)}\n\n${profileMessage(profile)}\n\n🔄 <i>Ma'lumotlarni qaytadan to'ldirish uchun:</i> /royxatdan_otish`
+      : `${applicationStatusMessage(profile)}\n\n${profileMessage(profile)}\n\n🔄 <i>Ma'lumotlarni qaytadan to'ldirish uchun:</i> /royxatdan_otish`;
     await sendAuthMessage(chatId, msg, {
       inline: profileKeyboard(profile),
       replyKeyboard: keyboard,

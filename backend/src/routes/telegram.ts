@@ -541,7 +541,7 @@ router.post("/auth-webhook", async (req, res) => {
 
   try {
     const update = req.body;
-    if (update) await handlePartnerUpdate(update);
+    if (update) await handleAuthBotUpdate(update);
   } catch (err) {
     console.error("[auth-bot webhook error]:", err);
   }
