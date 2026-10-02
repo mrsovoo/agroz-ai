@@ -66,6 +66,11 @@ export default function BottomNav() {
     setIsCartOpen(false);
   };
 
+  // Ob-havo ichki sahifasida pastki nav bar ko'rinmasligi kerak
+  if (pathname === "/ob-havo" || pathname?.startsWith("/ob-havo")) {
+    return null;
+  }
+
   return (
     <nav
       className="mobile-bottom-nav fixed bottom-0 left-1/2 z-[120] w-full max-w-[520px] -translate-x-1/2 transition-all bg-white border-t border-neutral-100 shadow-[0_-4px_25px_rgba(0,0,0,0.06)]"

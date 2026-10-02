@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import TelegramBackButton from "@/components/TelegramBackButton";
 import {
   ArrowLeft,
   MapPin,
@@ -160,16 +161,18 @@ export default function WeatherPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] px-4 pt-3 pb-24 text-neutral-900">
+    <div className="min-h-screen bg-[#f8fafc] px-4 pt-3 pb-10 text-neutral-900">
+      <TelegramBackButton href="/" />
+
       {/* 1. Header: Orqaga qaytish + Joylashuv */}
       <header className="flex items-center justify-between py-2">
         <Link
           href="/"
           onClick={() => haptic("light")}
-          className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[13px] font-bold text-neutral-700 shadow-xs border border-neutral-200 active:scale-95 transition"
+          className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-[13px] font-bold text-neutral-800 shadow-xs border border-neutral-200 active:scale-95 transition"
         >
           <ArrowLeft size={16} />
-          <span>Asosiy</span>
+          <span>Orqaga</span>
         </Link>
 
         <button
