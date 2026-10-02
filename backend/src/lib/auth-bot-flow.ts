@@ -775,16 +775,16 @@ async function handleCommand(
       replyKeyboard: keyboard,
     });
   } else {
+    await clearState(telegramId);
+    await setState(telegramId, "name", {});
     await sendAuthMessage(chatId, welcomeMessage(firstName, false), {
-      inline: NEXT_STEP_KEYBOARD,
+      removeKeyboard: true,
     });
   }
 }
 
 async function startRegistration(chatId: number, telegramId: number): Promise<void> {
   await clearState(telegramId);
-  // Mavjud profil bo'lsa — ma'lumotlarni oldindan to'ldiramiz: foydalanuvchi
-  // faqat o'zgartirmoqchi bo'lgan maydonni qayta yozadi.
   const existing = await getSpecialistByTelegramId(telegramId);
   const draft: Draft = existing
     ? {
@@ -803,14 +803,10 @@ async function startRegistration(chatId: number, telegramId: number): Promise<vo
         workHours: existing.workHours ?? undefined,
       }
     : {};
-  await setState(telegramId, "role", draft);
-  await sendAuthMessage(
-    chatId,
-    existing
-      ? `${roleQuestion()}\n\n<i>Ma'lumotlaringiz saqlangan — tasdiqlasangiz shu qoldi.</i>`
-      : roleQuestion(),
-    { inline: ROLE_KEYBOARD },
-  );
+  await setState(telegramId, "name", draft);
+  await sendAuthMessage(chatId, welcomeMessage(undefined, false), {
+    removeKeyboard: true,
+  });
 }
 
 /**
@@ -1706,35 +1702,28 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
     }
     let { step, draft } = state;
 
-    // Rol tanlash.
+    // Rol tanlash: Mutaxassis yoki Dorixona egasi.
     if (data === "r:s" || data === "r:p") {
       draft.role = data === "r:p" ? "pharmacy" : "specialist";
-      step = "name";
-      await setState(telegramId, step, draft);
       await answerCallbackQuery(query.id);
-      // Prefill — yangi yozilsa o'zgaradi, tasdiqlash uchun eski nom ko'rsatiladi.
-      await sendAuthMessage(chatId, draft.name ? askName(draft.name) : askName());
+      if (draft.role === "specialist") {
+        step = "specialty";
+        await setState(telegramId, step, draft);
+        await sendAuthMessage(chatId, askSpecialty(), { inline: SPECIALTY_KEYBOARD });
+      } else {
+        step = "organization";
+        await setState(telegramId, step, draft);
+        await sendAuthMessage(chatId, askOrganization());
+      }
       return;
     }
 
-    // Mutaxassislik tanlash (3 ta asosiy soha: crop | animal | both).
+    // Mutaxassislik tanlash (Agronom yoki Veterinar).
     if (data.startsWith("sp:")) {
       const value = data.slice(3);
-      let specialty = "Agronom va Veterinar";
-      let helpsWith: "crop" | "animal" | "both" = "both";
-
-      if (value === "crop") {
-        specialty = "Agronom (O'simliklar)";
-        helpsWith = "crop";
-      } else if (value === "animal") {
-        specialty = "Veterinar (Chorvachilik)";
-        helpsWith = "animal";
-      } else if (value === "both") {
-        specialty = "Agronom va Veterinar (Ikkalasi ham)";
-        helpsWith = "both";
-      } else {
-        specialty = value.slice(0, 160);
-      }
+      const isCrop = value === "crop";
+      const specialty = isCrop ? "Agronom" : "Veterinar";
+      const helpsWith: "crop" | "animal" = isCrop ? "crop" : "animal";
 
       if (state.step === "edit_spec") {
         await updateSpecialistFields(telegramId, { specialty, helpsWith });
@@ -1744,7 +1733,7 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
         if (updated) {
           await sendAuthMessage(
             chatId,
-            `✅ <b>Sohangiz muvaffaqiyatli yangilandi:</b> ${escapeHtml(specialty)}\n\n${profileMessage(updated)}`,
+            `✅ <b>Mutaxassisligingiz muvaffaqiyatli yangilandi:</b> ${escapeHtml(specialty)}\n\n${profileMessage(updated)}`,
             { inline: profileKeyboard(updated) },
           );
         }
@@ -1753,11 +1742,10 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
 
       draft.specialty = specialty;
       draft.helpsWith = helpsWith;
-      // Mutaxassislik tanlangach, to'g'ridan-to'g'ri amaliy tajriba so'raladi
       step = "experience";
       await setState(telegramId, step, draft);
       await answerCallbackQuery(query.id);
-      await sendAuthMessage(chatId, askExperience(), { inline: EXPERIENCE_KEYBOARD });
+      await sendAuthMessage(chatId, askExperience());
       return;
     }
 
@@ -2056,14 +2044,11 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
         }
         return;
       }
-      if (val === "skip") {
-        delete draft.workHours;
-      } else {
-        draft.workHours = val;
-      }
-      await setState(telegramId, "confirm", draft);
+      draft.workHours = val === "skip" ? "09:00 - 18:00" : val;
+      step = "location";
+      await setState(telegramId, step, draft);
       await answerCallbackQuery(query.id);
-      await sendSummary(chatId, telegramId, draft);
+      await sendAuthMessage(chatId, askLocation(), { replyKeyboard: locationKeyboard() });
       return;
     }
 
@@ -2513,45 +2498,54 @@ async function handleText(
   draft: Draft,
   text: string,
 ): Promise<void> {
-  if (!text) return;
-
   switch (step) {
     case "name": {
-      const skip = text === "/skip";
-      const name = skip ? (draft.name ?? null) : cleanText(text, 120);
-      if (!name) {
-        await sendAuthMessage(chatId, draft.name ? askName(draft.name) : askName());
+      const name = cleanText(text, 120);
+      if (!name || name.length < 2) {
+        await sendAuthMessage(chatId, "⚠️ Iltimos, to'liq ism va familiyangizni kiriting (Masalan: <i>Alisher Qodirov</i>):");
         return;
       }
       draft.name = name;
       await setState(telegramId, "phone", draft);
-      await sendAuthMessage(chatId, askPhone(), { replyKeyboard: contactKeyboard() });
+      await sendAuthMessage(chatId, askPhone(), { removeKeyboard: true });
       return;
     }
 
     case "phone": {
-      await handleContact(chatId, telegramId, text);
+      const phone = normalizePhone(text);
+      if (!phone) {
+        await sendAuthMessage(
+          chatId,
+          [
+            "⚠️ <b>Telefon raqam noto'g'ri kiritildi!</b>",
+            "",
+            "Iltimos, amaldagi telefon raqamingizni kiriting (Masalan: <code>+998901234567</code> yoki <code>901234567</code>):",
+          ].join("\n"),
+        );
+        return;
+      }
+      const owner = await findPhoneOwner(phone, telegramId);
+      if (owner) {
+        await sendAuthMessage(chatId, phoneTakenMessage(owner.name, owner.role));
+        return;
+      }
+      draft.phone = phone;
+      await setState(telegramId, "role", draft);
+      await sendAuthMessage(chatId, roleQuestion(), { inline: ROLE_KEYBOARD });
       return;
     }
 
-    // Ish vaqti — mijozga ko'rinadi. /skip yoki bo'sh — standart qoladi.
+    // Ish vaqti — qo'lda yozilganda
     case "work_hours": {
-      const skip = text === "/skip";
-      const hours = skip ? null : cleanText(text, 60);
-      if (!skip && !hours) {
-        await sendAuthMessage(chatId, askWorkHours(draft.workHours));
-        return;
-      }
-      if (hours) draft.workHours = hours;
-      else delete draft.workHours;
-      await setState(telegramId, "confirm", draft);
-      await sendSummary(chatId, telegramId, draft);
+      const hours = cleanText(text, 60) || "09:00 - 18:00";
+      draft.workHours = hours;
+      await setState(telegramId, "location", draft);
+      await sendAuthMessage(chatId, askLocation(), { replyKeyboard: locationKeyboard() });
       return;
     }
 
     case "address": {
-      const skip = text === "/skip";
-      const address = skip ? (draft.address ?? null) : cleanText(text, 300);
+      const address = cleanText(text, 300);
       if (!address) {
         await sendAuthMessage(chatId, askAddress());
         return;
@@ -2561,17 +2555,14 @@ async function handleText(
       return;
     }
 
-    // Foydalanuvchi tasdiqlash o'rniga manzilni yozib yubordi — shu matn qabul qilinadi.
+    // Foydalanuvchi mo'ljal yoki aniq manzil yozib yuborganida
     case "address_confirm": {
-      const skip = text === "/skip";
-      const address = skip ? (draft.address ?? null) : cleanText(text, 300);
-      if (!address) {
-        await sendAuthMessage(chatId, askAddressConfirm(draft.address ?? ""), {
-          inline: ADDRESS_CONFIRM_KEYBOARD,
-        });
-        return;
+      const extra = cleanText(text, 300);
+      if (extra && draft.address) {
+        draft.address = `${draft.address} (${extra})`;
+      } else if (extra) {
+        draft.address = extra;
       }
-      draft.address = address;
       await advanceAfterAddress(chatId, telegramId, draft);
       return;
     }
@@ -2583,58 +2574,44 @@ async function handleText(
         return;
       }
       draft.specialty = specialty;
-      await setState(telegramId, "helps_with", draft);
-      await sendAuthMessage(chatId, askHelpsWith(), { inline: HELPS_WITH_KEYBOARD });
+      await setState(telegramId, "experience", draft);
+      await sendAuthMessage(chatId, askExperience());
       return;
     }
-
-    // Mutaxassis uchun ham ish vaqti so'raymiz (dorixona turi pt: bosqichi
-    // dorixonalarda ishlatiladi, mutaxassislar hw: dan to'g'ridan-to'g'ri
-    // education'ga o'tadi — shuning uchun work_hours'ni specialty_text
-    // paytidan so'ng emas, confirm oldidan so'raymiz: advanceAfterAddress).
 
     case "helps_with":
       await sendAuthMessage(chatId, askHelpsWith(), { inline: HELPS_WITH_KEYBOARD });
       return;
 
     case "education": {
-      // /skip — ta'limni o'tkazib yuborish.
-      const skip = text === "/skip";
-      const education = skip ? null : cleanText(text, 300);
-      if (!skip && !education) {
-        await sendAuthMessage(chatId, askEducation());
-        return;
-      }
-      draft.education = education ?? undefined;
+      const education = cleanText(text, 300);
+      draft.education = education || undefined;
       await setState(telegramId, "experience", draft);
-      await sendAuthMessage(chatId, askExperience(), { inline: EXPERIENCE_KEYBOARD });
+      await sendAuthMessage(chatId, askExperience());
       return;
     }
 
     case "experience": {
-      // /skip — tajribani o'tkazib yuborish.
-      const skip = text === "/skip";
-      const years = skip ? null : Number(text.replace(/[^0-9]/g, ""));
-      if (!skip && (!Number.isFinite(years) || (years as number) < 0 || (years as number) > 80)) {
-        await sendAuthMessage(chatId, askExperience(), { inline: EXPERIENCE_KEYBOARD });
+      const expText = cleanText(text, 100);
+      if (!expText) {
+        await sendAuthMessage(chatId, askExperience());
         return;
       }
-      draft.experienceYears = years ?? undefined;
+      const numMatch = expText.match(/\d+/);
+      const years = numMatch ? parseInt(numMatch[0], 10) : 3;
+      draft.experienceYears = years;
       await setState(telegramId, "bio", draft);
       await sendAuthMessage(chatId, askBio());
       return;
     }
 
     case "bio": {
-      // /skip — bio'ni o'tkazib yuborish.
-      const skip = text === "/skip";
-      const bio = skip ? null : cleanText(text, 500);
-      if (!skip && !bio) {
-        await sendAuthMessage(chatId, askBio());
+      const bio = cleanText(text, 500);
+      if (!bio || bio.length < 3) {
+        await sendAuthMessage(chatId, "⚠️ Iltimos, ko'rsatadigan xizmatlaringiz haqida qisqacha yozib qoldiring:");
         return;
       }
-      draft.bio = bio ?? undefined;
-      // Mutaxassis uchun ham mijozlar qachon bog'lanishi mumkinligini so'raymiz
+      draft.bio = bio;
       await setState(telegramId, "work_hours", draft);
       await sendAuthMessage(chatId, askWorkHours(draft.workHours), { inline: WORK_HOURS_KEYBOARD });
       return;
@@ -3133,22 +3110,24 @@ async function handleLocation(
   draft.lat = lat;
   draft.lng = lng;
 
-  // Manzilni avtomatik aniqlaymiz — foydalanuvchi qo'lda yozib o'tirmasin.
+  // Manzilni avtomatik aniqlaymiz
   const detected = await reverseGeocode(lat as number, lng as number);
-  if (detected) {
-    draft.address = detected;
+  draft.address = detected || "O'zbekiston";
+
+  // Lokatsiya qabul qilinishi bilan pastdagi «Joylashuvni yuborish» tugmasini olib tashlaymiz
+  await clearReplyKeyboard(chatId, "📍 Joylashuv qabul qilindi!");
+
+  if (draft.role === "pharmacy") {
     await setState(telegramId, "address_confirm", draft);
-    // Lokatsiya qabul qilinishi bilan pastdagi «Joylashuvni yuborish» tugmasini olib tashlaymiz
-    await clearReplyKeyboard(chatId, "📍 Joylashuv qabul qilindi!");
-    await sendAuthMessage(chatId, askAddressConfirm(detected), {
+    await sendAuthMessage(chatId, askAddressConfirm(draft.address), {
       inline: ADDRESS_CONFIRM_KEYBOARD,
     });
     return;
   }
 
-  // Aniqlanmasa — qo'lda so'raymiz (oqim to'xtamaydi).
-  await setState(telegramId, "address", draft);
-  await clearReplyKeyboard(chatId, askAddress());
+  // Mutaxassis bo'lsa — to'g'ridan-to'g'ri tasdiqlash kartochkasiga o'tadi
+  await setState(telegramId, "confirm", draft);
+  await sendSummary(chatId, telegramId, draft);
 }
 
 async function handleMedicinePhoto(
@@ -3355,13 +3334,8 @@ async function saveMedicine(
 }
 
 async function advanceAfterAddress(chatId: number, telegramId: number, draft: Draft): Promise<void> {
-  if (draft.role === "pharmacy") {
-    await setState(telegramId, "organization", draft);
-    await sendAuthMessage(chatId, askOrganization());
-    return;
-  }
-  await setState(telegramId, "specialty", draft);
-  await sendAuthMessage(chatId, askSpecialty(), { inline: SPECIALTY_KEYBOARD });
+  await setState(telegramId, "confirm", draft);
+  await sendSummary(chatId, telegramId, draft);
 }
 
 async function sendSummary(chatId: number, telegramId: number, draft: Draft): Promise<void> {
@@ -3394,13 +3368,9 @@ async function sendSummary(chatId: number, telegramId: number, draft: Draft): Pr
 
 /** Majburiy maydonlardan biri yo'q bo'lsa — qaysi bosqichga qaytishni aytadi. */
 function requiredMissing(draft: Draft): { step: Step; question: string } | null {
-  if (!draft.role) return { step: "role", question: roleQuestion() };
   if (!draft.name) return { step: "name", question: askName() };
   if (!draft.phone) return { step: "phone", question: askPhone() };
-  if (!Number.isFinite(draft.lat) || !Number.isFinite(draft.lng)) {
-    return { step: "location", question: askLocation() };
-  }
-  if (!draft.address) return { step: "address", question: askAddress() };
+  if (!draft.role) return { step: "role", question: roleQuestion() };
   if (draft.role === "pharmacy" && !draft.organization) {
     return { step: "organization", question: askOrganization() };
   }
@@ -3409,6 +3379,10 @@ function requiredMissing(draft: Draft): { step: Step; question: string } | null 
       ? { step: "pharmacy_type", question: askPharmacyType() }
       : { step: "specialty", question: askSpecialty() };
   }
+  if (!Number.isFinite(draft.lat) || !Number.isFinite(draft.lng)) {
+    return { step: "location", question: askLocation() };
+  }
+  if (!draft.address) return { step: "address", question: askAddress() };
   return null;
 }
 

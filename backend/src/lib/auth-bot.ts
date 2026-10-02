@@ -213,38 +213,17 @@ export function escapeHtml(value: string): string {
 
 export const ROLE_KEYBOARD: InlineKeyboard = {
   inline_keyboard: [
-    [
-      { text: "👨‍🌾 Mutaxassisman", callback_data: "r:s" },
-      { text: "🏪 Dorixona egasiman", callback_data: "r:p" },
-    ],
+    [{ text: "👨‍🌾 Mutaxassis (Agronom / Veterinar)", callback_data: "r:s" }],
+    [{ text: "🏪 Agro-dorixona egasi", callback_data: "r:p" }],
   ],
 };
 
 export const SPECIALTY_KEYBOARD: InlineKeyboard = {
   inline_keyboard: [
     [
-      { text: "🌱 O'simliklar / Ekinlar (Agronom)", callback_data: "sp:crop" },
+      { text: "🌱 Agronom", callback_data: "sp:crop" },
+      { text: "🐄 Veterinar", callback_data: "sp:animal" },
     ],
-    [
-      { text: "🐄 Veterinariya (Chorvachilik)", callback_data: "sp:animal" },
-    ],
-    [
-      { text: "🌿🐄 Ikkalasi ham (Ekin & Chorva)", callback_data: "sp:both" },
-    ],
-  ],
-};
-
-export const EXPERIENCE_KEYBOARD: InlineKeyboard = {
-  inline_keyboard: [
-    [
-      { text: "🌱 1–2 yil (boshlang'ich)", callback_data: "exp:2" },
-      { text: "🌿 3–5 yil (amaliyotchi)", callback_data: "exp:4" },
-    ],
-    [
-      { text: "🌳 5–10 yil (tajribali)", callback_data: "exp:7" },
-      { text: "👑 10+ yil (katta mutaxassis)", callback_data: "exp:10" },
-    ],
-    [{ text: "⏩ O'tkazib yuborish", callback_data: "exp:skip" }],
   ],
 };
 
@@ -255,19 +234,16 @@ export const WORK_HOURS_KEYBOARD: InlineKeyboard = {
       { text: "⏰ 09:00 - 20:00", callback_data: "wh:09:00 - 20:00" },
     ],
     [
-      { text: "🚨 24/7 (favqulodda)", callback_data: "wh:24/7" },
-      { text: "⏩ O'tkazib yuborish (09:00 - 18:00)", callback_data: "wh:skip" },
+      { text: "🚨 24/7 (Doimiy)", callback_data: "wh:24/7" },
     ],
   ],
 };
 
 export const PHARMACY_TYPE_KEYBOARD: InlineKeyboard = {
   inline_keyboard: [
-    [
-      { text: "🌾 Agro dorixona", callback_data: "pt:agro" },
-      { text: "🩺 Vet dorixona", callback_data: "pt:vet" },
-    ],
-    [{ text: "📦 Umumiy (ikkalasi ham)", callback_data: "pt:general" }],
+    [{ text: "🌱 Ekin va o'simlik dorilari", callback_data: "pt:crop" }],
+    [{ text: "🐄 Veterinariya va chorva dorilari", callback_data: "pt:animal" }],
+    [{ text: "📦 Aralash (Ekin & Chorva dorilari)", callback_data: "pt:both" }],
   ],
 };
 
@@ -414,8 +390,8 @@ export const ADDRESS_CONFIRM_KEYBOARD: InlineKeyboard = {
 
 export const CONFIRM_KEYBOARD: InlineKeyboard = {
   inline_keyboard: [
-    [{ text: "✅ Tasdiqlash", callback_data: "c:ok" }],
-    [{ text: "❌ Bekor qilish", callback_data: "c:no" }],
+    [{ text: "✅ Ruxsat berish va tasdiqlash", callback_data: "c:ok" }],
+    [{ text: "❌ Qaytadan boshlash", callback_data: "r:start" }],
   ],
 };
 
@@ -444,33 +420,34 @@ export function locationKeyboard(): ReplyKeyboard {
 // ---------------------------------------------------------------------------
 
 export function welcomeMessage(name?: string, registered = false): string {
-  const lines = [
-    `👋 Salom${name ? `, ${escapeHtml(name)}` : ""}!`,
-    "",
-    "Men <b>Agroz Auth</b> botiman — <b>AgrozGO</b> platformasi uchun mutaxassislar va",
-    "dorixona egalarini ro'yxatdan o'tkazaman.",
-    "",
-    "📋 Ro'yxatdan o'tish uchun quyidagilar so'raladi:",
-    "• Ism-familiya",
-    "• Telefon raqam",
-    "• Lokatsiya (xaritada ko'rinish uchun)",
-    "• Manzil",
-    "• Mutaxassislik yoki dorixona ma'lumoti",
-  ];
-  if (registered) {
-    lines.push("", "ℹ️ Siz allaqachon ro'yxatdagisiz — qayta yuborsangiz ma'lumotlar yangilanadi.");
+  if (registered && name) {
+    return [
+      `Assalomu alaykum, <b>${escapeHtml(name)}</b>!`,
+      "",
+      "<b>AgrozGO | Biznes</b> botiga xush kelibsiz!",
+      "",
+      "Siz platformada faol foydalanuvchisiz. Pastdagi menyudan foydalanishingiz mumkin.",
+    ].join("\n");
   }
-  lines.push("", "Boshlash uchun pastdagi tugmani bosing.");
-  return lines.join("\n");
+  return [
+    "Assalomu alaykum!",
+    "<b>AgrozGO | Biznes</b> botiga xush kelibsiz!",
+    "",
+    "Ro'yxatdan o'tish uchun <b>Ism va Familiyangizni</b> kiriting:",
+  ].join("\n");
 }
 
 export function roleQuestion(): string {
-  return ["🧑‍🔬 <b>Kim sifatida ro'yxatdan o'tasiz?</b>", "", "Kerakli variantni tanlang."].join("\n");
+  return [
+    "🧑‍🌾 <b>Kim sifatida ro'yxatdan o'tmoqchisiz?</b>",
+    "",
+    "Quyidagi yo'nalishlardan birini tanlang:",
+  ].join("\n");
 }
 
 export function askName(prefill?: string): string {
   const base = [
-    "✍️ <b>Ism va familiyangizni yozing.</b>",
+    "✍️ <b>Ism va familiyangizni kiriting:</b>",
     "",
     "Masalan: <i>Alisher Qodirov</i>",
   ];
@@ -480,25 +457,19 @@ export function askName(prefill?: string): string {
 
 export function askPhone(): string {
   return [
-    "📱 <b>Hozirda ishlab turgan faol telefon raqamingizni kiriting.</b>",
+    "📱 <b>Amaldagi telefon raqamingizni yozing:</b>",
     "",
-    "⚠️ <b>DIQQAT:</b> Telegram hisobingizga ulangan raqam eskirgan yoki ishlamaydigan bo'lishi mumkin.",
-    "Shuning uchun, ayni vaqtda sizga qo'ng'iroq qilsa tushadigan <b>ishlayotgan raqamingizni yozib yuboring</b>",
-    "(masalan: <code>+998901234567</code> yoki <code>90 123 45 67</code>).",
+    "Iltimos, hozirda amaldagi, ishlab turgan telefon raqamingizni kiriting (Masalan: <code>+998901234567</code> yoki <code>901234567</code>).",
     "",
-    "<i>(Yoki agar Telegram hisobingizdagi raqam hozir ishlab turgan bo'lsa, pastdagi «📱 Telefon raqamni yuborish» tugmasini bosing)</i>",
-    "",
-    "❗️ Mijozlar va mutaxassislar siz bilan aynan shu raqam orqali bog'lanadi.",
+    "⚠️ <b>Muhim:</b> Ushbu raqam orqali sizga mijozlar va platforma xabarnomalari bog'lanadi.",
   ].join("\n");
 }
 
 export function askLocation(): string {
   return [
-    "📍 <b>Joylashuvingizni yuboring.</b>",
+    "📍 <b>Joylashuvingizni yuboring:</b>",
     "",
-    "Pastdagi <b>«📍 Lokatsiyani yuborish»</b> tugmasini bosing.",
-    "",
-    "Bu sizni xaritada ko'rsatish va 5 km ichidagi mijozlarga topish uchun kerak.",
+    "Hududingizdagi dehqon va fermerlar sizni masofa bo'yicha (eng yaqin mutaxassis sifatida) topa olishlari uchun pastdagi <b>«📍 Lokatsiyani yuborish»</b> tugmasini bosing:",
   ].join("\n");
 }
 
@@ -513,21 +484,17 @@ export function askAddress(): string {
 /** Lokatsiya bo'yicha avtomatik topilgan manzilni tasdiqlash so'rovi. */
 export function askAddressConfirm(address: string): string {
   return [
-    "📍 <b>Manzilingiz aniqlandi:</b>",
+    "🏢 <b>Dorixona manzili va mo'ljali:</b>",
     "",
-    `<b>${escapeHtml(address)}</b>`,
+    `📍 Aniqlangan manzil: <b>${escapeHtml(address)}</b>`,
     "",
-    "Shu manzil to'g'rimi? Tasdiqlasangiz, ro'yxatdan o'tish davom etadi.",
-    "Agar noto'g'ri bo'lsa — «✏️ O'zim yozaman»ni bosing.",
+    "Agar qo'shimcha mo'ljal kiritmoqchi bo'lsangiz (masalan: <i>Dehqon bozori ro'parasida, 12-do'kon</i>), matn qilib yozing yoki quyidagi tugmani bosing:",
   ].join("\n");
 }
 
 export function askSpecialty(): string {
   return [
-    "🧑‍🌾 <b>1. Faoliyat yo'nalishingizni tanlang:</b>",
-    "",
-    "AgrozGO platformasida qaysi soha bo'yicha fermer va dehqonlarga yordam berasiz?",
-    "Pastdagi 3 ta asosiy yo'nalishdan birini tanlang:",
+    "🌱 <b>Mutaxassislik yo'nalishingizni tanlang:</b>",
   ].join("\n");
 }
 
@@ -543,30 +510,27 @@ export function askSpecialtyText(): string {
   ].join("\n");
 }
 
+
+
 export function askOrganization(): string {
   return [
-    "🏪 <b>Dorixonangiz nomini yozing.</b>",
+    "🏪 <b>Agro-do'koningiz (dorixonangiz) nomini kiriting:</b>",
     "",
-    "Masalan: <i>AgroHimiya Savdo</i>",
+    "Masalan: <i>Baraka Agro Savdo</i> yoki <i>Farg'ona Agro Kimyo</i>",
   ].join("\n");
 }
 
 export function askPharmacyType(): string {
   return [
-    "🌾 <b>Dorixona turini tanlang.</b>",
-    "",
-    "• Agro — ekin/o'simlik dorilari",
-    "• Vet — chorva/hayvon dorilari",
-    "• Umumiy — ikkala turdagi dorilar ham",
+    "🌿 <b>Agro-do'koningiz yo'nalishini tanlang:</b>",
   ].join("\n");
 }
 
 export function askWorkHours(prefill?: string): string {
   const base = [
-    "🕘 <b>Mijozlar siz bilan qaysi vaqtlarda bog'lanishi mumkin?</b>",
+    "⏰ <b>Ish vaqtingiz:</b>",
     "",
-    "Pastdagi tugmalardan birini tanlang yoki o'zingiz yozing:",
-    "Masalan: <i>08:00 - 19:00</i>, <i>09:00 - 20:00</i> yoki <i>24/7 (favqulodda)</i>",
+    "Mijozlar siz bilan qaysi vaqtlarda bog'lanishi mumkin? Quyidagi tugmalardan birini tanlang yoki o'zingiz yozing:",
   ];
   if (prefill) base.push("", `Hozirgi qiymat: <b>${escapeHtml(prefill)}</b>`);
   return base.join("\n");
@@ -587,34 +551,31 @@ export function confirmSummary(data: {
   lng: number;
   workHours?: string | null;
 }): string {
-  const roleLabel = data.role === "pharmacy" ? "🏪 Dorixona egasi" : "👨‍🌾 Mutaxassis";
+  const isPharmacy = data.role === "pharmacy";
+  const roleLabel = isPharmacy ? "🏪 Agro-dorixona egasi" : "👨‍🌾 Mutaxassis";
   const rows = [
-    "🧾 <b>Ma'lumotlarni tekshiring:</b>",
+    "🧾 <b>Kiritilgan ma'lumotlarni tekshiring:</b>",
     "",
-    `<b>Turi:</b> ${roleLabel}`,
-    `<b>Ism:</b> ${escapeHtml(data.name)}`,
-    `<b>Telefon:</b> ${escapeHtml(data.phone)}`,
+    `👤 <b>F.I.Sh:</b> ${escapeHtml(data.name)}`,
+    `📞 <b>Telefon:</b> <code>${escapeHtml(data.phone)}</code>`,
+    `🏷 <b>Faoliyat turi:</b> ${roleLabel}`,
   ];
-  if (data.organization) rows.push(`<b>Dorixona nomi:</b> ${escapeHtml(data.organization)}`);
-  if (data.specialty) rows.push(`<b>Mutaxassislik:</b> ${escapeHtml(data.specialty)}`);
-  if (data.helpsWith) {
-    const hwLabel =
-      data.helpsWith === "crop"
-        ? "🌱 Ekin va o'simliklar"
-        : data.helpsWith === "animal"
-          ? "🐄 Chorva va parrandalar"
-          : "🌾 Har ikkalasi (universal)";
-    rows.push(`<b>Soha yo'nalishi:</b> ${hwLabel}`);
+
+  if (isPharmacy) {
+    if (data.organization) rows.push(`🏪 <b>Do'kon nomi:</b> ${escapeHtml(data.organization)}`);
+    if (data.specialty) rows.push(`🌿 <b>Yo'nalishi:</b> ${escapeHtml(data.specialty)}`);
+  } else {
+    if (data.specialty) rows.push(`🌱 <b>Yo'nalish:</b> ${escapeHtml(data.specialty)}`);
+    if (data.experienceYears) rows.push(`💼 <b>Ish tajribasi:</b> ${data.experienceYears} yil`);
+    if (data.bio) rows.push(`🛠 <b>Xizmatlar:</b> ${escapeHtml(data.bio)}`);
   }
-  if (data.education) rows.push(`<b>Ta'lim / Muassasa:</b> ${escapeHtml(data.education)}`);
-  if (data.experienceYears) rows.push(`<b>Amaliy tajriba:</b> ${data.experienceYears} yil`);
-  if (data.bio) rows.push(`<b>Xizmatlar / Bio:</b> ${escapeHtml(data.bio)}`);
+
   rows.push(
-    `<b>Manzil:</b> ${escapeHtml(data.address)}`,
-    `<b>Ish vaqti:</b> ${escapeHtml(data.workHours ?? "09:00 - 18:00")}`,
-    `<b>Lokatsiya:</b> ${data.lat.toFixed(5)}, ${data.lng.toFixed(5)}`,
+    `⏰ <b>Ish vaqti:</b> ${escapeHtml(data.workHours ?? "09:00 - 18:00")}`,
+    `📍 <b>Manzil / Hudud:</b> ${escapeHtml(data.address)}`,
     "",
-    "Hammasi to'g'rimi?",
+    "🔒 <b>Ruxsat va tasdiqlash:</b>",
+    "<i>Barcha ma'lumotlar to'g'rimi? Ushbu shaxsiy ma'lumotlaringiz dehqon va fermerlarga xizmat ko'rsatish maqsadida AgrozGO platformasida saqlanishiga va profilda aks ettirilishiga ruxsat berasizmi?</i>",
   );
   return rows.join("\n");
 }
@@ -622,12 +583,14 @@ export function confirmSummary(data: {
 export function savedMessage(name: string, role?: string): string {
   const isPharmacy = role === "pharmacy";
   return [
-    "✅ <b>Ro'yxatdan muvaffaqiyatli o'tdingiz!</b>",
+    "🎉 <b>Tabriklaymiz! Siz AgrozGO tizimida muvaffaqiyatli ro'yxatdan o'tdingiz!</b>",
     "",
-    `${escapeHtml(name)}, siz endi <b>AgrozGO</b> platformasida ${isPharmacy ? "dorixona sifatida" : "mutaxassis sifatida"} faolsiz.`,
-    "📍 Yaqin atrofdagi dehqon va chorvadorlar sizni xaritada topa oladi va bevosita bog'lanadi.",
+    `Hurmatli <b>${escapeHtml(name)}</b>, profilingiz platformada muvaffaqiyatli faollashtirildi.`,
+    isPharmacy
+      ? "📍 Agro-do'koningiz xaritada va dorilar bo'limida aks etadi. Pastdagi menyu orqali dorilaringizni kiritishingiz va buyurtmalarni qabul qilishingiz mumkin."
+      : "📍 Hududingizdagi dehqon va fermerlar sizni masofa bo'yicha topa olishadi va to'g'ridan-to'g'ri murojaat qilishadi.",
     "",
-    "💡 Pastdagi tugmalar orqali boshqaruv panelidan foydalanishingiz mumkin.",
+    "👇 <i>Pastdagi boshqaruv menyusidan foydalanishingiz mumkin:</i>",
   ].join("\n");
 }
 
@@ -915,37 +878,43 @@ export function noMedicinesMessage(): string {
 /** Tajriba yillari so'rovi. */
 export function askExperience(): string {
   return [
-    "🏅 <b>4. Ushbu sohada necha yillik amaliy tajribangiz bor?</b>",
+    "💼 <b>Ish tajribangiz:</b>",
     "",
-    "Pastdagi tayyor tugmalardan birini tanlang yoki raqam ko'rinishida yozing (masalan: <i>7</i>).",
-    "",
-    "<i>💡 Tajribali mutaxassislar xaritada va qidiruv ro'yxatida yuqoriroq ko'rsatiladi.</i>",
+    "Necha yillik ish tajribangiz borligini yozib qoldiring (Masalan: <i>3 yil</i>, <i>5 yil</i>, <i>10 yildan ortiq</i>):",
   ].join("\n");
 }
+
+export const EXPERIENCE_KEYBOARD: InlineKeyboard = {
+  inline_keyboard: [
+    [
+      { text: "🌱 1–2 yil", callback_data: "exp:2" },
+      { text: "🌿 3–5 yil", callback_data: "exp:4" },
+    ],
+    [
+      { text: "🌳 5–10 yil", callback_data: "exp:7" },
+      { text: "👑 10+ yil", callback_data: "exp:10" },
+    ],
+  ],
+};
 
 /** Qayerda tamomlagan so'rovi. */
 export function askEducation(): string {
   return [
-    "🎓 <b>3. Mutaxassislik ma'lumotingiz / Diplomingiz:</b>",
+    "🎓 <b>Mutaxassislik ma'lumotingiz / Diplomingiz:</b>",
     "",
     "Qaysi oliygoh, kollej yoki muassasada tahsil olgansiz?",
-    "Masalan:",
-    "• <i>Toshkent Davlat Agrar Universiteti (TDAU), Agronomiya</i>",
-    "• <i>Samarqand Davlat Veterinariya Meditsinasi Universiteti</i>",
-    "• <i>Qishloq xo'jaligi kolleji, Zootexniya</i>",
+    "Masalan: <i>Toshkent Davlat Agrar Universiteti</i>",
   ].join("\n");
 }
 
-/** O'zi haqida qisqa ma'lumot. */
+/** O'zi haqida qisqa ma'lumot (xizmatlar). */
 export function askBio(): string {
   return [
-    "📋 <b>5. Qanday xizmatlar ko'rsatasiz va qanday muammolarni hal qilasiz?</b>",
+    "🛠 <b>Qanday xizmatlar ko'rsatasiz?</b>",
     "",
-    "Dehqon va chorvadorlar sizga qaysi masalalarda murojaat qilishi mumkin? Qisqacha yozing:",
-    "Masalan:",
-    "• <i>Ekin kasalliklarini aniqlash, dorilash sxemasini tuzish, hosildorlikni oshirish</i>",
-    "• <i>Qoramol va mayda mollarni emlash, tug'ruqqa yordam, profilaktika</i>",
-    "• <i>Issiqxona ekinlari (pomidor, bodring) parvarishi va oziqlantirish</i>",
+    "Ko'rsatadigan xizmatlaringiz va maslahat bera oladigan sohalaringizni yozib qoldiring:",
+    "",
+    "Masalan: <i>Ekin kasalliklarini aniqlash, bog'dorchilik maslahati, chorva emlash, parvarishlash</i>",
   ].join("\n");
 }
 
