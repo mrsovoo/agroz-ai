@@ -6,6 +6,7 @@ import FadeImage from "@/components/FadeImage";
 import ProductCardActions from "@/components/ProductCardActions";
 import ProductCard from "@/components/ProductCard";
 import MedicineReviewsSection from "@/components/MedicineReviewsSection";
+import MedicineRatingSummary from "@/components/MedicineRatingSummary";
 import { shortSum } from "@/lib/format";
 import { apiUrl } from "@/lib/api-config";
 
@@ -243,6 +244,15 @@ export default async function MedicineDetail({ medicine }: { medicine: MedicineD
             >
               {medicine.type === "animal" ? "🐄 Hayvon" : medicine.type === "crop" ? "🌱 Ekin" : "📦 Umumiy"}
             </span>
+          </div>
+
+          {/* Reyting va sharhlar havolasi */}
+          <div className="flex items-center">
+            <MedicineRatingSummary
+              medicineId={medicine.id}
+              initialAvg={medicine.ratingAvg}
+              initialCount={medicine.ratingCount}
+            />
           </div>
 
           {medicine.price != null && medicine.price > 0 ? (

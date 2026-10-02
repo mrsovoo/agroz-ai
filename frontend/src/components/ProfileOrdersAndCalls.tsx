@@ -15,12 +15,22 @@ import {
   MapPin,
   RefreshCw,
   ShoppingBag,
+  Star,
+  X,
 } from "lucide-react";
 import { apiUrl } from "@/lib/api-config";
 import { formatOrderNumber } from "@/lib/format";
 import OrderTrackingStatusCard from "@/components/OrderTrackingStatusCard";
+import {
+  hasRatedOrderItem,
+  getOrderItemRating,
+  addMedicineReview,
+  REVIEWS_EVENT,
+} from "@/lib/medicine-reviews";
 
 type OrderItem = {
+  id?: number;
+  medicineId?: number;
   name: string;
   price: number;
   qty: number;
@@ -28,8 +38,11 @@ type OrderItem = {
 
 type UserOrder = {
   id: number;
+  pharmacyId?: number;
   pharmacyName: string;
   pharmacyPhone: string | null;
+  customerName?: string | null;
+  customerPhone?: string | null;
   deliveryType: string;
   customerAddress: string | null;
   totalSum: number;
@@ -55,6 +68,30 @@ export default function ProfileOrdersAndCalls({ userPhone }: { userPhone?: strin
   const [calls, setCalls] = useState<UserCall[]>([]);
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Baholash va fikr bildirish holati
+  const [ratingModalItem, setRatingModalItem] = useState<{
+    orderId: number;
+    medicineId: number;
+    medicineName: string;
+    customerName: string;
+    customerAddress?: string | null;
+  } | null>(null);
+  const [selectedStars, setSelectedStars] = useState<number>(5);
+  const [hoveredStars, setHoveredStars] = useState<number | null>(null);
+  const [reviewComment, setReviewComment] = useState("");
+  const [ratingSubmitted, setRatingSubmitted] = useState(false);
+  const [, setReviewsTick] = useState(0);
+
+  useEffect(() => {
+    const onReviewsUpdate = () => setReviewsTick((t) => t + 1);
+    window.addEventListener(REVIEWS_EVENT, onReviewsUpdate);
+    window.addEventListener("storage", onReviewsUpdate);
+    return () => {
+      window.removeEventListener(REVIEWS_EVENT, onReviewsUpdate);
+      window.removeEventListener("storage", onReviewsUpdate);
+    };
+  }, []);
 
   const fetchData = async () => {
     try {
@@ -267,11 +304,43 @@ export default function ProfileOrdersAndCalls({ userPhone }: { userPhone?: strin
                   <div className="rounded-xl bg-neutral-50 p-2.5 mt-2 border border-neutral-100">
                     <div className="divide-y divide-neutral-200/60">
                       {ord.items.map((it, idx) => (
-                        <div key={idx} className="flex items-center justify-between py-1 text-[11.5px]">
-                          <span className="text-neutral-800 font-medium">💊 {it.name}</span>
-                          <span className="font-mono text-neutral-600">
-                            {it.qty} dona × {it.price.toLocaleString()} so&apos;m
-                          </span>
+                        <div key={idx} className="flex flex-col py-1.5 text-[11.5px] gap-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-neutral-800 font-medium">💊 {it.name}</span>
+                            <span className="font-mono text-neutral-600">
+                              {it.qty} dona × {it.price.toLocaleString()} so&apos;m
+                            </span>
+                          </div>
+                          {it.medicineId ? (
+                            <div className="flex items-center justify-end">
+                              {hasRatedOrderItem(ord.id, it.medicineId) ? (
+                                <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-200">
+                                  <Star size={11} className="fill-amber-400 text-amber-400" />
+                                  <span>Baholandi ({getOrderItemRating(ord.id, it.medicineId)?.rating} ★)</span>
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setRatingModalItem({
+                                      orderId: ord.id,
+                                      medicineId: it.medicineId!,
+                                      medicineName: it.name,
+                                      customerName: ord.customerName || "Xaridor",
+                                      customerAddress: ord.customerAddress,
+                                    });
+                                    setSelectedStars(5);
+                                    setReviewComment("");
+                                    setRatingSubmitted(false);
+                                  }}
+                                  className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-800 border border-amber-200/90 hover:bg-amber-100 transition active:scale-95"
+                                >
+                                  <Star size={11} className="fill-amber-400 text-amber-400" />
+                                  <span>Baholash va fikr bildirish</span>
+                                </button>
+                              )}
+                            </div>
+                          ) : null}
                         </div>
                       ))}
                     </div>
@@ -396,6 +465,141 @@ export default function ProfileOrdersAndCalls({ userPhone }: { userPhone?: strin
               </div>
             ))
           )}
+        </div>
+      )}
+      {/* Baholash va fikr bildirish modali */}
+      {ratingModalItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-sm rounded-[24px] bg-white p-5 shadow-2xl border border-black/10">
+            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+              <div>
+                <h3 className="text-[16px] font-black text-neutral-900 leading-tight">
+                  Mahsulotni baholash
+                </h3>
+                <p className="text-[12px] font-medium text-neutral-500 truncate max-w-[240px]">
+                  {ratingModalItem.medicineName}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRatingModalItem(null)}
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-100 text-neutral-500 hover:bg-neutral-200 transition"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            {ratingSubmitted ? (
+              <div className="py-8 text-center">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mb-2">
+                  <CheckCircle2 size={24} />
+                </div>
+                <p className="text-[15px] font-bold text-neutral-900">
+                  Fikringiz uchun rahmat!
+                </p>
+                <p className="text-[12px] text-neutral-500 mt-0.5">
+                  Baholash muvaffaqiyatli saqlandi.
+                </p>
+              </div>
+            ) : (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!ratingModalItem) return;
+                  addMedicineReview({
+                    medicineId: ratingModalItem.medicineId,
+                    orderId: ratingModalItem.orderId,
+                    authorName: ratingModalItem.customerName || "Xaridor",
+                    authorRegion:
+                      ratingModalItem.customerAddress?.split(",")[0] || "O'zbekiston",
+                    authorRole: "Xaridor",
+                    rating: selectedStars,
+                    comment:
+                      reviewComment.trim() ||
+                      `${selectedStars} yulduzli baho qo'yildi`,
+                    verifiedPurchase: true,
+                  });
+                  setRatingSubmitted(true);
+                  setTimeout(() => {
+                    setRatingModalItem(null);
+                    setRatingSubmitted(false);
+                  }, 1200);
+                }}
+                className="mt-4 space-y-4"
+              >
+                {/* Yulduzchalar */}
+                <div className="text-center">
+                  <div className="flex justify-center gap-1.5">
+                    {[1, 2, 3, 4, 5].map((star) => {
+                      const active =
+                        star <= (hoveredStars !== null ? hoveredStars : selectedStars);
+                      return (
+                        <button
+                          key={star}
+                          type="button"
+                          onMouseEnter={() => setHoveredStars(star)}
+                          onMouseLeave={() => setHoveredStars(null)}
+                          onClick={() => setSelectedStars(star)}
+                          className="p-1 transition-transform hover:scale-115 active:scale-95"
+                        >
+                          <Star
+                            size={28}
+                            className={
+                              active
+                                ? "text-amber-400 fill-amber-400"
+                                : "text-neutral-200 fill-neutral-50"
+                            }
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-1 text-[12px] font-bold text-amber-600">
+                    {selectedStars === 5
+                      ? "A'lo darajada samarali! 🌟"
+                      : selectedStars === 4
+                        ? "Yaxshi ta'sir qildi 👍"
+                        : selectedStars === 3
+                          ? "O'rtacha natija 😐"
+                          : selectedStars === 2
+                            ? "Qoniqarsiz 👎"
+                            : "Juda qoniqarsiz 🙁"}
+                  </p>
+                </div>
+
+                {/* Sharh / Fikr */}
+                <div>
+                  <label className="block text-[11.5px] font-bold text-neutral-600 uppercase tracking-wider mb-1">
+                    Fikringiz yoki maslahatingiz (ixtiyoriy)
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    placeholder="Preparat ekin yoki chorvaga qanday yordam berdi? Boshqa dehqonlarga tavsiya qilasizmi?"
+                    className="w-full rounded-xl border border-neutral-200 p-2.5 text-xs text-neutral-900 placeholder:text-neutral-400 focus:border-[var(--brand-green)] focus:outline-hidden"
+                  />
+                </div>
+
+                {/* Tugmalar */}
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setRatingModalItem(null)}
+                    className="flex-1 rounded-xl bg-neutral-100 py-2.5 text-xs font-bold text-neutral-700 hover:bg-neutral-200 transition"
+                  >
+                    Bekor qilish
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 rounded-xl bg-[var(--brand-green)] py-2.5 text-xs font-bold text-white shadow-xs hover:brightness-105 active:scale-95 transition"
+                  >
+                    Bahoni saqlash
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
         </div>
       )}
     </section>

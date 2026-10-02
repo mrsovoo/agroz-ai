@@ -15,7 +15,7 @@ import {
   type CartStoreLine,
 } from "@/lib/cart-store";
 import { isFavorite, toggleFavorite, FAV_EVENT } from "@/lib/favorites-store";
-import { calculateMedicineRating } from "@/lib/medicine-reviews";
+import { calculateMedicineRating, REVIEWS_EVENT } from "@/lib/medicine-reviews";
 import { apiUrl } from "@/lib/api-config";
 
 export type PharmacyMedicine = CartStoreMedicine & {
@@ -82,6 +82,7 @@ export default function ProductCard({
 }) {
   const [liked, setLiked] = useState(false);
   const [qty, setQty] = useState(0);
+  const [ratingStats, setRatingStats] = useState({ avg: 0, count: 0 });
 
   useEffect(() => {
     const sync = () => {
@@ -89,17 +90,29 @@ export default function ProductCard({
       const cart = loadCart();
       const inLine = cart?.lines?.find((l) => l.medicine.id === medicine.id);
       setQty(inLine ? inLine.qty : 0);
+
+      // Reyting hisoblash: avval mahsulotga qoldirilgan sharhlar, bo'lmasa mavjud reyting
+      const calculated = calculateMedicineRating(medicine.id);
+      if (calculated.count > 0) {
+        setRatingStats({ avg: calculated.avg, count: calculated.count });
+      } else if (medicine.ratingAvg && medicine.ratingAvg > 0) {
+        setRatingStats({ avg: Number(medicine.ratingAvg.toFixed(1)), count: medicine.ratingCount ?? 0 });
+      } else {
+        setRatingStats({ avg: 0, count: 0 });
+      }
     };
     sync();
     window.addEventListener(FAV_EVENT, sync);
     window.addEventListener(CART_EVENT, sync);
+    window.addEventListener(REVIEWS_EVENT, sync);
     window.addEventListener("storage", sync);
     return () => {
       window.removeEventListener(FAV_EVENT, sync);
       window.removeEventListener(CART_EVENT, sync);
+      window.removeEventListener(REVIEWS_EVENT, sync);
       window.removeEventListener("storage", sync);
     };
-  }, [pharmacy.id, medicine.id]);
+  }, [pharmacy.id, medicine.id, medicine.ratingAvg, medicine.ratingCount]);
 
   function add() {
     const cart = loadCart();
@@ -305,7 +318,35 @@ export default function ProductCard({
           )}
         </div>
 
-        <div className="mt-2.5">
+        <div className="mt-2">
+          {/* Reyting va yangilangan vaqt */}
+          <div className="flex items-center gap-1.5 mb-1.5">
+            {ratingStats.count > 0 ? (
+              <div className="flex items-center gap-1">
+                <div className="flex items-center gap-0.5 text-amber-500 font-extrabold text-[11.5px]">
+                  <Star size={12} className="fill-amber-400 text-amber-400" />
+                  <span>{ratingStats.avg.toFixed(1)}</span>
+                </div>
+                <span className="text-[11px] text-neutral-400 font-medium">
+                  ({ratingStats.count})
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 text-[11px] text-neutral-400 font-medium">
+                <Star size={11} className="text-neutral-300" />
+                <span>Yangi</span>
+              </div>
+            )}
+            {updatedText && (
+              <>
+                <span className="text-neutral-300 text-[10px]">•</span>
+                <span className="text-[10.5px] font-medium text-neutral-400 truncate">
+                  {updatedText}
+                </span>
+              </>
+            )}
+          </div>
+
           {/* Narxi (agar narxi kiritilmagan bo'lsa "Kelishiladi") */}
           <div className="flex items-baseline justify-between gap-1">
             {medicine.price && medicine.price > 0 ? (
@@ -323,11 +364,6 @@ export default function ProductCard({
               </span>
             )}
           </div>
-          {updatedText && (
-            <p className="mt-0.5 text-[10.5px] font-medium text-neutral-400">
-              {updatedText}
-            </p>
-          )}
 
           {/* Savatga tugmasi — kartochka radiusiga mos (rounded-[16px]) */}
           <div className="mt-2.5">

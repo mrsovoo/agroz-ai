@@ -6,6 +6,7 @@
 export type MedicineReview = {
   id: string;
   medicineId: number;
+  orderId?: number;
   authorName: string;
   authorRegion: string;
   authorRole: string;
@@ -34,7 +35,19 @@ export function getAllMedicineReviews(medicineId: number): MedicineReview[] {
   return getStoredCustomReviews()[medicineId] || [];
 }
 
-export function addMedicineReview(review: Omit<MedicineReview, "id" | "timestamp" | "createdAt">): MedicineReview {
+export function hasRatedOrderItem(orderId: number, medicineId: number): boolean {
+  const reviews = getAllMedicineReviews(medicineId);
+  return reviews.some((r) => r.orderId === orderId);
+}
+
+export function getOrderItemRating(orderId: number, medicineId: number): MedicineReview | undefined {
+  const reviews = getAllMedicineReviews(medicineId);
+  return reviews.find((r) => r.orderId === orderId);
+}
+
+export function addMedicineReview(
+  review: Omit<MedicineReview, "id" | "timestamp" | "createdAt">,
+): MedicineReview {
   const customStore = getStoredCustomReviews();
   const list = customStore[review.medicineId] || [];
 
@@ -57,13 +70,31 @@ export function addMedicineReview(review: Omit<MedicineReview, "id" | "timestamp
   return newRev;
 }
 
-export function calculateMedicineRating(medicineId: number): { avg: number; count: number } {
+export function calculateMedicineRating(medicineId: number): {
+  avg: number;
+  count: number;
+  distribution: Record<1 | 2 | 3 | 4 | 5, number>;
+} {
   const reviews = getAllMedicineReviews(medicineId);
-  if (reviews.length === 0) return { avg: 0, count: 0 };
+  if (reviews.length === 0) {
+    return {
+      avg: 0,
+      count: 0,
+      distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+    };
+  }
 
-  const sum = reviews.reduce((s, r) => s + r.rating, 0);
+  const distribution: Record<1 | 2 | 3 | 4 | 5, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  let sum = 0;
+  for (const r of reviews) {
+    const star = Math.max(1, Math.min(5, Math.round(r.rating))) as 1 | 2 | 3 | 4 | 5;
+    distribution[star] = (distribution[star] || 0) + 1;
+    sum += star;
+  }
+
   return {
     avg: Number((sum / reviews.length).toFixed(1)),
     count: reviews.length,
+    distribution,
   };
 }

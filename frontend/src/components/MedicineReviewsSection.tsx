@@ -90,7 +90,7 @@ export default function MedicineReviewsSection({ medicineId, medicineName }: { m
   }
 
   return (
-    <section className="mt-8 rounded-[24px] bg-white p-5 shadow-sm web:p-7">
+    <section id="sharhlar" className="mt-8 rounded-[24px] bg-white p-5 shadow-sm web:p-7 scroll-mt-20">
       {/* Sarlavha va Statistika */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-black/5 pb-5">
         <div>

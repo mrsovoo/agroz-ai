@@ -185,14 +185,19 @@ router.get("/activity", async (req, res) => {
         const pharmacy = specMap.get(o.pharmacySpecialistId);
         return {
           id: o.id,
+          pharmacyId: o.pharmacySpecialistId,
           pharmacyName: pharmacy?.organization || pharmacy?.name || "Agro Dorixona",
           pharmacyPhone: pharmacy?.phone || null,
+          customerName: o.customerName,
+          customerPhone: o.customerPhone,
           deliveryType: o.deliveryType,
           customerAddress: o.customerAddress,
           totalSum: o.totalSum || 0,
           status: o.status,
           createdAt: o.createdAt,
           items: (itemsMap.get(o.id) || []).map((it) => ({
+            id: it.id,
+            medicineId: it.medicineId,
             name: it.name,
             price: it.price || 0,
             qty: it.qty,
