@@ -273,7 +273,7 @@ export default function MarketClient() {
     for (const p of items) {
       if (p.locked) continue;
       for (const m of p.medicines) {
-        if (m.status !== "bor") continue;
+        if (m.status === "yoq") continue;
         if (section !== "all" && m.type !== section && m.type !== "general") continue;
         if (q) {
           const haystack = `${m.name} ${m.usage ?? ""} ${p.organization ?? p.name}`.toLowerCase();

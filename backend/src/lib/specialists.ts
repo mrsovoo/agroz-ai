@@ -500,7 +500,7 @@ export async function listSpecialists(opts: {
     list.push({
       id: m.id,
       name: m.name,
-      status: m.status,
+      status: m.status === "yoq" ? "yoq" : "bor",
       hasPhoto,
       photoVersion: m.photoData
         ? `${m.photoData.length}_${m.photoData.slice(-10)}`
