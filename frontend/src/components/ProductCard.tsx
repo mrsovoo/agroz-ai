@@ -110,6 +110,22 @@ export default function ProductCard({
       address: pharmacy.address ?? null,
     };
 
+    if (cart && cart.pharmacy && cart.pharmacy.id !== pharmacy.id && cart.lines.length > 0) {
+      if (
+        !confirm(
+          `Savatda boshqa agro-do'kon (${cart.pharmacy.name}) dorilari bor. Yangi agro-do'kon dorilari savatni almashtiradi. Davom etamizmi?`,
+        )
+      ) {
+        return;
+      }
+      saveCart({
+        pharmacy: newPharmacy,
+        lines: [{ medicine, pharmacy: newPharmacy, qty: 1 }],
+      });
+      notifyCartChanged();
+      return;
+    }
+
     if (!cart || !Array.isArray(cart.lines) || cart.lines.length === 0) {
       saveCart({
         pharmacy: newPharmacy,
@@ -203,10 +219,10 @@ export default function ProductCard({
   return (
     <div
       onClick={handleCardClick}
-      className="group relative flex h-full w-full cursor-pointer flex-col justify-between rounded-[22px] bg-[#f8f9fa] border border-neutral-100 p-2.5 sm:p-3 shadow-2xs transition-all duration-200 hover:shadow-xs hover:border-neutral-200/80 active:scale-[0.99]"
+      className="group relative flex h-full w-full cursor-pointer flex-col justify-between rounded-[22px] bg-white border border-neutral-200/80 p-2.5 sm:p-3 shadow-2xs transition-all duration-200 hover:shadow-xs hover:border-emerald-400/80 active:scale-[0.99]"
     >
-      {/* Rasm maydoni — balandligi oshirilgan (aspect-[3/4]), rasm va tur ikonkasi aniq va katta ko'rinadi */}
-      <div className="relative mb-2.5 flex aspect-[3/4] w-full items-center justify-center overflow-hidden rounded-[16px] bg-neutral-100/80 border border-neutral-200/60">
+      {/* Rasm maydoni — toza, burchaklari kartochkaga mos (rounded-[16px]) */}
+      <div className="relative mb-2.5 flex aspect-[1/1] w-full items-center justify-center overflow-hidden rounded-[16px] bg-neutral-100/80 border border-neutral-200/60">
         {/* Tur ikonkasi va belgisi */}
         <div className="absolute top-2 left-2 z-10 pointer-events-none">
           {medicine.type === "crop" ? (
@@ -224,6 +240,24 @@ export default function ProductCard({
           )}
         </div>
 
+        {/* Sevimlilar ❤️ tugmasi */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const next = toggleFavorite(pharmacy.id, medicine.id);
+            setLiked(next);
+          }}
+          aria-label={liked ? "Yoqtirilganlardan o'chirish" : "Sevimlilarga qo'shish"}
+          className="absolute top-2 right-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 backdrop-blur-md shadow-2xs border border-black/5 hover:bg-white active:scale-90 transition"
+        >
+          <Heart
+            size={16}
+            className={liked ? "text-red-500 fill-red-500" : "text-neutral-400 hover:text-red-400"}
+          />
+        </button>
+
         <Link href={href} aria-label={medicine.name} className="block h-full w-full">
           {medicine.hasPhoto ? (
             <FadeImage
@@ -239,10 +273,21 @@ export default function ProductCard({
         </Link>
       </div>
 
-      {/* Ma'lumot: Nomi, Tavsifi, Narxi va + Savatga */}
+      {/* Ma'lumot: Agro-do'kon, Nomi, Tavsifi, Narxi va Savatga tugmasi */}
       <div className="flex flex-1 flex-col justify-between">
         <div>
-          {/* Nomi */}
+          {/* Agro-do'kon nomi va shahri */}
+          <div className="flex items-center justify-between gap-1 text-[11px] text-neutral-500 mb-1">
+            <span className="inline-flex items-center gap-1 truncate font-medium">
+              <MapPin size={11} className="text-[#039e1e] shrink-0" />
+              <span className="truncate">{pharmacy.name}</span>
+            </span>
+            <span className="shrink-0 text-[10.5px] text-neutral-400 font-normal">
+              {getShortCity(pharmacy.address, pharmacy.name)}
+            </span>
+          </div>
+
+          {/* Dori Nomi */}
           <Link href={href} className="block">
             <h3
               className="text-[13.5px] sm:text-[14.5px] font-black leading-snug text-neutral-900 line-clamp-1 hover:text-[#039e1e] transition-colors"
@@ -254,7 +299,7 @@ export default function ProductCard({
 
           {/* Tavsifi */}
           {medicine.usage && (
-            <p className="mt-1 text-[11px] sm:text-[11.5px] leading-tight text-neutral-500 line-clamp-2 min-h-[26px]">
+            <p className="mt-0.5 text-[11px] sm:text-[11.5px] leading-tight text-neutral-500 line-clamp-2 min-h-[26px]">
               {medicine.usage}
             </p>
           )}
@@ -264,11 +309,11 @@ export default function ProductCard({
           {/* Narxi (agar narxi kiritilmagan bo'lsa "Kelishiladi") */}
           <div className="flex items-baseline justify-between gap-1">
             {medicine.price && medicine.price > 0 ? (
-              <p className="text-[14px] sm:text-[15px] font-black text-neutral-900 tracking-tight">
+              <p className="text-[14.5px] sm:text-[15.5px] font-black text-neutral-900 tracking-tight">
                 {new Intl.NumberFormat("uz-UZ").format(medicine.price).replace(/\s/g, ".")} so&apos;m
               </p>
             ) : (
-              <span className="inline-flex items-center rounded-lg bg-neutral-200/70 px-2 py-0.5 text-[11.5px] sm:text-[12px] font-extrabold text-neutral-700 tracking-tight">
+              <span className="inline-flex items-center rounded-lg bg-neutral-100 px-2 py-0.5 text-[11.5px] sm:text-[12px] font-bold text-neutral-700 tracking-tight">
                 Kelishiladi
               </span>
             )}
@@ -284,10 +329,10 @@ export default function ProductCard({
             </p>
           )}
 
-          {/* + Savatga tugmasi */}
-          <div className="mt-2">
+          {/* Savatga tugmasi — kartochka radiusiga mos (rounded-[16px]) */}
+          <div className="mt-2.5">
             {qty > 0 ? (
-              <div className="flex h-11 min-h-[44px] w-full items-center justify-between rounded-full bg-[#eaf5e1] border border-[#039e1e]/30 px-0.5 text-[#039e1e]">
+              <div className="flex h-11 min-h-[44px] w-full items-center justify-between rounded-[16px] bg-[#eaf5e1] border border-[#039e1e]/25 px-1 text-[#039e1e] shadow-2xs">
                 <button
                   type="button"
                   onClick={(e) => {
@@ -295,13 +340,13 @@ export default function ProductCard({
                     e.stopPropagation();
                     changeQty(-1);
                   }}
-                  className="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-white text-[#039e1e] shadow-xs active:scale-90 transition font-black"
+                  className="flex h-9 w-9 min-h-[36px] min-w-[36px] items-center justify-center rounded-[12px] bg-white text-[#039e1e] shadow-xs active:scale-90 transition font-black hover:bg-neutral-50"
                   aria-label="Kamaytirish"
                 >
-                  <Minus size={15} strokeWidth={3} />
+                  <Minus size={15} strokeWidth={2.8} />
                 </button>
 
-                <span className="text-[12.5px] sm:text-[13px] font-black tracking-tight select-none">
+                <span className="text-[13px] font-black tracking-tight select-none">
                   {qty} ta
                 </span>
 
@@ -312,10 +357,10 @@ export default function ProductCard({
                     e.stopPropagation();
                     changeQty(1);
                   }}
-                  className="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-[#039e1e] text-white shadow-xs active:scale-90 transition font-black"
+                  className="flex h-9 w-9 min-h-[36px] min-w-[36px] items-center justify-center rounded-[12px] bg-[#039e1e] text-white shadow-xs active:scale-90 transition font-black hover:bg-[#028518]"
                   aria-label="Ko'paytirish"
                 >
-                  <Plus size={15} strokeWidth={3} />
+                  <Plus size={15} strokeWidth={2.8} />
                 </button>
               </div>
             ) : (
@@ -326,9 +371,10 @@ export default function ProductCard({
                   e.stopPropagation();
                   add();
                 }}
-                className="flex h-11 min-h-[44px] w-full items-center justify-center rounded-full bg-[#039e1e] hover:bg-[#028518] px-3 text-[12.5px] sm:text-[13px] font-bold text-white shadow-2xs active:scale-95 transition-all"
+                className="flex h-11 min-h-[44px] w-full items-center justify-center gap-1.5 rounded-[16px] bg-[#039e1e] hover:bg-[#028518] px-3 text-[13px] font-extrabold text-white shadow-2xs hover:shadow-xs active:scale-[0.98] transition-all duration-150"
               >
-                + Savatga
+                <Plus size={16} strokeWidth={2.8} />
+                <span>Savatga</span>
               </button>
             )}
           </div>
