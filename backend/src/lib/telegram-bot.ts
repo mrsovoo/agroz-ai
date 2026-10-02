@@ -40,9 +40,9 @@ export async function isBotConfigured(): Promise<boolean> {
 }
 
 /** Ilovaning tashqi manzili (Mini App tugmasi va deep linklar uchun). */
-export function appBaseUrl(): string | null {
-  const raw = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (!raw) return null;
+export function appBaseUrl(): string {
+  const raw = process.env.NEXT_PUBLIC_APP_URL?.trim() || process.env.WEB_APP_URL?.trim();
+  if (!raw) return "https://agroz-ai.vercel.app";
   return raw.replace(/\/+$/, "");
 }
 
@@ -97,7 +97,7 @@ let botNameSynced = false;
 
 /** Fermerlar boti uchun toza inline menyu */
 export function farmerGreetingKeyboard(): InlineKeyboard {
-  const url = appBaseUrl() || "https://agroz.uz";
+  const url = appBaseUrl();
   return {
     inline_keyboard: [
       [{ text: "🌐 AgrozGO ni ochish", web_app: { url } }],
@@ -126,7 +126,7 @@ export async function setAgrozGoMenuButton(chatId?: number): Promise<boolean> {
     botNameSynced = true;
     callBot("setMyName", { name: "AgrozGO" }).catch(() => {});
   }
-  const url = appBaseUrl() || "https://agroz.uz";
+  const url = appBaseUrl();
   const payload: Record<string, unknown> = {
     menu_button: {
       type: "web_app",

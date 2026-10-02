@@ -294,12 +294,12 @@ export async function partnerWebhookSecret(): Promise<string | null> {
 }
 
 export function webAppUrl(): string {
-  const raw = process.env.WEB_APP_URL || process.env.NEXT_PUBLIC_APP_URL || "https://agroz.uz";
+  const raw = process.env.WEB_APP_URL || process.env.NEXT_PUBLIC_APP_URL || "https://agroz-ai.vercel.app";
   return raw.replace(/\/+$/, "");
 }
 
 export function partnerMiniappUrl(): string {
-  const raw = process.env.PARTNER_MINIAPP_URL || `${webAppUrl()}/admin/panel`;
+  const raw = process.env.PARTNER_MINIAPP_URL || `${webAppUrl()}/kabinet`;
   return raw.replace(/\/+$/, "");
 }
 

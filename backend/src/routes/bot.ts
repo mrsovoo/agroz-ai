@@ -660,6 +660,15 @@ async function sendPartnerGreeting(token: string, chatId: number, spec: typeof s
           resize_keyboard: true,
         };
 
+  await callTelegram(token, "setChatMenuButton", {
+    chat_id: chatId,
+    menu_button: {
+      type: "web_app",
+      text: "Kabinet",
+      web_app: { url: kabinetUrl },
+    },
+  }).catch(() => {});
+
   await callTelegram(token, "sendMessage", {
     chat_id: chatId,
     text: greeting,
