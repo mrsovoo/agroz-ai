@@ -40,14 +40,48 @@ export type HomeMedicine = {
   pharmacyAddress?: string;
 };
 
+function isVeterinarian(s: Specialist): boolean {
+  return (
+    s.helpsWith === "animal" ||
+    Boolean(s.specialty && /veterinar|chorva|parranda|hayvon/i.test(s.specialty)) ||
+    Boolean(s.bio && /veterinar|chorva|parranda|hayvon/i.test(s.bio))
+  );
+}
+
+function selectNearbySpecialists(allSpecs: Specialist[]): Specialist[] {
+  const sorted = [...allSpecs].sort((a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999));
+  const vets = sorted.filter((s) => isVeterinarian(s));
+  const agrs = sorted.filter((s) => !isVeterinarian(s));
+
+  const result: Specialist[] = [];
+  const addedIds = new Set<number>();
+
+  for (const s of [...vets.slice(0, 2), ...agrs.slice(0, 2)]) {
+    if (!addedIds.has(s.id)) {
+      result.push(s);
+      addedIds.add(s.id);
+    }
+  }
+
+  for (const s of sorted) {
+    if (result.length >= 4) break;
+    if (!addedIds.has(s.id)) {
+      result.push(s);
+      addedIds.add(s.id);
+    }
+  }
+
+  return result.sort((a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999));
+}
+
 export type HomeSpecialist = Specialist;
 
 export default function HomeClientView({
   initialMedicines = [],
-  initialSpecialist,
+  initialSpecialists = [],
 }: {
   initialMedicines?: HomeMedicine[];
-  initialSpecialist?: HomeSpecialist | null;
+  initialSpecialists?: HomeSpecialist[];
 }) {
   const [medicines, setMedicines] = useState<HomeMedicine[]>(initialMedicines || []);
   const [displayedMedicines, setDisplayedMedicines] = useState<HomeMedicine[]>(() => {
@@ -56,7 +90,7 @@ export default function HomeClientView({
     }
     return [];
   });
-  const [specialist] = useState<Specialist | null>(initialSpecialist || null);
+  const [specialists, setSpecialists] = useState<Specialist[]>(initialSpecialists || []);
   const [selectedProfile, setSelectedProfile] = useState<Specialist | null>(null);
   const [callModalSpecialist, setCallModalSpecialist] = useState<Specialist | null>(null);
 
@@ -99,6 +133,39 @@ export default function HomeClientView({
 
     fetchRandomMedicines();
   }, [initialMedicines]);
+
+  // Mutaxassislar: foydalanuvchi lokatsiyasi bo'yicha yaqin 2 ta veterinar va 2 ta agronom (tasodifiy yangilanmaydi, lokatsiyaga qarab barqaror turadi)
+  useEffect(() => {
+    async function loadNearbySpecialists(lat?: number, lng?: number) {
+      try {
+        const url = lat && lng
+          ? `/api/specialists?role=specialist&lat=${lat}&lng=${lng}`
+          : `/api/specialists?role=specialist`;
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const data = await res.json();
+        const items = Array.isArray(data?.items) ? data.items : [];
+        const specsOnly = items.filter((s: any) => s.role === "specialist" || (s.role !== "pharmacy" && !s.organization));
+        if (specsOnly.length > 0) {
+          setSpecialists(selectNearbySpecialists(specsOnly));
+        }
+      } catch {}
+    }
+
+    if (typeof window !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          loadNearbySpecialists(pos.coords.latitude, pos.coords.longitude);
+        },
+        () => {
+          if (specialists.length === 0) loadNearbySpecialists();
+        },
+        { timeout: 8000, maximumAge: 300000 }
+      );
+    } else if (specialists.length === 0) {
+      loadNearbySpecialists();
+    }
+  }, []);
 
   const [callModalOpen, setCallModalOpen] = useState(false);
   const [quantities, setQuantities] = useState<Record<number, number>>({});
@@ -229,26 +296,38 @@ export default function HomeClientView({
         )}
       </section>
 
-      {/* 4. Mutaxassislar bo'limi — faqat real mutaxassis borligini tekshiradi */}
-      {specialist && (
-        <section className="mt-6">
+      {/* 4. Mutaxassislar bo'limi — lokatsiya orqali yaqin 2 ta veterinar va 2 ta agronom */}
+      {specialists.length > 0 && (
+        <section className="mt-7">
           <div className="flex items-center justify-between mb-3 px-0.5">
-            <h2 className="text-[20px] font-black tracking-tight text-neutral-900">Mutaxassislar</h2>
+            <div>
+              <h2 className="text-[20px] font-black tracking-tight text-neutral-900">
+                Mutaxassislar
+              </h2>
+              <p className="text-[12px] text-neutral-500 font-medium">
+                Sizga eng yaqin malakali agronom va veterinarlar
+              </p>
+            </div>
             <Link
               href="/mutaxassislar"
-              className="text-[14px] font-bold text-[#039e1e] hover:underline active:opacity-80 transition inline-flex items-center gap-1"
+              className="text-[13.5px] font-bold text-[#039e1e] hover:underline active:opacity-80 transition inline-flex items-center gap-1 shrink-0"
             >
-              <span>Barchasi</span>
+              <span>Barchasini ko&apos;rish</span>
               <span>→</span>
             </Link>
           </div>
 
-          {/* Mutaxassislar bo'limi bilan 100% bir xil standart kartochka */}
-          <SpecialistCard
-            specialist={specialist}
-            onViewProfile={(s) => setSelectedProfile(s)}
-            onCall={(s) => setCallModalSpecialist(s)}
-          />
+          {/* Mutaxassislar bo'limi bilan 100% bir xil standart kartochkalar (2 veterinar va 2 agronom) */}
+          <div className="space-y-3">
+            {specialists.map((s) => (
+              <SpecialistCard
+                key={s.id}
+                specialist={s}
+                onViewProfile={(spec) => setSelectedProfile(spec)}
+                onCall={(spec) => setCallModalSpecialist(spec)}
+              />
+            ))}
+          </div>
         </section>
       )}
 

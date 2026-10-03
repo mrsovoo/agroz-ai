@@ -4,9 +4,43 @@ import { apiUrl } from "@/lib/api-config";
 // Doimiy jonli va tasodifiy yangilanish uchun
 export const dynamic = "force-dynamic";
 
+function isVeterinarian(s: HomeSpecialist): boolean {
+  return (
+    s.helpsWith === "animal" ||
+    Boolean(s.specialty && /veterinar|chorva|parranda|hayvon/i.test(s.specialty)) ||
+    Boolean(s.bio && /veterinar|chorva|parranda|hayvon/i.test(s.bio))
+  );
+}
+
+function selectTopSpecialists(specs: HomeSpecialist[]): HomeSpecialist[] {
+  const sorted = [...specs].sort((a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999));
+  const vets = sorted.filter((s) => isVeterinarian(s));
+  const agrs = sorted.filter((s) => !isVeterinarian(s));
+
+  const result: HomeSpecialist[] = [];
+  const addedIds = new Set<number>();
+
+  for (const s of [...vets.slice(0, 2), ...agrs.slice(0, 2)]) {
+    if (!addedIds.has(s.id)) {
+      result.push(s);
+      addedIds.add(s.id);
+    }
+  }
+
+  for (const s of sorted) {
+    if (result.length >= 4) break;
+    if (!addedIds.has(s.id)) {
+      result.push(s);
+      addedIds.add(s.id);
+    }
+  }
+
+  return result.sort((a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999));
+}
+
 export default async function HomePage() {
   let initialMedicines: HomeMedicine[] = [];
-  let initialSpecialist: HomeSpecialist | null = null;
+  let initialSpecialists: HomeSpecialist[] = [];
 
   try {
     const fetchOptions: RequestInit = {
@@ -16,7 +50,7 @@ export default async function HomePage() {
 
     const [medRes, specRes] = await Promise.allSettled([
       fetch(apiUrl("/api/medicines?limit=60&random=1"), fetchOptions),
-      fetch(apiUrl("/api/specialists"), fetchOptions),
+      fetch(apiUrl("/api/specialists?role=specialist"), fetchOptions),
     ]);
 
     const medMap = new Map<number, HomeMedicine>();
@@ -47,31 +81,31 @@ export default async function HomePage() {
     if (specRes.status === "fulfilled" && specRes.value.ok) {
       const sData = await specRes.value.json();
       const list = Array.isArray(sData) ? sData : (sData?.items || sData?.specialists || []);
-      const specsOnly = list.filter((s: any) => s.role === "specialist");
-      if (specsOnly.length > 0) {
-        const spec = specsOnly[0];
-        initialSpecialist = {
-          id: spec.id,
-          name: spec.name,
-          phone: spec.phone,
-          specialty: spec.specialty,
-          education: spec.education ?? null,
-          bio: spec.bio ?? null,
-          helpsWith: spec.helpsWith ?? "both",
-          experienceYears: spec.experienceYears ?? null,
-          ratingAvg: spec.ratingAvg ?? null,
-          ratingCount: spec.ratingCount ?? 0,
-          role: spec.role,
-          address: spec.address || "O'zbekiston",
-          lat: spec.lat ?? 41.3111,
-          lng: spec.lng ?? 69.2797,
-          workHours: spec.workHours ?? null,
-          isBusy: Boolean(spec.isBusy),
-          distanceKm: spec.distanceKm ?? null,
-        };
-      }
+      const specsOnly = list.filter((s: any) => s.role === "specialist" || (s.role !== "pharmacy" && !s.organization));
+      
+      const mappedSpecs: HomeSpecialist[] = specsOnly.map((spec: any) => ({
+        id: spec.id,
+        name: spec.name,
+        phone: spec.phone,
+        specialty: spec.specialty,
+        education: spec.education ?? null,
+        bio: spec.bio ?? null,
+        helpsWith: spec.helpsWith ?? "both",
+        experienceYears: spec.experienceYears ?? null,
+        ratingAvg: spec.ratingAvg ?? null,
+        ratingCount: spec.ratingCount ?? 0,
+        role: spec.role || "specialist",
+        address: spec.address || "O'zbekiston",
+        lat: spec.lat ?? 41.3111,
+        lng: spec.lng ?? 69.2797,
+        workHours: spec.workHours ?? null,
+        isBusy: Boolean(spec.isBusy),
+        distanceKm: spec.distanceKm ?? null,
+      }));
 
-      // Agro-do&apos;konlardagi barcha agro-mahsulotlarni ham to'liq qo'shib olish (birorta agro-mahsulot qolib ketmasligi uchun)
+      initialSpecialists = selectTopSpecialists(mappedSpecs);
+
+      // Agro-do'konlardagi barcha agro-mahsulotlarni ham to'liq qo'shib olish
       for (const p of list) {
         if (Array.isArray(p.medicines)) {
           for (const m of p.medicines) {
@@ -100,13 +134,13 @@ export default async function HomePage() {
 
     initialMedicines = Array.from(medMap.values()).sort((a, b) => b.id - a.id);
   } catch {
-    // Tarmoq xatosi bo'lsa HomeClientView o'zidagi standart Bento Max va Veterinar fallback'ini ishlatadi
+    // Tarmoq xatosi bo'lsa HomeClientView o'zidagi standart fallback'ini ishlatadi
   }
 
   return (
     <HomeClientView
       initialMedicines={initialMedicines}
-      initialSpecialist={initialSpecialist}
+      initialSpecialists={initialSpecialists}
     />
   );
 }
