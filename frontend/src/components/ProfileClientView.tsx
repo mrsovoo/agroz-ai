@@ -43,17 +43,28 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
       .then((data) => {
         if (data?.ok && data.user) {
           setUser(data.user);
-        } else {
-          const tg = getTelegramUser();
-          if (tg) {
-            const fullName = [tg.first_name, tg.last_name].filter(Boolean).join(" ");
-            setUser({
-              id: tg.id,
-              name: fullName || tg.username || "Sizning ismingiz",
-              phone: null,
-              telegramId: tg.id,
-            });
+          if (data.user.name) {
+            try { localStorage.setItem("agroz_customer_name", data.user.name); } catch {}
           }
+          if (data.user.phone) {
+            try { localStorage.setItem("agroz_customer_phone", data.user.phone); } catch {}
+          }
+        } else {
+          // Serverda sessiya topilmasa, bot orqali avval kiritilgan ma'lumotlarni tekshiramiz
+          try {
+            const savedName = localStorage.getItem("agroz_customer_name");
+            const savedPhone = localStorage.getItem("agroz_customer_phone");
+            if (savedName || savedPhone) {
+              setUser((prev) => ({
+                id: prev?.id,
+                name: savedName || prev?.name || null,
+                phone: savedPhone || prev?.phone || null,
+                telegramId: prev?.telegramId,
+              }));
+              return;
+            }
+          } catch {}
+          setUser(null);
         }
       })
       .catch(() => {});

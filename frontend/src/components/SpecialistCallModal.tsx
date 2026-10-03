@@ -75,6 +75,21 @@ export default function SpecialistCallModal({
     /veterinar/i.test(specialist?.specialty || "") ||
     specialist?.helpsWith === "animal";
 
+  // Modal ochilganda nav bar'ni yashirish va hodisani xabardor qilish
+  useEffect(() => {
+    if (isOpen) {
+      window.dispatchEvent(new CustomEvent("SPECIALIST_MODAL_TOGGLE", { detail: { open: true } }));
+      document.body.classList.add("modal-open");
+    } else {
+      window.dispatchEvent(new CustomEvent("SPECIALIST_MODAL_TOGGLE", { detail: { open: false } }));
+      document.body.classList.remove("modal-open");
+    }
+    return () => {
+      window.dispatchEvent(new CustomEvent("SPECIALIST_MODAL_TOGGLE", { detail: { open: false } }));
+      document.body.classList.remove("modal-open");
+    };
+  }, [isOpen]);
+
   // Modal ochilganda ma'lumotlarni tayyorlash
   useEffect(() => {
     if (!isOpen || !specialist) return;
@@ -117,7 +132,7 @@ export default function SpecialistCallModal({
     setRatingStars(5);
     setProblem("");
 
-    // 1. Foydalanuvchining avval saqlangan ma'lumotlarini yuklash
+    // 1. Foydalanuvchining avval bot orqali ro'yxatdan o'tgan ma'lumotlarini yuklash
     let initialName = "";
     let initialPhone = "";
     let initialAddress = "";
@@ -128,13 +143,6 @@ export default function SpecialistCallModal({
       initialAddress = localStorage.getItem("agroz_customer_address") || "";
     } catch {}
 
-    // Telegram foydalanuvchisi ma'lumotlari
-    const tgUser = getTelegramUser();
-    if (tgUser && !initialName) {
-      const fullName = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ");
-      if (fullName) initialName = fullName;
-    }
-
     if (initialName) setName(initialName);
     if (initialPhone) {
       const clean = initialPhone.replace(/\D/g, "").replace(/^998/, "").slice(-9);
@@ -142,18 +150,23 @@ export default function SpecialistCallModal({
     }
     if (initialAddress) setAddress(initialAddress);
 
-    // 2. Serverdagi profil ma'lumotlarini olish (avto-to'ldirish)
+    // 2. Serverdagi bazadan bot orqali kiritilgan rasmiy ism va telefonni olish (aniq manba)
     apiFetch("/api/profile")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.user) {
-          if (data.user.name && !initialName) setName(data.user.name);
-          if (data.user.phone && !initialPhone) {
+          if (data.user.name) {
+            setName(data.user.name);
+            try { localStorage.setItem("agroz_customer_name", data.user.name); } catch {}
+          }
+          if (data.user.phone) {
             const clean = data.user.phone.replace(/\D/g, "").replace(/^998/, "").slice(-9);
             setPhoneDigits(clean);
+            try { localStorage.setItem("agroz_customer_phone", data.user.phone); } catch {}
           }
-          if ((data.user.region || data.user.district) && !initialAddress) {
-            setAddress([data.user.region, data.user.district].filter(Boolean).join(", "));
+          if (data.user.region || data.user.district) {
+            const addr = [data.user.region, data.user.district].filter(Boolean).join(", ");
+            setAddress((prev) => prev || addr);
           }
         }
       })
@@ -333,7 +346,7 @@ export default function SpecialistCallModal({
     specialist.specialty || (isVeterinar ? "Veterinar" : "Agronom");
 
   return (
-    <div className="fixed inset-0 z-[110] flex justify-center bg-neutral-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[200] flex justify-center bg-neutral-900/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="w-full max-w-[520px] h-[100dvh] flex flex-col justify-between bg-neutral-50 overflow-hidden shadow-2xl">
         {/* 1. Header (Sticky Top) */}
         <div className="shrink-0 bg-white/95 backdrop-blur-md px-5 py-3.5 border-b border-neutral-200/80 flex items-center justify-between z-10">
@@ -716,8 +729,8 @@ export default function SpecialistCallModal({
           )}
         </div>
 
-        {/* 3. Pinned Bottom Bar: Har doim pastki navigatsiya paneli ustida mahkam turadi */}
-        <div className="shrink-0 bg-white/95 backdrop-blur-md px-5 pt-3.5 pb-6 border-t border-neutral-200/90 shadow-lg z-20">
+        {/* 3. Pinned Bottom Bar: Har doim pastki navigatsiya paneli o'rnida mahkam turadi */}
+        <div className="shrink-0 bg-white px-5 pt-3.5 pb-[max(1.25rem,env(safe-area-inset-bottom))] border-t border-neutral-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] z-20">
           {mode === "form" ? (
             <button
               type="submit"

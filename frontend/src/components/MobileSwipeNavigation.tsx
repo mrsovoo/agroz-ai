@@ -32,6 +32,7 @@ export default function MobileSwipeNavigation() {
 
       // Xarita (Leaflet), modal yoki o'yin/chizish bloklari
       if (
+        document.body.classList.contains("modal-open") ||
         target.closest(".leaflet-container") ||
         target.closest("[role='dialog']") ||
         target.closest(".no-swipe") ||

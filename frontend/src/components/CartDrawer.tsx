@@ -356,7 +356,18 @@ export default function CartDrawer() {
     };
   }, []);
 
-  // Ro'yxatdan o'tgan foydalanuvchi ma'lumotlarini yuklash
+  useEffect(() => {
+    if (open) {
+      document.body.classList.add("modal-open");
+    } else {
+      document.body.classList.remove("modal-open");
+    }
+    return () => {
+      document.body.classList.remove("modal-open");
+    };
+  }, [open]);
+
+  // Ro'yxatdan o'tgan foydalanuvchi ma'lumotlarini yuklash (Bot orqali kiritilgan ism va telefon)
   useEffect(() => {
     if (!open) return;
     setUserLoading(true);
@@ -379,19 +390,21 @@ export default function CartDrawer() {
         if (data?.ok && data.user) {
           setCurrentUser(data.user);
           localStorage.setItem("agroz_user", JSON.stringify(data.user));
+          if (data.user.name) localStorage.setItem("agroz_customer_name", data.user.name);
+          if (data.user.phone) localStorage.setItem("agroz_customer_phone", data.user.phone);
           fetchUserOrders(data.user.phone);
         } else {
-          const tgUser = getTelegramUser();
-          if (tgUser) {
-            const fullName = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ");
-            setCurrentUser((prev) => (prev?.name ? prev : {
-              id: tgUser.id,
-              name: fullName || tgUser.username || "Telegram foydalanuvchisi",
-              phone: null,
-            }));
-          } else {
-            setCurrentUser((prev) => prev);
-          }
+          // Bazada bo'lmasa, avval saqlangan mijoz ma'lumotlarini tekshiramiz (soxta Telegram account nomini qo'ymaymiz)
+          try {
+            const savedName = localStorage.getItem("agroz_customer_name");
+            const savedPhone = localStorage.getItem("agroz_customer_phone");
+            if (savedName && savedPhone) {
+              setCurrentUser({ name: savedName, phone: savedPhone });
+              fetchUserOrders(savedPhone);
+              return;
+            }
+          } catch {}
+          setCurrentUser(null);
           fetchUserOrders(null);
         }
       })
@@ -577,7 +590,7 @@ export default function CartDrawer() {
   return (
     <div
       onClick={close}
-      className="fixed inset-0 z-[100] flex justify-end bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in"
+      className="fixed inset-0 z-[180] flex justify-end bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in"
     >
       <div
         onClick={(e) => e.stopPropagation()}
@@ -622,7 +635,10 @@ export default function CartDrawer() {
 
         {/* Agar savat bo'sh bo'lsa (yoki buyurtma qabul qilingan bo'lsa) */}
         {!cart || cart.lines.length === 0 ? (
-          <div className="flex-1 min-h-0 overflow-y-auto px-5 py-6 space-y-6">
+          <div
+            className="flex-1 min-h-0 overflow-y-auto px-5 py-6 space-y-6 overscroll-contain touch-pan-y"
+            style={{ WebkitOverflowScrolling: "touch" }}
+          >
             {/* 1. Savat bo'sh holati va "Dorilarni ko'rish" tugmasi */}
             <div className="flex flex-col items-center justify-center py-4 text-center">
               <h3 className="text-[20px] font-black text-neutral-900 tracking-tight">
@@ -877,8 +893,11 @@ export default function CartDrawer() {
         ) : (
           /* Mahsulotlar va Buyurtma Formasi */
           <form onSubmit={handleSubmit} className="flex flex-1 min-h-0 flex-col overflow-hidden">
-            <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4">
-              {/* Agro-do&apos;kon ma'lumoti */}
+            <div
+              className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4 overscroll-contain touch-pan-y"
+              style={{ WebkitOverflowScrolling: "touch" }}
+            >
+              {/* Agro-do'kon ma'lumoti */}
               <div className="rounded-2xl bg-neutral-50 p-3.5 border border-black/5">
                 <div className="flex items-center gap-2 text-[13px] font-extrabold text-neutral-900">
                   <Store size={15} className="text-[var(--brand-green)]" />
@@ -1196,8 +1215,8 @@ export default function CartDrawer() {
               )}
             </div>
 
-            {/* Pastki Harakatlar Paneli (Har doim ko'rinib turishi uchun shrink-0 va BottomNav balandligini hisobga olgan safe-area) */}
-            <div className="shrink-0 border-t border-black/10 bg-white p-4 pb-[max(5.5rem,calc(env(safe-area-inset-bottom)+5rem))] shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+            {/* Pastki Harakatlar Paneli (Har doim ko'rinib turishi uchun shrink-0 va safe-area) */}
+            <div className="shrink-0 border-t border-black/10 bg-white p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
               {!currentUser ? (
                 <Link
                   href="/kirish"

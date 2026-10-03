@@ -19,6 +19,7 @@ export default function BottomNav() {
   const pathname = usePathname();
   const [cartCount, setCartCount] = useState(0);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isSpecialistModalOpen, setIsSpecialistModalOpen] = useState(false);
 
   useEffect(() => {
     const sync = () => {
@@ -30,11 +31,15 @@ export default function BottomNav() {
     const handleOpen = () => setIsCartOpen(true);
     const handleClose = () => setIsCartOpen(false);
     const handleToggle = () => setIsCartOpen((prev) => !prev);
+    const handleSpecialistModal = (e: any) => {
+      setIsSpecialistModalOpen(Boolean(e.detail?.open));
+    };
 
     window.addEventListener(CART_EVENT, sync);
     window.addEventListener(OPEN_CART_EVENT, handleOpen);
     window.addEventListener(CLOSE_CART_EVENT, handleClose);
     window.addEventListener(TOGGLE_CART_EVENT, handleToggle);
+    window.addEventListener("SPECIALIST_MODAL_TOGGLE", handleSpecialistModal);
     window.addEventListener("storage", sync);
 
     return () => {
@@ -42,6 +47,7 @@ export default function BottomNav() {
       window.removeEventListener(OPEN_CART_EVENT, handleOpen);
       window.removeEventListener(CLOSE_CART_EVENT, handleClose);
       window.removeEventListener(TOGGLE_CART_EVENT, handleToggle);
+      window.removeEventListener("SPECIALIST_MODAL_TOGGLE", handleSpecialistModal);
       window.removeEventListener("storage", sync);
     };
   }, []);
@@ -52,6 +58,16 @@ export default function BottomNav() {
       setIsCartOpen(false);
     }
   }, [pathname]);
+
+  // Ob-havo ichki sahifasida, mutaxassis chaqirish modalida yoki savat ochiqligida pastki nav bar ko'rinmasligi kerak
+  if (
+    pathname === "/ob-havo" ||
+    pathname?.startsWith("/ob-havo") ||
+    isSpecialistModalOpen ||
+    isCartOpen
+  ) {
+    return null;
+  }
 
   // Qaysi bo'limda bo'lsa, o'sha yashil (#0ba324), qolganlari och kulrang
   const isSavat = pathname === "/savat" || isCartOpen;
@@ -66,14 +82,9 @@ export default function BottomNav() {
     setIsCartOpen(false);
   };
 
-  // Ob-havo ichki sahifasida pastki nav bar ko'rinmasligi kerak
-  if (pathname === "/ob-havo" || pathname?.startsWith("/ob-havo")) {
-    return null;
-  }
-
   return (
     <nav
-      className="mobile-bottom-nav fixed bottom-0 left-1/2 z-[120] w-full max-w-[520px] -translate-x-1/2 transition-all bg-white border-t border-neutral-100 shadow-[0_-4px_25px_rgba(0,0,0,0.06)]"
+      className="mobile-bottom-nav fixed bottom-0 left-1/2 z-[50] w-full max-w-[520px] -translate-x-1/2 transition-all bg-white border-t border-neutral-100 shadow-[0_-4px_25px_rgba(0,0,0,0.06)]"
     >
       <ul className="grid grid-cols-5 pb-[max(10px,env(safe-area-inset-bottom))] pt-2.5">
         {/* 1. Asosiy */}

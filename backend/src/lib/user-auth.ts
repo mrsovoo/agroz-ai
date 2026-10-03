@@ -8,6 +8,7 @@ import {
   supportTickets,
   supportMessages,
   specialistCalls,
+  specialists,
   orders,
 } from "../db/schema.js";
 import { eq, sql } from "drizzle-orm";
@@ -74,11 +75,41 @@ export async function getUserFromReq(req: any): Promise<typeof users.$inferSelec
     try {
       const u = (await db.select().from(users).where(eq(users.telegramId, telegramId)).limit(1))[0];
       if (u) return u;
+      const s = (await db.select().from(specialists).where(eq(specialists.telegramId, telegramId)).limit(1))[0];
+      if (s) {
+        return {
+          id: s.id,
+          name: s.organization || s.name,
+          phone: s.phone,
+          region: s.address,
+          district: null,
+          secondPhone: null,
+          telegramId: s.telegramId,
+          role: s.role,
+          createdAt: s.createdAt,
+          updatedAt: s.updatedAt,
+        } as any;
+      }
     } catch (err) {
       try {
         await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS second_phone varchar(32);`);
         const u = (await db.select().from(users).where(eq(users.telegramId, telegramId)).limit(1))[0];
         if (u) return u;
+        const s = (await db.select().from(specialists).where(eq(specialists.telegramId, telegramId)).limit(1))[0];
+        if (s) {
+          return {
+            id: s.id,
+            name: s.organization || s.name,
+            phone: s.phone,
+            region: s.address,
+            district: null,
+            secondPhone: null,
+            telegramId: s.telegramId,
+            role: s.role,
+            createdAt: s.createdAt,
+            updatedAt: s.updatedAt,
+          } as any;
+        }
       } catch {}
     }
   }

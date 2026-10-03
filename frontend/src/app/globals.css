@@ -30,7 +30,6 @@
 
 html,
 body {
-  overscroll-behavior-y: none;
   background: #e5e6ea;
   color: var(--brand-ink);
   font-family:
@@ -51,6 +50,10 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+body.modal-open {
+  overflow: hidden;
+}
+
 .web-top-nav,
 .web-footer {
   display: none;
@@ -62,7 +65,7 @@ body {
   min-height: 100dvh;
   background: var(--brand-bg);
   position: relative;
-  padding-bottom: 88px;
+  padding-bottom: max(112px, calc(env(safe-area-inset-bottom) + 84px));
   padding-top: max(8px, env(safe-area-inset-top));
   box-shadow: 0 0 50px rgba(0, 0, 0, 0.08);
 }

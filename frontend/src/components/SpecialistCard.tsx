@@ -213,13 +213,22 @@ export function SpecialistProfileModal({
   const specialtyText =
     specialist.specialty || (isVet ? "Veterinar vrach" : "Agronom maslahatchi");
 
+  React.useEffect(() => {
+    window.dispatchEvent(new CustomEvent("SPECIALIST_MODAL_TOGGLE", { detail: { open: true } }));
+    document.body.classList.add("modal-open");
+    return () => {
+      window.dispatchEvent(new CustomEvent("SPECIALIST_MODAL_TOGGLE", { detail: { open: false } }));
+      document.body.classList.remove("modal-open");
+    };
+  }, []);
+
   function openDirections() {
     const url = `https://www.google.com/maps/dir/?api=1&destination=${specialist.lat},${specialist.lng}&travelmode=driving`;
     window.open(url, "_blank", "noopener");
   }
 
   return (
-    <div className="fixed inset-0 z-[105] flex justify-center bg-neutral-900/50 backdrop-blur-xs animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[190] flex justify-center bg-neutral-900/50 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="w-full max-w-[500px] h-[100dvh] flex flex-col bg-white overflow-hidden shadow-2xl">
         {/* 1. Header (Sticky Top Bar) */}
         <div className="shrink-0 flex items-center justify-between px-5 pt-4 pb-3 border-b border-neutral-100 bg-white z-10">
@@ -414,7 +423,7 @@ export function SpecialistProfileModal({
         </div>
 
         {/* 3. Sticky Bottom Action Bar — HAR DOIM EKRANDA, HECH QACHON CHIQIB KETMAYDI */}
-        <div className="shrink-0 bg-white/95 backdrop-blur-md px-5 pt-3 pb-6 border-t border-neutral-100 flex items-center gap-3 shadow-lg z-20">
+        <div className="shrink-0 bg-white/95 backdrop-blur-md px-5 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] border-t border-neutral-100 flex items-center gap-3 shadow-lg z-20">
           <a
             href={`tel:${specialist.phone.replace(/\s/g, "")}`}
             className="flex h-13 w-13 shrink-0 items-center justify-center rounded-2xl bg-neutral-100 text-neutral-800 hover:bg-neutral-200 active:scale-95 transition"
