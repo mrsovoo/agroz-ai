@@ -1,20 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
-import Link from "next/link";
 import {
   Search,
   Loader2,
   MapPin,
   Phone,
-  Send,
   Star,
   Clock,
   CheckCircle2,
   Sparkles,
   User,
   ChevronLeft,
-  ChevronRight,
   Share2,
   Award,
   GraduationCap,
@@ -22,7 +19,7 @@ import {
   Sprout,
   Stethoscope,
   X,
-  Navigation,
+  Car,
 } from "lucide-react";
 import SpecialistCallModal from "@/components/SpecialistCallModal";
 import SpecialistRatingModal from "@/components/SpecialistRatingModal";
@@ -37,13 +34,9 @@ type Specialist = {
   phone: string;
   role: string;
   specialty: string | null;
-  /** Qayerda o'qigan/tamomlagan. */
   education: string | null;
-  /** Qisqa bio: nimalarni biladi, qanday yordam beradi. */
   bio: string | null;
-  /** crop | animal | both — kimga yordam beradi. */
   helpsWith: string;
-  /** Tajriba yillari. */
   experienceYears: number | null;
   organization: string | null;
   address: string;
@@ -51,7 +44,6 @@ type Specialist = {
   lng: number;
   workHours: string | null;
   distanceKm: number | null;
-  /** Radiusdan tashqarida — ko'rinadi, lekin qulflangan. */
   locked: boolean;
   ratingAvg: number | null;
   ratingCount: number;
@@ -156,13 +148,12 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
 
   const loadSpecialists = useCallback(() => {
     const params = new URLSearchParams();
-    params.set("role", "specialist");
     if (coords) {
       params.set("lat", String(coords.lat));
       params.set("lng", String(coords.lng));
-      params.set("radius", "50");
     }
-    fetch(`/api/specialists?${params.toString()}`)
+    // Barcha malakali mutaxassis va maslahatchilarni olamiz
+    fetch(apiUrl(`/api/specialists?${params.toString()}`))
       .then((r) => r.json())
       .then((d: { items?: Specialist[] }) => {
         setItems(Array.isArray(d?.items) ? d.items : []);
@@ -175,7 +166,7 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
     setLoading(true);
     loadSpecialists();
 
-    // Jonli bandlik statusi (isBusy) uchun yangilab turish
+    // Jonli bandlik statusi (isBusy) uchun har 10 soniyada yangilab turish
     const timer = setInterval(() => {
       loadSpecialists();
     }, 10000);
@@ -195,18 +186,20 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
   // Filtrlangan mutaxassislar ro'yxati
   const filteredSpecialists = useMemo(() => {
     return items.filter((s) => {
-      // 1. Kategoriya bo'yicha filter
+      // 1. Kategoriya (yo'nalish) bo'yicha aniq filtr
       if (activeCategory === "agronom") {
         const isAgronom =
           s.helpsWith === "crop" ||
           s.helpsWith === "both" ||
-          (s.specialty && /agronom/i.test(s.specialty));
+          (s.specialty && /agronom|dehqon|issiqxona|hosil|ekin|bog/i.test(s.specialty)) ||
+          (s.bio && /dehqonchilik|issiqxona|agronom|ekin|bog/i.test(s.bio));
         if (!isAgronom) return false;
       } else if (activeCategory === "veterinar") {
         const isVet =
           s.helpsWith === "animal" ||
           s.helpsWith === "both" ||
-          (s.specialty && /veterinar/i.test(s.specialty));
+          (s.specialty && /veterinar|chorva|parranda|hayvon/i.test(s.specialty)) ||
+          (s.bio && /veterinar|chorva|parranda|hayvon/i.test(s.bio));
         if (!isVet) return false;
       } else if (activeCategory === "available") {
         if (s.isBusy) return false;
@@ -228,46 +221,46 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
   }, [items, activeCategory, searchQuery]);
 
   return (
-    <div className="px-5 pt-3 pb-28 max-w-xl mx-auto">
+    <div className="px-4 sm:px-5 pt-3 pb-32 max-w-xl mx-auto">
       {/* 1. Sarlavha (Header) */}
       <div className="pt-2 pb-1">
-        <h1 className="text-[26px] font-black text-neutral-900 tracking-tight leading-tight">
+        <h1 className="text-[24px] sm:text-[26px] font-black text-neutral-900 tracking-tight leading-tight">
           Mutaxassislar
         </h1>
-        <p className="text-[13.5px] text-neutral-500 font-medium mt-0.5">
+        <p className="text-[13px] sm:text-[13.5px] text-neutral-500 font-medium mt-0.5">
           Malakali agronom va veterinarlardan tezkor amaliy yordam
         </p>
       </div>
 
-      {/* 2. Qidiruv qutisi (Namunadagi kabi toza qidiruv satri) */}
-      <div className="mt-3.5 relative flex items-center">
+      {/* 2. Qidiruv qutisi */}
+      <div className="mt-3.5 relative flex items-center gap-2">
         <div className="relative flex-1">
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Ism, soha yoki hudud bo'yicha qidirish..."
-            className="w-full rounded-2xl bg-white border border-neutral-200/90 py-3.5 pl-4 pr-11 text-[14px] text-neutral-900 placeholder:text-neutral-400 shadow-2xs focus:border-[#039e1e] focus:bg-white focus:outline-none transition"
+            className="w-full rounded-2xl bg-white border border-neutral-200/90 py-3 sm:py-3.5 pl-4 pr-10 text-[14.5px] sm:text-[15px] text-neutral-900 placeholder:text-neutral-400 shadow-2xs focus:border-[#039e1e] focus:bg-white focus:outline-none transition"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 p-1"
             >
               <X size={16} />
             </button>
           )}
         </div>
-        <div className="ml-2.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#039e1e] text-white shadow-xs">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#039e1e] text-white shadow-xs">
           <Search size={18} />
         </div>
       </div>
 
-      {/* 3. Kategoriyalar (Namunadagi kabi yumaloq kartochkalar) */}
-      <div className="mt-4.5">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[14px] font-bold text-neutral-900 tracking-tight">
+      {/* 3. Kategoriyalar (Moslashuvchan gorizontal skroll — hech qachon qisilmaydi va buzilmaydi) */}
+      <div className="mt-4">
+        <div className="flex items-center justify-between mb-2 px-0.5">
+          <span className="text-[13.5px] font-bold text-neutral-800 tracking-tight">
             Yo&apos;nalishlar
           </span>
           <span className="text-[12px] font-semibold text-neutral-400">
@@ -275,7 +268,7 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
           </span>
         </div>
 
-        <div className="grid grid-cols-4 gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4 sm:-mx-5 sm:px-5">
           {CATEGORIES.map((cat) => {
             const isActive = activeCategory === cat.v;
             const Icon = cat.icon;
@@ -284,22 +277,14 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
                 key={cat.v}
                 type="button"
                 onClick={() => setActiveCategory(cat.v)}
-                className={`flex flex-col items-center justify-center py-3 px-1 rounded-2xl border transition-all active:scale-95 ${
+                className={`inline-flex items-center gap-2 py-2.5 px-3.5 rounded-2xl border transition-all shrink-0 font-bold text-[12.5px] sm:text-[13px] active:scale-95 ${
                   isActive
                     ? "bg-[#039e1e] text-white border-[#039e1e] shadow-xs"
                     : "bg-white text-neutral-700 border-neutral-200/80 hover:bg-neutral-50 shadow-2xs"
                 }`}
               >
-                <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-xl mb-1.5 transition-colors ${
-                    isActive ? "bg-white/20 text-white" : "bg-neutral-100 text-neutral-600"
-                  }`}
-                >
-                  <Icon size={17} />
-                </div>
-                <span className="text-[11px] font-bold truncate max-w-full px-1">
-                  {cat.l}
-                </span>
+                <Icon size={15} />
+                <span>{cat.l}</span>
               </button>
             );
           })}
@@ -308,7 +293,7 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
 
       {/* 4. Mutaxassis xizmati yakunlangan va hali baholanmagan chaqiruvlar bo'lsa */}
       {calls.filter((c) => c.status === "completed" && !c.stars).length > 0 && (
-        <div className="mt-4 space-y-2">
+        <div className="mt-3 space-y-2">
           {calls
             .filter((c) => c.status === "completed" && !c.stars)
             .map((c) => (
@@ -341,8 +326,8 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
       )}
 
       {/* 5. Mutaxassislar ro'yxati sarlavhasi */}
-      <div className="mt-5 flex items-center justify-between">
-        <h2 className="text-[16px] font-black text-neutral-900 tracking-tight">
+      <div className="mt-4 flex items-center justify-between px-0.5">
+        <h2 className="text-[15.5px] font-black text-neutral-900 tracking-tight">
           Top Mutaxassislar
         </h2>
       </div>
@@ -361,7 +346,7 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
             Mutaxassislar topilmadi
           </h3>
           <p className="mt-1 text-[13px] text-neutral-500 max-w-sm mx-auto">
-            Qidiruv so&apos;rovi yoki ushbu toifada hozircha mutaxassislar mavjud emas.
+            Ushbu yo&apos;nalishda hozircha mutaxassislar mavjud emas yoki qidiruv bo&apos;yicha ma&apos;lumot chiqmadi.
           </p>
         </div>
       ) : (
@@ -391,10 +376,9 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
                 onClick={() => setSelectedProfile(s)}
                 className="group rounded-[24px] bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-neutral-100/90 transition-all hover:shadow-md hover:border-emerald-300/60 active:scale-[0.99] cursor-pointer flex flex-col justify-between"
               >
-                {/* Yuqori qism: Avatar, Mutaxassislik, Ism va Badge'lar */}
+                {/* Yuqori qism: Avatar (Ism bosh harfi), Mutaxassislik, Ism va Badge'lar */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3.5 min-w-0">
-                    {/* Foydalanuvchi so'ragan: rasm o'rtasida ismning bosh harfi va jonli status */}
                     <SpecialistAvatar
                       name={s.name}
                       isVeterinar={isVet}
@@ -406,7 +390,7 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
                       <span className="text-[12px] font-bold text-neutral-500 tracking-tight block truncate">
                         {specialtyText}
                       </span>
-                      <h3 className="text-[17px] font-black text-neutral-900 leading-snug truncate group-hover:text-[#039e1e] transition-colors">
+                      <h3 className="text-[16.5px] sm:text-[17px] font-black text-neutral-900 leading-snug truncate group-hover:text-[#039e1e] transition-colors">
                         {s.name}
                       </h3>
                       <div className="flex items-center gap-2 mt-1 text-[12px] text-neutral-500">
@@ -429,24 +413,31 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
                   {/* O'ng tomonda reyting va tajriba */}
                   <div className="flex flex-col items-end gap-1.5 shrink-0">
                     {ratingText ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-[11.5px] font-black text-amber-700 border border-amber-200/80 shadow-2xs">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-black text-amber-700 border border-amber-200/80 shadow-2xs">
                         <Star size={11} className="fill-amber-400 text-amber-400" />
                         <span>{ratingText}</span>
                       </span>
                     ) : (
-                      <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10.5px] font-bold text-neutral-500">
+                      <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-bold text-neutral-500">
                         Yangi
                       </span>
                     )}
                     {expText && (
-                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10.5px] font-bold text-emerald-800 border border-emerald-200/60">
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-800 border border-emerald-200/60">
                         {expText}
                       </span>
                     )}
                   </div>
                 </div>
 
-                {/* Pastki qism: 2 ta tugma (Profilni ko'rish va Chaqirish) */}
+                {/* Mutaxassis xizmat ko'rsatish yo'nalishi / Bio */}
+                {s.bio && (
+                  <p className="mt-2 text-[12px] leading-relaxed text-neutral-500 line-clamp-1 italic bg-neutral-50/80 rounded-xl px-2.5 py-1">
+                    &ldquo;{s.bio}&rdquo;
+                  </p>
+                )}
+
+                {/* Pastki qism: 2 ta tugma (Profil va Chaqirish) */}
                 <div className="mt-3.5 pt-3 border-t border-neutral-100 grid grid-cols-2 gap-2.5">
                   <button
                     type="button"
@@ -478,11 +469,11 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
       )}
 
       {/* ========================================================================= */}
-      {/* 7. NAMUNADAGI KEYINGI EKRAN: MUTAXASSISNING TO'LIQ PROFILI (SCREEN 2) */}
+      {/* 7. MUTAXASSISNING TO'LIQ PROFILI (SCREEN 2 - Namunadagi o'ng ekran) */}
       {/* ========================================================================= */}
       {selectedProfile && (
         <div className="fixed inset-0 z-[105] flex justify-center bg-neutral-900/40 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-200">
-          <div className="w-full max-w-[520px] min-h-[100dvh] flex flex-col justify-between bg-white px-5 pt-6 pb-28">
+          <div className="w-full max-w-[500px] min-h-[100dvh] flex flex-col justify-between bg-white px-5 pt-6 pb-28">
             <div>
               {/* Yuqori qism: Orqaga qaytish va Ulashish */}
               <div className="flex items-center justify-between">
@@ -557,9 +548,9 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
                 )}
               </div>
 
-              {/* Namunadagi 4 ta dumaloq tezkor tugmalar (Quick Actions) */}
-              <div className="mt-6 grid grid-cols-4 gap-3">
-                {/* 1. Telefon */}
+              {/* 4 ta haqiqiy va ishlaydigan tezkor tugmalar (Ortiqcha Telegram linklari olib tashlangan) */}
+              <div className="mt-6 grid grid-cols-4 gap-2.5 sm:gap-3">
+                {/* 1. Telefon orqali to'g'ridan-to'g'ri bog'lanish */}
                 <a
                   href={`tel:${selectedProfile.phone.replace(/\s/g, "")}`}
                   className="flex flex-col items-center gap-1.5 group"
@@ -570,18 +561,21 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
                   <span className="text-[11px] font-bold text-neutral-600">Qo&apos;ng&apos;iroq</span>
                 </a>
 
-                {/* 2. Telegram */}
-                <a
-                  href="https://t.me/agroz_auth_bot"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                {/* 2. Chaqiruv buyurtma qilish */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const s = selectedProfile;
+                    setSelectedProfile(null);
+                    setCallModalSpecialist(s);
+                  }}
                   className="flex flex-col items-center gap-1.5 group"
                 >
-                  <div className="flex h-13 w-13 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 border border-blue-200/70 shadow-xs group-hover:bg-blue-100 group-active:scale-90 transition">
-                    <Send size={20} className="-ml-0.5 mt-0.5" />
+                  <div className="flex h-13 w-13 items-center justify-center rounded-2xl bg-emerald-50 text-[#039e1e] border border-emerald-200/70 shadow-xs group-hover:bg-emerald-100 group-active:scale-90 transition">
+                    <Car size={20} />
                   </div>
-                  <span className="text-[11px] font-bold text-neutral-600">Telegram</span>
-                </a>
+                  <span className="text-[11px] font-bold text-neutral-600">Chaqirish</span>
+                </button>
 
                 {/* 3. Xarita / Manzil */}
                 <button
@@ -612,8 +606,8 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
                   }}
                   className="flex flex-col items-center gap-1.5 group"
                 >
-                  <div className="flex h-13 w-13 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200/70 shadow-xs group-hover:bg-emerald-100 group-active:scale-90 transition">
-                    <Star size={20} className="fill-emerald-500" />
+                  <div className="flex h-13 w-13 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 border border-blue-200/70 shadow-xs group-hover:bg-blue-100 group-active:scale-90 transition">
+                    <Star size={20} className="fill-blue-500" />
                   </div>
                   <span className="text-[11px] font-bold text-neutral-600">
                     {selectedProfile.ratingAvg ? `★ ${selectedProfile.ratingAvg.toFixed(1)}` : "Baholash"}

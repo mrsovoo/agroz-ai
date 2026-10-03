@@ -647,8 +647,8 @@ export async function listSpecialists(opts: {
       (ratingBySpecialist.get(s.id)?.avg ?? 0) >= 4;
     const limit = extended ? Math.max(radiusKm * 1.5, radiusKm) : radiusKm;
 
-    // Agro-do'konlar uchun locked hech qachon true bo'lmaydi (barcha dorilar ko'rinadi)
-    const locked = s.role === "pharmacy" ? false : (isSameProvince ? false : d > limit);
+    // Barcha tasdiqlangan mutaxassislar ochiq va ko'rinadi (locked = false)
+    const locked = false;
 
     return withMeta(s, d, locked);
   });
