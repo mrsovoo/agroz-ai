@@ -53,8 +53,8 @@ export function loadCart(): CartStoreState {
 
     const fallbackPharmacy: CartStorePharmacy = {
       id: Number(parsed.pharmacy?.id || 1),
-      name: String(parsed.pharmacy?.name ?? "Agro Agro-do&apos;kon").slice(0, 200),
-      phone: String(parsed.pharmacy?.phone ?? "+998 90 123 45 67").slice(0, 32),
+      name: String(parsed.pharmacy?.name ?? "Agro-do'kon").slice(0, 200),
+      phone: String(parsed.pharmacy?.phone ?? "").slice(0, 32),
       address: parsed.pharmacy?.address ? String(parsed.pharmacy.address).slice(0, 300) : null,
     };
 

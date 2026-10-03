@@ -334,10 +334,6 @@ router.post("/call", async (req, res) => {
 router.get("/call/:id/status", async (req, res) => {
   try {
     const user = await getUserFromReq(req);
-    if (!user) {
-      return res.status(401).json({ error: "Chaqiruv holatini ko'rish uchun tizimga kiring" });
-    }
-
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id <= 0) {
       return res.status(400).json({ error: "Noto'g'ri chaqiruv ID" });
@@ -353,9 +349,21 @@ router.get("/call/:id/status", async (req, res) => {
       return res.status(404).json({ error: "Chaqiruv topilmadi" });
     }
 
-    const suffixes = getUserPhoneSuffixes(user);
+    const phoneParam = typeof req.query.phone === "string" ? req.query.phone.replace(/\D/g, "").slice(-9) : null;
     const callPhoneSuffix = (call.customerPhone || "").replace(/\D/g, "").slice(-9);
-    if (!callPhoneSuffix || !suffixes.includes(callPhoneSuffix)) {
+
+    let isAuthorized = false;
+    if (user) {
+      const suffixes = getUserPhoneSuffixes(user);
+      if (callPhoneSuffix && suffixes.includes(callPhoneSuffix)) {
+        isAuthorized = true;
+      }
+    }
+    if (!isAuthorized && phoneParam && callPhoneSuffix && phoneParam === callPhoneSuffix) {
+      isAuthorized = true;
+    }
+
+    if (!isAuthorized) {
       return res.status(403).json({ error: "Ruxsat yo'q: bu chaqiruv sizga tegishli emas" });
     }
 

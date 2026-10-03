@@ -174,7 +174,7 @@ export default function OrderTrackingStatusCard({
             {isPickup ? (
               <span>{pharmacyName ? `${pharmacyName} (Olib ketish)` : "Agro-do&apos;kondan olib ketish"}</span>
             ) : (
-              <span>{customerAddress || "Toshkent viloyati, Zangiota tumani"}</span>
+              <span>{customerAddress || "Ko'rsatilmagan"}</span>
             )}
           </p>
 

@@ -1,7 +1,21 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ChevronLeft, Check, Star, Send, CheckCircle2, Clock } from "lucide-react";
+import {
+  ChevronLeft,
+  Check,
+  Star,
+  CheckCircle2,
+  Clock,
+  Phone,
+  MapPin,
+  FileText,
+  AlertCircle,
+  Loader2,
+  Navigation,
+  User,
+  ShieldCheck,
+} from "lucide-react";
 import { createSpecialistCall, completeSpecialistCall } from "@/lib/specialist-calls";
 import { apiUrl, apiFetch } from "@/lib/api-config";
 import { getTelegramUser } from "@/lib/telegram";
@@ -21,18 +35,33 @@ export default function SpecialistCallModal({
     specialty?: string | null;
     phone: string;
     role?: string | null;
+    helpsWith?: string | null;
     customerName?: string | null;
     customerAddress?: string | null;
+    problem?: string | null;
   } | null;
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }) {
-  const [callId, setCallId] = useState(501);
+  // Rejim: "form" (yangi ariza to'ldirish) yoki "tracking" (chaqiruvni kuzatish)
+  const [mode, setMode] = useState<"form" | "tracking">("form");
+
+  // Forma maydonlari
+  const [name, setName] = useState("");
+  const [phoneDigits, setPhoneDigits] = useState("");
+  const [address, setAddress] = useState("");
+  const [problem, setProblem] = useState("");
+  const [userLat, setUserLat] = useState<number | null>(null);
+  const [userLng, setUserLng] = useState<number | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Kuzatuv maydonlari
+  const [callId, setCallId] = useState<number | string | null>(null);
   const [callProgress, setCallProgress] = useState<1 | 2 | 3>(1);
-  const [name, setName] = useState("Telegram foydalanuvchisi");
-  const [phone, setPhone] = useState("+998 90 123 45 67");
-  const [address, setAddress] = useState("Toshkent viloyati, Zangiota tumani");
+  const [isCancelled, setIsCancelled] = useState(false);
 
   // Reyting va sharh (3-bosqich: Yakunlandi bo'lganda)
   const [ratingStars, setRatingStars] = useState(5);
@@ -40,100 +69,92 @@ export default function SpecialistCallModal({
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
 
-  // Avtomatik ravishda foydalanuvchi ma'lumotlarini yuklash va chaqiruvni shakllantirish
+  // Mutaxassis sohasi (veterinar yoki agronom)
+  const isVeterinar =
+    specialist?.role === "veterinarian" ||
+    /veterinar/i.test(specialist?.specialty || "") ||
+    specialist?.helpsWith === "animal";
+
+  // Modal ochilganda ma'lumotlarni tayyorlash
   useEffect(() => {
     if (!isOpen || !specialist) return;
 
+    setFormError(null);
+    setIsSubmitting(false);
+
     // Agar mavjud chaqiruv tarixidan ochilgan bo'lsa (callId allaqachon mavjud)
     if (specialist.callId) {
-      const numId = Number(specialist.callId) || 501;
-      setCallId(numId);
+      setMode("tracking");
+      setCallId(specialist.callId);
       const st = specialist.status;
       if (st === "completed" || st === "bajarildi") {
         setCallProgress(3);
+        setIsCancelled(false);
       } else if (st === "tasdiqlandi" || st === "qabul_qilindi") {
         setCallProgress(2);
+        setIsCancelled(false);
+      } else if (st === "bekor" || st === "cancelled") {
+        setIsCancelled(true);
       } else {
         setCallProgress(1);
+        setIsCancelled(false);
       }
       if (specialist.customerName) setName(specialist.customerName);
       if (specialist.customerAddress) setAddress(specialist.customerAddress);
+      if (specialist.problem) setProblem(specialist.problem);
       setRatingSubmitted(false);
       setReviewComment("");
       setRatingStars(5);
       return;
     }
 
-    // Yangi chaqiruv yaratish:
-    const storedLastId = localStorage.getItem("agroz_last_call_id");
-    const nextId = storedLastId ? Math.max(501, Number(storedLastId) + 1) : 501;
-    setCallId(nextId);
-    localStorage.setItem("agroz_last_call_id", String(nextId));
+    // Yangi chaqiruv shakli:
+    setMode("form");
     setCallProgress(1);
+    setIsCancelled(false);
     setRatingSubmitted(false);
     setReviewComment("");
     setRatingStars(5);
+    setProblem("");
 
-    // 1. Profil va Telegram ma'lumotlarini olish
-    const tgUser = getTelegramUser();
-    if (tgUser) {
-      const fullName = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ");
-      if (fullName || tgUser.username) {
-        setName(fullName || tgUser.username || "Telegram foydalanuvchisi");
-      }
-    }
+    // 1. Foydalanuvchining avval saqlangan ma'lumotlarini yuklash
+    let initialName = "";
+    let initialPhone = "";
+    let initialAddress = "";
 
     try {
-      const savedName = localStorage.getItem("agroz_customer_name");
-      const savedPhone = localStorage.getItem("agroz_customer_phone");
-      const savedAddress = localStorage.getItem("agroz_customer_address");
-      if (savedName) setName(savedName);
-      if (savedPhone) setPhone(savedPhone.startsWith("+") ? savedPhone : `+998${savedPhone}`);
-      if (savedAddress) setAddress(savedAddress);
+      initialName = localStorage.getItem("agroz_customer_name") || "";
+      initialPhone = localStorage.getItem("agroz_customer_phone") || "";
+      initialAddress = localStorage.getItem("agroz_customer_address") || "";
     } catch {}
 
+    // Telegram foydalanuvchisi ma'lumotlari
+    const tgUser = getTelegramUser();
+    if (tgUser && !initialName) {
+      const fullName = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ");
+      if (fullName) initialName = fullName;
+    }
+
+    if (initialName) setName(initialName);
+    if (initialPhone) {
+      const clean = initialPhone.replace(/\D/g, "").replace(/^998/, "").slice(-9);
+      setPhoneDigits(clean);
+    }
+    if (initialAddress) setAddress(initialAddress);
+
+    // 2. Serverdagi profil ma'lumotlarini olish (avto-to'ldirish)
     apiFetch("/api/profile")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.user) {
-          if (data.user.name) setName(data.user.name);
-          if (data.user.phone) {
-            setPhone(data.user.phone.startsWith("+") ? data.user.phone : `+${data.user.phone}`);
+          if (data.user.name && !initialName) setName(data.user.name);
+          if (data.user.phone && !initialPhone) {
+            const clean = data.user.phone.replace(/\D/g, "").replace(/^998/, "").slice(-9);
+            setPhoneDigits(clean);
           }
-          if (data.user.region || data.user.district) {
+          if ((data.user.region || data.user.district) && !initialAddress) {
             setAddress([data.user.region, data.user.district].filter(Boolean).join(", "));
           }
-        }
-      })
-      .catch(() => {});
-
-    // 2. Chaqiruvni serverga va lokal bazaga qayd qilish
-    const callRecord = {
-      id: String(nextId),
-      specialistId: specialist.id,
-      specialistName: specialist.organization || specialist.name,
-      customerName: name,
-      customerPhone: phone,
-      problem: `${specialist.specialty || "Mutaxassis"} ko'rigi va maslahati`,
-      address: address,
-    };
-    createSpecialistCall(callRecord);
-
-    fetch(apiUrl("/api/specialists/call"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        specialistId: specialist.id,
-        customerName: name,
-        customerPhone: phone,
-        problem: callRecord.problem,
-        address: address,
-      }),
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (d?.callId) {
-          setCallId(Number(d.callId));
         }
       })
       .catch(() => {});
@@ -141,20 +162,27 @@ export default function SpecialistCallModal({
 
   // Real-time server polling: mutaxassis botda qabul qilganda yoki ishni bajarganda
   useEffect(() => {
-    if (!isOpen || !callId) return;
+    if (!isOpen || !callId || mode !== "tracking") return;
 
     let cancelled = false;
+    const phoneFull = `+998${phoneDigits}`;
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(apiUrl(`/api/specialists/call/${callId}/status`));
+        const res = await fetch(
+          apiUrl(`/api/specialists/call/${callId}/status?phone=${encodeURIComponent(phoneFull)}`)
+        );
         if (!res.ok) return;
         const d = await res.json();
         if (cancelled || !d?.ok || !d?.status) return;
 
         if (d.status === "qabul_qilindi") {
+          setIsCancelled(false);
           setCallProgress((prev) => (prev < 2 ? 2 : prev));
         } else if (d.status === "bajarildi") {
+          setIsCancelled(false);
           setCallProgress(3);
+        } else if (d.status === "bekor") {
+          setIsCancelled(true);
         }
       } catch {}
     }, 4000);
@@ -163,7 +191,146 @@ export default function SpecialistCallModal({
       cancelled = true;
       clearInterval(interval);
     };
-  }, [isOpen, callId]);
+  }, [isOpen, callId, mode, phoneDigits]);
+
+  // Geolokatsiyani aniqlash (GPS)
+  const handleDetectLocation = () => {
+    if (!navigator.geolocation) {
+      setFormError("Brauzeringiz geolokatsiyani qo'llab-quvvatlamaydi.");
+      return;
+    }
+    setIsLocating(true);
+    setFormError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setIsLocating(false);
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setUserLat(lat);
+        setUserLng(lng);
+        if (!address.trim()) {
+          setAddress(`📍 Joylashuv aniqlandi (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
+        }
+      },
+      (err) => {
+        setIsLocating(false);
+        console.warn("[geolocation error]:", err);
+        setFormError("Joylashuvni aniqlashga ruxsat berilmadi. Manzilni qo'lda yozib qoldiring.");
+      },
+      { timeout: 10000, enableHighAccuracy: true }
+    );
+  };
+
+  // Tezkor tavsiya chiplari
+  const quickChips = isVeterinar
+    ? [
+        "💉 Emlash / Vaksina",
+        "🩺 Umumiy tibbiy ko'rik",
+        "💊 Davolash kursi",
+        "🐄 Ishtahasizlik / Yuqori harorat",
+        "🥛 Tug'ruq va parvarish",
+      ]
+    : [
+        "🌿 Kasallikni aniqlash",
+        "🐛 Zararkunandalarga ishlov",
+        "🧪 O'g'itlash va parvarish",
+        "🌱 Barg sarg'ayishi / qurishi",
+        "🌾 Hosildorlik maslahati",
+      ];
+
+  const handleChipClick = (chip: string) => {
+    const cleanChip = chip.replace(/^[^\s]+\s/, ""); // emoji olib tashlash
+    if (!problem.trim()) {
+      setProblem(cleanChip);
+    } else if (!problem.includes(cleanChip)) {
+      setProblem(`${problem.trim()}, ${cleanChip}`);
+    }
+  };
+
+  // Formani yuborish
+  const handleSubmitCall = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!specialist || isSubmitting) return;
+
+    setFormError(null);
+
+    const cleanName = name.trim();
+    if (cleanName.length < 2) {
+      setFormError("Iltimos, ism va familiyangizni to'liq kiriting.");
+      return;
+    }
+
+    const cleanDigits = phoneDigits.replace(/\D/g, "");
+    if (cleanDigits.length !== 9) {
+      setFormError("Iltimos, 9 xonali telefon raqamingizni to'liq kiriting (masalan: 90 123 45 67).");
+      return;
+    }
+
+    const cleanAddress = address.trim();
+    if (cleanAddress.length < 3) {
+      setFormError("Iltimos, yetib borish manzilini (viloyat, tuman, ko'cha) kiriting.");
+      return;
+    }
+
+    const cleanProblem = problem.trim();
+    if (cleanProblem.length < 5) {
+      setFormError("Iltimos, muammo yoki chaqiruv sababini batafsilroq yozing (kamida 5 ta belgi).");
+      return;
+    }
+
+    setIsSubmitting(true);
+    const phoneFull = `+998${cleanDigits}`;
+
+    // Ma'lumotlarni keyingi safar uchun eslab qolish
+    try {
+      localStorage.setItem("agroz_customer_name", cleanName);
+      localStorage.setItem("agroz_customer_phone", phoneFull);
+      localStorage.setItem("agroz_customer_address", cleanAddress);
+    } catch {}
+
+    try {
+      const res = await fetch(apiUrl("/api/specialists/call"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          specialistId: specialist.id,
+          customerName: cleanName,
+          customerPhone: phoneFull,
+          problem: cleanProblem,
+          address: cleanAddress,
+          userLat: userLat || undefined,
+          userLng: userLng || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || "Chaqiruv yuborilmadi. Iltimos, qayta urinib ko'ring.");
+      }
+
+      const newId = data.callId || Date.now();
+      setCallId(newId);
+
+      // Lokal omborga saqlash
+      createSpecialistCall({
+        id: String(newId),
+        specialistId: specialist.id,
+        specialistName: specialist.organization || specialist.name,
+        customerName: cleanName,
+        customerPhone: phoneFull,
+        problem: cleanProblem,
+        address: cleanAddress,
+      });
+
+      // Tracking rejimiga o'tish
+      setMode("tracking");
+      setCallProgress(1);
+    } catch (err: any) {
+      setFormError(err.message || "Tarmoq xatosi yuz berdi. Iltimos, internetni tekshiring.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleBack = useCallback(() => {
     onClose();
@@ -171,7 +338,7 @@ export default function SpecialistCallModal({
   }, [onClose, onSuccess]);
 
   const handleSubmitRating = async () => {
-    if (!specialist || isSubmittingRating) return;
+    if (!specialist || !callId || isSubmittingRating) return;
     setIsSubmittingRating(true);
     try {
       await completeSpecialistCall(String(callId), ratingStars, reviewComment);
@@ -188,161 +355,394 @@ export default function SpecialistCallModal({
 
   if (!isOpen || !specialist) return null;
 
-  const specialistTitle = specialist.specialty || (specialist.role === "pharmacy" ? "Agro-do&apos;kon egasi" : "Agronom");
+  const specialistTitle =
+    specialist.specialty || (isVeterinar ? "Veterinar" : "Agronom");
 
   return (
-    <div className="fixed inset-0 z-[110] flex justify-center bg-neutral-50 overflow-y-auto animate-in fade-in duration-200">
-      <div className="w-full max-w-[500px] min-h-[100dvh] flex flex-col justify-between px-5 pt-7 pb-28">
+    <div className="fixed inset-0 z-[110] flex justify-center bg-neutral-900/40 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-200">
+      <div className="w-full max-w-[520px] min-h-[100dvh] flex flex-col justify-between bg-neutral-50 px-5 pt-6 pb-28">
         <div>
-          {/* 1. Orqaga tugmasi (Light UI) */}
-          <button
-            type="button"
-            onClick={handleBack}
-            className="inline-flex items-center gap-1 text-[17px] font-semibold text-[#039e1e] hover:opacity-85 active:scale-95 transition"
-          >
-            <ChevronLeft size={22} className="stroke-[2.6] -ml-1" />
-            <span>Orqaga</span>
-          </button>
-
-          {/* 2. Sarlavha: Chaqiruv #... va Mutaxassis nomi */}
-          <div className="mt-4">
-            <h1 className="text-[24px] font-bold text-neutral-900 tracking-tight leading-tight">
-              Chaqiruv #{callId}
-            </h1>
-            <p className="text-[15px] font-normal text-neutral-500 mt-1">
-              {specialistTitle} {specialist.name}
-            </p>
+          {/* 1. Header: Orqaga tugmasi */}
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={handleBack}
+              className="inline-flex items-center gap-1 text-[16px] font-semibold text-[#039e1e] hover:opacity-85 active:scale-95 transition"
+            >
+              <ChevronLeft size={22} className="stroke-[2.6] -ml-1" />
+              <span>Orqaga</span>
+            </button>
+            <span className="text-[12px] font-mono font-medium text-neutral-400">
+              {mode === "form" ? "Chaqiruv arizasi" : `Chaqiruv #${callId}`}
+            </span>
           </div>
 
-          {/* 3. 3-bosqichli status kartochkasi (Yorug' UI) */}
-          <div className="mt-5 rounded-[22px] bg-white border border-neutral-200/90 p-5 shadow-xs space-y-4">
-            {/* 1-bosqich: So'rov yuborildi */}
-            <div className="flex items-center gap-3.5">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#039e1e] text-white shadow-xs">
-                <Check size={16} className="stroke-[3]" />
-              </div>
-              <span className="text-[16px] font-bold text-neutral-900">
-                So&apos;rov yuborildi
-              </span>
+          {/* 2. Mutaxassis qisqa kartochkasi */}
+          <div className="mt-4 rounded-2xl bg-white p-4 border border-neutral-200/80 shadow-xs flex items-center gap-3.5">
+            <div className="h-12 w-12 shrink-0 rounded-2xl bg-[#ffad2a] flex items-center justify-center text-white shadow-2xs font-bold text-lg">
+              {isVeterinar ? "🐾" : "🌱"}
             </div>
-
-            {/* 2-bosqich: Qabul qilindi */}
-            <div className="flex items-center gap-3.5">
-              {callProgress >= 2 ? (
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#039e1e] text-white shadow-xs">
-                  <Check size={16} className="stroke-[3]" />
-                </div>
-              ) : (
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-neutral-300 bg-neutral-100" />
-              )}
-              <span
-                className={`text-[16px] ${
-                  callProgress >= 2 ? "font-bold text-neutral-900" : "font-medium text-neutral-400"
-                }`}
-              >
-                Qabul qilindi
-              </span>
+            <div className="min-w-0 flex-1">
+              <h3 className="font-bold text-neutral-900 text-[16px] truncate leading-tight">
+                {specialist.organization || specialist.name}
+              </h3>
+              <p className="text-[13px] text-neutral-500 mt-0.5 truncate font-medium">
+                {specialistTitle}
+              </p>
             </div>
-
-            {/* 3-bosqich: Yakunlandi */}
-            <div className="flex items-center gap-3.5">
-              {callProgress >= 3 ? (
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#039e1e] text-white shadow-xs">
-                  <Check size={16} className="stroke-[3]" />
-                </div>
-              ) : (
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-neutral-300 bg-neutral-100" />
-              )}
-              <span
-                className={`text-[16px] ${
-                  callProgress >= 3 ? "font-bold text-neutral-900" : "font-medium text-neutral-400"
-                }`}
-              >
-                Yakunlandi
-              </span>
-            </div>
+            <a
+              href={`tel:${specialist.phone.replace(/\s/g, "")}`}
+              className="h-10 w-10 shrink-0 rounded-xl bg-neutral-100 flex items-center justify-center text-neutral-700 hover:bg-neutral-200 active:scale-95 transition"
+              title="Qo'ng'iroq qilish"
+            >
+              <Phone size={18} />
+            </a>
           </div>
 
-          {/* 4. 3-bosqichga yetganda reyting va izoh qoldirish bo'limi */}
-          {callProgress === 3 && (
-            <div className="mt-5 rounded-[22px] bg-white border border-neutral-200/90 p-5 shadow-xs space-y-4 animate-in fade-in duration-200">
-              <div className="text-center">
-                <h3 className="text-[17px] font-bold text-neutral-900">
-                  Xizmatni baholang va izoh qoldiring
-                </h3>
-                <p className="text-[13px] text-neutral-500 mt-1">
-                  Mutaxassis xizmatidan qoniqdingizmi? Tajribangiz bilan bo&apos;lishing.
+          {/* 3. A) FORMA REJIMI: Ma'lumotlarni kiritish */}
+          {mode === "form" && (
+            <form onSubmit={handleSubmitCall} className="mt-5 space-y-4">
+              <div>
+                <h1 className="text-[22px] font-bold text-neutral-900 tracking-tight leading-tight">
+                  Mutaxassisni chaqirish
+                </h1>
+                <p className="text-[13.5px] text-neutral-500 mt-1">
+                  Mutaxassis yetib kelishi va sifatli ko&apos;rik o&apos;tkazishi uchun ma&apos;lumotlaringizni kiriting:
                 </p>
               </div>
 
-              {/* Yulduzlar */}
-              <div className="flex items-center justify-center gap-2 py-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => setRatingStars(star)}
-                    className="p-1.5 transition-transform hover:scale-115 active:scale-95"
-                  >
-                    <Star
-                      size={32}
-                      className={
-                        star <= ratingStars
-                          ? "fill-[#f59e0b] text-[#f59e0b] drop-shadow-2xs"
-                          : "fill-neutral-200 text-neutral-300"
-                      }
-                    />
-                  </button>
-                ))}
-              </div>
+              {formError && (
+                <div className="flex items-start gap-2.5 rounded-2xl bg-red-50 p-3.5 border border-red-200 text-red-800 text-[13px] font-medium animate-in fade-in">
+                  <AlertCircle size={18} className="shrink-0 text-red-600 mt-0.5" />
+                  <span>{formError}</span>
+                </div>
+              )}
 
-              {/* Izoh qoldirish */}
-              <div>
-                <textarea
-                  rows={3}
-                  value={reviewComment}
-                  onChange={(e) => setReviewComment(e.target.value)}
-                  placeholder="Mutaxassis haqida izohingizni yozing (ixtiyoriy)..."
-                  className="w-full rounded-xl border border-neutral-300/80 bg-neutral-50/60 p-3 text-[14px] text-neutral-900 placeholder:text-neutral-400 focus:border-[#039e1e] focus:bg-white focus:outline-none transition resize-none"
+              {/* Ism input */}
+              <div className="rounded-2xl bg-white p-4 border border-neutral-200/80 shadow-xs space-y-1.5">
+                <label className="text-[12.5px] font-bold text-neutral-700 flex items-center gap-1.5">
+                  <User size={15} className="text-neutral-400" />
+                  <span>F.I.SH (Ismingiz) *</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ism va familiyangizni kiriting..."
+                  className="w-full rounded-xl border border-neutral-200 bg-neutral-50/50 px-3.5 py-2.5 text-[14.5px] text-neutral-900 placeholder:text-neutral-400 focus:border-[#039e1e] focus:bg-white focus:outline-none transition"
                 />
               </div>
 
-              {ratingSubmitted ? (
-                <div className="flex items-center justify-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 p-3.5 text-center text-emerald-800 text-[14px] font-bold">
-                  <CheckCircle2 size={18} className="text-[#039e1e]" />
-                  <span>Rahmat! Baho va izohingiz qabul qilindi.</span>
+              {/* Telefon raqam input */}
+              <div className="rounded-2xl bg-white p-4 border border-neutral-200/80 shadow-xs space-y-1.5">
+                <label className="text-[12.5px] font-bold text-neutral-700 flex items-center gap-1.5">
+                  <Phone size={15} className="text-neutral-400" />
+                  <span>Telefon raqamingiz *</span>
+                </label>
+                <div className="flex items-center rounded-xl border border-neutral-200 bg-neutral-50/50 overflow-hidden focus-within:border-[#039e1e] focus-within:bg-white transition">
+                  <span className="px-3.5 py-2.5 text-[14.5px] font-bold font-mono text-neutral-600 bg-neutral-100/70 border-r border-neutral-200">
+                    +998
+                  </span>
+                  <input
+                    type="tel"
+                    required
+                    maxLength={9}
+                    value={phoneDigits}
+                    onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, "").slice(0, 9))}
+                    placeholder="90 123 45 67"
+                    className="w-full px-3.5 py-2.5 text-[14.5px] font-mono text-neutral-900 placeholder:text-neutral-400 bg-transparent focus:outline-none"
+                  />
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleSubmitRating}
-                  disabled={isSubmittingRating}
-                  className="w-full rounded-xl bg-[#039e1e] py-3.5 text-center text-[15px] font-bold text-white shadow-xs hover:bg-[#028519] active:scale-[0.99] transition disabled:opacity-50"
-                >
-                  {isSubmittingRating ? "Yuborilmoqda..." : "Baholash va yakunlash"}
-                </button>
+                <p className="text-[11px] text-neutral-400 font-medium">
+                  Mutaxassis siz bilan aynan shu raqam orqali bog&apos;lanadi.
+                </p>
+              </div>
+
+              {/* Manzil input & Joylashuv aniqlash */}
+              <div className="rounded-2xl bg-white p-4 border border-neutral-200/80 shadow-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[12.5px] font-bold text-neutral-700 flex items-center gap-1.5">
+                    <MapPin size={15} className="text-neutral-400" />
+                    <span>Yetib borish manzili *</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleDetectLocation}
+                    disabled={isLocating}
+                    className="inline-flex items-center gap-1 text-[11.5px] font-bold text-[#039e1e] hover:underline disabled:opacity-50"
+                  >
+                    {isLocating ? (
+                      <Loader2 size={12} className="animate-spin" />
+                    ) : (
+                      <Navigation size={12} />
+                    )}
+                    <span>Joylashuvimni aniqlash</span>
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  required
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Viloyat, tuman, mahalla, ko'cha yoki mo'ljal..."
+                  className="w-full rounded-xl border border-neutral-200 bg-neutral-50/50 px-3.5 py-2.5 text-[14.5px] text-neutral-900 placeholder:text-neutral-400 focus:border-[#039e1e] focus:bg-white focus:outline-none transition"
+                />
+              </div>
+
+              {/* Muammo / Chaqirish sababi */}
+              <div className="rounded-2xl bg-white p-4 border border-neutral-200/80 shadow-xs space-y-2">
+                <label className="text-[12.5px] font-bold text-neutral-700 flex items-center gap-1.5">
+                  <FileText size={15} className="text-neutral-400" />
+                  <span>Chaqirish sababi / Muammo tavsifi *</span>
+                </label>
+
+                {/* Tezkor chiplar */}
+                <div className="flex flex-wrap gap-1.5 pb-1">
+                  {quickChips.map((chip) => (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => handleChipClick(chip)}
+                      className="rounded-lg bg-neutral-100 px-2.5 py-1 text-[11px] font-medium text-neutral-700 hover:bg-neutral-200 active:scale-95 transition"
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
+
+                <textarea
+                  required
+                  rows={3}
+                  value={problem}
+                  onChange={(e) => setProblem(e.target.value)}
+                  placeholder={
+                    isVeterinar
+                      ? "Masalan: Sigirning ishtahasi yo'q, tana harorati yuqori, tezkor ko'rik kerak..."
+                      : "Masalan: Pomidor barglari sarg'ayib quriyapti, zararkunandalarni aniqlash kerak..."
+                  }
+                  className="w-full rounded-xl border border-neutral-200 bg-neutral-50/50 p-3 text-[14px] text-neutral-900 placeholder:text-neutral-400 focus:border-[#039e1e] focus:bg-white focus:outline-none transition resize-none"
+                />
+              </div>
+
+              {/* Yuborish tugmasi */}
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full rounded-2xl bg-[#039e1e] py-4 text-center text-[16px] font-bold text-white shadow-md hover:bg-[#028519] active:scale-[0.99] transition disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 size={20} className="animate-spin" />
+                    <span>Yuborilmoqda...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Chaqiruvni yuborish</span>
+                    <span>➔</span>
+                  </>
+                )}
+              </button>
+
+              <div className="flex items-center justify-center gap-1.5 text-[11.5px] text-neutral-400 font-medium">
+                <ShieldCheck size={14} className="text-emerald-600" />
+                <span>Ma&apos;lumotlaringiz shifrlangan va mutaxassisga to&apos;g&apos;ridan-to&apos;g&apos;ri yuboriladi</span>
+              </div>
+            </form>
+          )}
+
+          {/* 3. B) KUZATUV REJIMI (Tracking): Chaqiruv statusi */}
+          {mode === "tracking" && (
+            <div className="mt-5 space-y-4">
+              <div>
+                <h1 className="text-[24px] font-bold text-neutral-900 tracking-tight leading-tight">
+                  Chaqiruv #{callId}
+                </h1>
+                <p className="text-[14px] text-neutral-500 mt-1">
+                  Mutaxassis sizning arizangizni ko&apos;rib chiqmoqda.
+                </p>
+              </div>
+
+              {/* Bekor qilingan holati */}
+              {isCancelled && (
+                <div className="rounded-2xl bg-red-50 border border-red-200 p-4 text-red-900">
+                  <div className="flex items-center gap-2 font-bold text-[15px]">
+                    <AlertCircle size={20} className="text-red-600" />
+                    <span>Chaqiruv bekor qilindi</span>
+                  </div>
+                  <p className="text-[13px] text-red-700 mt-1">
+                    Ushbu chaqiruv mutaxassis yoki tizim tomonidan bekor qilindi. Boshqa mutaxassisga murojaat qilishingiz mumkin.
+                  </p>
+                </div>
+              )}
+
+              {/* 3-bosqichli status kartochkasi */}
+              {!isCancelled && (
+                <div className="rounded-2xl bg-white border border-neutral-200/90 p-5 shadow-xs space-y-4">
+                  {/* 1-bosqich: So'rov yuborildi */}
+                  <div className="flex items-center gap-3.5">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#039e1e] text-white shadow-xs">
+                      <Check size={16} className="stroke-[3]" />
+                    </div>
+                    <div>
+                      <span className="text-[15px] font-bold text-neutral-900 block leading-tight">
+                        So&apos;rov yuborildi
+                      </span>
+                      <span className="text-[12px] text-neutral-500">
+                        Mutaxassis botiga bildirishnoma yetkazildi
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 2-bosqich: Qabul qilindi */}
+                  <div className="flex items-center gap-3.5">
+                    {callProgress >= 2 ? (
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#039e1e] text-white shadow-xs">
+                        <Check size={16} className="stroke-[3]" />
+                      </div>
+                    ) : (
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-neutral-300 bg-neutral-100" />
+                    )}
+                    <div>
+                      <span
+                        className={`text-[15px] block leading-tight ${
+                          callProgress >= 2 ? "font-bold text-neutral-900" : "font-medium text-neutral-400"
+                        }`}
+                      >
+                        Qabul qilindi
+                      </span>
+                      <span className="text-[12px] text-neutral-500">
+                        {callProgress >= 2
+                          ? "Mutaxassis chaqiruvni tasdiqladi va yo'lga chiqdi"
+                          : "Mutaxassis tasdiqlashi kutilmoqda"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 3-bosqich: Yakunlandi */}
+                  <div className="flex items-center gap-3.5">
+                    {callProgress >= 3 ? (
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#039e1e] text-white shadow-xs">
+                        <Check size={16} className="stroke-[3]" />
+                      </div>
+                    ) : (
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-neutral-300 bg-neutral-100" />
+                    )}
+                    <div>
+                      <span
+                        className={`text-[15px] block leading-tight ${
+                          callProgress >= 3 ? "font-bold text-neutral-900" : "font-medium text-neutral-400"
+                        }`}
+                      >
+                        Yakunlandi
+                      </span>
+                      <span className="text-[12px] text-neutral-500">
+                        {callProgress >= 3 ? "Xizmat to'liq ko'rsatildi" : "Xizmat ko'rsatilgach yakunlanadi"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Yuborilgan ma'lumotlar xulosasi */}
+              <div className="rounded-2xl bg-white border border-neutral-200/90 p-4.5 shadow-xs space-y-2.5 text-[13.5px]">
+                <h4 className="text-[12px] font-bold text-neutral-400 uppercase tracking-wider">
+                  Chaqiruv tafsilotlari
+                </h4>
+                <div className="flex items-center justify-between text-neutral-800">
+                  <span className="text-neutral-500">Mijoz:</span>
+                  <span className="font-bold">{name || "Ko'rsatilmagan"}</span>
+                </div>
+                <div className="flex items-center justify-between text-neutral-800">
+                  <span className="text-neutral-500">Telefon:</span>
+                  <span className="font-mono font-bold">+998 {phoneDigits}</span>
+                </div>
+                <div className="flex items-start justify-between text-neutral-800 gap-3">
+                  <span className="text-neutral-500 shrink-0">Manzil:</span>
+                  <span className="font-medium text-right break-words">{address}</span>
+                </div>
+                {problem && (
+                  <div className="pt-2 border-t border-neutral-100">
+                    <span className="text-[12px] text-neutral-500 block">Muammo tavsifi:</span>
+                    <p className="mt-1 font-medium text-neutral-800 italic bg-neutral-50 rounded-xl p-2.5">
+                      &ldquo;{problem}&rdquo;
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Mutaxassis bilan tezkor bog'lanish */}
+              <a
+                href={`tel:${specialist.phone.replace(/\s/g, "")}`}
+                className="w-full flex items-center justify-center gap-2 rounded-2xl bg-neutral-900 py-3.5 text-center text-[15px] font-bold text-white shadow-xs hover:bg-neutral-800 active:scale-95 transition"
+              >
+                <Phone size={18} />
+                <span>Mutaxassisga qo&apos;ng&apos;iroq qilish</span>
+              </a>
+
+              {/* 4. 3-bosqichga yetganda reyting va izoh qoldirish bo'limi */}
+              {callProgress === 3 && (
+                <div className="rounded-2xl bg-white border border-neutral-200/90 p-5 shadow-xs space-y-4 animate-in fade-in duration-200">
+                  <div className="text-center">
+                    <h3 className="text-[17px] font-bold text-neutral-900">
+                      Xizmatni baholang va izoh qoldiring
+                    </h3>
+                    <p className="text-[13px] text-neutral-500 mt-1">
+                      Mutaxassis xizmatidan qoniqdingizmi? Tajribangiz bilan bo&apos;lishing.
+                    </p>
+                  </div>
+
+                  {/* Yulduzlar */}
+                  <div className="flex items-center justify-center gap-2 py-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setRatingStars(star)}
+                        className="p-1.5 transition-transform hover:scale-115 active:scale-95"
+                      >
+                        <Star
+                          size={32}
+                          className={
+                            star <= ratingStars
+                              ? "fill-[#f59e0b] text-[#f59e0b] drop-shadow-2xs"
+                              : "fill-neutral-200 text-neutral-300"
+                          }
+                        />
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Izoh qoldirish */}
+                  <div>
+                    <textarea
+                      rows={3}
+                      value={reviewComment}
+                      onChange={(e) => setReviewComment(e.target.value)}
+                      placeholder="Mutaxassis haqida izohingizni yozing (ixtiyoriy)..."
+                      className="w-full rounded-xl border border-neutral-300/80 bg-neutral-50/60 p-3 text-[14px] text-neutral-900 placeholder:text-neutral-400 focus:border-[#039e1e] focus:bg-white focus:outline-none transition resize-none"
+                    />
+                  </div>
+
+                  {ratingSubmitted ? (
+                    <div className="flex items-center justify-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 p-3.5 text-center text-emerald-800 text-[14px] font-bold">
+                      <CheckCircle2 size={18} className="text-[#039e1e]" />
+                      <span>Rahmat! Baho va izohingiz qabul qilindi.</span>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleSubmitRating}
+                      disabled={isSubmittingRating}
+                      className="w-full rounded-xl bg-[#039e1e] py-3.5 text-center text-[15px] font-bold text-white shadow-xs hover:bg-[#028519] active:scale-[0.99] transition disabled:opacity-50"
+                    >
+                      {isSubmittingRating ? "Yuborilmoqda..." : "Baholash va yakunlash"}
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           )}
-
-          {/* 5. Mutaxassis botiga kelgan xabar (real demo) */}
-          <div className="mt-6">
-            <p className="text-[13px] text-neutral-500 font-bold uppercase tracking-wider mb-2">
-              Mutaxassis botiga kelgan xabar (demo):
-            </p>
-
-            <div className="rounded-2xl bg-[#f0f4f9] border border-blue-100/80 p-4.5 text-[#1e293b] shadow-2xs">
-              <h4 className="text-[16px] font-bold text-[#1e3a8a] tracking-tight">
-                Yangi chaqiruv #{callId}
-              </h4>
-              <p className="text-[14px] font-medium text-[#1e293b] mt-1.5">
-                <span className="font-semibold text-neutral-600">Mijoz:</span> {name}
-              </p>
-              <p className="text-[14px] font-medium text-[#1e293b] mt-0.5">
-                <span className="font-semibold text-neutral-600">Manzil:</span> {address}
-              </p>
-            </div>
-          </div>
         </div>
       </div>
     </div>
