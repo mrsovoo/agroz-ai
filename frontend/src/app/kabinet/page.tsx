@@ -25,6 +25,9 @@ import {
   Award,
   ChevronRight,
   ExternalLink,
+  Camera,
+  Image as ImageIcon,
+  X,
 } from "lucide-react";
 import { haptic } from "@/lib/telegram";
 
@@ -138,6 +141,8 @@ export default function PartnerKabinetPage() {
   const [newMedStock, setNewMedStock] = useState("10");
   const [newMedUnit, setNewMedUnit] = useState("dona");
   const [newMedUsage, setNewMedUsage] = useState("");
+  const [newMedPhoto, setNewMedPhoto] = useState<string | null>(null);
+  const [isCompressingPhoto, setIsCompressingPhoto] = useState(false);
   const [savingMed, setSavingMed] = useState(false);
 
   // Huquqiy rozilik guvohnomasi modali
@@ -386,6 +391,62 @@ export default function PartnerKabinetPage() {
     }
   }
 
+  // Rasm tanlash va brauzerda siqish (max 800px JPEG, ~50-80 KB)
+  function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("Faqat rasm faylini tanlashingiz mumkin");
+      return;
+    }
+
+    setIsCompressingPhoto(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        const maxDim = 800;
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL("image/jpeg", 0.8);
+          setNewMedPhoto(compressed);
+        } else {
+          setNewMedPhoto(event.target?.result as string);
+        }
+        setIsCompressingPhoto(false);
+        haptic("light");
+      };
+      img.onerror = () => {
+        setIsCompressingPhoto(false);
+        alert("Rasmni o'qib bo'lmadi");
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.onerror = () => {
+      setIsCompressingPhoto(false);
+      alert("Faylni o'qishda xatolik yuz berdi");
+    };
+    reader.readAsDataURL(file);
+  }
+
   // Yangi dori qo'shish
   async function handleAddMedicineSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -408,6 +469,7 @@ export default function PartnerKabinetPage() {
           stock: Number(newMedStock) || 10,
           stockUnit: newMedUnit,
           usage: newMedUsage.trim() || null,
+          photoData: newMedPhoto,
           initData,
         }),
       });
@@ -418,6 +480,7 @@ export default function PartnerKabinetPage() {
         setNewMedName("");
         setNewMedPrice("");
         setNewMedUsage("");
+        setNewMedPhoto(null);
         haptic("medium");
       } else {
         alert(data?.error || "Dori qo'shishda xatolik");
@@ -1148,20 +1211,33 @@ export default function PartnerKabinetPage() {
               <div className="space-y-2">
                 {filteredMeds.map((m) => (
                   <div key={m.id} className="rounded-2xl border border-zinc-200 bg-white p-3 shadow-xs flex items-center justify-between gap-3">
-                    <div className="space-y-0.5 flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-extrabold text-zinc-900 text-xs truncate">{m.name}</span>
-                        <span className="rounded bg-zinc-100 text-zinc-600 px-1.5 py-0.2 text-[9px] font-mono">
-                          {m.type === "crop" ? "Ekin" : m.type === "animal" ? "Veterinar" : "Umumiy"}
-                        </span>
-                      </div>
-                      {m.usage && <p className="text-[11px] text-zinc-500 truncate">{m.usage}</p>}
-                      <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-700">
-                        <span className="font-bold text-emerald-800">
-                          {m.price ? `${m.price.toLocaleString()} so'm` : "Kelishuv"}
-                        </span>
-                        <span className="text-zinc-400">•</span>
-                        <span>Qoldiq: {m.stock} {m.stockUnit}</span>
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                      {m.photoData ? (
+                        <div className="w-11 h-11 rounded-xl overflow-hidden bg-zinc-100 border border-zinc-200 shrink-0 shadow-2xs">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={m.photoData} alt={m.name} className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className="w-11 h-11 rounded-xl bg-zinc-100 border border-zinc-200 flex items-center justify-center text-lg shrink-0">
+                          {m.type === "crop" ? "🌾" : m.type === "animal" ? "🐾" : "💊"}
+                        </div>
+                      )}
+
+                      <div className="space-y-0.5 flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-extrabold text-zinc-900 text-xs truncate">{m.name}</span>
+                          <span className="rounded bg-zinc-100 text-zinc-600 px-1.5 py-0.2 text-[9px] font-mono">
+                            {m.type === "crop" ? "Ekin" : m.type === "animal" ? "Veterinar" : "Umumiy"}
+                          </span>
+                        </div>
+                        {m.usage && <p className="text-[11px] text-zinc-500 truncate">{m.usage}</p>}
+                        <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-700">
+                          <span className="font-bold text-emerald-800">
+                            {m.price ? `${m.price.toLocaleString()} so'm` : "Kelishuv"}
+                          </span>
+                          <span className="text-zinc-400">•</span>
+                          <span>Qoldiq: {m.stock} {m.stockUnit}</span>
+                        </div>
                       </div>
                     </div>
 
@@ -1327,6 +1403,50 @@ export default function PartnerKabinetPage() {
             </div>
 
             <form onSubmit={handleAddMedicineSubmit} className="p-4 space-y-3 text-xs">
+              {/* Dori fotosurati (Kamera yoki Galereyadan) */}
+              <div>
+                <label className="font-bold text-zinc-700 block mb-1">Dori fotosurati (ixtiyoriy)</label>
+                {newMedPhoto ? (
+                  <div className="relative w-full h-36 rounded-2xl overflow-hidden border border-zinc-200 bg-zinc-100 shadow-2xs">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={newMedPhoto} alt="Dori fotosurati" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewMedPhoto(null);
+                        haptic("light");
+                      }}
+                      className="absolute top-2 right-2 rounded-full bg-black/60 hover:bg-black/80 text-white p-1.5 transition active:scale-95"
+                      title="Rasmni o'chirish"
+                    >
+                      <X size={14} />
+                    </button>
+                    <span className="absolute bottom-2 left-2 rounded-md bg-black/60 text-white text-[10px] px-2 py-0.5 font-medium">
+                      ✓ Rasm tanlandi
+                    </span>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center border-2 border-dashed border-emerald-300 hover:border-emerald-400 bg-emerald-50/60 hover:bg-emerald-50 rounded-2xl p-4 cursor-pointer transition text-center group active:scale-[0.99]">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 mb-2 group-hover:scale-105 transition">
+                      <Camera size={20} />
+                    </div>
+                    <span className="font-bold text-xs text-emerald-950">
+                      {isCompressingPhoto ? "Rasm yuklanmoqda..." : "Fotosuratni yuklash"}
+                    </span>
+                    <span className="text-[10px] text-zinc-500 mt-0.5">
+                      Kameradan oling yoki galereyadan tanlang
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={isCompressingPhoto}
+                      onChange={handlePhotoSelect}
+                    />
+                  </label>
+                )}
+              </div>
+
               <div>
                 <label className="font-bold text-zinc-700 block mb-1">Dori nomi *</label>
                 <input

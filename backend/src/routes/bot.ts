@@ -1757,16 +1757,19 @@ router.post("/partner/medicines", async (req, res) => {
       return res.status(403).json({ ok: false, error: "Faqat dorixona rahbarlari dori qo'sha oladi" });
     }
 
-    const { name, type, usage, price, stock, stockUnit } = req.body || {};
+    const { name, type, usage, price, stock, stockUnit, photoData } = req.body || {};
     const cleanName = cleanText(name, 150);
     if (!cleanName) {
       return res.status(400).json({ ok: false, error: "Dori nomi kiritilishi shart" });
     }
 
+    const cleanPhotoData = typeof photoData === "string" && photoData.startsWith("data:image/") ? photoData : null;
+
     const medicine = await addMedicine({
       specialistId: spec.id,
       name: cleanName,
       photoFileId: null,
+      photoData: cleanPhotoData,
       type: type === "animal" || type === "crop" ? type : "general",
       usage: usage ? cleanText(usage, 300) : null,
       price: Number(price) > 0 ? Number(price) : null,
@@ -1801,12 +1804,15 @@ router.patch("/partner/medicines/:id", async (req, res) => {
       return res.status(403).json({ ok: false, error: "Dori topilmadi yoki sizga tegishli emas" });
     }
 
-    const { status, price, stock, usage } = req.body || {};
+    const { status, price, stock, usage, photoData } = req.body || {};
     const updates: Record<string, any> = { updatedAt: new Date() };
     if (status === "bor" || status === "yoq") updates.status = status;
     if (price !== undefined) updates.price = Number(price) > 0 ? Number(price) : null;
     if (stock !== undefined) updates.stock = Number(stock) >= 0 ? Number(stock) : 0;
     if (usage !== undefined) updates.usage = usage ? cleanText(usage, 300) : null;
+    if (photoData !== undefined) {
+      updates.photoData = typeof photoData === "string" && photoData.startsWith("data:image/") ? photoData : null;
+    }
 
     await db.update(specialistMedicines).set(updates).where(eq(specialistMedicines.id, medId));
     res.json({ ok: true, medicine: { ...med, ...updates } });
