@@ -148,15 +148,18 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
 
   const loadSpecialists = useCallback(() => {
     const params = new URLSearchParams();
+    // Mutaxassislar bo'limida faqat malakali mutaxassislar (agronom, veterinar) ko'rsatiladi, dorixona egalari (pharmacy) chiqmaydi
+    params.set("role", "specialist");
     if (coords) {
       params.set("lat", String(coords.lat));
       params.set("lng", String(coords.lng));
     }
-    // Barcha malakali mutaxassis va maslahatchilarni olamiz
     fetch(apiUrl(`/api/specialists?${params.toString()}`))
       .then((r) => r.json())
       .then((d: { items?: Specialist[] }) => {
-        setItems(Array.isArray(d?.items) ? d.items : []);
+        const list = Array.isArray(d?.items) ? d.items : [];
+        // Qo'shimcha xavfsizlik filtri: dorixona egalari mutlaqo chiqmasligi kerak
+        setItems(list.filter((s) => s.role === "specialist" || (s.role !== "pharmacy" && !s.organization)));
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -186,6 +189,11 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
   // Filtrlangan mutaxassislar ro'yxati
   const filteredSpecialists = useMemo(() => {
     return items.filter((s) => {
+      // 0. Dorixona egalari (pharmacy) mutaxassislar bo'limida mutlaqo ko'rinmasligi shart
+      if (s.role === "pharmacy" || (s.role && s.role !== "specialist")) {
+        return false;
+      }
+
       // 1. Kategoriya (yo'nalish) bo'yicha aniq filtr
       if (activeCategory === "agronom") {
         const isAgronom =
@@ -212,8 +220,7 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
         const matchSpec = (s.specialty || "").toLowerCase().includes(q);
         const matchAddr = (s.address || "").toLowerCase().includes(q);
         const matchBio = (s.bio || "").toLowerCase().includes(q);
-        const matchOrg = (s.organization || "").toLowerCase().includes(q);
-        return matchName || matchSpec || matchAddr || matchBio || matchOrg;
+        return matchName || matchSpec || matchAddr || matchBio;
       }
 
       return true;
