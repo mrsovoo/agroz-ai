@@ -1707,7 +1707,8 @@ router.get("/partner/orders", async (req, res) => {
 
     res.json({ ok: true, orders: enriched });
   } catch (err: any) {
-    res.status(500).json({ ok: false, error: err.message });
+    console.error("[partner:orders error]:", err);
+    res.status(500).json({ ok: false, error: "Server xatosi yuz berdi" });
   }
 });
 
@@ -1735,7 +1736,8 @@ router.get("/partner/medicines", async (req, res) => {
 
     res.json({ ok: true, medicines: rows });
   } catch (err: any) {
-    res.status(500).json({ ok: false, error: err.message });
+    console.error("[partner:medicines error]:", err);
+    res.status(500).json({ ok: false, error: "Server xatosi yuz berdi" });
   }
 });
 
@@ -1774,7 +1776,8 @@ router.post("/partner/medicines", async (req, res) => {
 
     res.json({ ok: true, medicine });
   } catch (err: any) {
-    res.status(500).json({ ok: false, error: err.message });
+    console.error("[partner:addMedicine error]:", err);
+    res.status(500).json({ ok: false, error: "Server xatosi yuz berdi" });
   }
 });
 
@@ -1808,7 +1811,8 @@ router.patch("/partner/medicines/:id", async (req, res) => {
     await db.update(specialistMedicines).set(updates).where(eq(specialistMedicines.id, medId));
     res.json({ ok: true, medicine: { ...med, ...updates } });
   } catch (err: any) {
-    res.status(500).json({ ok: false, error: err.message });
+    console.error("[partner:updateMedicine error]:", err);
+    res.status(500).json({ ok: false, error: "Server xatosi yuz berdi" });
   }
 });
 
@@ -1830,7 +1834,8 @@ router.delete("/partner/medicines/:id", async (req, res) => {
     await db.delete(specialistMedicines).where(and(eq(specialistMedicines.id, medId), eq(specialistMedicines.specialistId, spec.id)));
     res.json({ ok: true });
   } catch (err: any) {
-    res.status(500).json({ ok: false, error: err.message });
+    console.error("[partner:deleteMedicine error]:", err);
+    res.status(500).json({ ok: false, error: "Server xatosi yuz berdi" });
   }
 });
 
@@ -1877,7 +1882,8 @@ router.post("/partner/orders/:id/action", async (req, res) => {
 
     res.json({ ok: true, status: nextStatus || order.status });
   } catch (err: any) {
-    res.status(500).json({ ok: false, error: err.message });
+    console.error("[partner:orderAction error]:", err);
+    res.status(500).json({ ok: false, error: "Server xatosi yuz berdi" });
   }
 });
 
@@ -1940,7 +1946,8 @@ router.get("/partner/calls", async (req, res) => {
 
     res.json({ ok: true, calls: enriched });
   } catch (err: any) {
-    res.status(500).json({ ok: false, error: err.message });
+    console.error("[partner:calls error]:", err);
+    res.status(500).json({ ok: false, error: "Server xatosi yuz berdi" });
   }
 });
 
@@ -1977,7 +1984,8 @@ router.post("/partner/calls/:id/action", async (req, res) => {
 
     res.json({ ok: true, status: nextStatus || call.status });
   } catch (err: any) {
-    res.status(500).json({ ok: false, error: err.message });
+    console.error("[partner:callAction error]:", err);
+    res.status(500).json({ ok: false, error: "Server xatosi yuz berdi" });
   }
 });
 
@@ -1999,7 +2007,8 @@ router.post("/partner/busy", async (req, res) => {
     await db.update(specialists).set({ isBusy: Boolean(isBusy) }).where(eq(specialists.id, spec.id));
     res.json({ ok: true, isBusy: Boolean(isBusy) });
   } catch (err: any) {
-    res.status(500).json({ ok: false, error: err.message });
+    console.error("[partner:busy error]:", err);
+    res.status(500).json({ ok: false, error: "Server xatosi yuz berdi" });
   }
 });
 

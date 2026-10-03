@@ -1467,12 +1467,14 @@ export default function PartnerKabinetPage() {
                 </div>
               </div>
 
-              <div className="rounded-xl bg-zinc-900 p-3 text-white space-y-1 font-mono text-[10.5px]">
-                <span className="text-zinc-400 font-bold block">🔐 SHA-256 Audit Muhr:</span>
-                <p className="text-emerald-400 break-all">VERIFIED-O-RQ-547-IMMUTABLE-RECORD</p>
-                <span className="text-zinc-500 block text-[9.5px]">
-                  Ushbu yozuv serverda o&apos;zgarmas tartibda saqlanadi.
+              <div className="rounded-xl bg-zinc-50 border border-zinc-200 p-3 text-zinc-700 space-y-1 text-xs">
+                <span className="font-bold text-zinc-900 block flex items-center gap-1.5">
+                  <ShieldCheck size={14} className="text-emerald-600" />
+                  <span>Davlat Standarti: O&apos;RQ-547 Qonuni</span>
                 </span>
+                <p className="text-[11px] text-zinc-600 leading-relaxed">
+                  Ushbu rozilik ma&apos;lumotlari qonunchilik talablariga muvofiq maxfiy va xavfsiz tarzda qayd etilgan.
+                </p>
               </div>
 
               <button

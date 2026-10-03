@@ -4,6 +4,7 @@ out
 build
 dist
 .env
+.env*
 .env*.local
 *.tsbuildinfo
 .DS_Store
@@ -13,4 +14,32 @@ yarn-error.log*
 pnpm-debug.log*
 .vercel
 .kilo
-.env*
+
+# SSH & Cryptographic Private Keys
+*.pem
+*.key
+*.pkcs12
+*.pfx
+*.p12
+*.rsa
+id_rsa
+id_rsa*
+id_ed25519
+id_ed25519*
+id_ecdsa
+id_ecdsa*
+id_dsa
+id_dsa*
+.ssh
+.ssh/*
+authorized_keys
+known_hosts
+
+# Cloud & Server Credentials
+credentials.json
+service-account*.json
+*.keystore
+*.jks
+*.secret
+secrets/
+*.credentials

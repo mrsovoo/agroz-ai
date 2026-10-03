@@ -53,7 +53,7 @@ router.get("/", async (req, res) => {
     res.json({ items, radiusKm });
   } catch (err: any) {
     console.error("[specialists route error]:", err);
-    res.status(500).json({ error: err.message || "Server xatosi" });
+    res.status(500).json({ error: "Server xatosi yuz berdi" });
   }
 });
 
@@ -154,7 +154,7 @@ async function handleRateSpecialist(req: any, res: any) {
     res.json({ ok: true, ...result });
   } catch (err: any) {
     console.error("[rate error]:", err);
-    res.status(500).json({ error: err.message || "Server xatosi" });
+    res.status(500).json({ error: "Server xatosi yuz berdi" });
   }
 }
 
@@ -344,7 +344,7 @@ router.post("/call", async (req, res) => {
     res.json({ ok: true, callId: call.id, specialistName: spec.name });
   } catch (err: any) {
     console.error("[specialists/call error]:", err);
-    res.status(500).json({ error: err.message || "Server xatosi" });
+    res.status(500).json({ error: "Server xatosi yuz berdi" });
   }
 });
 
@@ -402,7 +402,8 @@ router.get("/call/:id/status", async (req, res) => {
       updatedAt: call.updatedAt,
     });
   } catch (err: any) {
-    res.status(500).json({ error: err.message || "Server xatosi" });
+    console.error("[specialists/call status error]:", err);
+    res.status(500).json({ error: "Server xatosi yuz berdi" });
   }
 });
 
