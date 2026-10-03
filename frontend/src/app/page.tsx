@@ -55,9 +55,19 @@ export default async function HomePage() {
           name: spec.name,
           phone: spec.phone,
           specialty: spec.specialty,
-          experienceYears: spec.experienceYears,
-          ratingAvg: spec.ratingAvg,
+          education: spec.education ?? null,
+          bio: spec.bio ?? null,
+          helpsWith: spec.helpsWith ?? "both",
+          experienceYears: spec.experienceYears ?? null,
+          ratingAvg: spec.ratingAvg ?? null,
+          ratingCount: spec.ratingCount ?? 0,
           role: spec.role,
+          address: spec.address || "O'zbekiston",
+          lat: spec.lat ?? 41.3111,
+          lng: spec.lng ?? 69.2797,
+          workHours: spec.workHours ?? null,
+          isBusy: Boolean(spec.isBusy),
+          distanceKm: spec.distanceKm ?? null,
         };
       }
 

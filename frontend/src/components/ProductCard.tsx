@@ -30,9 +30,9 @@ export type ProductCardMedicine = PharmacyMedicine;
 export function formatUnit(stockUnit?: string | null): string {
   if (!stockUnit) return "dona";
   const u = stockUnit.toLowerCase().trim();
-  if (u === "kg" || u === "kilo" || u === "kilogram") return "kg";
-  if (u === "litr" || u === "l") return "litr";
-  if (u === "dona" || u === "donasi" || u === "ta") return "dona";
+  if (u === "kg" || u === "kilo" || u === "kilogram" || u === "кг") return "kg";
+  if (u === "litr" || u === "l" || u === "liter" || u === "литр" || u === "л") return "litr";
+  if (u === "dona" || u === "donasi" || u === "ta" || u === "дона" || u === "sht") return "dona";
   return u;
 }
 
@@ -295,72 +295,73 @@ export default function ProductCard({
         </Link>
       </div>
 
-      {/* Ma'lumot: Turgan manzil, Dori nomi, Tavsifi, Reyting, Narxi / donasi (kg) va Savatga */}
+      {/* Ma'lumot: Turgan manzil, Dori nomi, Tavsifi, Reyting, Narxi / donasi (kg / litr) va Savatga */}
       <div className="flex flex-1 flex-col justify-between">
         <div>
-          {/* O'sha turgan manzil (Dorixona nomi yo'q) */}
-          <div className="flex items-center gap-1 text-[11px] sm:text-[11.5px] font-medium text-neutral-500 mb-1">
+          {/* 1. O'sha turgan manzil (Dorixona nomi yo'q) */}
+          <div className="flex items-center gap-1 text-[11px] sm:text-[11.5px] font-medium text-neutral-400 mb-1">
             <MapPin size={11} className="text-[#039e1e] shrink-0" />
             <span className="truncate">{getShortCity(pharmacy.address)}</span>
           </div>
 
-          {/* Dori Nomi */}
-          <Link href={href} className="block">
+          {/* 2. Dori Nomi */}
+          <Link href={href} className="block group/title">
             <h3
-              className="text-[14px] sm:text-[15px] font-black leading-snug text-neutral-900 line-clamp-1 hover:text-[#039e1e] transition-colors"
+              className="text-[14px] sm:text-[15px] font-black leading-snug text-neutral-900 line-clamp-1 group-hover/title:text-[#039e1e] transition-colors"
               title={medicine.name}
             >
               {medicine.name}
             </h3>
           </Link>
 
-          {/* Dorining nomi tagida tavsifi */}
-          <p className="mt-1 text-[11px] sm:text-[11.5px] leading-tight text-neutral-500 line-clamp-2 min-h-[26px]">
-            {medicine.usage || "Qo'llanish tavsifi mavjud"}
+          {/* 3. Dorining nomi tagida qisqartirilgan ixcham tavsifi (To'liq tavsif ustiga bosganda chiqadi) */}
+          <p className="mt-0.5 text-[11px] sm:text-[11.5px] leading-normal text-neutral-500 line-clamp-1 font-medium">
+            {medicine.usage || "Qo'llanilishi bo'yicha batafsil ko'rish"}
           </p>
         </div>
 
-        <div className="mt-2">
-          {/* Reyting */}
-          <div className="flex items-center gap-1.5 mb-1.5">
+        <div className="mt-2 pt-1.5 border-t border-neutral-100">
+          {/* 4. Reyting va birligi */}
+          <div className="flex items-center justify-between gap-1 mb-1">
             {ratingStats.count > 0 ? (
-              <div className="flex items-center gap-1">
-                <div className="flex items-center gap-0.5 text-amber-500 font-extrabold text-[11.5px]">
-                  <Star size={12} className="fill-amber-400 text-amber-400" />
-                  <span>{ratingStats.avg.toFixed(1)}</span>
-                </div>
-                <span className="text-[11px] text-neutral-400 font-medium">
+              <div className="inline-flex items-center gap-0.5 text-amber-500 font-extrabold text-[11px]">
+                <Star size={11} className="fill-amber-400 text-amber-400" />
+                <span>{ratingStats.avg.toFixed(1)}</span>
+                <span className="text-[10px] text-neutral-400 font-medium">
                   ({ratingStats.count})
                 </span>
               </div>
             ) : (
-              <div className="flex items-center gap-1 text-[11px] text-neutral-400 font-medium">
-                <Star size={11} className="text-neutral-300" />
+              <div className="inline-flex items-center gap-0.5 text-[10.5px] text-neutral-400 font-medium">
+                <Star size={10} className="text-neutral-300" />
                 <span>Yangi</span>
               </div>
             )}
+
+            {/* Birlik (dona / kg / litr) */}
+            <span className="text-[10.5px] sm:text-[11px] font-bold text-neutral-600 bg-neutral-100 px-1.5 py-0.5 rounded-md">
+              1 {formatUnit(medicine.stockUnit)}
+            </span>
           </div>
 
-          {/* Narx va narxining yonida donasi, agar kilo bo'lsa kg */}
-          <div className="flex items-baseline gap-1.5">
+          {/* 5. Narxi */}
+          <div className="flex items-baseline gap-1">
             {medicine.price && medicine.price > 0 ? (
               <p className="text-[14.5px] sm:text-[15.5px] font-black text-neutral-900 tracking-tight">
-                {new Intl.NumberFormat("uz-UZ").format(medicine.price).replace(/\s/g, ".")} so&apos;m
+                {new Intl.NumberFormat("uz-UZ").format(medicine.price).replace(/\s/g, ".")}{" "}
+                <span className="text-[11.5px] font-bold text-neutral-500">so&apos;m</span>
               </p>
             ) : (
               <span className="inline-flex items-center rounded-lg bg-neutral-100 px-2 py-0.5 text-[11.5px] sm:text-[12px] font-bold text-neutral-700 tracking-tight">
                 Kelishiladi
               </span>
             )}
-            <span className="text-[11.5px] font-bold text-neutral-500">
-              / {formatUnit(medicine.stockUnit)}
-            </span>
           </div>
 
-          {/* Savatga tugmasi — kartochka radiusiga mos (rounded-[16px]) */}
+          {/* 6. Savatga qo'shish buttoni — toza va moslashuvchan */}
           <div className="mt-2.5">
             {qty > 0 ? (
-              <div className="flex h-11 min-h-[44px] w-full items-center justify-between rounded-[16px] bg-[#eaf5e1] border border-[#039e1e]/25 px-1 text-[#039e1e] shadow-2xs">
+              <div className="flex h-10 min-h-[40px] w-full items-center justify-between rounded-[14px] bg-[#eaf5e1] border border-[#039e1e]/25 px-1 text-[#039e1e] shadow-2xs">
                 <button
                   type="button"
                   onClick={(e) => {
@@ -368,13 +369,13 @@ export default function ProductCard({
                     e.stopPropagation();
                     changeQty(-1);
                   }}
-                  className="flex h-9 w-9 min-h-[36px] min-w-[36px] items-center justify-center rounded-[12px] bg-white text-[#039e1e] shadow-xs active:scale-90 transition font-black hover:bg-neutral-50"
+                  className="flex h-8 w-8 min-h-[32px] min-w-[32px] items-center justify-center rounded-[10px] bg-white text-[#039e1e] shadow-xs active:scale-90 transition font-black hover:bg-neutral-50"
                   aria-label="Kamaytirish"
                 >
-                  <Minus size={15} strokeWidth={2.8} />
+                  <Minus size={14} strokeWidth={2.8} />
                 </button>
 
-                <span className="text-[13px] font-black tracking-tight select-none">
+                <span className="text-[12px] sm:text-[12.5px] font-black tracking-tight select-none">
                   {qty} {formatUnit(medicine.stockUnit)}
                 </span>
 
@@ -385,10 +386,10 @@ export default function ProductCard({
                     e.stopPropagation();
                     changeQty(1);
                   }}
-                  className="flex h-9 w-9 min-h-[36px] min-w-[36px] items-center justify-center rounded-[12px] bg-[#039e1e] text-white shadow-xs active:scale-90 transition font-black hover:bg-[#028518]"
+                  className="flex h-8 w-8 min-h-[32px] min-w-[32px] items-center justify-center rounded-[10px] bg-[#039e1e] text-white shadow-xs active:scale-90 transition font-black hover:bg-[#028518]"
                   aria-label="Ko'paytirish"
                 >
-                  <Plus size={15} strokeWidth={2.8} />
+                  <Plus size={14} strokeWidth={2.8} />
                 </button>
               </div>
             ) : (
@@ -399,9 +400,9 @@ export default function ProductCard({
                   e.stopPropagation();
                   add();
                 }}
-                className="flex h-11 min-h-[44px] w-full items-center justify-center gap-1.5 rounded-[16px] bg-[#039e1e] hover:bg-[#028518] px-3 text-[13px] font-extrabold text-white shadow-2xs hover:shadow-xs active:scale-[0.98] transition-all duration-150"
+                className="flex h-10 min-h-[40px] w-full items-center justify-center gap-1.5 rounded-[14px] bg-[#039e1e] hover:bg-[#028518] px-3 text-[13px] font-black text-white shadow-2xs hover:shadow-xs active:scale-[0.98] transition-all duration-150"
               >
-                <Plus size={16} strokeWidth={2.8} />
+                <Plus size={15} strokeWidth={2.8} />
                 <span>Savatga</span>
               </button>
             )}

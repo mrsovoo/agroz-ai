@@ -1122,16 +1122,23 @@ export default function PartnerKabinetPage() {
                       Ko&apos;rsatadigan xizmatlari va maslahat sohalari:
                     </span>
                     <p className="text-zinc-800 leading-relaxed font-sans">
-                      {partner.bio || partner.helpsWith || "Ekin kasalliklarini aniqlash, agronomik maslahat, profilaktika va parvarishlash."}
+                      {partner.bio || "Xizmatlar tavsifi kiritilmagan."}
                     </p>
                   </div>
 
-                  {partner.education && (
+                  {partner.education ? (
                     <div className="rounded-xl bg-zinc-50 p-3 border border-zinc-100 space-y-1">
                       <span className="text-[10px] uppercase font-mono font-bold text-zinc-400 block">
                         Ta&apos;lim va malaka:
                       </span>
                       <p className="text-zinc-800">{partner.education}</p>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl bg-zinc-50 p-3 border border-zinc-100 space-y-1">
+                      <span className="text-[10px] uppercase font-mono font-bold text-zinc-400 block">
+                        Ta&apos;lim va malaka:
+                      </span>
+                      <p className="text-zinc-400 italic">Kiritilmagan</p>
                     </div>
                   )}
 
@@ -1139,7 +1146,7 @@ export default function PartnerKabinetPage() {
                     <span className="text-[10px] uppercase font-mono font-bold text-zinc-400 block">
                       Qabul va ish vaqti:
                     </span>
-                    <p className="font-mono text-zinc-900 font-bold">{partner.workHours || "08:00 - 18:00"}</p>
+                    <p className="font-mono text-zinc-900 font-bold">{partner.workHours || "Kelishuv asosida"}</p>
                   </div>
                 </div>
               </div>

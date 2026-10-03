@@ -8,6 +8,11 @@ import WeatherCard from "@/components/WeatherCard";
 import SpecialistCallModal from "@/components/SpecialistCallModal";
 import ProductCard from "@/components/ProductCard";
 import {
+  SpecialistCard,
+  SpecialistProfileModal,
+  type Specialist,
+} from "@/components/SpecialistCard";
+import {
   loadCart,
   saveCart,
   notifyCartChanged,
@@ -35,15 +40,7 @@ export type HomeMedicine = {
   pharmacyAddress?: string;
 };
 
-export type HomeSpecialist = {
-  id: number;
-  name: string;
-  phone: string;
-  specialty: string | null;
-  experienceYears: number | null;
-  ratingAvg: number | null;
-  role?: string;
-};
+export type HomeSpecialist = Specialist;
 
 export default function HomeClientView({
   initialMedicines = [],
@@ -59,7 +56,9 @@ export default function HomeClientView({
     }
     return [];
   });
-  const [specialist] = useState<HomeSpecialist | null>(initialSpecialist || null);
+  const [specialist] = useState<Specialist | null>(initialSpecialist || null);
+  const [selectedProfile, setSelectedProfile] = useState<Specialist | null>(null);
+  const [callModalSpecialist, setCallModalSpecialist] = useState<Specialist | null>(null);
 
   useEffect(() => {
     // Har gal Asosiy sahifa ochilganda yoki yangilanganda 4 ta tasodifiy dorilar tanlanadi
@@ -234,76 +233,44 @@ export default function HomeClientView({
       {specialist && (
         <section className="mt-6">
           <div className="flex items-center justify-between mb-3 px-0.5">
-            <h2 className="text-[20px] font-black tracking-tight text-neutral-900">Mutaxasislar</h2>
+            <h2 className="text-[20px] font-black tracking-tight text-neutral-900">Mutaxassislar</h2>
             <Link
               href="/mutaxassislar"
-              className="text-[14px] font-bold text-[#039e1e] hover:underline active:opacity-80 transition"
+              className="text-[14px] font-bold text-[#039e1e] hover:underline active:opacity-80 transition inline-flex items-center gap-1"
             >
-              Barchasi
+              <span>Barchasi</span>
+              <span>→</span>
             </Link>
           </div>
 
-          {/* Mutaxassis kartasi */}
-          <div className="rounded-[24px] bg-[#f8f9fa] border border-neutral-100 p-4 shadow-2xs">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {/* Sariq/olovrang avatar */}
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] bg-gradient-to-br from-[#f59e0b] to-[#ea580c] text-white shadow-2xs font-black text-xl">
-                  {specialist?.name?.charAt(0) ?? "V"}
-                </div>
-
-                <div>
-                  <h3 className="text-[17px] font-black leading-snug text-neutral-900">
-                    {specialist?.specialty || "Veterinar"}
-                  </h3>
-                  <p className="text-[12.5px] font-medium text-neutral-500 mt-0.5">
-                    {specialist?.name ?? "—"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Badgelar: tajriba yillari & reyting */}
-              <div className="flex items-center gap-1.5 shrink-0">
-                {specialist?.experienceYears != null && specialist.experienceYears > 0 && (
-                  <span className="rounded-full bg-[#028518] px-2.5 py-0.5 text-[11px] font-bold text-white shadow-2xs">
-                    {specialist.experienceYears >= 10 ? "10+ yil" : `${specialist.experienceYears} yil`}
-                  </span>
-                )}
-                {specialist?.ratingAvg && specialist.ratingAvg > 0 ? (
-                  <span className="rounded-full bg-[#f59e0b] px-2.5 py-0.5 text-[11px] font-bold text-white shadow-2xs">
-                    ★ {specialist.ratingAvg.toFixed(1)}
-                  </span>
-                ) : (
-                  <span className="rounded-full bg-neutral-200/80 px-2 py-0.5 text-[10.5px] font-bold text-neutral-600">
-                    Yangi
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* 2 ta tugma: Bog'lanish & Chaqirish */}
-            <div className="mt-3.5 grid grid-cols-2 gap-2.5">
-              <a
-                href={`tel:${specialist?.phone ?? ""}`}
-                onClick={() => haptic("light")}
-                className="flex items-center justify-center rounded-xl bg-[#6b7280] hover:bg-[#4b5563] py-2.5 text-[14px] font-bold text-white transition active:scale-95 shadow-2xs"
-              >
-                Bog&apos;lanish
-              </a>
-              <button
-                type="button"
-                onClick={() => {
-                  haptic("medium");
-                  setCallModalOpen(true);
-                }}
-                className="flex items-center justify-center rounded-xl bg-[#039e1e] hover:bg-[#028518] py-2.5 text-[14px] font-bold text-white transition active:scale-95 shadow-2xs"
-              >
-                Chaqirish
-              </button>
-            </div>
-          </div>
+          {/* Mutaxassislar bo'limi bilan 100% bir xil standart kartochka */}
+          <SpecialistCard
+            specialist={specialist}
+            onViewProfile={(s) => setSelectedProfile(s)}
+            onCall={(s) => setCallModalSpecialist(s)}
+          />
         </section>
       )}
+
+      {/* Mutaxassis to'liq profili modali (Screen 2) */}
+      {selectedProfile && (
+        <SpecialistProfileModal
+          specialist={selectedProfile}
+          onClose={() => setSelectedProfile(null)}
+          onCall={(s) => {
+            setSelectedProfile(null);
+            setCallModalSpecialist(s);
+          }}
+        />
+      )}
+
+      {/* Mutaxassisni chaqirish modali */}
+      <SpecialistCallModal
+        specialist={callModalSpecialist}
+        isOpen={!!callModalSpecialist}
+        onClose={() => setCallModalSpecialist(null)}
+        onSuccess={() => setCallModalSpecialist(null)}
+      />
 
     </div>
   );

@@ -176,6 +176,9 @@ type Step =
   | "edit_loc"
   | "edit_org"
   | "edit_spec"
+  | "edit_edu"
+  | "edit_exp"
+  | "edit_bio"
   // Murojaat / Yordam matnini kutish
   | "support_text"
   // Cross-bot OTP tasdiqlash (@agrozai_bot dagi foydalanuvchini tekshirish)
@@ -1680,6 +1683,38 @@ async function handleIndependentCallback(
     return true;
   }
 
+  if (data === "ed:edu") {
+    await answerCallbackQuery(query.id);
+    await setState(telegramId, "edit_edu", {});
+    await sendAuthMessage(
+      chatId,
+      "🎓 <b>Mutaxassislik ma'lumotingiz / Diplomingizni yozing:</b>\n\nQaysi oliygoh, kollej yoki muassasada tahsil olgansiz?\nMasalan: <i>Toshkent Davlat Agrar Universiteti</i>\n\nBekor qilish uchun: /bekor",
+    );
+    return true;
+  }
+
+  if (data === "ed:exp") {
+    await answerCallbackQuery(query.id);
+    await setState(telegramId, "edit_exp", {});
+    await sendAuthMessage(
+      chatId,
+      "🎖 <b>Sohadagi ish tajribangizni tanlang:</b>",
+      { inline: EXPERIENCE_KEYBOARD },
+    );
+    return true;
+  }
+
+  if (data === "ed:bio") {
+    const profile = await getSpecialistByTelegramId(telegramId);
+    await answerCallbackQuery(query.id);
+    await setState(telegramId, "edit_bio", {});
+    await sendAuthMessage(
+      chatId,
+      askBio(profile?.specialty ?? undefined),
+    );
+    return true;
+  }
+
   return false;
 }
 
@@ -2027,11 +2062,29 @@ async function handleCallback(query: NonNullable<AuthBotUpdate["callback_query"]
     // Tajriba yillari inline tugmasi: exp:2 | exp:4 | exp:7 | exp:12 | exp:skip
     if (data.startsWith("exp:")) {
       const val = data.slice(4);
-      if (val === "skip") {
-        delete draft.experienceYears;
-      } else {
+      let expYears: number | null = null;
+      if (val !== "skip") {
         const y = Number(val);
-        if (Number.isFinite(y)) draft.experienceYears = y;
+        if (Number.isFinite(y)) expYears = y;
+      }
+      if (state.step === "edit_exp") {
+        await updateSpecialistFields(telegramId, { experienceYears: expYears });
+        await clearState(telegramId);
+        const updated = await getSpecialistByTelegramId(telegramId);
+        await answerCallbackQuery(query.id);
+        if (updated) {
+          await sendAuthMessage(
+            chatId,
+            `✅ <b>Ish tajribangiz yangilandi:</b> ${expYears ? `${expYears} yil` : "Ko'rsatilmagan"}\n\n${profileMessage(updated)}`,
+            { inline: profileKeyboard(updated) },
+          );
+        }
+        return;
+      }
+      if (expYears != null) {
+        draft.experienceYears = expYears;
+      } else {
+        delete draft.experienceYears;
       }
       step = "bio";
       await setState(telegramId, step, draft);
@@ -3044,6 +3097,44 @@ async function handleText(
         return;
       }
       await sendAuthMessage(chatId, askSpecialty(), { inline: SPECIALTY_KEYBOARD });
+      return;
+    }
+
+    case "edit_edu": {
+      const edu = cleanText(text, 300);
+      if (edu) {
+        await updateSpecialistFields(telegramId, { education: edu });
+        await clearState(telegramId);
+        const updated = await getSpecialistByTelegramId(telegramId);
+        if (updated) {
+          await sendAuthMessage(
+            chatId,
+            `✅ <b>Ta'lim ma'lumotingiz yangilandi:</b> ${escapeHtml(edu)}\n\n${profileMessage(updated)}`,
+            { inline: profileKeyboard(updated) },
+          );
+        }
+        return;
+      }
+      await sendAuthMessage(chatId, "⚠️ Iltimos, ta'lim muassasasi yoki diplomingiz nomini yozing:\n\n<i>Bekor qilish uchun: /bekor</i>");
+      return;
+    }
+
+    case "edit_bio": {
+      const bio = cleanText(text, 500);
+      if (bio) {
+        await updateSpecialistFields(telegramId, { bio });
+        await clearState(telegramId);
+        const updated = await getSpecialistByTelegramId(telegramId);
+        if (updated) {
+          await sendAuthMessage(
+            chatId,
+            `✅ <b>Xizmatlar tavsifi yangilandi:</b>\n\n${profileMessage(updated)}`,
+            { inline: profileKeyboard(updated) },
+          );
+        }
+        return;
+      }
+      await sendAuthMessage(chatId, "⚠️ Iltimos, ko'rsatadigan xizmatlaringizni yozib qoldiring:\n\n<i>Bekor qilish uchun: /bekor</i>");
       return;
     }
 

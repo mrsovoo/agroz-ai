@@ -363,7 +363,12 @@ export function profileKeyboard(s: { role: string; name: string; isApproved?: bo
     }
   } else {
     rows.push([
-      { text: "🎯 Mutaxassislikni o'zgartirish", callback_data: "ed:spec" },
+      { text: "🎓 Ta'lim/Diplom", callback_data: "ed:edu" },
+      { text: "🎖 Tajriba yillari", callback_data: "ed:exp" },
+    ]);
+    rows.push([
+      { text: "🛠 Xizmatlar tavsifi", callback_data: "ed:bio" },
+      { text: "🎯 Mutaxassislik", callback_data: "ed:spec" },
     ]);
     if (!s.isApproved) {
       rows.push([
@@ -697,16 +702,44 @@ export function profileMessage(s: {
   ];
   if (s.organization) rows.push(`<b>Dorixona:</b> ${escapeHtml(s.organization)}`);
   if (s.specialty) rows.push(`<b>Mutaxassislik:</b> ${escapeHtml(s.specialty)}`);
-  if (s.education) rows.push(`<b>Ta'lim:</b> ${escapeHtml(s.education)}`);
-  if (s.experienceYears) rows.push(`<b>Tajriba:</b> ${s.experienceYears} yil`);
-  if (s.bio) rows.push(`<b>Ma'lumot:</b> ${escapeHtml(s.bio)}`);
+  if (s.education) {
+    rows.push(`<b>Ta'lim:</b> ${escapeHtml(s.education)}`);
+  } else if (s.role !== "pharmacy") {
+    rows.push(`⚠️ <b>Ta'lim:</b> <i>Kiritilmagan</i>`);
+  }
+  if (s.experienceYears) {
+    rows.push(`<b>Tajriba:</b> ${s.experienceYears} yil`);
+  } else if (s.role !== "pharmacy") {
+    rows.push(`⚠️ <b>Tajriba:</b> <i>Ko'rsatilmagan</i>`);
+  }
+  if (s.bio) {
+    rows.push(`<b>Xizmatlar tavsifi:</b> ${escapeHtml(s.bio)}`);
+  } else if (s.role !== "pharmacy") {
+    rows.push(`⚠️ <b>Xizmatlar tavsifi:</b> <i>Kiritilmagan</i>`);
+  }
   rows.push(
     `<b>Manzil:</b> ${escapeHtml(s.address)}`,
-    `<b>Ish vaqti:</b> ${escapeHtml(s.workHours ?? "09:00 - 18:00")}`,
+    `<b>Ish vaqti:</b> ${escapeHtml(s.workHours ?? "Kelishuv asosida")}`,
     `<b>Lokatsiya:</b> ${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}`,
-    "",
-    "Yangilash: <b>/royxatdan_otish</b> · O'chirish: <b>/profilni_ochirish</b>",
   );
+
+  const missing: string[] = [];
+  if (s.role !== "pharmacy") {
+    if (!s.education) missing.push("Ta'lim");
+    if (!s.experienceYears) missing.push("Tajriba");
+    if (!s.bio) missing.push("Xizmatlar tavsifi");
+  }
+
+  if (missing.length > 0) {
+    rows.push(
+      "",
+      `💡 <i>Profilingiz mijozlarga to'liq va ishonchli ko'rinishi uchun quyidagilarni kiritish tavsiya etiladi:</i> <b>${missing.join(", ")}</b>`,
+      "To'ldirish uchun pastdagi tugmalardan foydalaning.",
+    );
+  } else {
+    rows.push("", "Yangilash: <b>/royxatdan_otish</b> · O'chirish: <b>/profilni_ochirish</b>");
+  }
+
   return rows.join("\n");
 }
 
