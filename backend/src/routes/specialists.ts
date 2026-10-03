@@ -190,11 +190,30 @@ router.post("/call", async (req, res) => {
       return res.status(404).json({ error: "Mutaxassis topilmadi" });
     }
 
+    const user = await getUserFromReq(req);
+    let resolvedCustomerName = customerName.trim();
+
+    if (user?.name?.trim()) {
+      resolvedCustomerName = user.name.trim();
+    } else {
+      const cleanDigits = customerPhone.replace(/\D/g, "").slice(-9);
+      if (cleanDigits.length === 9) {
+        const [matchedUser] = await db
+          .select({ name: users.name })
+          .from(users)
+          .where(sql`RIGHT(REGEXP_REPLACE(${users.phone}, '\\D', '', 'g'), 9) = ${cleanDigits}`)
+          .limit(1);
+        if (matchedUser?.name?.trim()) {
+          resolvedCustomerName = matchedUser.name.trim();
+        }
+      }
+    }
+
     const [call] = await db
       .insert(specialistCalls)
       .values({
         specialistId: specId,
-        customerName: customerName.trim(),
+        customerName: resolvedCustomerName,
         customerPhone: customerPhone.trim(),
         problem: problem.trim(),
         address: address && typeof address === "string" ? address.trim() : null,
@@ -202,7 +221,6 @@ router.post("/call", async (req, res) => {
       })
       .returning();
 
-    const user = await getUserFromReq(req);
     if (user && (!user.phone || user.phone !== customerPhone.trim())) {
       await db.update(users).set({ phone: customerPhone.trim() }).where(eq(users.id, user.id));
       user.phone = customerPhone.trim();

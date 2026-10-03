@@ -143,6 +143,9 @@ export default function PartnerKabinetPage() {
   // Huquqiy rozilik guvohnomasi modali
   const [showConsentModal, setShowConsentModal] = useState(false);
 
+  // Bog'lanish bosilganda telefon raqamini ko'rsatish holati
+  const [revealedPhones, setRevealedPhones] = useState<Record<string, boolean>>({});
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const tg = (window as any).Telegram?.WebApp;
@@ -731,24 +734,66 @@ export default function PartnerKabinetPage() {
 
                     {/* Mijoz va Tezkor Bog'lanish */}
                     <div className="space-y-2 text-xs">
-                      <div className="flex items-center justify-between">
-                        <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
                           <span className="text-[11px] text-zinc-400 block font-medium">Mijoz / Fermer</span>
-                          <span className="text-sm font-extrabold text-zinc-900">{c.customerName}</span>
+                          <span className="text-sm font-extrabold text-zinc-900 truncate block">{c.customerName}</span>
                         </div>
 
-                        {/* 1-Tap Qo'ng'iroq Tugmasi: Shoshilayotgan mutaxassis uchun katta va yashil */}
+                        {/* Bog'lanish tugmasi: bosilganda raqam chiqadi va ulanish imkoni beriladi */}
                         {c.customerPhone && (
-                          <a
-                            href={`tel:${c.customerPhone}`}
-                            onClick={() => haptic("light")}
-                            className="flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-3 py-2 text-xs font-bold text-white shadow-xs active:scale-95 transition"
+                          <button
+                            type="button"
+                            onClick={() => {
+                              haptic("medium");
+                              setRevealedPhones((prev) => ({
+                                ...prev,
+                                [`call_${c.id}`]: !prev[`call_${c.id}`],
+                              }));
+                            }}
+                            className="flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-3.5 py-2 text-xs font-bold text-white shadow-xs active:scale-95 transition shrink-0"
                           >
                             <Phone size={13} />
-                            <span>Qo&apos;ng&apos;iroq</span>
-                          </a>
+                            <span>Bog&apos;lanish</span>
+                          </button>
                         )}
                       </div>
+
+                      {/* Bog'lanish bosilganda ko'rinadigan telefon raqami qutisi */}
+                      {revealedPhones[`call_${c.id}`] && c.customerPhone && (
+                        <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-2.5 flex items-center justify-between gap-2 animate-in fade-in duration-150">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <Phone size={13} className="text-emerald-700 shrink-0" />
+                            <a
+                              href={`tel:${c.customerPhone}`}
+                              onClick={() => haptic("light")}
+                              className="font-mono font-black text-xs text-emerald-950 hover:underline truncate"
+                            >
+                              {c.customerPhone}
+                            </a>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <a
+                              href={`tel:${c.customerPhone}`}
+                              onClick={() => haptic("light")}
+                              className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-emerald-700 transition"
+                            >
+                              Qo&apos;ng&apos;iroq
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard?.writeText(c.customerPhone || "");
+                                haptic("light");
+                                alert("Telefon raqami nusxalandi: " + c.customerPhone);
+                              }}
+                              className="rounded-lg bg-white border border-emerald-300 px-2 py-1 text-[11px] font-bold text-emerald-800 hover:bg-emerald-100 transition"
+                            >
+                              Nusxa
+                            </button>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Muammo / Alomatlar tavsifi */}
                       <div className="rounded-xl bg-amber-50/70 p-3 border border-amber-200/80">
@@ -896,23 +941,66 @@ export default function PartnerKabinetPage() {
                     </div>
 
                     <div className="space-y-2 text-xs">
-                      <div className="flex items-center justify-between">
-                        <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
                           <span className="text-[11px] text-zinc-400 block font-medium">Mijoz</span>
-                          <span className="text-sm font-extrabold text-zinc-900">{ord.customerName}</span>
+                          <span className="text-sm font-extrabold text-zinc-900 truncate block">{ord.customerName}</span>
                         </div>
 
+                        {/* Bog'lanish tugmasi: bosilganda raqam chiqadi */}
                         {ord.customerPhone && (
-                          <a
-                            href={`tel:${ord.customerPhone}`}
-                            onClick={() => haptic("light")}
-                            className="flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-3 py-2 text-xs font-bold text-white shadow-xs active:scale-95 transition"
+                          <button
+                            type="button"
+                            onClick={() => {
+                              haptic("medium");
+                              setRevealedPhones((prev) => ({
+                                ...prev,
+                                [`ord_${ord.id}`]: !prev[`ord_${ord.id}`],
+                              }));
+                            }}
+                            className="flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-3.5 py-2 text-xs font-bold text-white shadow-xs active:scale-95 transition shrink-0"
                           >
                             <Phone size={13} />
-                            <span>Qo&apos;ng&apos;iroq</span>
-                          </a>
+                            <span>Bog&apos;lanish</span>
+                          </button>
                         )}
                       </div>
+
+                      {/* Bog'lanish bosilganda ko'rinadigan telefon raqami qutisi */}
+                      {revealedPhones[`ord_${ord.id}`] && ord.customerPhone && (
+                        <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-2.5 flex items-center justify-between gap-2 animate-in fade-in duration-150">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <Phone size={13} className="text-emerald-700 shrink-0" />
+                            <a
+                              href={`tel:${ord.customerPhone}`}
+                              onClick={() => haptic("light")}
+                              className="font-mono font-black text-xs text-emerald-950 hover:underline truncate"
+                            >
+                              {ord.customerPhone}
+                            </a>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <a
+                              href={`tel:${ord.customerPhone}`}
+                              onClick={() => haptic("light")}
+                              className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-emerald-700 transition"
+                            >
+                              Qo&apos;ng&apos;iroq
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard?.writeText(ord.customerPhone || "");
+                                haptic("light");
+                                alert("Telefon raqami nusxalandi: " + ord.customerPhone);
+                              }}
+                              className="rounded-lg bg-white border border-emerald-300 px-2 py-1 text-[11px] font-bold text-emerald-800 hover:bg-emerald-100 transition"
+                            >
+                              Nusxa
+                            </button>
+                          </div>
+                        </div>
+                      )}
 
                       <div className="rounded-xl bg-zinc-50 p-2 text-zinc-700 font-medium flex items-center justify-between">
                         <span>Yetkazish turi:</span>

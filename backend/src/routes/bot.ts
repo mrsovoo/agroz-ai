@@ -1683,11 +1683,27 @@ router.get("/partner/orders", async (req, res) => {
       itemsMap.set(it.orderId, arr);
     }
 
-    const enriched = rows.map((r) => ({
-      ...r,
-      items: itemsMap.get(r.id) || [],
-      customerPhone: r.customerPhone,
-    }));
+    const orderUserIds = Array.from(new Set(rows.map((r) => r.userId).filter(Boolean))) as number[];
+    const orderUsersMap = new Map<number, string>();
+    if (orderUserIds.length > 0) {
+      const dbUsers = await db
+        .select({ id: users.id, name: users.name })
+        .from(users)
+        .where(or(...orderUserIds.map((uid) => eq(users.id, uid))));
+      for (const u of dbUsers) {
+        if (u.name) orderUsersMap.set(u.id, u.name.trim());
+      }
+    }
+
+    const enriched = rows.map((r) => {
+      const registeredName = (r.userId && orderUsersMap.get(r.userId)) || r.customerName;
+      return {
+        ...r,
+        customerName: registeredName,
+        items: itemsMap.get(r.id) || [],
+        customerPhone: r.customerPhone,
+      };
+    });
 
     res.json({ ok: true, orders: enriched });
   } catch (err: any) {
@@ -1886,10 +1902,41 @@ router.get("/partner/calls", async (req, res) => {
       .orderBy(desc(specialistCalls.id))
       .limit(50);
 
-    const enriched = rows.map((c) => ({
-      ...c,
-      customerPhone: c.customerPhone,
-    }));
+    const phoneSuffixes = Array.from(
+      new Set(
+        rows
+          .map((r) => (r.customerPhone ? r.customerPhone.replace(/\D/g, "").slice(-9) : ""))
+          .filter((s) => s.length === 9)
+      )
+    );
+
+    const userMap = new Map<string, string>();
+    if (phoneSuffixes.length > 0) {
+      const orConditions = phoneSuffixes.map(
+        (sfx) => sql`RIGHT(REGEXP_REPLACE(${users.phone}, '\\D', '', 'g'), 9) = ${sfx}`
+      );
+      const matchedUsers = await db
+        .select({ phone: users.phone, name: users.name })
+        .from(users)
+        .where(or(...orConditions));
+
+      for (const u of matchedUsers) {
+        if (u.phone && u.name) {
+          const sfx = u.phone.replace(/\D/g, "").slice(-9);
+          userMap.set(sfx, u.name.trim());
+        }
+      }
+    }
+
+    const enriched = rows.map((c) => {
+      const sfx = c.customerPhone ? c.customerPhone.replace(/\D/g, "").slice(-9) : "";
+      const registeredName = sfx && userMap.get(sfx) ? userMap.get(sfx)! : c.customerName;
+      return {
+        ...c,
+        customerName: registeredName,
+        customerPhone: c.customerPhone,
+      };
+    });
 
     res.json({ ok: true, calls: enriched });
   } catch (err: any) {
