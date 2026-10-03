@@ -20,15 +20,15 @@ import {
   ShieldCheck,
   Navigation,
   FileText,
-  Lock,
   Phone,
-  Calendar,
-  Layers,
   Sparkles,
+  Award,
+  ChevronRight,
+  ExternalLink,
 } from "lucide-react";
 import { haptic } from "@/lib/telegram";
 
-/** Backend URL — Vercel rewrites ishlamasa ham backend'ga to'g'ridan-to'g'ri boradi */
+/** Backend URL — Vercel yoki to'g'ridan-to'g'ri backend */
 const BACKEND =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") ||
   process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/+$/, "") ||
@@ -112,8 +112,8 @@ export default function PartnerKabinetPage() {
   // Hamkor profili
   const [partner, setPartner] = useState<PartnerProfile | null>(null);
 
-  // Tablar: Chaqiruvlar | Profil | Tarix (mutaxassis uchun) YOKI Bronlar | Dorilar | Profil (dorixona uchun)
-  const [activeTab, setActiveTab] = useState<string>("main");
+  // Tablar: Mutaxassis uchun "calls" | "profile". Dorixona uchun "orders" | "medicines" | "profile"
+  const [activeTab, setActiveTab] = useState<string>("calls");
 
   // Ro'yxatlar
   const [orders, setOrders] = useState<PartnerOrder[]>([]);
@@ -184,7 +184,14 @@ export default function PartnerKabinetPage() {
         setPartner(p);
         setIsBusy(Boolean(p.isBusy));
 
-        // Agar tasdiqlanmagan bo'lsa, davom etmaymiz
+        // Default tabni belgilash
+        if (p.role === "pharmacy") {
+          setActiveTab((prev) => (prev === "calls" ? "orders" : prev));
+        } else {
+          setActiveTab((prev) => (prev === "orders" || prev === "medicines" ? "calls" : prev));
+        }
+
+        // Agar tasdiqlanmagan bo'lsa
         if (!p.isApproved) {
           setLoading(false);
           return;
@@ -238,10 +245,11 @@ export default function PartnerKabinetPage() {
     }
   }, [initData]);
 
-  // Bandlik holatini almashtirish
+  // Bandlik holatini almashtirish (1-tap toggle)
   async function toggleBusy() {
     haptic("medium");
     const next = !isBusy;
+    setIsBusy(next);
     try {
       const res = await fetch(`${BACKEND}/api/bot/partner/busy`, {
         method: "POST",
@@ -249,18 +257,20 @@ export default function PartnerKabinetPage() {
           "Content-Type": "application/json",
           "x-telegram-init-data": initData,
         },
-        body: JSON.stringify({ isBusy: next, initData }),
+        body: JSON.stringify({ isBusy: next }),
       });
       const data = await res.json();
-      if (data?.ok) {
-        setIsBusy(data.isBusy);
+      if (!data?.ok) {
+        setIsBusy(!next); // rollback
+        alert("Holatni o'zgartirib bo'lmadi");
       }
     } catch {
-      alert("Holatni o'zgartirib bo'lmadi");
+      setIsBusy(!next);
+      alert("Aloqa xatosi yuz berdi");
     }
   }
 
-  // Chaqiruvlar harakati (Mutaxassis)
+  // Chaqiruv amali (Qabul qilish / Rad etish / Yakunlash)
   async function handleCallAction(callId: number, action: "accept" | "reject" | "done") {
     haptic("medium");
     setActionBusyId(callId);
@@ -271,23 +281,25 @@ export default function PartnerKabinetPage() {
           "Content-Type": "application/json",
           "x-telegram-init-data": initData,
         },
-        body: JSON.stringify({ action, initData }),
+        body: JSON.stringify({ action }),
       });
       const data = await res.json();
       if (data?.ok && data.status) {
         setCalls((prev) =>
           prev.map((c) => (c.id === callId ? { ...c, status: data.status } : c))
         );
-        loadData(initData);
+        haptic("medium");
+      } else {
+        alert(data?.error || "Amalni bajarib bo'lmadi");
       }
     } catch {
-      alert("Amalni bajarib bo'lmadi");
+      alert("Server bilan aloqada xatolik");
     } finally {
       setActionBusyId(null);
     }
   }
 
-  // Buyurtmalar harakati (Dorixona)
+  // Bron amali (Tasdiqlash / Bekor / Tayyor / Yetkazildi)
   async function handleOrderAction(orderId: number, action: "confirm" | "cancel" | "ready" | "done") {
     haptic("medium");
     setActionBusyId(orderId);
@@ -298,26 +310,32 @@ export default function PartnerKabinetPage() {
           "Content-Type": "application/json",
           "x-telegram-init-data": initData,
         },
-        body: JSON.stringify({ action, initData }),
+        body: JSON.stringify({ action }),
       });
       const data = await res.json();
       if (data?.ok && data.status) {
         setOrders((prev) =>
           prev.map((o) => (o.id === orderId ? { ...o, status: data.status } : o))
         );
-        loadData(initData);
+        haptic("medium");
+      } else {
+        alert(data?.error || "Amalni bajarib bo'lmadi");
       }
     } catch {
-      alert("Amalni bajarib bo'lmadi");
+      alert("Server bilan aloqada xatolik");
     } finally {
       setActionBusyId(null);
     }
   }
 
-  // Dori holatini almashtirish (bor/yoq)
-  async function handleToggleMedicineStatus(medId: number, currentStatus: string) {
+  // Dori bor/yo'q holatini 1-tap orqali o'zgartirish
+  async function handleToggleMedicineStatus(medId: number, currentStatus: "bor" | "yoq" | "qoralama") {
     haptic("light");
     const nextStatus = currentStatus === "bor" ? "yoq" : "bor";
+    // Optimistik yangilash
+    setMedicines((prev) =>
+      prev.map((m) => (m.id === medId ? { ...m, status: nextStatus } : m))
+    );
     try {
       const res = await fetch(`${BACKEND}/api/bot/partner/medicines/${medId}`, {
         method: "PATCH",
@@ -328,20 +346,25 @@ export default function PartnerKabinetPage() {
         body: JSON.stringify({ status: nextStatus, initData }),
       });
       const data = await res.json();
-      if (data?.ok) {
+      if (!data?.ok) {
+        // Rollback
         setMedicines((prev) =>
-          prev.map((m) => (m.id === medId ? { ...m, status: nextStatus } : m))
+          prev.map((m) => (m.id === medId ? { ...m, status: currentStatus } : m))
         );
+        alert("Holatni saqlab bo'lmadi");
       }
     } catch {
-      alert("Dori holatini o'zgartirib bo'lmadi");
+      setMedicines((prev) =>
+        prev.map((m) => (m.id === medId ? { ...m, status: currentStatus } : m))
+      );
+      alert("Aloqa xatosi");
     }
   }
 
   // Dorini o'chirish
   async function handleDeleteMedicine(medId: number) {
-    if (!confirm("Ushbu dori vositasini katalogdan butunlay o'chirasizmi?")) return;
-    haptic("medium");
+    if (!confirm("Haqiqatan ham ushbu dorini katalogdan o'chirmoqchimisiz?")) return;
+    haptic("heavy");
     try {
       const res = await fetch(`${BACKEND}/api/bot/partner/medicines/${medId}`, {
         method: "DELETE",
@@ -353,6 +376,7 @@ export default function PartnerKabinetPage() {
       const data = await res.json();
       if (data?.ok) {
         setMedicines((prev) => prev.filter((m) => m.id !== medId));
+        haptic("medium");
       }
     } catch {
       alert("Dorini o'chirib bo'lmadi");
@@ -430,19 +454,23 @@ export default function PartnerKabinetPage() {
 
   const isPharmacy = partner?.role === "pharmacy";
 
+  // Faol chaqiruvlar / buyurtmalar soni (badge uchun)
+  const pendingCallsCount = useMemo(() => calls.filter((c) => c.status === "yangi" || c.status === "qabul_qilindi").length, [calls]);
+  const pendingOrdersCount = useMemo(() => orders.filter((o) => o.status === "yangi" || o.status === "tasdiqlandi").length, [orders]);
+
   return (
     <div className="min-h-screen bg-[#f8fafc] pb-24 text-zinc-900 font-sans antialiased">
-      {/* 1. Header (Sticky App Bar) */}
+      {/* 1. Header (Sticky App Bar) — Radikal Sodda va Aniq */}
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-zinc-200/80 bg-white/95 backdrop-blur-md px-4 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-xs font-bold text-lg">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white font-bold text-lg shadow-xs">
             {isPharmacy ? "🏪" : partner?.specialty?.toLowerCase().includes("vet") ? "🐾" : "🌾"}
           </div>
-          <div>
-            <h1 className="text-sm font-black tracking-tight text-zinc-900 truncate max-w-[190px]">
+          <div className="min-w-0">
+            <h1 className="text-sm font-black tracking-tight text-zinc-900 truncate">
               {partner ? partner.organization || partner.name : "AgrozGO Kabinet"}
             </h1>
-            <p className="text-[11px] font-semibold text-zinc-500 flex items-center gap-1.5">
+            <p className="text-[11px] font-semibold text-zinc-500 flex items-center gap-1.5 truncate">
               <span>{isPharmacy ? "Agro-Dorixona" : partner?.specialty || "Mutaxassis"}</span>
               {partner?.rating?.avg ? (
                 <span className="flex items-center text-amber-600 font-bold">
@@ -454,7 +482,8 @@ export default function PartnerKabinetPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Yangilash tugmasi */}
           <button
             type="button"
             onClick={() => loadData(initData)}
@@ -464,18 +493,19 @@ export default function PartnerKabinetPage() {
             <RefreshCw size={15} className={loading ? "animate-spin text-emerald-600" : ""} />
           </button>
 
+          {/* 1-Tap Bandlik Kaliti: Katta va Aniq */}
           {partner?.isApproved && (
             <button
               type="button"
               onClick={toggleBusy}
-              className={`flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[11px] font-bold transition active:scale-95 shadow-2xs border ${
+              className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-black transition active:scale-95 shadow-xs border ${
                 isBusy
-                  ? "bg-red-50 text-red-700 border-red-200"
-                  : "bg-emerald-50 text-emerald-800 border-emerald-200"
+                  ? "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                  : "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
               }`}
             >
-              <Power size={12} />
-              <span>{isBusy ? "🔴 Band" : "🟢 Bo'sh"}</span>
+              <Power size={13} className={isBusy ? "text-red-600" : "text-emerald-700"} />
+              <span>{isBusy ? "Bandman" : "Bo'shman"}</span>
             </button>
           )}
         </div>
@@ -483,10 +513,10 @@ export default function PartnerKabinetPage() {
 
       {/* Telegram Tashqarisidan Kirish Eslatmasi */}
       {!isTelegram && (
-        <div className="mx-4 mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-[12px] text-amber-800 flex items-start gap-2 shadow-2xs">
+        <div className="mx-4 mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 flex items-start gap-2 shadow-2xs">
           <AlertCircle size={16} className="shrink-0 mt-0.5 text-amber-600" />
           <div>
-            <b>Eslatma:</b> Ushbu kabinet Telegram <b>@agroz_auth_bot</b> orqali ochilganda profilingiz bilan to&apos;liq integratsiyalashgan holda ishlaydi.
+            <b>Telegram WebApp rejimi:</b> Ushbu kabinet <b>@agroz_auth_bot</b> orqali avtomatik profil bilan ochiladi.
           </div>
         </div>
       )}
@@ -497,63 +527,43 @@ export default function PartnerKabinetPage() {
         </div>
       )}
 
-      {/* 2. Agar Foydalanuvchi Arizasi Kutilayotgan Bo'lsa (Pending Approval State) */}
+      {/* 2. Agar Foydalanuvchi Arizasi Kutilayotgan Bo'lsa (Pending Approval) */}
       {partner && !partner.isApproved && (
         <div className="mx-4 mt-4 space-y-4">
-          <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-5 text-center shadow-xs">
+          <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-5 text-center shadow-xs">
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-800">
               <Clock size={24} />
             </div>
             <h2 className="text-base font-black text-amber-950">Arizangiz ko&apos;rib chiqilmoqda</h2>
             <p className="mt-1 text-xs text-amber-800 leading-relaxed max-w-md mx-auto">
-              Hurmatli <b>{partner.name}</b>, sizning arizangiz AgrozGO ma&apos;muriyatiga yuborilgan.
-              Tasdiqlanishi bilan Telegram <b>@agroz_auth_bot</b> orqali xabar olasiz va barcha buyurtma/chaqiruvlar boshqaruvi ochiladi.
+              Hurmatli <b>{partner.name}</b>, sizning arizangiz moderator tomonidan ko&apos;rib chiqilmoqda.
+              Tasdiqlanishi bilan <b>@agroz_auth_bot</b> orqali xabar beriladi.
             </p>
           </div>
 
-          {/* Profil ma'lumotlari xulosasi */}
+          {/* Yuborilgan ma'lumotlar xulosasi */}
           <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs space-y-3">
-            <span className="text-[10.5px] uppercase font-mono tracking-wider text-zinc-400 font-bold block">
-              📋 Yuborilgan Ma&apos;lumotlaringiz
+            <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block">
+              📋 Sizning Ma&apos;lumotlaringiz
             </span>
             <div className="space-y-2 text-xs divide-y divide-zinc-100">
-              <div className="flex justify-between py-1">
-                <span className="text-zinc-500">Ism & Familiya:</span>
+              <div className="flex justify-between py-1.5">
+                <span className="text-zinc-500">F.I.SH / Nomi:</span>
                 <span className="font-bold text-zinc-900">{partner.name}</span>
               </div>
-              <div className="flex justify-between py-1">
+              <div className="flex justify-between py-1.5">
                 <span className="text-zinc-500">Faoliyat turi:</span>
                 <span className="font-bold text-zinc-900">{isPharmacy ? "Agro-Dorixona" : partner.specialty || "Mutaxassis"}</span>
               </div>
-              <div className="flex justify-between py-1">
-                <span className="text-zinc-500">Telefon:</span>
+              <div className="flex justify-between py-1.5">
+                <span className="text-zinc-500">Telefon raqam:</span>
                 <span className="font-mono font-bold text-zinc-900">{partner.phone}</span>
               </div>
-              <div className="flex justify-between py-1">
+              <div className="flex justify-between py-1.5">
                 <span className="text-zinc-500">Manzil:</span>
                 <span className="text-right text-zinc-700 max-w-[200px]">{partner.address || "—"}</span>
               </div>
-              <div className="flex justify-between py-1">
-                <span className="text-zinc-500">Ish vaqti:</span>
-                <span className="font-mono text-zinc-800">{partner.workHours || "08:00 - 18:00"}</span>
-              </div>
             </div>
-
-            {partner.consentedAt && (
-              <div className="mt-3 rounded-xl bg-emerald-50 p-3 border border-emerald-200 text-[11px] text-emerald-800 flex items-center justify-between">
-                <span className="flex items-center gap-1.5 font-semibold">
-                  <ShieldCheck size={14} className="text-emerald-700" />
-                  <span>O&apos;RQ-547 Rozilik tasdiqlangan</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setShowConsentModal(true)}
-                  className="font-bold underline text-emerald-900 hover:text-emerald-950"
-                >
-                  Guvohnoma
-                </button>
-              </div>
-            )}
           </div>
         </div>
       )}
@@ -561,23 +571,28 @@ export default function PartnerKabinetPage() {
       {/* 3. Tasdiqlangan Hamkor Boshqaruv Markazi */}
       {partner && partner.isApproved && (
         <div className="space-y-4 pt-3">
-          {/* Navigatsiya Tablari */}
+          {/* Navigatsiya Tablari — Lo'nda va Ikkilanmasdan Tanlanadigan */}
           <div className="px-4">
-            <div className="grid grid-cols-3 gap-1 rounded-2xl bg-zinc-200/80 p-1 text-xs font-bold">
+            <div className={`grid gap-1 rounded-2xl bg-zinc-200/80 p-1 text-xs font-bold ${isPharmacy ? "grid-cols-3" : "grid-cols-2"}`}>
               {isPharmacy ? (
                 <>
                   <button
                     type="button"
                     onClick={() => {
                       haptic("light");
-                      setActiveTab("main");
+                      setActiveTab("orders");
                     }}
-                    className={`flex items-center justify-center gap-1.5 rounded-xl py-2 transition ${
-                      activeTab === "main" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-600 hover:text-zinc-900"
+                    className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 transition ${
+                      activeTab === "orders" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-600 hover:text-zinc-900"
                     }`}
                   >
                     <Package size={15} />
-                    <span>Bronlar ({orders.length})</span>
+                    <span>Bronlar</span>
+                    {pendingOrdersCount > 0 && (
+                      <span className="rounded-full bg-amber-500 px-1.5 py-0.2 text-[10px] text-white font-extrabold">
+                        {pendingOrdersCount}
+                      </span>
+                    )}
                   </button>
                   <button
                     type="button"
@@ -585,7 +600,7 @@ export default function PartnerKabinetPage() {
                       haptic("light");
                       setActiveTab("medicines");
                     }}
-                    className={`flex items-center justify-center gap-1.5 rounded-xl py-2 transition ${
+                    className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 transition ${
                       activeTab === "medicines" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-600 hover:text-zinc-900"
                     }`}
                   >
@@ -598,7 +613,7 @@ export default function PartnerKabinetPage() {
                       haptic("light");
                       setActiveTab("profile");
                     }}
-                    className={`flex items-center justify-center gap-1.5 rounded-xl py-2 transition ${
+                    className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 transition ${
                       activeTab === "profile" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-600 hover:text-zinc-900"
                     }`}
                   >
@@ -612,27 +627,19 @@ export default function PartnerKabinetPage() {
                     type="button"
                     onClick={() => {
                       haptic("light");
-                      setActiveTab("main");
+                      setActiveTab("calls");
                     }}
-                    className={`flex items-center justify-center gap-1.5 rounded-xl py-2 transition ${
-                      activeTab === "main" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-600 hover:text-zinc-900"
+                    className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 transition ${
+                      activeTab === "calls" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-600 hover:text-zinc-900"
                     }`}
                   >
                     <PhoneCall size={15} />
-                    <span>Chaqiruvlar ({calls.length})</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      haptic("light");
-                      setActiveTab("services");
-                    }}
-                    className={`flex items-center justify-center gap-1.5 rounded-xl py-2 transition ${
-                      activeTab === "services" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-600 hover:text-zinc-900"
-                    }`}
-                  >
-                    <Layers size={15} />
-                    <span>Xizmatlarim</span>
+                    <span>Chaqiruvlar</span>
+                    {pendingCallsCount > 0 && (
+                      <span className="rounded-full bg-emerald-600 px-1.5 py-0.2 text-[10px] text-white font-extrabold">
+                        {pendingCallsCount}
+                      </span>
+                    )}
                   </button>
                   <button
                     type="button"
@@ -640,7 +647,7 @@ export default function PartnerKabinetPage() {
                       haptic("light");
                       setActiveTab("profile");
                     }}
-                    className={`flex items-center justify-center gap-1.5 rounded-xl py-2 transition ${
+                    className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 transition ${
                       activeTab === "profile" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-600 hover:text-zinc-900"
                     }`}
                   >
@@ -652,16 +659,16 @@ export default function PartnerKabinetPage() {
             </div>
           </div>
 
-          {/* 3.1. ASOSIY TAB: CHAQUVVLAR (Mutaxassis uchun) */}
-          {!isPharmacy && activeTab === "main" && (
+          {/* 3.1. MUTAXASSIS: CHAQIRUVLAR TABI */}
+          {!isPharmacy && activeTab === "calls" && (
             <div className="px-4 space-y-3">
               {/* Filter tugmalari */}
-              <div className="flex gap-1 overflow-x-auto pb-1 text-[11px] font-bold">
+              <div className="flex gap-1 overflow-x-auto pb-1 text-[11px] font-bold scrollbar-none">
                 {[
                   { id: "all", label: `Barchasi (${calls.length})` },
                   { id: "yangi", label: `Yangi (${calls.filter((c) => c.status === "yangi").length})` },
                   { id: "qabul_qilindi", label: `Qabul qilingan (${calls.filter((c) => c.status === "qabul_qilindi").length})` },
-                  { id: "bajarildi", label: `Bajarilgan (${calls.filter((c) => c.status === "bajarildi").length})` },
+                  { id: "bajarildi", label: `Yakunlangan (${calls.filter((c) => c.status === "bajarildi").length})` },
                 ].map((flt) => (
                   <button
                     key={flt.id}
@@ -670,7 +677,7 @@ export default function PartnerKabinetPage() {
                     className={`shrink-0 rounded-xl px-3 py-1.5 transition border ${
                       callStatusFilter === flt.id
                         ? "bg-zinc-900 text-white border-zinc-900 shadow-xs"
-                        : "bg-white text-zinc-600 border-zinc-200"
+                        : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300"
                     }`}
                   >
                     {flt.label}
@@ -680,12 +687,13 @@ export default function PartnerKabinetPage() {
 
               {filteredCalls.length === 0 && !loading && (
                 <div className="rounded-2xl border border-dashed border-zinc-200 bg-white p-8 text-center text-zinc-400">
-                  <PhoneCall size={36} className="mx-auto mb-2 opacity-40 text-zinc-400" />
-                  <p className="text-sm font-bold text-zinc-700">Chaqiruvlar topilmadi</p>
-                  <p className="text-xs text-zinc-500 mt-1">Fermerlar yordam so&apos;raganda chaqiruvlar shu yerda paydo bo&apos;ladi</p>
+                  <PhoneCall size={36} className="mx-auto mb-2 opacity-30 text-zinc-400" />
+                  <p className="text-sm font-bold text-zinc-700">Chaqiruvlar yo&apos;q</p>
+                  <p className="text-xs text-zinc-500 mt-1">Fermerlar yordam so&apos;raganda chaqiruv shu yerda paydo bo&apos;ladi</p>
                 </div>
               )}
 
+              {/* Chaqiruv kartochkalari — 1-bosishda natijaga yetkazuvchi dizayn */}
               {filteredCalls.map((c) => {
                 const isWorking = actionBusyId === c.id;
                 const statusColor =
@@ -699,73 +707,78 @@ export default function PartnerKabinetPage() {
 
                 const statusText =
                   c.status === "yangi"
-                    ? "Yangi chaqiruv"
+                    ? "Kutilmoqda"
                     : c.status === "qabul_qilindi"
-                    ? "Qabul qilingan"
+                    ? "Jarayonda"
                     : c.status === "bajarildi"
                     ? "Yakunlangan"
                     : "Rad etilgan";
 
                 return (
-                  <div key={c.id} className="rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-3">
+                  <div key={c.id} className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-xs space-y-3">
+                    {/* Yuqori qism: ID, Status va Vaqt */}
                     <div className="flex items-center justify-between border-b border-zinc-100 pb-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono font-black text-zinc-800">Chaqiruv #{c.id}</span>
-                        <span className={`rounded-full px-2 py-0.5 text-[10.5px] font-extrabold border ${statusColor}`}>
+                        <span className="text-xs font-mono font-black text-zinc-900">#{c.id}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold border ${statusColor}`}>
                           {statusText}
                         </span>
                       </div>
-                      <span className="text-[10.5px] font-mono text-zinc-400">
+                      <span className="text-[11px] font-mono text-zinc-400">
                         {new Date(c.createdAt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })}
                       </span>
                     </div>
 
-                    <div className="space-y-1.5 text-xs">
+                    {/* Mijoz va Tezkor Bog'lanish */}
+                    <div className="space-y-2 text-xs">
                       <div className="flex items-center justify-between">
-                        <span className="text-zinc-500">Fermer / Mijoz:</span>
-                        <span className="font-bold text-zinc-900">{c.customerName}</span>
-                      </div>
+                        <div>
+                          <span className="text-[11px] text-zinc-400 block font-medium">Mijoz / Fermer</span>
+                          <span className="text-sm font-extrabold text-zinc-900">{c.customerName}</span>
+                        </div>
 
-                      {c.customerPhone && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-zinc-500">Telefon:</span>
+                        {/* 1-Tap Qo'ng'iroq Tugmasi: Shoshilayotgan mutaxassis uchun katta va yashil */}
+                        {c.customerPhone && (
                           <a
                             href={`tel:${c.customerPhone}`}
-                            className="font-mono font-bold text-emerald-700 hover:underline flex items-center gap-1"
+                            onClick={() => haptic("light")}
+                            className="flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-3 py-2 text-xs font-bold text-white shadow-xs active:scale-95 transition"
                           >
-                            <Phone size={12} />
-                            <span>{c.customerPhone}</span>
+                            <Phone size={13} />
+                            <span>Qo&apos;ng&apos;iroq</span>
                           </a>
-                        </div>
-                      )}
+                        )}
+                      </div>
 
+                      {/* Muammo / Alomatlar tavsifi */}
+                      <div className="rounded-xl bg-amber-50/70 p-3 border border-amber-200/80">
+                        <span className="text-[10px] font-bold uppercase text-amber-800 tracking-wider block mb-1">
+                          Muammo tavsifi:
+                        </span>
+                        <p className="text-xs text-zinc-900 leading-relaxed font-sans">{c.problem}</p>
+                      </div>
+
+                      {/* Manzil va 1-Tap Navigator havolasi */}
                       {c.address && (
-                        <div className="rounded-xl bg-zinc-50 p-2.5 border border-zinc-100 space-y-1">
-                          <span className="text-[10.5px] font-semibold text-zinc-500 flex items-center gap-1">
-                            <MapPin size={12} className="text-zinc-400" /> Manzil / Joylashuv:
-                          </span>
-                          <p className="text-zinc-800 font-medium">{c.address}</p>
+                        <div className="rounded-xl bg-zinc-50 p-2.5 border border-zinc-100 flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <MapPin size={14} className="text-zinc-500 shrink-0" />
+                            <span className="text-xs text-zinc-800 truncate font-medium">{c.address}</span>
+                          </div>
                           <a
-                            href={`https://maps.google.com/?q=${encodeURIComponent(c.address)}`}
+                            href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(c.address)}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:underline pt-0.5"
+                            className="shrink-0 flex items-center gap-1 rounded-lg bg-blue-50 px-2 py-1 text-[11px] font-bold text-blue-700 hover:bg-blue-100 transition"
                           >
                             <Navigation size={11} />
-                            <span>Xaritada ochish (Google Maps)</span>
+                            <span>Xarita</span>
                           </a>
                         </div>
                       )}
-
-                      <div className="rounded-xl bg-amber-50/60 p-2.5 border border-amber-200/70">
-                        <span className="text-[10px] uppercase font-mono font-bold text-amber-800 block mb-0.5">
-                          Muammo tavsifi / Alomatlar:
-                        </span>
-                        <p className="text-zinc-900 font-sans leading-relaxed whitespace-pre-wrap">{c.problem}</p>
-                      </div>
                     </div>
 
-                    {/* Tugmalar */}
+                    {/* Harakat tugmalari — 1-bosishda holatni o'zgartirish */}
                     <div className="pt-1 flex gap-2">
                       {c.status === "yangi" && (
                         <>
@@ -773,7 +786,7 @@ export default function PartnerKabinetPage() {
                             type="button"
                             disabled={isWorking}
                             onClick={() => handleCallAction(c.id, "accept")}
-                            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2.5 text-xs font-bold text-white active:scale-95 transition shadow-xs disabled:opacity-50"
+                            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 py-2.5 text-xs font-bold text-white active:scale-95 transition shadow-xs disabled:opacity-50"
                           >
                             <CheckCircle2 size={15} />
                             <span>Qabul qilish (Boraman)</span>
@@ -782,7 +795,7 @@ export default function PartnerKabinetPage() {
                             type="button"
                             disabled={isWorking}
                             onClick={() => handleCallAction(c.id, "reject")}
-                            className="flex items-center justify-center gap-1 rounded-xl bg-zinc-100 px-3.5 py-2.5 text-xs font-bold text-red-600 active:scale-95 transition disabled:opacity-50"
+                            className="flex items-center justify-center gap-1 rounded-xl bg-zinc-100 px-3.5 py-2.5 text-xs font-bold text-red-600 hover:bg-red-50 active:scale-95 transition disabled:opacity-50"
                           >
                             <XCircle size={15} />
                             <span>Rad etish</span>
@@ -795,10 +808,10 @@ export default function PartnerKabinetPage() {
                           type="button"
                           disabled={isWorking}
                           onClick={() => handleCallAction(c.id, "done")}
-                          className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-zinc-900 py-2.5 text-xs font-bold text-white active:scale-95 transition shadow-xs disabled:opacity-50"
+                          className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 py-2.5 text-xs font-bold text-white active:scale-95 transition shadow-xs disabled:opacity-50"
                         >
                           <CheckCircle2 size={15} />
-                          <span>Chaqiruvni yakunlash (Bajarildi)</span>
+                          <span>Yordam berildi (Yakunlash)</span>
                         </button>
                       )}
                     </div>
@@ -808,17 +821,17 @@ export default function PartnerKabinetPage() {
             </div>
           )}
 
-          {/* 3.2. ASOSIY TAB: BRONLAR & BUYURTMALAR (Dorixona uchun) */}
-          {isPharmacy && activeTab === "main" && (
+          {/* 3.2. DORIXONA: BRONLAR & BUYURTMALAR TABI */}
+          {isPharmacy && activeTab === "orders" && (
             <div className="px-4 space-y-3">
               {/* Filter tugmalari */}
-              <div className="flex gap-1 overflow-x-auto pb-1 text-[11px] font-bold">
+              <div className="flex gap-1 overflow-x-auto pb-1 text-[11px] font-bold scrollbar-none">
                 {[
                   { id: "all", label: `Barchasi (${orders.length})` },
                   { id: "yangi", label: `Yangi (${orders.filter((o) => o.status === "yangi").length})` },
                   { id: "tasdiqlandi", label: `Tasdiqlangan (${orders.filter((o) => o.status === "tasdiqlandi").length})` },
                   { id: "tayyor", label: `Tayyor (${orders.filter((o) => o.status === "tayyor").length})` },
-                  { id: "yetkazildi", label: `Topshirildi (${orders.filter((o) => o.status === "yetkazildi").length})` },
+                  { id: "yetkazildi", label: `Topshirilgan (${orders.filter((o) => o.status === "yetkazildi").length})` },
                 ].map((flt) => (
                   <button
                     key={flt.id}
@@ -827,7 +840,7 @@ export default function PartnerKabinetPage() {
                     className={`shrink-0 rounded-xl px-3 py-1.5 transition border ${
                       orderStatusFilter === flt.id
                         ? "bg-zinc-900 text-white border-zinc-900 shadow-xs"
-                        : "bg-white text-zinc-600 border-zinc-200"
+                        : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300"
                     }`}
                   >
                     {flt.label}
@@ -837,12 +850,13 @@ export default function PartnerKabinetPage() {
 
               {filteredOrders.length === 0 && !loading && (
                 <div className="rounded-2xl border border-dashed border-zinc-200 bg-white p-8 text-center text-zinc-400">
-                  <Package size={36} className="mx-auto mb-2 opacity-40 text-zinc-400" />
-                  <p className="text-sm font-bold text-zinc-700">Bronlar topilmadi</p>
-                  <p className="text-xs text-zinc-500 mt-1">Mijozlar mahsulot bron qilganda shu yerda paydo bo&apos;ladi</p>
+                  <Package size={36} className="mx-auto mb-2 opacity-30 text-zinc-400" />
+                  <p className="text-sm font-bold text-zinc-700">Bronlar yo&apos;q</p>
+                  <p className="text-xs text-zinc-500 mt-1">Mijoz dori bron qilganda shu yerda paydo bo&apos;ladi</p>
                 </div>
               )}
 
+              {/* Bron kartochkasi */}
               {filteredOrders.map((ord) => {
                 const isWorking = actionBusyId === ord.id;
                 const statusColor =
@@ -862,62 +876,56 @@ export default function PartnerKabinetPage() {
                     : ord.status === "tasdiqlandi"
                     ? "Tasdiqlangan"
                     : ord.status === "tayyor"
-                    ? "Tayyor bo'ldi"
+                    ? "Olib ketishga tayyor"
                     : ord.status === "yetkazildi"
-                    ? "Yetkazildi"
+                    ? "Topshirildi"
                     : "Bekor qilingan";
 
                 return (
-                  <div key={ord.id} className="rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-3">
+                  <div key={ord.id} className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-xs space-y-3">
                     <div className="flex items-center justify-between border-b border-zinc-100 pb-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono font-black text-zinc-800">Bron #{ord.id}</span>
-                        <span className={`rounded-full px-2 py-0.5 text-[10.5px] font-extrabold border ${statusColor}`}>
+                        <span className="text-xs font-mono font-black text-zinc-900">Bron #{ord.id}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold border ${statusColor}`}>
                           {statusText}
                         </span>
                       </div>
-                      <span className="text-[10.5px] font-mono text-zinc-400">
+                      <span className="text-[11px] font-mono text-zinc-400">
                         {new Date(ord.createdAt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })}
                       </span>
                     </div>
 
-                    <div className="space-y-1.5 text-xs">
+                    <div className="space-y-2 text-xs">
                       <div className="flex items-center justify-between">
-                        <span className="text-zinc-500">Mijoz:</span>
-                        <span className="font-bold text-zinc-900">{ord.customerName}</span>
-                      </div>
+                        <div>
+                          <span className="text-[11px] text-zinc-400 block font-medium">Mijoz</span>
+                          <span className="text-sm font-extrabold text-zinc-900">{ord.customerName}</span>
+                        </div>
 
-                      {ord.customerPhone && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-zinc-500">Telefon:</span>
+                        {ord.customerPhone && (
                           <a
                             href={`tel:${ord.customerPhone}`}
-                            className="font-mono font-bold text-emerald-700 hover:underline flex items-center gap-1"
+                            onClick={() => haptic("light")}
+                            className="flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-3 py-2 text-xs font-bold text-white shadow-xs active:scale-95 transition"
                           >
-                            <Phone size={12} />
-                            <span>{ord.customerPhone}</span>
+                            <Phone size={13} />
+                            <span>Qo&apos;ng&apos;iroq</span>
                           </a>
-                        </div>
-                      )}
+                        )}
+                      </div>
 
-                      <div className="flex items-center justify-between">
-                        <span className="text-zinc-500">Yetkazish turi:</span>
-                        <span className="font-semibold text-zinc-800">
-                          {ord.deliveryType === "delivery" ? "🚚 Yetkazib berish (Dostavka)" : "🏪 Olib ketish (Do'kondan)"}
+                      <div className="rounded-xl bg-zinc-50 p-2 text-zinc-700 font-medium flex items-center justify-between">
+                        <span>Yetkazish turi:</span>
+                        <span className="font-bold text-zinc-900">
+                          {ord.deliveryType === "delivery" ? "🚚 Yetkazib berish" : "🏪 Do'kondan olib ketish"}
                         </span>
                       </div>
 
-                      {ord.customerAddress && (
-                        <div className="rounded-lg bg-zinc-50 p-2 text-[11px] text-zinc-700">
-                          📍 {ord.customerAddress}
-                        </div>
-                      )}
-
                       {/* Mahsulotlar ro'yxati */}
                       {ord.items && ord.items.length > 0 && (
-                        <div className="rounded-xl bg-zinc-50 p-2.5 border border-zinc-100 space-y-1">
-                          <span className="text-[10.5px] uppercase font-mono font-bold text-zinc-500 block mb-1">
-                            Buyurtma tarkibi:
+                        <div className="rounded-xl bg-zinc-50/80 p-3 border border-zinc-100 space-y-1.5">
+                          <span className="text-[10px] font-bold uppercase text-zinc-400 tracking-wider block">
+                            So&apos;ralgan dorilar:
                           </span>
                           <div className="divide-y divide-zinc-200/60">
                             {ord.items.map((it, idx) => (
@@ -927,15 +935,17 @@ export default function PartnerKabinetPage() {
                               </div>
                             ))}
                           </div>
-                          <div className="pt-2 border-t border-zinc-200 flex justify-between font-mono font-bold text-zinc-900 text-xs">
+                          <div className="pt-2 border-t border-zinc-200 flex justify-between font-bold text-zinc-900 text-xs">
                             <span>Jami summa:</span>
-                            <span>{ord.totalSum ? `${ord.totalSum.toLocaleString()} so'm` : "Kelishiladi"}</span>
+                            <span className="text-emerald-700">
+                              {ord.totalSum ? `${ord.totalSum.toLocaleString()} so'm` : "Kelishiladi"}
+                            </span>
                           </div>
                         </div>
                       )}
                     </div>
 
-                    {/* Tugmalar */}
+                    {/* Bosqichma-bosqich harakatlar */}
                     <div className="pt-1 flex gap-2">
                       {ord.status === "yangi" && (
                         <>
@@ -943,16 +953,16 @@ export default function PartnerKabinetPage() {
                             type="button"
                             disabled={isWorking}
                             onClick={() => handleOrderAction(ord.id, "confirm")}
-                            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2.5 text-xs font-bold text-white active:scale-95 transition shadow-xs disabled:opacity-50"
+                            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 py-2.5 text-xs font-bold text-white active:scale-95 transition shadow-xs disabled:opacity-50"
                           >
                             <CheckCircle2 size={15} />
-                            <span>Tasdiqlash</span>
+                            <span>Tasdiqlash (Dori bor)</span>
                           </button>
                           <button
                             type="button"
                             disabled={isWorking}
                             onClick={() => handleOrderAction(ord.id, "cancel")}
-                            className="flex items-center justify-center gap-1 rounded-xl bg-zinc-100 px-3.5 py-2.5 text-xs font-bold text-red-600 active:scale-95 transition disabled:opacity-50"
+                            className="flex items-center justify-center gap-1 rounded-xl bg-zinc-100 px-3.5 py-2.5 text-xs font-bold text-red-600 hover:bg-red-50 active:scale-95 transition disabled:opacity-50"
                           >
                             <XCircle size={15} />
                             <span>Yo&apos;q</span>
@@ -965,10 +975,10 @@ export default function PartnerKabinetPage() {
                           type="button"
                           disabled={isWorking}
                           onClick={() => handleOrderAction(ord.id, "ready")}
-                          className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-purple-600 py-2.5 text-xs font-bold text-white active:scale-95 transition shadow-xs disabled:opacity-50"
+                          className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 py-2.5 text-xs font-bold text-white active:scale-95 transition shadow-xs disabled:opacity-50"
                         >
                           <Clock size={15} />
-                          <span>Tayyor bo&apos;ldi (Olib ketishga)</span>
+                          <span>Tayyorlandi (Xabar yuborish)</span>
                         </button>
                       )}
 
@@ -977,7 +987,7 @@ export default function PartnerKabinetPage() {
                           type="button"
                           disabled={isWorking}
                           onClick={() => handleOrderAction(ord.id, "done")}
-                          className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-zinc-900 py-2.5 text-xs font-bold text-white active:scale-95 transition shadow-xs disabled:opacity-50"
+                          className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 py-2.5 text-xs font-bold text-white active:scale-95 transition shadow-xs disabled:opacity-50"
                         >
                           <CheckCircle2 size={15} />
                           <span>Mijozga topshirildi (Yakunlash)</span>
@@ -990,37 +1000,37 @@ export default function PartnerKabinetPage() {
             </div>
           )}
 
-          {/* 3.3. DORIXONA UCHUN: DORILAR KATALOGI TABI */}
+          {/* 3.3. DORIXONA: DORILAR KATALOGI (Bor/Yo'q 1-tap boshqaruvi) */}
           {isPharmacy && activeTab === "medicines" && (
             <div className="px-4 space-y-3">
-              {/* Qidiruv va Yangi Dori Qo'shish Tugmasi */}
+              {/* Qidiruv va Tezkor Qo'shish */}
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
                   <input
                     type="text"
-                    placeholder="Dori nomi bo'yicha qidiruv..."
+                    placeholder="Dori nomi bo'yicha..."
                     value={medSearch}
                     onChange={(e) => setMedSearch(e.target.value)}
-                    className="w-full rounded-xl bg-white pl-9 pr-3 py-2 text-xs text-zinc-900 border border-zinc-200 placeholder-zinc-400 focus:outline-none focus:border-zinc-400"
+                    className="w-full rounded-xl bg-white pl-9 pr-3 py-2.5 text-xs text-zinc-900 border border-zinc-200 placeholder-zinc-400 focus:outline-none focus:border-zinc-400 shadow-2xs"
                   />
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowAddMedModal(true)}
-                  className="flex items-center gap-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-3 py-2 text-xs font-bold text-white shadow-xs active:scale-95 transition"
+                  className="flex items-center gap-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-3 py-2.5 text-xs font-bold text-white shadow-xs active:scale-95 transition shrink-0"
                 >
-                  <Plus size={15} />
+                  <Plus size={16} />
                   <span>Dori qo&apos;shish</span>
                 </button>
               </div>
 
               {/* Turi bo'yicha filter */}
-              <div className="flex gap-1 overflow-x-auto text-[11px] font-bold">
+              <div className="flex gap-1 overflow-x-auto text-[11px] font-bold scrollbar-none">
                 {[
                   { id: "all", label: "Barchasi" },
-                  { id: "crop", label: "🌾 Ekinlar uchun" },
-                  { id: "animal", label: "🐾 Hayvonlar uchun" },
+                  { id: "crop", label: "🌾 Ekinlar" },
+                  { id: "animal", label: "🐾 Hayvonlar" },
                   { id: "general", label: "Umumiy" },
                 ].map((flt) => (
                   <button
@@ -1040,48 +1050,51 @@ export default function PartnerKabinetPage() {
 
               {filteredMeds.length === 0 && !loading && (
                 <div className="rounded-2xl border border-dashed border-zinc-200 bg-white p-8 text-center text-zinc-400">
-                  <Store size={36} className="mx-auto mb-2 opacity-40 text-zinc-400" />
+                  <Store size={36} className="mx-auto mb-2 opacity-30 text-zinc-400" />
                   <p className="text-sm font-bold text-zinc-700">Dorilar topilmadi</p>
-                  <p className="text-xs text-zinc-500 mt-1">Yangi dori qo&apos;shish tugmasi orqali dorilaringizni katalogga kiriting</p>
+                  <p className="text-xs text-zinc-500 mt-1">Yangi dori qo&apos;shish orqali do&apos;koningiz dorilarini kiriting</p>
                 </div>
               )}
 
-              <div className="space-y-2.5">
+              {/* Dorilar ro'yxati: 1-Tap Bor/Tugadi toggle */}
+              <div className="space-y-2">
                 {filteredMeds.map((m) => (
-                  <div key={m.id} className="rounded-2xl border border-zinc-200/90 bg-white p-3.5 shadow-2xs flex items-center justify-between gap-3">
-                    <div className="space-y-1 flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-zinc-900 text-xs truncate">{m.name}</span>
-                        <span className="rounded bg-zinc-100 text-zinc-600 px-1.5 py-0.5 text-[9.5px] font-mono">
+                  <div key={m.id} className="rounded-2xl border border-zinc-200 bg-white p-3 shadow-xs flex items-center justify-between gap-3">
+                    <div className="space-y-0.5 flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-extrabold text-zinc-900 text-xs truncate">{m.name}</span>
+                        <span className="rounded bg-zinc-100 text-zinc-600 px-1.5 py-0.2 text-[9px] font-mono">
                           {m.type === "crop" ? "Ekin" : m.type === "animal" ? "Veterinar" : "Umumiy"}
                         </span>
                       </div>
                       {m.usage && <p className="text-[11px] text-zinc-500 truncate">{m.usage}</p>}
-                      <div className="flex items-center gap-3 text-[11px] font-mono text-zinc-700">
+                      <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-700">
                         <span className="font-bold text-emerald-800">
-                          {m.price ? `${m.price.toLocaleString()} so'm` : "Narx belgilanmagan"}
+                          {m.price ? `${m.price.toLocaleString()} so'm` : "Kelishuv"}
                         </span>
                         <span className="text-zinc-400">•</span>
                         <span>Qoldiq: {m.stock} {m.stockUnit}</span>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {/* 1-Tap Bor/Tugadi tugmasi */}
                       <button
                         type="button"
                         onClick={() => handleToggleMedicineStatus(m.id, m.status)}
-                        className={`rounded-xl px-2.5 py-1.5 text-[10.5px] font-bold border transition ${
+                        className={`rounded-xl px-3 py-2 text-xs font-black border transition active:scale-95 ${
                           m.status === "bor"
-                            ? "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100"
+                            ? "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
                             : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
                         }`}
                       >
                         {m.status === "bor" ? "🟢 Bor" : "🔴 Tugadi"}
                       </button>
+
                       <button
                         type="button"
                         onClick={() => handleDeleteMedicine(m.id)}
-                        className="rounded-xl p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 transition"
+                        className="rounded-xl p-2 text-zinc-400 hover:text-red-600 hover:bg-red-50 transition"
                         title="O'chirish"
                       >
                         <Trash2 size={15} />
@@ -1093,145 +1106,111 @@ export default function PartnerKabinetPage() {
             </div>
           )}
 
-          {/* 3.4. MUTAXASSIS UCHUN: XIZMATLARIM VA TAJRIBA TABI */}
-          {!isPharmacy && activeTab === "services" && (
-            <div className="px-4 space-y-3">
-              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs space-y-4">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800">
-                    <Sparkles size={16} />
-                  </div>
-                  <h3 className="text-sm font-bold text-zinc-900">Kasbiy Faoliyat & Xizmatlar</h3>
-                </div>
-
-                <div className="space-y-3 text-xs">
-                  <div className="rounded-xl bg-zinc-50 p-3 border border-zinc-100 space-y-1">
-                    <span className="text-[10px] uppercase font-mono font-bold text-zinc-400 block">
-                      Mutaxassislik yo&apos;nalishi:
-                    </span>
-                    <p className="text-sm font-bold text-zinc-900">{partner.specialty || "Agronom / Veterinariya mutaxassisi"}</p>
-                    {partner.experienceYears && (
-                      <p className="text-[11px] text-zinc-600 mt-1">
-                        Amaliy ish tajribasi: <b>{partner.experienceYears} yil</b>
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="rounded-xl bg-zinc-50 p-3 border border-zinc-100 space-y-1">
-                    <span className="text-[10px] uppercase font-mono font-bold text-zinc-400 block">
-                      Ko&apos;rsatadigan xizmatlari va maslahat sohalari:
-                    </span>
-                    <p className="text-zinc-800 leading-relaxed font-sans">
-                      {partner.bio || "Xizmatlar tavsifi kiritilmagan."}
-                    </p>
-                  </div>
-
-                  {partner.education ? (
-                    <div className="rounded-xl bg-zinc-50 p-3 border border-zinc-100 space-y-1">
-                      <span className="text-[10px] uppercase font-mono font-bold text-zinc-400 block">
-                        Ta&apos;lim va malaka:
-                      </span>
-                      <p className="text-zinc-800">{partner.education}</p>
-                    </div>
-                  ) : (
-                    <div className="rounded-xl bg-zinc-50 p-3 border border-zinc-100 space-y-1">
-                      <span className="text-[10px] uppercase font-mono font-bold text-zinc-400 block">
-                        Ta&apos;lim va malaka:
-                      </span>
-                      <p className="text-zinc-400 italic">Kiritilmagan</p>
-                    </div>
-                  )}
-
-                  <div className="rounded-xl bg-zinc-50 p-3 border border-zinc-100 space-y-1">
-                    <span className="text-[10px] uppercase font-mono font-bold text-zinc-400 block">
-                      Qabul va ish vaqti:
-                    </span>
-                    <p className="font-mono text-zinc-900 font-bold">{partner.workHours || "Kelishuv asosida"}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 3.5. PROFIL VA HUQUQIY HIMOYA TABI */}
+          {/* 3.4. PROFILIM TABI (Barcha ma'lumotlar, tajriba, xizmatlar va huquqiy guvohnoma bitta joyda) */}
           {activeTab === "profile" && (
             <div className="px-4 space-y-3">
-              {/* Profil asosiy kartasi */}
-              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs space-y-3">
-                <span className="text-[10.5px] uppercase font-mono tracking-wider text-zinc-400 font-bold block">
-                  👤 Shaxsiy va Tashkiliy Profil
-                </span>
-                <div className="space-y-2 text-xs divide-y divide-zinc-100">
-                  <div className="flex justify-between py-1.5">
-                    <span className="text-zinc-500">F.I.SH / Rahbar:</span>
-                    <span className="font-bold text-zinc-900">{partner.name}</span>
+              {/* Profil Asosiy Kartasi */}
+              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-600 text-white font-bold text-xl shadow-xs">
+                    {isPharmacy ? "🏪" : partner.specialty?.toLowerCase().includes("vet") ? "🐾" : "🌾"}
                   </div>
-                  {partner.organization && (
-                    <div className="flex justify-between py-1.5">
-                      <span className="text-zinc-500">Tashkilot / Do&apos;kon:</span>
-                      <span className="font-bold text-zinc-900">{partner.organization}</span>
-                    </div>
-                  )}
+                  <div>
+                    <h3 className="text-sm font-extrabold text-zinc-900">{partner.name}</h3>
+                    <p className="text-xs text-zinc-500 font-medium">
+                      {isPharmacy ? partner.organization || "Agro-Dorixona" : partner.specialty || "Mutaxassis"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2 text-xs divide-y divide-zinc-100 pt-1">
                   <div className="flex justify-between py-1.5">
                     <span className="text-zinc-500">Telefon:</span>
                     <a href={`tel:${partner.phone}`} className="font-mono font-bold text-emerald-700 hover:underline">
-                      📞 {partner.phone}
+                      {partner.phone}
                     </a>
                   </div>
-                  <div className="flex justify-between py-1.5">
-                    <span className="text-zinc-500">Manzil:</span>
-                    <span className="text-right text-zinc-700 max-w-[200px]">{partner.address || "Ko'rsatilmagan"}</span>
-                  </div>
+
+                  {partner.address && (
+                    <div className="flex justify-between py-1.5">
+                      <span className="text-zinc-500">Manzil:</span>
+                      <span className="text-right text-zinc-800 font-medium max-w-[200px]">{partner.address}</span>
+                    </div>
+                  )}
+
                   <div className="flex justify-between py-1.5">
                     <span className="text-zinc-500">Ish vaqti:</span>
-                    <span className="font-mono text-zinc-800">{partner.workHours || "08:00 - 18:00"}</span>
+                    <span className="font-mono text-zinc-800 font-bold">{partner.workHours || "08:00 - 18:00"}</span>
                   </div>
+
+                  {!isPharmacy && partner.experienceYears && (
+                    <div className="flex justify-between py-1.5">
+                      <span className="text-zinc-500">Tajriba:</span>
+                      <span className="font-bold text-zinc-900">{partner.experienceYears} yil</span>
+                    </div>
+                  )}
+
+                  {!isPharmacy && partner.education && (
+                    <div className="flex justify-between py-1.5">
+                      <span className="text-zinc-500">Ta&apos;lim:</span>
+                      <span className="text-right text-zinc-800 font-medium max-w-[200px]">{partner.education}</span>
+                    </div>
+                  )}
                 </div>
+
+                {/* Mutaxassis xizmatlari va bio */}
+                {!isPharmacy && partner.bio && (
+                  <div className="rounded-xl bg-zinc-50 p-3 border border-zinc-100 space-y-1">
+                    <span className="text-[10px] font-bold uppercase text-zinc-400 block tracking-wider">
+                      Ko&apos;rsatadigan xizmatlarim:
+                    </span>
+                    <p className="text-xs text-zinc-800 leading-relaxed font-sans">{partner.bio}</p>
+                  </div>
+                )}
               </div>
 
-              {/* Huquqiy Himoya & O'RQ-547 Qonuni Bo'yicha Rozilik Guvohnomasi */}
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 shadow-xs space-y-2">
+              {/* O'RQ-547 Qonuniy Himoya Guvohnomasi */}
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 shadow-xs space-y-2.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-xs">
                       <ShieldCheck size={18} />
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-emerald-950">Huquqiy Ma&apos;lumotlar Roziligi</h4>
-                      <p className="text-[10px] font-mono text-emerald-700">O&apos;zbekiston Respublikasi O&apos;RQ-547 Qonuni</p>
+                      <h4 className="text-xs font-bold text-emerald-950">Qonuniy Himoya (O&apos;RQ-547)</h4>
+                      <p className="text-[10px] text-emerald-700">Elektron Rozilik Guvohnomasi</p>
                     </div>
                   </div>
-                  <span className="rounded-md bg-emerald-200/60 px-2 py-0.5 text-[10px] font-mono font-bold text-emerald-900">
+                  <span className="rounded-md bg-emerald-200/70 px-2 py-0.5 text-[10px] font-mono font-bold text-emerald-900">
                     TASDIQLANGAN
                   </span>
                 </div>
 
-                <p className="text-[11.5px] text-emerald-800 leading-relaxed">
-                  Siz platformaga a&apos;zo bo&apos;lishda shaxsiy ma&apos;lumotlar saqlanishiga rozilik berganingiz
-                  kriptografik SHA-256 xeshi bilan o&apos;zgarmas tartibda qayd etilgan.
+                <p className="text-xs text-emerald-800 leading-relaxed">
+                  Sizning platformadagi faoliyatingiz va shaxsiy ma&apos;lumotlaringiz O&apos;zbekiston Respublikasi O&apos;RQ-547 Qonuni asosida kriptografik tarzda himoyalangan.
                 </p>
 
                 <button
                   type="button"
                   onClick={() => setShowConsentModal(true)}
-                  className="w-full rounded-xl bg-white hover:bg-emerald-100/50 border border-emerald-300/80 py-2 text-xs font-bold text-emerald-900 transition flex items-center justify-center gap-1.5 shadow-2xs"
+                  className="w-full rounded-xl bg-white hover:bg-emerald-50 border border-emerald-300 py-2.5 text-xs font-bold text-emerald-900 transition flex items-center justify-center gap-1.5 shadow-2xs"
                 >
                   <FileText size={14} />
-                  <span>Elektron Guvohnomani ko&apos;rish</span>
+                  <span>Elektron Guvohnomani ochish</span>
                 </button>
               </div>
 
-              {/* Yordam va Qo'llab-quvvatlash */}
+              {/* Texnik Yordam */}
               <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-xs flex items-center justify-between">
                 <div>
                   <h4 className="text-xs font-bold text-zinc-900">AgrozGO Texnik Yordam</h4>
-                  <p className="text-[11px] text-zinc-500">Savollar yoki takliflar bo&apos;yicha ma&apos;muriyat</p>
+                  <p className="text-[11px] text-zinc-500">Savollar yoki takliflar bo&apos;yicha</p>
                 </div>
                 <a
                   href="https://t.me/agroz_support"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-xl bg-zinc-900 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-zinc-800"
+                  className="rounded-xl bg-zinc-900 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-zinc-800"
                 >
                   @agroz_support
                 </a>
@@ -1243,7 +1222,7 @@ export default function PartnerKabinetPage() {
 
       {/* 4. MODAL: YANGI DORI QO'SHISH (DORIXONA) */}
       {showAddMedModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
           <div className="w-full max-w-md rounded-2xl bg-white border border-zinc-200 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3 bg-zinc-50/80">
               <h3 className="text-sm font-bold text-zinc-900 flex items-center gap-1.5">
@@ -1310,7 +1289,7 @@ export default function PartnerKabinetPage() {
                 </div>
 
                 <div>
-                  <label className="font-bold text-zinc-700 block mb-1">O&apos;lchov birligi</label>
+                  <label className="font-bold text-zinc-700 block mb-1">Birligi</label>
                   <select
                     value={newMedUnit}
                     onChange={(e) => setNewMedUnit(e.target.value)}
@@ -1325,10 +1304,10 @@ export default function PartnerKabinetPage() {
               </div>
 
               <div>
-                <label className="font-bold text-zinc-700 block mb-1">Qo&apos;llanilishi / Qisqa tavsif</label>
+                <label className="font-bold text-zinc-700 block mb-1">Qisqa tavsif (ixtiyoriy)</label>
                 <textarea
                   rows={2}
-                  placeholder="Zararkunandalarga qarshi samarali, mevali daraxtlarga tavsiya etiladi..."
+                  placeholder="Zararkunandalarga qarshi, mevali daraxtlarga..."
                   value={newMedUsage}
                   onChange={(e) => setNewMedUsage(e.target.value)}
                   className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-zinc-900 focus:outline-none focus:border-zinc-400"
@@ -1356,7 +1335,7 @@ export default function PartnerKabinetPage() {
         </div>
       )}
 
-      {/* 5. MODAL: HUQUQIY ROZILIK GUVOXNOMASI (O'RQ-547) */}
+      {/* 5. MODAL: ELEKTRON ROZILIK GUVOXNOMASI (O'RQ-547) */}
       {showConsentModal && partner && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
           <div className="w-full max-w-lg rounded-2xl bg-white border border-zinc-200 shadow-2xl overflow-hidden">
@@ -1376,12 +1355,12 @@ export default function PartnerKabinetPage() {
 
             <div className="p-5 space-y-3 text-xs">
               <div className="rounded-xl bg-emerald-50 p-3 border border-emerald-200 text-emerald-900 leading-relaxed font-sans">
-                <b>O&apos;zbekiston Respublikasi O&apos;RQ-547-sonli Qonuni</b> 18-moddasiga binoan, ushbu subyekt platformadan ro&apos;yxatdan o&apos;tishda o&apos;z shaxsiy ma&apos;lumotlarini saqlash va qayta ishlashga to&apos;liq elektron rozilik bergan.
+                <b>O&apos;zbekiston Respublikasi O&apos;RQ-547-sonli Qonuni</b> 18-moddasiga muvofiq, platforma orqali ro&apos;yxatdan o&apos;tishda shaxsiy ma&apos;lumotlar saqlanishiga elektron rozilik berilgan.
               </div>
 
               <div className="space-y-1.5 divide-y divide-zinc-100 text-zinc-700">
                 <div className="flex justify-between py-1">
-                  <span className="text-zinc-500">Subyekt:</span>
+                  <span className="text-zinc-500">Hamkor:</span>
                   <span className="font-bold text-zinc-900">{partner.name}</span>
                 </div>
                 <div className="flex justify-between py-1">
@@ -1393,7 +1372,7 @@ export default function PartnerKabinetPage() {
                   <span className="font-mono text-zinc-900">{partner.consentVersion || "v1.0"}</span>
                 </div>
                 <div className="flex justify-between py-1">
-                  <span className="text-zinc-500">Tasdiqlangan vaqt:</span>
+                  <span className="text-zinc-500">Tasdiqlangan sana:</span>
                   <span className="font-mono font-bold text-emerald-800">
                     {partner.consentedAt ? new Date(partner.consentedAt).toLocaleString("uz-UZ") : "Tasdiqlangan"}
                   </span>
@@ -1401,10 +1380,10 @@ export default function PartnerKabinetPage() {
               </div>
 
               <div className="rounded-xl bg-zinc-900 p-3 text-white space-y-1 font-mono text-[10.5px]">
-                <span className="text-zinc-400 font-bold block">🔐 SHA-256 Kripto Audit Muhr:</span>
+                <span className="text-zinc-400 font-bold block">🔐 SHA-256 Audit Muhr:</span>
                 <p className="text-emerald-400 break-all">VERIFIED-O-RQ-547-IMMUTABLE-RECORD</p>
                 <span className="text-zinc-500 block text-[9.5px]">
-                  Ushbu yozuv serverda o&apos;zgarmas tartibda himoyalangan.
+                  Ushbu yozuv serverda o&apos;zgarmas tartibda saqlanadi.
                 </span>
               </div>
 
