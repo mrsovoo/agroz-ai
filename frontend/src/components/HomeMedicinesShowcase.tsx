@@ -12,6 +12,7 @@ export type ShowcaseMedicine = {
   type: string;
   price: number | null;
   usage: string | null;
+  stockUnit?: string | null;
   hasPhoto: boolean;
   photoVersion?: string | null;
   pharmacyId: number;
@@ -153,6 +154,7 @@ export default function HomeMedicinesShowcase({
                   type: m.type,
                   hasPhoto: m.hasPhoto,
                   usage: m.usage,
+                  stockUnit: m.stockUnit,
                   status: "bor",
                 }}
                 pharmacy={{

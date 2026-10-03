@@ -13,6 +13,7 @@ export default async function FeaturedMedicines() {
     type: string;
     price: number | null;
     usage: string | null;
+    stockUnit?: string | null;
     hasPhoto: boolean;
     pharmacyId: number;
     pharmacyName: string;
@@ -40,6 +41,7 @@ export default async function FeaturedMedicines() {
             type: m.type,
             price: m.price,
             usage: m.usage,
+            stockUnit: m.stockUnit ?? "dona",
             hasPhoto: Boolean(m.hasPhoto),
             pharmacyId: p.id,
             pharmacyName: p.organization || p.name,
@@ -83,6 +85,7 @@ export default async function FeaturedMedicines() {
               type: m.type,
               hasPhoto: m.hasPhoto,
               usage: m.usage,
+              stockUnit: m.stockUnit,
               status: "bor",
             }}
             pharmacy={{

@@ -27,6 +27,15 @@ export type PharmacyMedicine = CartStoreMedicine & {
 
 export type ProductCardMedicine = PharmacyMedicine;
 
+export function formatUnit(stockUnit?: string | null): string {
+  if (!stockUnit) return "dona";
+  const u = stockUnit.toLowerCase().trim();
+  if (u === "kg" || u === "kilo" || u === "kilogram") return "kg";
+  if (u === "litr" || u === "l") return "litr";
+  if (u === "dona" || u === "donasi" || u === "ta") return "dona";
+  return u;
+}
+
 export function formatMedicineUpdatedAt(updatedAt?: string | null): string | null {
   if (!updatedAt) return null;
   const ts = new Date(updatedAt).getTime();
@@ -286,40 +295,33 @@ export default function ProductCard({
         </Link>
       </div>
 
-      {/* Ma'lumot: Agro-do'kon, Nomi, Tavsifi, Narxi va Savatga tugmasi */}
+      {/* Ma'lumot: Turgan manzil, Dori nomi, Tavsifi, Reyting, Narxi / donasi (kg) va Savatga */}
       <div className="flex flex-1 flex-col justify-between">
         <div>
-          {/* Agro-do'kon nomi va shahri */}
-          <div className="flex items-center justify-between gap-1 text-[11px] text-neutral-500 mb-1">
-            <span className="inline-flex items-center gap-1 truncate font-medium">
-              <MapPin size={11} className="text-[#039e1e] shrink-0" />
-              <span className="truncate">{pharmacy.name}</span>
-            </span>
-            <span className="shrink-0 text-[10.5px] text-neutral-400 font-normal">
-              {getShortCity(pharmacy.address, pharmacy.name)}
-            </span>
+          {/* O'sha turgan manzil (Dorixona nomi yo'q) */}
+          <div className="flex items-center gap-1 text-[11px] sm:text-[11.5px] font-medium text-neutral-500 mb-1">
+            <MapPin size={11} className="text-[#039e1e] shrink-0" />
+            <span className="truncate">{getShortCity(pharmacy.address)}</span>
           </div>
 
           {/* Dori Nomi */}
           <Link href={href} className="block">
             <h3
-              className="text-[13.5px] sm:text-[14.5px] font-black leading-snug text-neutral-900 line-clamp-1 hover:text-[#039e1e] transition-colors"
+              className="text-[14px] sm:text-[15px] font-black leading-snug text-neutral-900 line-clamp-1 hover:text-[#039e1e] transition-colors"
               title={medicine.name}
             >
               {medicine.name}
             </h3>
           </Link>
 
-          {/* Tavsifi */}
-          {medicine.usage && (
-            <p className="mt-0.5 text-[11px] sm:text-[11.5px] leading-tight text-neutral-500 line-clamp-2 min-h-[26px]">
-              {medicine.usage}
-            </p>
-          )}
+          {/* Dorining nomi tagida tavsifi */}
+          <p className="mt-1 text-[11px] sm:text-[11.5px] leading-tight text-neutral-500 line-clamp-2 min-h-[26px]">
+            {medicine.usage || "Qo'llanish tavsifi mavjud"}
+          </p>
         </div>
 
         <div className="mt-2">
-          {/* Reyting va yangilangan vaqt */}
+          {/* Reyting */}
           <div className="flex items-center gap-1.5 mb-1.5">
             {ratingStats.count > 0 ? (
               <div className="flex items-center gap-1">
@@ -337,18 +339,10 @@ export default function ProductCard({
                 <span>Yangi</span>
               </div>
             )}
-            {updatedText && (
-              <>
-                <span className="text-neutral-300 text-[10px]">•</span>
-                <span className="text-[10.5px] font-medium text-neutral-400 truncate">
-                  {updatedText}
-                </span>
-              </>
-            )}
           </div>
 
-          {/* Narxi (agar narxi kiritilmagan bo'lsa "Kelishiladi") */}
-          <div className="flex items-baseline justify-between gap-1">
+          {/* Narx va narxining yonida donasi, agar kilo bo'lsa kg */}
+          <div className="flex items-baseline gap-1.5">
             {medicine.price && medicine.price > 0 ? (
               <p className="text-[14.5px] sm:text-[15.5px] font-black text-neutral-900 tracking-tight">
                 {new Intl.NumberFormat("uz-UZ").format(medicine.price).replace(/\s/g, ".")} so&apos;m
@@ -358,11 +352,9 @@ export default function ProductCard({
                 Kelishiladi
               </span>
             )}
-            {medicine.stockUnit && (
-              <span className="text-[11px] text-neutral-400 font-medium">
-                / {medicine.stockUnit}
-              </span>
-            )}
+            <span className="text-[11.5px] font-bold text-neutral-500">
+              / {formatUnit(medicine.stockUnit)}
+            </span>
           </div>
 
           {/* Savatga tugmasi — kartochka radiusiga mos (rounded-[16px]) */}
@@ -383,7 +375,7 @@ export default function ProductCard({
                 </button>
 
                 <span className="text-[13px] font-black tracking-tight select-none">
-                  {qty} ta
+                  {qty} {formatUnit(medicine.stockUnit)}
                 </span>
 
                 <button
