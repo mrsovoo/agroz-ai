@@ -221,32 +221,6 @@ export default function SpecialistCallModal({
     );
   };
 
-  // Tezkor tavsiya chiplari
-  const quickChips = isVeterinar
-    ? [
-        "💉 Emlash / Vaksina",
-        "🩺 Umumiy tibbiy ko'rik",
-        "💊 Davolash kursi",
-        "🐄 Ishtahasizlik / Yuqori harorat",
-        "🥛 Tug'ruq va parvarish",
-      ]
-    : [
-        "🌿 Kasallikni aniqlash",
-        "🐛 Zararkunandalarga ishlov",
-        "🧪 O'g'itlash va parvarish",
-        "🌱 Barg sarg'ayishi / qurishi",
-        "🌾 Hosildorlik maslahati",
-      ];
-
-  const handleChipClick = (chip: string) => {
-    const cleanChip = chip.replace(/^[^\s]+\s/, ""); // emoji olib tashlash
-    if (!problem.trim()) {
-      setProblem(cleanChip);
-    } else if (!problem.includes(cleanChip)) {
-      setProblem(`${problem.trim()}, ${cleanChip}`);
-    }
-  };
-
   // Formani yuborish
   const handleSubmitCall = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -359,26 +333,27 @@ export default function SpecialistCallModal({
     specialist.specialty || (isVeterinar ? "Veterinar" : "Agronom");
 
   return (
-    <div className="fixed inset-0 z-[110] flex justify-center bg-neutral-900/40 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-200">
-      <div className="w-full max-w-[520px] min-h-[100dvh] flex flex-col justify-between bg-neutral-50 px-5 pt-6 pb-28">
-        <div>
-          {/* 1. Header: Orqaga tugmasi */}
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={handleBack}
-              className="inline-flex items-center gap-1 text-[16px] font-semibold text-[#039e1e] hover:opacity-85 active:scale-95 transition"
-            >
-              <ChevronLeft size={22} className="stroke-[2.6] -ml-1" />
-              <span>Orqaga</span>
-            </button>
-            <span className="text-[12px] font-mono font-medium text-neutral-400">
-              {mode === "form" ? "Chaqiruv arizasi" : `Chaqiruv #${callId}`}
-            </span>
-          </div>
+    <div className="fixed inset-0 z-[110] flex justify-center bg-neutral-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="w-full max-w-[520px] h-[100dvh] flex flex-col justify-between bg-neutral-50 overflow-hidden shadow-2xl">
+        {/* 1. Header (Sticky Top) */}
+        <div className="shrink-0 bg-white/95 backdrop-blur-md px-5 py-3.5 border-b border-neutral-200/80 flex items-center justify-between z-10">
+          <button
+            type="button"
+            onClick={handleBack}
+            className="inline-flex items-center gap-1 text-[15.5px] font-semibold text-[#039e1e] hover:opacity-85 active:scale-95 transition"
+          >
+            <ChevronLeft size={22} className="stroke-[2.6] -ml-1" />
+            <span>Orqaga</span>
+          </button>
+          <span className="text-[12px] font-mono font-medium text-neutral-400">
+            {mode === "form" ? "Chaqiruv arizasi" : `Chaqiruv #${callId}`}
+          </span>
+        </div>
 
-          {/* 2. Mutaxassis qisqa kartochkasi */}
-          <div className="mt-4 rounded-2xl bg-white p-4 border border-neutral-200/80 shadow-xs flex items-center gap-3.5">
+        {/* 2. Scrollable Body Content */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          {/* Mutaxassis qisqa kartochkasi */}
+          <div className="rounded-2xl bg-white p-3.5 border border-neutral-200/80 shadow-xs flex items-center gap-3.5">
             <div className="h-12 w-12 shrink-0 rounded-2xl bg-[#ffad2a] flex items-center justify-center text-white shadow-2xs font-bold text-lg">
               {isVeterinar ? "🐾" : "🌱"}
             </div>
@@ -401,13 +376,13 @@ export default function SpecialistCallModal({
 
           {/* 3. A) FORMA REJIMI: Ma'lumotlarni kiritish */}
           {mode === "form" && (
-            <form onSubmit={handleSubmitCall} className="mt-5 space-y-4">
+            <form id="specialist-call-form" onSubmit={handleSubmitCall} className="mt-5 space-y-4">
               <div>
-                <h1 className="text-[22px] font-bold text-neutral-900 tracking-tight leading-tight">
+                <h1 className="text-[21px] font-bold text-neutral-900 tracking-tight leading-tight">
                   Mutaxassisni chaqirish
                 </h1>
-                <p className="text-[13.5px] text-neutral-500 mt-1">
-                  Mutaxassis yetib kelishi va sifatli ko&apos;rik o&apos;tkazishi uchun ma&apos;lumotlaringizni kiriting:
+                <p className="text-[13px] text-neutral-500 mt-1">
+                  Mutaxassis ko&apos;rikka tez yetib borishi uchun ma&apos;lumotlarni tasdiqlang:
                 </p>
               </div>
 
@@ -418,52 +393,78 @@ export default function SpecialistCallModal({
                 </div>
               )}
 
-              {/* Ism input */}
-              <div className="rounded-2xl bg-white p-4 border border-neutral-200/80 shadow-xs space-y-1.5">
-                <label className="text-[12.5px] font-bold text-neutral-700 flex items-center gap-1.5">
-                  <User size={15} className="text-neutral-400" />
-                  <span>F.I.SH (Ismingiz) *</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Ism va familiyangizni kiriting..."
-                  className="w-full rounded-xl border border-neutral-200 bg-neutral-50/50 px-3.5 py-2.5 text-[14.5px] text-neutral-900 placeholder:text-neutral-400 focus:border-[#039e1e] focus:bg-white focus:outline-none transition"
-                />
-              </div>
-
-              {/* Telefon raqam input */}
-              <div className="rounded-2xl bg-white p-4 border border-neutral-200/80 shadow-xs space-y-1.5">
-                <label className="text-[12.5px] font-bold text-neutral-700 flex items-center gap-1.5">
-                  <Phone size={15} className="text-neutral-400" />
-                  <span>Telefon raqamingiz *</span>
-                </label>
-                <div className="flex items-center rounded-xl border border-neutral-200 bg-neutral-50/50 overflow-hidden focus-within:border-[#039e1e] focus-within:bg-white transition">
-                  <span className="px-3.5 py-2.5 text-[14.5px] font-bold font-mono text-neutral-600 bg-neutral-100/70 border-r border-neutral-200">
-                    +998
+              {/* 1. Mijoz profili: Ism va telefon (ro'yxatdan o'tgan / botdagi profil) */}
+              <div className="rounded-2xl bg-white p-4 border border-neutral-200/80 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[12px] font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <User size={14} className="text-emerald-600" />
+                    <span>Mening profilim</span>
                   </span>
-                  <input
-                    type="tel"
-                    required
-                    maxLength={9}
-                    value={phoneDigits}
-                    onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, "").slice(0, 9))}
-                    placeholder="90 123 45 67"
-                    className="w-full px-3.5 py-2.5 text-[14.5px] font-mono text-neutral-900 placeholder:text-neutral-400 bg-transparent focus:outline-none"
-                  />
+                  <span className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    <CheckCircle2 size={12} className="text-emerald-600" />
+                    Tasdiqlangan
+                  </span>
                 </div>
-                <p className="text-[11px] text-neutral-400 font-medium">
-                  Mutaxassis siz bilan aynan shu raqam orqali bog&apos;lanadi.
-                </p>
+
+                <div className="flex items-center gap-3.5 pt-0.5">
+                  <div className="h-11 w-11 shrink-0 rounded-full bg-emerald-600 text-white font-bold text-[17px] flex items-center justify-center shadow-xs">
+                    {(name.trim() ? name.trim().charAt(0) : "M").toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[15.5px] font-bold text-neutral-900 truncate">
+                      {name.trim() || "Ism ko'rsatilmagan"}
+                    </div>
+                    <div className="text-[13.5px] font-mono font-medium text-neutral-500 mt-0.5 flex items-center gap-1.5">
+                      <Phone size={13} className="text-neutral-400" />
+                      <span>{phoneDigits ? `+998 ${phoneDigits}` : "Telefon kiritilmagan"}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Profil to'liq bo'lmaganda yoki o'zgartirish kerak bo'lganda qo'shimcha kiritish */}
+                {(!name.trim() || phoneDigits.length !== 9) && (
+                  <div className="pt-2 border-t border-neutral-100 space-y-2.5">
+                    <div>
+                      <label className="text-[12px] font-medium text-neutral-600 block mb-1">
+                        Ismingiz:
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="Ism va familiyangiz..."
+                        className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2 text-[14px] text-neutral-900 focus:border-[#039e1e] focus:bg-white focus:outline-none transition"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[12px] font-medium text-neutral-600 block mb-1">
+                        Telefon raqamingiz:
+                      </label>
+                      <div className="flex items-center rounded-xl border border-neutral-200 bg-neutral-50 overflow-hidden focus-within:border-[#039e1e] focus-within:bg-white transition">
+                        <span className="px-3 py-2 text-[13.5px] font-bold font-mono text-neutral-600 bg-neutral-100 border-r border-neutral-200">
+                          +998
+                        </span>
+                        <input
+                          type="tel"
+                          required
+                          maxLength={9}
+                          value={phoneDigits}
+                          onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, "").slice(0, 9))}
+                          placeholder="90 123 45 67"
+                          className="w-full px-3 py-2 text-[14px] font-mono text-neutral-900 bg-transparent focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Manzil input & Joylashuv aniqlash */}
+              {/* 2. Manzil input & Joylashuv aniqlash */}
               <div className="rounded-2xl bg-white p-4 border border-neutral-200/80 shadow-xs space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-[12.5px] font-bold text-neutral-700 flex items-center gap-1.5">
-                    <MapPin size={15} className="text-neutral-400" />
+                    <MapPin size={15} className="text-emerald-600" />
                     <span>Yetib borish manzili *</span>
                   </label>
                   <button
@@ -490,63 +491,33 @@ export default function SpecialistCallModal({
                 />
               </div>
 
-              {/* Muammo / Chaqirish sababi */}
+              {/* 3. Muammo / Chaqirish sababi (Faqat yozish uchun keng textarea) */}
               <div className="rounded-2xl bg-white p-4 border border-neutral-200/80 shadow-xs space-y-2">
                 <label className="text-[12.5px] font-bold text-neutral-700 flex items-center gap-1.5">
-                  <FileText size={15} className="text-neutral-400" />
-                  <span>Chaqirish sababi / Muammo tavsifi *</span>
+                  <FileText size={15} className="text-emerald-600" />
+                  <span>Chaqirish sababi / Muammo haqida yozing *</span>
                 </label>
-
-                {/* Tezkor chiplar */}
-                <div className="flex flex-wrap gap-1.5 pb-1">
-                  {quickChips.map((chip) => (
-                    <button
-                      key={chip}
-                      type="button"
-                      onClick={() => handleChipClick(chip)}
-                      className="rounded-lg bg-neutral-100 px-2.5 py-1 text-[11px] font-medium text-neutral-700 hover:bg-neutral-200 active:scale-95 transition"
-                    >
-                      {chip}
-                    </button>
-                  ))}
-                </div>
 
                 <textarea
                   required
-                  rows={3}
+                  rows={4}
                   value={problem}
                   onChange={(e) => setProblem(e.target.value)}
                   placeholder={
                     isVeterinar
-                      ? "Masalan: Sigirning ishtahasi yo'q, tana harorati yuqori, tezkor ko'rik kerak..."
-                      : "Masalan: Pomidor barglari sarg'ayib quriyapti, zararkunandalarni aniqlash kerak..."
+                      ? "Chaqirish sababini yozing (masalan: molning tana harorati yuqori, 2 kundan beri ovqat yemayapti, ko'rik va ukol kerak)..."
+                      : "Chaqirish sababini yozing (masalan: issiqxonadagi pomidor barglarida dog'lar paydo bo'ldi, o'g'it va dori sepish bo'yicha mutaxassis ko'rigi zarur)..."
                   }
-                  className="w-full rounded-xl border border-neutral-200 bg-neutral-50/50 p-3 text-[14px] text-neutral-900 placeholder:text-neutral-400 focus:border-[#039e1e] focus:bg-white focus:outline-none transition resize-none"
+                  className="w-full rounded-xl border border-neutral-200 bg-neutral-50/50 p-3.5 text-[14.5px] text-neutral-900 placeholder:text-neutral-400 focus:border-[#039e1e] focus:bg-white focus:outline-none transition resize-none leading-relaxed"
                 />
+                <p className="text-[11.5px] text-neutral-400">
+                  Muammoni qanchalik aniq yozsangiz, mutaxassis shunchalik tayyorgarlik bilan yetib keladi.
+                </p>
               </div>
 
-              {/* Yuborish tugmasi */}
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full rounded-2xl bg-[#039e1e] py-4 text-center text-[16px] font-bold text-white shadow-md hover:bg-[#028519] active:scale-[0.99] transition disabled:opacity-60 flex items-center justify-center gap-2"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 size={20} className="animate-spin" />
-                    <span>Yuborilmoqda...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Chaqiruvni yuborish</span>
-                    <span>➔</span>
-                  </>
-                )}
-              </button>
-
-              <div className="flex items-center justify-center gap-1.5 text-[11.5px] text-neutral-400 font-medium">
+              <div className="flex items-center justify-center gap-1.5 text-[11.5px] text-neutral-400 font-medium pt-1">
                 <ShieldCheck size={14} className="text-emerald-600" />
-                <span>Ma&apos;lumotlaringiz shifrlangan va mutaxassisga to&apos;g&apos;ridan-to&apos;g&apos;ri yuboriladi</span>
+                <span>Ma&apos;lumotlaringiz shifrlangan va mutaxassisga to&apos;g&apos;ridan-to&apos;g&apos;ri yetkaziladi</span>
               </div>
             </form>
           )}
@@ -742,6 +713,38 @@ export default function SpecialistCallModal({
                 </div>
               )}
             </div>
+          )}
+        </div>
+
+        {/* 3. Pinned Bottom Bar: Har doim pastki navigatsiya paneli ustida mahkam turadi */}
+        <div className="shrink-0 bg-white/95 backdrop-blur-md px-5 pt-3.5 pb-6 border-t border-neutral-200/90 shadow-lg z-20">
+          {mode === "form" ? (
+            <button
+              type="submit"
+              form="specialist-call-form"
+              disabled={isSubmitting}
+              className="w-full rounded-2xl bg-[#039e1e] py-4 text-center text-[16px] font-bold text-white shadow-md hover:bg-[#028519] active:scale-[0.99] transition disabled:opacity-60 flex items-center justify-center gap-2 cursor-pointer"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 size={20} className="animate-spin" />
+                  <span>Yuborilmoqda...</span>
+                </>
+              ) : (
+                <>
+                  <span>Chaqiruvni tasdiqlash</span>
+                  <span className="text-lg">➔</span>
+                </>
+              )}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleBack}
+              className="w-full rounded-2xl bg-neutral-900 py-3.5 text-center text-[15px] font-bold text-white shadow-md hover:bg-neutral-800 active:scale-[0.99] transition"
+            >
+              Oynani yopish
+            </button>
           )}
         </div>
       </div>
