@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import {
   Package,
   PhoneCall,
@@ -14,6 +14,7 @@ import {
   Store,
   UserCheck,
   Plus,
+  Minus,
   Search,
   Trash2,
   Star,
@@ -28,14 +29,27 @@ import {
   Camera,
   Image as ImageIcon,
   X,
+  LayoutDashboard,
+  Boxes,
 } from "lucide-react";
 import { haptic } from "@/lib/telegram";
+import PharmacyDashboard, { LOW_STOCK_THRESHOLD } from "./PharmacyDashboard";
 
 /** Backend URL — Vercel yoki to'g'ridan-to'g'ri backend */
 const BACKEND =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") ||
   process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/+$/, "") ||
   "https://agroz-ai-backend-production.up.railway.app";
+
+type StockFilter = "all" | "low" | "out" | "draft";
+
+/** Dori qoldiq holati: qoralama → tugagan → kam qolgan → yetarli */
+function medStockState(m: { status: string; stock: number }): "ok" | "low" | "out" | "draft" {
+  if (m.status === "qoralama") return "draft";
+  if (m.status === "yoq" || m.stock <= 0) return "out";
+  if (m.stock <= LOW_STOCK_THRESHOLD) return "low";
+  return "ok";
+}
 
 type PartnerProfile = {
   id: number;
@@ -128,6 +142,11 @@ export default function PartnerKabinetPage() {
   const [orderStatusFilter, setOrderStatusFilter] = useState<"all" | "yangi" | "tasdiqlandi" | "tayyor" | "yetkazildi">("all");
   const [medSearch, setMedSearch] = useState("");
   const [medTypeFilter, setMedTypeFilter] = useState<"all" | "crop" | "animal" | "general">("all");
+  const [stockFilter, setStockFilter] = useState<StockFilter>("all");
+
+  // Qoldiq stepper uchun debounce taymerlari va rollback qiymatlari
+  const stockTimersRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
+  const stockOriginalRef = useRef<Record<number, number>>({});
 
   // Yuklash va jarayon holatlari
   const [isBusy, setIsBusy] = useState(false);
@@ -194,9 +213,9 @@ export default function PartnerKabinetPage() {
 
         // Default tabni belgilash
         if (p.role === "pharmacy") {
-          setActiveTab((prev) => (prev === "calls" ? "orders" : prev));
+          setActiveTab((prev) => (prev === "calls" ? "dashboard" : prev));
         } else {
-          setActiveTab((prev) => (prev === "orders" || prev === "medicines" ? "calls" : prev));
+          setActiveTab((prev) => (prev === "orders" || prev === "medicines" || prev === "dashboard" ? "calls" : prev));
         }
 
         // Agar tasdiqlanmagan bo'lsa
@@ -369,6 +388,42 @@ export default function PartnerKabinetPage() {
     }
   }
 
+  // Qoldiqni +/- bilan o'zgartirish: UI darhol yangilanadi, oxirgi bosishdan 700ms keyin bitta so'rov
+  function handleStockChange(medId: number, delta: number) {
+    haptic("light");
+    const current = medicines.find((m) => m.id === medId);
+    if (!current) return;
+    const nextStock = Math.max(0, current.stock + delta);
+    if (nextStock === current.stock) return;
+
+    if (!(medId in stockOriginalRef.current)) {
+      stockOriginalRef.current[medId] = current.stock;
+    }
+    setMedicines((prev) => prev.map((m) => (m.id === medId ? { ...m, stock: nextStock } : m)));
+
+    clearTimeout(stockTimersRef.current[medId]);
+    stockTimersRef.current[medId] = setTimeout(async () => {
+      const original = stockOriginalRef.current[medId];
+      delete stockOriginalRef.current[medId];
+      delete stockTimersRef.current[medId];
+      try {
+        const res = await fetch(`${BACKEND}/api/bot/partner/medicines/${medId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "x-telegram-init-data": initData,
+          },
+          body: JSON.stringify({ stock: nextStock, initData }),
+        });
+        const data = await res.json();
+        if (!data?.ok) throw new Error();
+      } catch {
+        setMedicines((prev) => prev.map((m) => (m.id === medId ? { ...m, stock: original } : m)));
+        alert("Qoldiqni saqlab bo'lmadi");
+      }
+    }, 700);
+  }
+
   // Dorini o'chirish
   async function handleDeleteMedicine(medId: number) {
     if (!confirm("Haqiqatan ham ushbu dorini katalogdan o'chirmoqchimisiz?")) return;
@@ -512,13 +567,28 @@ export default function PartnerKabinetPage() {
   const filteredMeds = useMemo(() => {
     return medicines.filter((m) => {
       if (medTypeFilter !== "all" && m.type !== medTypeFilter) return false;
+      if (stockFilter !== "all" && medStockState(m) !== stockFilter) return false;
       if (!medSearch.trim()) return true;
       const q = medSearch.toLowerCase();
       return m.name.toLowerCase().includes(q) || (m.usage && m.usage.toLowerCase().includes(q));
     });
-  }, [medicines, medTypeFilter, medSearch]);
+  }, [medicines, medTypeFilter, medSearch, stockFilter]);
+
+  // Qoldiq holati hisoblagichlari (chiplar, nav badge)
+  const stockCounts = useMemo(() => {
+    const c = { ok: 0, low: 0, out: 0, draft: 0 };
+    for (const m of medicines) c[medStockState(m)]++;
+    return c;
+  }, [medicines]);
 
   const isPharmacy = partner?.role === "pharmacy";
+
+  // Tab almashtirish: sahifa tepasiga qaytariladi
+  function goTab(tab: string) {
+    haptic("light");
+    setActiveTab(tab);
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   // Faol chaqiruvlar / buyurtmalar soni (badge uchun)
   const pendingCallsCount = useMemo(() => calls.filter((c) => c.status === "yangi" || c.status === "qabul_qilindi").length, [calls]);
@@ -637,58 +707,10 @@ export default function PartnerKabinetPage() {
       {/* 3. Tasdiqlangan Hamkor Boshqaruv Markazi */}
       {partner && partner.isApproved && (
         <div className="space-y-4 pt-3">
-          {/* Navigatsiya Tablari — Lo'nda va Ikkilanmasdan Tanlanadigan */}
+          {/* Navigatsiya Tablari (Mutaxassis) — Dorixona uchun pastki nav bar ishlatiladi */}
+          {!isPharmacy && (
           <div className="px-4">
-            <div className={`grid gap-1 rounded-2xl bg-zinc-200/80 p-1 text-xs font-bold ${isPharmacy ? "grid-cols-3" : "grid-cols-2"}`}>
-              {isPharmacy ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      haptic("light");
-                      setActiveTab("orders");
-                    }}
-                    className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 transition ${
-                      activeTab === "orders" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-600 hover:text-zinc-900"
-                    }`}
-                  >
-                    <Package size={15} />
-                    <span>Bronlar</span>
-                    {pendingOrdersCount > 0 && (
-                      <span className="rounded-full bg-amber-500 px-1.5 py-0.2 text-[10px] text-white font-extrabold">
-                        {pendingOrdersCount}
-                      </span>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      haptic("light");
-                      setActiveTab("medicines");
-                    }}
-                    className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 transition ${
-                      activeTab === "medicines" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-600 hover:text-zinc-900"
-                    }`}
-                  >
-                    <Store size={15} />
-                    <span>Dorilar ({medicines.length})</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      haptic("light");
-                      setActiveTab("profile");
-                    }}
-                    className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 transition ${
-                      activeTab === "profile" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-600 hover:text-zinc-900"
-                    }`}
-                  >
-                    <UserCheck size={15} />
-                    <span>Profilim</span>
-                  </button>
-                </>
-              ) : (
-                <>
+            <div className="grid grid-cols-2 gap-1 rounded-2xl bg-zinc-200/80 p-1 text-xs font-bold">
                   <button
                     type="button"
                     onClick={() => {
@@ -717,13 +739,12 @@ export default function PartnerKabinetPage() {
                       activeTab === "profile" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-600 hover:text-zinc-900"
                     }`}
                   >
-                    <UserCheck size={15} />
-                    <span>Profilim</span>
-                  </button>
-                </>
-              )}
+                  <UserCheck size={15} />
+                  <span>Profilim</span>
+                </button>
             </div>
           </div>
+          )}
 
           {/* 3.1. MUTAXASSIS: CHAQIRUVLAR TABI */}
           {!isPharmacy && activeTab === "calls" && (
@@ -927,6 +948,31 @@ export default function PartnerKabinetPage() {
                 );
               })}
             </div>
+          )}
+
+          {/* 3.2a. DORIXONA: ASOSIY (DASHBOARD) */}
+          {isPharmacy && activeTab === "dashboard" && (
+            <PharmacyDashboard
+              orders={orders}
+              medicines={medicines}
+              rating={partner.rating}
+              onOpenOrders={(f) => {
+                haptic("light");
+                setOrderStatusFilter(f ?? "all");
+                goTab("orders");
+              }}
+              onOpenStock={(f) => {
+                haptic("light");
+                setStockFilter(f ?? "all");
+                setMedTypeFilter("all");
+                setMedSearch("");
+                goTab("medicines");
+              }}
+              onAddMedicine={() => {
+                haptic("light");
+                setShowAddMedModal(true);
+              }}
+            />
           )}
 
           {/* 3.2. DORIXONA: BRONLAR & BUYURTMALAR TABI */}
@@ -1176,6 +1222,30 @@ export default function PartnerKabinetPage() {
                 </button>
               </div>
 
+              {/* Qoldiq holati bo'yicha filter */}
+              <div className="flex gap-1 overflow-x-auto text-[11px] font-bold scrollbar-none">
+                {[
+                  { id: "all", label: `Barchasi (${medicines.length})`, active: "bg-zinc-900 text-white border-zinc-900" },
+                  { id: "low", label: `⚠️ Kam qolgan (${stockCounts.low})`, active: "bg-amber-500 text-white border-amber-500" },
+                  { id: "out", label: `🔴 Tugagan (${stockCounts.out})`, active: "bg-red-600 text-white border-red-600" },
+                  { id: "draft", label: `📝 Qoralama (${stockCounts.draft})`, active: "bg-zinc-700 text-white border-zinc-700" },
+                ].map((flt) => (
+                  <button
+                    key={flt.id}
+                    type="button"
+                    onClick={() => {
+                      haptic("light");
+                      setStockFilter(flt.id as StockFilter);
+                    }}
+                    className={`shrink-0 rounded-xl px-3 py-1.5 transition border ${
+                      stockFilter === flt.id ? `${flt.active} shadow-xs` : "bg-white text-zinc-600 border-zinc-200"
+                    }`}
+                  >
+                    {flt.label}
+                  </button>
+                ))}
+              </div>
+
               {/* Turi bo'yicha filter */}
               <div className="flex gap-1 overflow-x-auto text-[11px] font-bold scrollbar-none">
                 {[
@@ -1235,8 +1305,37 @@ export default function PartnerKabinetPage() {
                           <span className="font-bold text-emerald-800">
                             {m.price ? `${m.price.toLocaleString()} so'm` : "Kelishuv"}
                           </span>
-                          <span className="text-zinc-400">•</span>
-                          <span>Qoldiq: {m.stock} {m.stockUnit}</span>
+                        </div>
+                        {/* Qoldiqni 1-tap o'zgartirish */}
+                        <div className="flex items-center gap-1.5 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => handleStockChange(m.id, -1)}
+                            disabled={m.stock <= 0}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 text-zinc-700 active:scale-90 transition disabled:opacity-40"
+                            aria-label="Qoldiqni kamaytirish"
+                          >
+                            <Minus size={13} />
+                          </button>
+                          <span
+                            className={`min-w-[64px] text-center rounded-lg px-2 py-1 text-[11px] font-mono font-black ${
+                              m.stock <= 0
+                                ? "bg-red-50 text-red-700"
+                                : m.stock <= LOW_STOCK_THRESHOLD
+                                ? "bg-amber-50 text-amber-800"
+                                : "bg-zinc-100 text-zinc-800"
+                            }`}
+                          >
+                            {m.stock} {m.stockUnit}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleStockChange(m.id, 1)}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-800 active:scale-90 transition"
+                            aria-label="Qoldiqni oshirish"
+                          >
+                            <Plus size={13} />
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -1382,6 +1481,65 @@ export default function PartnerKabinetPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* 3.5. DORIXONA: PASTKI NAVIGATSIYA (Dashboard nav bar) */}
+      {isPharmacy && partner?.isApproved && (
+        <nav
+          className="fixed bottom-0 inset-x-0 z-40 border-t border-zinc-200 bg-white/95 backdrop-blur-md shadow-[0_-2px_10px_rgba(0,0,0,0.04)]"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        >
+          <div className="mx-auto max-w-md grid grid-cols-5 items-end px-2 pt-1.5 pb-1.5">
+            {[
+              { id: "dashboard", label: "Asosiy", Icon: LayoutDashboard, badge: 0, badgeCls: "" },
+              { id: "orders", label: "Bronlar", Icon: Package, badge: pendingOrdersCount, badgeCls: "bg-amber-500" },
+              { id: "__add", label: "", Icon: Plus, badge: 0, badgeCls: "" },
+              { id: "medicines", label: "Qoldiq", Icon: Boxes, badge: stockCounts.low + stockCounts.out, badgeCls: "bg-red-500" },
+              { id: "profile", label: "Profil", Icon: UserCheck, badge: 0, badgeCls: "" },
+            ].map(({ id, label, Icon, badge, badgeCls }) => {
+              if (id === "__add") {
+                return (
+                  <div key={id} className="flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        haptic("medium");
+                        setShowAddMedModal(true);
+                      }}
+                      className="-mt-6 flex h-[52px] w-[52px] items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 ring-4 ring-white active:scale-90 transition"
+                      aria-label="Dori qo'shish"
+                    >
+                      <Plus size={24} strokeWidth={2.6} />
+                    </button>
+                  </div>
+                );
+              }
+              const active = activeTab === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => goTab(id)}
+                  className={`relative flex flex-col items-center gap-0.5 rounded-xl py-1 text-[10px] font-bold transition active:scale-95 ${
+                    active ? "text-emerald-700" : "text-zinc-500"
+                  }`}
+                >
+                  <span className={`flex h-7 w-12 items-center justify-center rounded-full transition ${active ? "bg-emerald-50" : ""}`}>
+                    <Icon size={19} strokeWidth={active ? 2.5 : 2} />
+                  </span>
+                  <span>{label}</span>
+                  {badge > 0 && (
+                    <span
+                      className={`absolute top-0 right-2 min-w-[17px] rounded-full px-1 text-[9px] leading-[17px] text-white font-extrabold ring-2 ring-white ${badgeCls}`}
+                    >
+                      {badge > 99 ? "99+" : badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </nav>
       )}
 
       {/* 4. MODAL: YANGI DORI QO'SHISH (DORIXONA) */}
