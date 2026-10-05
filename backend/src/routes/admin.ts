@@ -901,14 +901,126 @@ router.get("/pharmacies/:id/medicines", requireAdmin, async (req, res) => {
         usage: m.usage,
         price: m.price,
         stock: m.stock,
+        stockUnit: m.stockUnit,
         status: m.status,
         photoFileId: m.photoFileId,
+        photoData: m.photoData,
         createdAt: m.createdAt,
+        updatedAt: m.updatedAt,
       })),
       totalCount: items.length,
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
+
+// PUT /api/admin/medicines/:id — Super Admin dori ma'lumotlarini (nomi, narxi, qoldig'i, rasmi, tavsifi) tahrirlashi
+router.put("/medicines/:id", requireAdmin, async (req, res) => {
+  try {
+    const medId = Number(req.params.id);
+    if (!Number.isSafeInteger(medId) || medId <= 0) {
+      return res.status(400).json({ ok: false, error: "Noto'g'ri dori ID raqami" });
+    }
+
+    const existing = (
+      await db.select().from(specialistMedicines).where(eq(specialistMedicines.id, medId)).limit(1)
+    )[0];
+    if (!existing) {
+      return res.status(404).json({ ok: false, error: "Dori topilmadi" });
+    }
+
+    const body = req.body || {};
+    const updates: Record<string, any> = { updatedAt: new Date() };
+
+    if (body.name !== undefined) {
+      const trimmed = String(body.name).trim();
+      if (!trimmed) {
+        return res.status(400).json({ ok: false, error: "Dori nomi bo'sh bo'lishi mumkin emas" });
+      }
+      updates.name = trimmed.slice(0, 160);
+    }
+
+    if (body.type !== undefined) {
+      const t = String(body.type);
+      updates.type = ["crop", "animal", "general"].includes(t) ? t : "general";
+    }
+
+    if (body.usage !== undefined) {
+      updates.usage = body.usage ? String(body.usage).trim().slice(0, 300) : null;
+    }
+
+    if (body.price !== undefined) {
+      const p = Number(body.price);
+      updates.price = Number.isFinite(p) && p > 0 ? Math.round(p) : null;
+    }
+
+    if (body.stock !== undefined) {
+      const s = Number(body.stock);
+      updates.stock = Number.isFinite(s) && s >= 0 ? Math.round(s) : 0;
+    }
+
+    if (body.stockUnit !== undefined) {
+      updates.stockUnit = String(body.stockUnit || "dona").trim().slice(0, 20);
+    }
+
+    if (body.status !== undefined) {
+      const st = String(body.status);
+      updates.status = ["bor", "yoq", "qoralama"].includes(st) ? st : "bor";
+    }
+
+    // Rasm yangilash yoki o'chirish
+    if (body.photoData !== undefined) {
+      if (body.photoData === null || body.photoData === "") {
+        updates.photoData = null;
+        updates.photoFileId = null;
+      } else if (typeof body.photoData === "string" && body.photoData.startsWith("data:image/")) {
+        updates.photoData = body.photoData;
+      }
+    }
+
+    await db.update(specialistMedicines).set(updates).where(eq(specialistMedicines.id, medId));
+
+    const updated = (
+      await db.select().from(specialistMedicines).where(eq(specialistMedicines.id, medId)).limit(1)
+    )[0];
+
+    res.json({
+      ok: true,
+      message: "Dori ma'lumotlari muvaffaqiyatli yangilandi",
+      medicine: updated,
+    });
+  } catch (err: any) {
+    console.error("[admin update medicine error]:", err);
+    res.status(500).json({ ok: false, error: err.message || "Server xatosi" });
+  }
+});
+
+// DELETE /api/admin/medicines/:id — Super Admin dorini o'chirish
+router.delete("/medicines/:id", requireAdmin, async (req, res) => {
+  try {
+    const medId = Number(req.params.id);
+    if (!Number.isSafeInteger(medId) || medId <= 0) {
+      return res.status(400).json({ ok: false, error: "Noto'g'ri dori ID raqami" });
+    }
+
+    const existing = (
+      await db.select().from(specialistMedicines).where(eq(specialistMedicines.id, medId)).limit(1)
+    )[0];
+    if (!existing) {
+      return res.status(404).json({ ok: false, error: "Dori topilmadi" });
+    }
+
+    await db.delete(specialistMedicines).where(eq(specialistMedicines.id, medId));
+
+    res.json({
+      ok: true,
+      message: "Dori muvaffaqiyatli o'chirildi",
+      deletedId: medId,
+    });
+  } catch (err: any) {
+    console.error("[admin delete medicine error]:", err);
+    res.status(500).json({ ok: false, error: err.message || "Server xatosi" });
   }
 });
 

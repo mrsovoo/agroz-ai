@@ -398,6 +398,14 @@ export default function SuperAdminPage() {
   const [callStatusFilter, setCallStatusFilter] = useState<string>("all");
   const [callSearch, setCallSearch] = useState<string>("");
 
+  const [currentTime, setCurrentTime] = useState<number>(0);
+
+  useEffect(() => {
+    setCurrentTime(Date.now());
+    const timer = setInterval(() => setCurrentTime(Date.now()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
   const [notice, setNotice] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
 
   // Fikrlar filtrlash
@@ -1539,7 +1547,8 @@ export default function SuperAdminPage() {
                         );
                       })
                       .map((o) => {
-                        const ageMs = o.createdAt ? Date.now() - new Date(o.createdAt).getTime() : 0;
+                        const createdAtMs = o.createdAt ? new Date(o.createdAt).getTime() : 0;
+                        const ageMs = createdAtMs > 0 ? (currentTime > 0 ? currentTime - createdAtMs : 0) : 0;
                         const isUnansweredOver2Hours =
                           o.status === "yangi" && Number.isFinite(ageMs) && ageMs >= 2 * 60 * 60 * 1000;
                         return (
