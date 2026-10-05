@@ -52,13 +52,7 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
-	<key>NSCameraUsageDescription</key>
-	<string>AgrozGO o'simlik kasalliklari va zararkunandalarni AI orqali aniqlash uchun kameradan foydalanadi.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>AgrozGO yaqin atrofdagi agro-dorixonalar, mutaxassislar va aniq hududiy ob-havo ma'lumotlarini taqdim etish uchun joylashuvingizdan foydalanadi.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>AgrozGO o'simlik barglari va kasalliklarining rasmlarini tahlil qilish uchun fotogalereyadan foydalanadi.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>AgrozGO agro-tahlil natijalari va retseptlarni rasmlar albomingizga saqlash uchun ruxsat so'raydi.</string>
+	<string>AgrozGO yaqin atrofdagi agro-do'konlar, mutaxassislar va aniq hududiy ob-havo ma'lumotlarini taqdim etish uchun joylashuvingizdan foydalanadi.</string>
 </dict>
 </plist>

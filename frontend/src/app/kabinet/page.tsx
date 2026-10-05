@@ -33,6 +33,8 @@ import {
   Boxes,
 } from "lucide-react";
 import { haptic } from "@/lib/telegram";
+import { isNativeApp } from "@/lib/capacitor";
+import { useRouter } from "next/navigation";
 import PharmacyDashboard, { LOW_STOCK_THRESHOLD } from "./PharmacyDashboard";
 
 /** Backend URL — Vercel yoki to'g'ridan-to'g'ri backend */
@@ -167,11 +169,15 @@ export default function PartnerKabinetPage() {
   // Huquqiy rozilik guvohnomasi modali
   const [showConsentModal, setShowConsentModal] = useState(false);
 
-  // Bog'lanish bosilganda telefon raqamini ko'rsatish holati
   const [revealedPhones, setRevealedPhones] = useState<Record<string, boolean>>({});
+  const router = useRouter();
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (isNativeApp()) {
+      router.replace("/");
+      return;
+    }
     const tg = (window as any).Telegram?.WebApp;
     if (tg) {
       tg.ready?.();
@@ -183,7 +189,7 @@ export default function PartnerKabinetPage() {
         setIsTelegram(true);
       }
     }
-  }, []);
+  }, [router]);
 
   async function loadData(tgData = initData) {
     if (!tgData) {
