@@ -1024,6 +1024,64 @@ router.delete("/medicines/:id", requireAdmin, async (req, res) => {
   }
 });
 
+// POST /api/admin/pharmacies/:id/medicines — Super Admin do'kon uchun yangi dori qo'shishi
+router.post("/pharmacies/:id/medicines", requireAdmin, async (req, res) => {
+  try {
+    const pharmacyId = Number(req.params.id);
+    if (!Number.isSafeInteger(pharmacyId) || pharmacyId <= 0) {
+      return res.status(400).json({ ok: false, error: "Noto'g'ri dorixona ID raqami" });
+    }
+
+    const pharmacy = (
+      await db.select().from(specialists).where(eq(specialists.id, pharmacyId)).limit(1)
+    )[0];
+    if (!pharmacy) {
+      return res.status(404).json({ ok: false, error: "Dorixona topilmadi" });
+    }
+
+    const body = req.body || {};
+    const name = String(body.name || "").trim();
+    if (!name) {
+      return res.status(400).json({ ok: false, error: "Dori nomini kiritish majburiy" });
+    }
+
+    const type = ["crop", "animal", "general"].includes(body.type) ? body.type : "general";
+    const usage = body.usage ? String(body.usage).trim().slice(0, 300) : null;
+    const price = Number(body.price) > 0 ? Math.round(Number(body.price)) : null;
+    const stock = Number(body.stock) >= 0 ? Math.round(Number(body.stock)) : 10;
+    const stockUnit = String(body.stockUnit || "dona").trim().slice(0, 20);
+    const status = ["bor", "yoq", "qoralama"].includes(body.status) ? body.status : "bor";
+    const photoData =
+      typeof body.photoData === "string" && body.photoData.startsWith("data:image/")
+        ? body.photoData
+        : null;
+
+    const [inserted] = await db
+      .insert(specialistMedicines)
+      .values({
+        specialistId: pharmacyId,
+        name: name.slice(0, 160),
+        type,
+        usage,
+        price,
+        stock,
+        stockUnit,
+        status,
+        photoData,
+      })
+      .returning();
+
+    res.json({
+      ok: true,
+      message: "Yangi dori muvaffaqiyatli qo'shildi",
+      medicine: inserted,
+    });
+  } catch (err: any) {
+    console.error("[admin create medicine error]:", err);
+    res.status(500).json({ ok: false, error: err.message || "Server xatosi" });
+  }
+});
+
 // POST /api/admin/specialists/:id/approve
 router.post("/specialists/:id/approve", requireAdmin, async (req, res) => {
   try {

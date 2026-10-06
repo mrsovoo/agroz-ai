@@ -406,6 +406,19 @@ export default function AdminPanelPage() {
   const [isCompressingMedPhoto, setIsCompressingMedPhoto] = useState(false);
   const [savingMedChanges, setSavingMedChanges] = useState(false);
 
+  // Yangi dori qo'shish modali (Super Admin tanlangan dorixona uchun yangi dori qo'shishi)
+  const [showAddMedModal, setShowAddMedModal] = useState(false);
+  const [newMedName, setNewMedName] = useState("");
+  const [newMedType, setNewMedType] = useState<"crop" | "animal" | "general">("crop");
+  const [newMedPrice, setNewMedPrice] = useState("");
+  const [newMedStock, setNewMedStock] = useState("10");
+  const [newMedUnit, setNewMedUnit] = useState("dona");
+  const [newMedUsage, setNewMedUsage] = useState("");
+  const [newMedStatus, setNewMedStatus] = useState<"bor" | "yoq" | "qoralama">("bor");
+  const [newMedPhoto, setNewMedPhoto] = useState<string | null>(null);
+  const [isCompressingNewMedPhoto, setIsCompressingNewMedPhoto] = useState(false);
+  const [savingNewMed, setSavingNewMed] = useState(false);
+
   // To'g'ridan-to'g'ri xabar yuborish modali (Agro-do&apos;kon yoki Mutaxassisga)
   const [directMsgModal, setDirectMsgModal] = useState<{
     open: boolean;
@@ -858,6 +871,115 @@ export default function AdminPanelPage() {
     }
   }
 
+  function handleOpenAddMedicine() {
+    setNewMedName("");
+    setNewMedType("crop");
+    setNewMedPrice("");
+    setNewMedStock("10");
+    setNewMedUnit("dona");
+    setNewMedUsage("");
+    setNewMedStatus("bor");
+    setNewMedPhoto(null);
+    setShowAddMedModal(true);
+  }
+
+  function handleNewMedPhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("Faqat rasm fayllari ruxsat etiladi (JPEG, PNG, WEBP)");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert("Rasm hajmi juda katta (10MB dan kam bo'lishi kerak)");
+      return;
+    }
+
+    setIsCompressingNewMedPhoto(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const maxWidth = 1080;
+        const maxHeight = 1450;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL("image/jpeg", 0.85);
+          setNewMedPhoto(compressed);
+        } else {
+          setNewMedPhoto(event.target?.result as string);
+        }
+        setIsCompressingNewMedPhoto(false);
+      };
+      img.onerror = () => {
+        setIsCompressingNewMedPhoto(false);
+        alert("Rasmni o'qib bo'lmadi");
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.onerror = () => {
+      setIsCompressingNewMedPhoto(false);
+      alert("Faylni o'qishda xatolik yuz berdi");
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function handleCreateMedicineSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedPharmacyForMeds) return;
+
+    if (!newMedName.trim()) {
+      alert("Iltimos, dori nomini kiriting");
+      return;
+    }
+
+    setSavingNewMed(true);
+    try {
+      const res = await adminFetch(`/api/admin/pharmacies/${selectedPharmacyForMeds.id}/medicines`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newMedName.trim(),
+          type: newMedType,
+          price: newMedPrice ? Number(newMedPrice) : null,
+          stock: newMedStock ? Number(newMedStock) : 10,
+          stockUnit: newMedUnit,
+          usage: newMedUsage.trim() || null,
+          status: newMedStatus,
+          photoData: newMedPhoto,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.ok && data.medicine) {
+        setPharmacyMedicines((prev) => [data.medicine, ...prev]);
+        setShowAddMedModal(false);
+        setNotice({ kind: "ok", text: `"${data.medicine.name}" muvaffaqiyatli qo'shildi!` });
+      } else {
+        alert(data.error || "Dori qo'shishda xatolik yuz berdi");
+      }
+    } catch {
+      alert("Serverga ulanishda xatolik yuz berdi");
+    } finally {
+      setSavingNewMed(false);
+    }
+  }
+
   async function handleSendDirectMessage(e: React.FormEvent) {
     e.preventDefault();
     if (!directMsgModal || !directMsgText.trim()) return;
@@ -1200,7 +1322,7 @@ export default function AdminPanelPage() {
               { id: "users", label: "Foydalanuvchilar", icon: Users, count: usersList.length },
               { id: "orders", label: "Buyurtmalar", icon: ShoppingCart, count: ordersList.filter((o) => o.status === "yangi").length },
               { id: "calls", label: "Chaqiruvlar", icon: Activity, count: callsList.filter((c) => c.status === "yangi").length },
-              { id: "pharmacies", label: "Agro-do&apos;konlar", icon: Store, count: pharmacies.length },
+              { id: "pharmacies", label: "Dorixonalar (Agro-do'konlar)", icon: Store, count: pharmacies.length },
               { id: "specialists", label: "Mutaxassislar", icon: Sparkles, count: specialistsList.length },
               { id: "regions", label: "Viloyatlar Tahlili", icon: Globe },
               { id: "reviews", label: "Mijozlar Fikrlari", icon: MessageSquare, count: reviews.length },
@@ -1297,16 +1419,16 @@ export default function AdminPanelPage() {
         {/* ------------------------------------------------------------- */}
         {activeTab === "pharmacies" && (
           <div className="space-y-6">
-            {/* Header va Metrikalar */}
+              {/* Header va Metrikalar */}
             <div className="rounded-2xl border border-slate-200 bg-white p-5">
               <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
                 <div>
                   <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                     <Store className="text-emerald-500" size={20} />
-                    Agro-do&apos;konlar Boshqaruvi
+                    Dorixonalar / Agro-do&apos;konlar Boshqaruvi
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
-                    Platformadagi barcha hamkor agro-do&apos;konlar va ularning agro-mahsulotlar nazorati
+                    Platformadagi barcha agro-do&apos;konlar va dorixonalar kabinetlari, mahsulotlar nazorati
                   </p>
                 </div>
                 <button
@@ -1321,16 +1443,16 @@ export default function AdminPanelPage() {
               {/* Metrika kartalari */}
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-6">
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Jami Agro-do&apos;konlar</p>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Jami Dorixonalar</p>
                   <p className="mt-1 text-2xl font-black text-slate-900">{pharmacies.length} ta</p>
                   <p className="mt-1 text-[11px] text-slate-400">Ro&apos;yxatdan o&apos;tgan</p>
                 </div>
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3.5">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">💊 Kiritilgan Agro-mahsulotlar</p>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">💊 Kiritilgan Mahsulotlar</p>
                   <p className="mt-1 text-2xl font-black text-emerald-800">
                     {pharmacies.reduce((sum, p) => sum + (p.medicinesCount || 0), 0)} ta
                   </p>
-                  <p className="mt-1 text-[11px] text-emerald-600 font-semibold">Barcha agro-do&apos;konlarda</p>
+                  <p className="mt-1 text-[11px] text-emerald-600 font-semibold">Barcha dorixonalarda</p>
                 </div>
                 <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3.5">
                   <p className="text-[11px] font-bold uppercase tracking-wider text-amber-700">📦 Jami Buyurtmalar</p>
@@ -1344,21 +1466,21 @@ export default function AdminPanelPage() {
                   <p className="mt-1 text-2xl font-black text-teal-800">
                     {pharmacies.length} ta
                   </p>
-                  <p className="mt-1 text-[11px] text-teal-600 font-semibold">Panel ochiq</p>
+                  <p className="mt-1 text-[11px] text-teal-600 font-semibold">Kabinet ochiq</p>
                 </div>
               </div>
 
               {/* Qidiruv */}
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
                 <span className="text-xs font-semibold text-slate-500">
-                  Jami agro-do&apos;konlar: <b>{pharmacies.length} ta</b>
+                  Jami dorixonalar: <b>{pharmacies.length} ta</b>
                 </span>
 
                 <div className="relative min-w-[260px] flex-1 sm:max-w-md">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
-                    placeholder="Agro-do&apos;kon nomi, mas'ul shaxs yoki telefon..."
+                    placeholder="Dorixona nomi, mas'ul shaxs yoki telefon..."
                     value={pharmacySearch}
                     onChange={(e) => setPharmacySearch(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-xs text-slate-800 placeholder-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none"
@@ -1367,7 +1489,7 @@ export default function AdminPanelPage() {
               </div>
             </div>
 
-            {/* Agro-do&apos;konlar Ro'yxati */}
+            {/* Agro-do'konlar Ro'yxati */}
             {(() => {
               const filtered = pharmacies.filter((p) => {
                 if (pharmacySearch.trim()) {
@@ -1386,9 +1508,9 @@ export default function AdminPanelPage() {
                 return (
                   <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-12 text-center">
                     <Store size={36} className="mx-auto mb-3 text-slate-300" />
-                    <h4 className="text-sm font-bold text-slate-800">Agro-do&apos;konlar topilmadi</h4>
+                    <h4 className="text-sm font-bold text-slate-800">Dorixonalar topilmadi</h4>
                     <p className="mt-1 text-xs text-slate-400">
-                      {pharmacySearch ? "Qidiruv so'rovi bo'yicha hech narsa chiqmadi" : "Hozircha agro-do&apos;konlar mavjud emas"}
+                      {pharmacySearch ? "Qidiruv so'rovi bo'yicha hech narsa chiqmadi" : "Hozircha dorixonalar mavjud emas"}
                     </p>
                   </div>
                 );
@@ -1399,16 +1521,18 @@ export default function AdminPanelPage() {
                   {filtered.map((p) => (
                     <div
                       key={p.id}
-                      className="relative rounded-2xl border border-slate-200 bg-white p-5 transition shadow-xs hover:border-slate-300"
+                      onClick={() => handleViewPharmacyMedicines(p)}
+                      className="group relative cursor-pointer rounded-2xl border border-slate-200 bg-white p-5 transition shadow-xs hover:border-emerald-500 hover:shadow-md"
+                      title="Kabinetga kirish uchun ustiga bosing"
                     >
                       {/* Kartochka tepasi */}
                       <div className="flex items-start justify-between gap-3 mb-3">
                         <div className="flex items-start gap-3 min-w-0">
-                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 group-hover:bg-emerald-600 group-hover:text-white transition">
                             <Store size={22} />
                           </div>
                           <div className="min-w-0">
-                            <h4 className="text-base font-black text-slate-900 truncate">
+                            <h4 className="text-base font-black text-slate-900 truncate group-hover:text-emerald-700 transition">
                               {p.organization || p.name}
                             </h4>
                             <p className="text-xs text-slate-500 font-medium truncate">
@@ -1417,9 +1541,14 @@ export default function AdminPanelPage() {
                           </div>
                         </div>
 
-                        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">
-                          #{p.id} Agro-do&apos;kon
-                        </span>
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">
+                            #{p.id} Dorixona
+                          </span>
+                          <span className="text-[10px] text-emerald-600 font-bold opacity-0 group-hover:opacity-100 transition">
+                            Kabinetga kirish →
+                          </span>
+                        </div>
                       </div>
 
                       {/* Ma'lumotlar bloki */}
@@ -1428,7 +1557,11 @@ export default function AdminPanelPage() {
                           <span className="text-slate-400 flex items-center gap-1">
                             <Phone size={13} /> Telefon:
                           </span>
-                          <a href={`tel:${p.phone}`} className="font-bold text-slate-900 hover:text-emerald-600">
+                          <a
+                            href={`tel:${p.phone}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="font-bold text-slate-900 hover:text-emerald-600"
+                          >
                             {p.phone}
                           </a>
                         </div>
@@ -1467,8 +1600,8 @@ export default function AdminPanelPage() {
 
                       {/* Statistika ko'rsatkichlari */}
                       <div className="grid grid-cols-3 gap-2 py-1 mb-3 text-center">
-                        <div className="rounded-xl bg-slate-50 p-2">
-                          <p className="text-[10px] uppercase font-bold text-slate-400">Agro-mahsulotlar</p>
+                        <div className="rounded-xl bg-slate-50 p-2 group-hover:bg-emerald-50/50 transition">
+                          <p className="text-[10px] uppercase font-bold text-slate-400">Mahsulotlar</p>
                           <p className="text-sm font-black text-teal-700">{p.medicinesCount} ta</p>
                         </div>
                         <div className="rounded-xl bg-slate-50 p-2">
@@ -1494,15 +1627,21 @@ export default function AdminPanelPage() {
                       <div className="flex items-center justify-between gap-2 pt-2">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => handleViewPharmacyMedicines(p)}
-                            className="flex items-center gap-1.5 rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-xs font-bold text-teal-800 hover:bg-teal-100 active:scale-95 transition"
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewPharmacyMedicines(p);
+                            }}
+                            className="flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100 active:scale-95 transition shadow-xs"
                           >
-                            <Package size={14} />
-                            Agro-mahsulotlar ({p.medicinesCount})
+                            <Store size={14} />
+                            Kabinetga kirish
                           </button>
 
                           <button
-                            onClick={() => {
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setDirectMsgTitle("");
                               setDirectMsgText("");
                               setDirectMsgBtnText("");
@@ -1517,7 +1656,7 @@ export default function AdminPanelPage() {
                               });
                             }}
                             className="flex items-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-bold text-sky-800 hover:bg-sky-100 active:scale-95 transition"
-                            title="Ushbu agro-do&apos;kon egasiga Telegram orqali xabar yuborish"
+                            title="Ushbu dorixona egasiga Telegram orqali xabar yuborish"
                           >
                             <Send size={13} />
                             Xabar
@@ -1525,9 +1664,13 @@ export default function AdminPanelPage() {
                         </div>
 
                         <button
-                          onClick={() => handleDeleteSpecialist(p.id, p.organization || p.name)}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteSpecialist(p.id, p.organization || p.name);
+                          }}
                           disabled={busy}
-                          title="Agro-do&apos;konni butunlay o'chirish"
+                          title="Dorixonani butunlay o'chirish"
                           className="flex items-center justify-center rounded-xl p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 transition"
                         >
                           <Trash2 size={16} />
@@ -3465,11 +3608,16 @@ export default function AdminPanelPage() {
                     <Store size={24} />
                   </div>
                   <div>
-                    <h3 className="text-lg font-black text-slate-900">
-                      {selectedPharmacyForMeds.org || selectedPharmacyForMeds.name}
-                    </h3>
-                    <p className="text-xs text-slate-500 font-medium">
-                      Agro-do&apos;kon assortimenti va dorilar ro&apos;yxati ({pharmacyMedicines.length} ta dori)
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-800 uppercase">
+                        Kabinet
+                      </span>
+                      <h3 className="text-lg font-black text-slate-900">
+                        {selectedPharmacyForMeds.org || selectedPharmacyForMeds.name}
+                      </h3>
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium mt-0.5">
+                      Agro-do&apos;kon assortimenti, mahsulotlar (dorilar) nazorati va super boshqaruvi ({pharmacyMedicines.length} ta mahsulot)
                     </p>
                   </div>
                 </div>
@@ -3482,18 +3630,26 @@ export default function AdminPanelPage() {
                 </button>
               </div>
 
-              {/* Ichki qidiruv */}
-              <div className="mb-4">
-                <div className="relative">
+              {/* Ichki qidiruv va Yangi Dori qo'shish */}
+              <div className="mb-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <div className="relative flex-1">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
                     placeholder="Dori nomi yoki qo'llanilishi bo'yicha izlash..."
                     value={medicineSearch}
                     onChange={(e) => setMedicineSearch(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-xs text-slate-800 placeholder-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-xs text-slate-800 placeholder-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none"
                   />
                 </div>
+                <button
+                  type="button"
+                  onClick={handleOpenAddMedicine}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-500 active:scale-95 transition shadow-sm shrink-0"
+                >
+                  <Plus size={16} />
+                  <span>+ Yangi dori qo&apos;shish</span>
+                </button>
               </div>
 
               {/* Dorilar jadvali */}
@@ -3849,6 +4005,231 @@ export default function AdminPanelPage() {
                       <>
                         <Check size={14} />
                         <span>O&apos;zgarishlarni saqlash</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* YANGI DORI QO'SHISH MODALI (SUPER ADMIN UCHUN) */}
+        {showAddMedModal && selectedPharmacyForMeds && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 overflow-y-auto">
+            <div className="relative w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl border border-slate-200 my-8">
+              <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-3 mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200">
+                    <Plus size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-slate-900">Yangi Dori Qo&apos;shish</h3>
+                    <p className="text-xs text-slate-500 font-medium">
+                      {selectedPharmacyForMeds.org || selectedPharmacyForMeds.name} kabinetiga yangi mahsulot kiritish
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAddMedModal(false)}
+                  className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateMedicineSubmit} className="space-y-4">
+                {/* Rasm yuklash */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Dori rasmi (Mahsulot fotosi)
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center">
+                      {newMedPhoto ? (
+                        <>
+                          <img
+                            src={newMedPhoto}
+                            alt="Preview"
+                            className="h-full w-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setNewMedPhoto(null)}
+                            className="absolute top-1 right-1 h-5 w-5 rounded-full bg-red-600 text-white flex items-center justify-center text-xs hover:bg-red-700 shadow-sm"
+                            title="Rasmni olib tashlash"
+                          >
+                            ×
+                          </button>
+                        </>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center text-slate-400">
+                          <Image size={24} />
+                          <span className="text-[10px] mt-0.5">Rasm yo&apos;q</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex-1 space-y-1.5">
+                      <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-emerald-50 px-3.5 py-2 text-xs font-bold text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition active:scale-95">
+                        <Image size={15} />
+                        <span>{newMedPhoto ? "Boshqa rasm yuklash" : "Rasm tanlash"}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleNewMedPhotoUpload}
+                          className="hidden"
+                          disabled={isCompressingNewMedPhoto}
+                        />
+                      </label>
+                      {isCompressingNewMedPhoto && (
+                        <p className="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
+                          <RefreshCw size={12} className="animate-spin" /> Rasm qayta ishlanmoqda...
+                        </p>
+                      )}
+                      <p className="text-[11px] text-slate-400">
+                        JPEG, PNG yoki WEBP. Rasm avtomatik ravishda 1080×1450 hajmga moslanadi.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Nomi */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Dori / Mahsulot nomi *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newMedName}
+                    onChange={(e) => setNewMedName(e.target.value)}
+                    placeholder="Masalan: Bi-58 yangi (insektoakaritsid)"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none font-semibold"
+                  />
+                </div>
+
+                {/* Turi va Holati */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Kategoriya (Turi)
+                    </label>
+                    <select
+                      value={newMedType}
+                      onChange={(e) => setNewMedType(e.target.value as any)}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none"
+                    >
+                      <option value="crop">🌱 Ekin / O&apos;simlik</option>
+                      <option value="animal">🐄 Chorva / Hayvon</option>
+                      <option value="general">Umumiy</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Mavjudlik holati
+                    </label>
+                    <select
+                      value={newMedStatus}
+                      onChange={(e) => setNewMedStatus(e.target.value as any)}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none"
+                    >
+                      <option value="bor">✅ Mavjud (bor)</option>
+                      <option value="yoq">❌ Tugagan (yo&apos;q)</option>
+                      <option value="qoralama">📝 Qoralama</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Narxi va Qoldig'i */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-1">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Narxi (so&apos;m)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1000"
+                      value={newMedPrice}
+                      onChange={(e) => setNewMedPrice(e.target.value)}
+                      placeholder="Masalan: 45000"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Qoldiq soni
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={newMedStock}
+                      onChange={(e) => setNewMedStock(e.target.value)}
+                      placeholder="10"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      O&apos;lchov birligi
+                    </label>
+                    <select
+                      value={newMedUnit}
+                      onChange={(e) => setNewMedUnit(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none"
+                    >
+                      <option value="dona">dona</option>
+                      <option value="kg">kg</option>
+                      <option value="litr">litr</option>
+                      <option value="gramm">gramm</option>
+                      <option value="qop">qop</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Qo'llanilishi va tavsifi */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Qo&apos;llanilishi va qisqa tavsifi
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={newMedUsage}
+                    onChange={(e) => setNewMedUsage(e.target.value)}
+                    placeholder="Qaysi zararkunandalar yoki kasalliklarga qarshi, me'yori va qoidalari..."
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none leading-relaxed"
+                  />
+                </div>
+
+                {/* Tugmalar */}
+                <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddMedModal(false)}
+                    disabled={savingNewMed}
+                    className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 transition"
+                  >
+                    Bekor qilish
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingNewMed || isCompressingNewMedPhoto}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-5 py-2 text-xs font-bold text-white hover:bg-emerald-500 transition active:scale-95 disabled:opacity-50 shadow-sm"
+                  >
+                    {savingNewMed ? (
+                      <>
+                        <RefreshCw size={14} className="animate-spin" />
+                        <span>Qo&apos;shilmoqda...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check size={14} />
+                        <span>Dorini saqlash</span>
                       </>
                     )}
                   </button>
