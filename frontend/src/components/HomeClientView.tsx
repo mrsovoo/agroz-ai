@@ -268,10 +268,11 @@ export default function HomeClientView({
             Hozircha dorilar mavjud emas
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {displayedMedicines.slice(0, 4).map((med, idx) => (
               <ProductCard
                 key={med.id || idx}
+                variant="md"
                 medicine={{
                   id: med.id,
                   name: med.name,
