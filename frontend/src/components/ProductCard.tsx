@@ -47,6 +47,8 @@ export interface ProductCardProps {
   ratingCount?: number;
   /** Joylashgan shahar yoki hudud matni */
   city?: string | null;
+  /** Maxsus rasm manbasi (URL yoki base64) */
+  photoSrc?: string;
   /** Havola manzili (standart: /dori/:id) */
   linkHref?: string;
   /** Qo'shimcha amallar slot (masalan, maxsus tugma yoki savat boshqaruvi) */
@@ -166,24 +168,24 @@ export function renderMedicinePlaceholder(type?: string | null, iconSize = 22) {
 
 const VARIANTS = {
   lg: {
-    root: "group relative flex h-full w-full cursor-pointer flex-col justify-between rounded-[20px] bg-white border border-neutral-200/80 p-2.5 sm:p-3 shadow-2xs transition-all duration-200 hover:shadow-xs hover:border-emerald-400/80 active:scale-[0.99]",
-    imgWrap: "relative mb-2 flex aspect-square w-full items-center justify-center overflow-hidden rounded-[14px] bg-white border border-neutral-200/70",
-    title: "text-[13.5px] sm:text-[14.5px] font-black leading-snug text-neutral-900 line-clamp-2 min-h-[2.4rem] sm:min-h-[2.6rem] group-hover:text-[#039e1e] transition-colors",
-    price: "text-[14px] sm:text-[15.5px] font-black text-neutral-900 tracking-tight whitespace-nowrap",
-    badge: "text-[9.5px] px-2 py-0.5",
-    city: "text-[11px] sm:text-[11.5px]",
+    root: "group relative flex h-full w-full cursor-pointer flex-col justify-between rounded-[20px] bg-white border border-neutral-200/80 p-3 shadow-2xs transition-all duration-200 hover:shadow-xs hover:border-emerald-400/80 active:scale-[0.99]",
+    imgWrap: "relative mb-2 flex aspect-square w-full items-center justify-center overflow-hidden rounded-[14px] bg-white border border-neutral-200/70 p-2 sm:p-2.5",
+    title: "text-[13px] font-bold leading-tight text-neutral-900 line-clamp-2 min-h-[2.4em] group-hover:text-[#039e1e] transition-colors",
+    price: "text-[15px] font-extrabold text-neutral-900 tracking-tight whitespace-nowrap",
+    badge: "text-[11px] px-2 py-0.5",
+    city: "text-[11px]",
   },
   md: {
-    root: "group relative flex h-full w-full cursor-pointer flex-col justify-between rounded-[18px] bg-white border border-neutral-200/80 p-2 sm:p-2.5 shadow-2xs transition-all duration-200 hover:shadow-xs hover:border-emerald-400/80 active:scale-[0.99]",
-    imgWrap: "relative mb-1.5 flex aspect-square w-full items-center justify-center overflow-hidden rounded-[13px] bg-white border border-neutral-200/70",
-    title: "text-[13px] sm:text-[13.5px] font-black leading-snug text-neutral-900 line-clamp-2 min-h-[2.3rem] sm:min-h-[2.4rem] group-hover:text-[#039e1e] transition-colors",
-    price: "text-[13.5px] sm:text-[14.5px] font-black text-neutral-900 tracking-tight whitespace-nowrap",
-    badge: "text-[9px] px-1.5 py-0.5",
-    city: "text-[10.5px] sm:text-[11px]",
+    root: "group relative flex h-full w-full cursor-pointer flex-col justify-between rounded-[18px] bg-white border border-neutral-200/80 p-3 shadow-2xs transition-all duration-200 hover:shadow-xs hover:border-emerald-400/80 active:scale-[0.99]",
+    imgWrap: "relative mb-1.5 flex aspect-square w-full items-center justify-center overflow-hidden rounded-[13px] bg-white border border-neutral-200/70 p-2",
+    title: "text-[13px] font-bold leading-tight text-neutral-900 line-clamp-2 min-h-[2.4em] group-hover:text-[#039e1e] transition-colors",
+    price: "text-[15px] font-extrabold text-neutral-900 tracking-tight whitespace-nowrap",
+    badge: "text-[11px] px-2 py-0.5",
+    city: "text-[11px]",
   },
   sm: {
     root: "group relative flex w-[110px] shrink-0 cursor-pointer flex-col justify-between rounded-[14px] bg-white border border-neutral-200/80 p-2 shadow-2xs transition-all duration-150 hover:border-emerald-400 active:scale-95",
-    imgWrap: "relative mb-1 flex aspect-square w-full items-center justify-center overflow-hidden rounded-[10px] bg-white border border-neutral-200/60",
+    imgWrap: "relative mb-1 flex aspect-square w-full items-center justify-center overflow-hidden rounded-[10px] bg-white border border-neutral-200/60 p-1",
     title: "text-[11px] font-bold leading-tight text-neutral-900 line-clamp-2 min-h-[1.85rem]",
     price: "text-[11px] font-black text-[#039e1e] tracking-tight truncate",
     badge: "hidden",
@@ -191,7 +193,7 @@ const VARIANTS = {
   },
   row: {
     root: "group relative flex w-full cursor-pointer items-center justify-between rounded-[18px] bg-white border border-neutral-200/80 p-2 sm:p-2.5 shadow-2xs transition-all duration-150 hover:border-emerald-300 active:scale-[0.995]",
-    imgWrap: "relative flex h-14 w-14 aspect-square shrink-0 items-center justify-center overflow-hidden rounded-[12px] bg-white border border-neutral-200/70",
+    imgWrap: "relative flex h-14 w-14 aspect-square shrink-0 items-center justify-center overflow-hidden rounded-[12px] bg-white border border-neutral-200/70 p-1",
     title: "text-[13px] sm:text-[13.5px] font-bold text-neutral-900 line-clamp-2 leading-snug",
     price: "text-[12.5px] sm:text-[13.5px] font-black text-[var(--brand-green)] tracking-tight whitespace-nowrap",
     badge: "text-[9px] px-1.5 py-0.2",
@@ -214,6 +216,7 @@ export function ProductCardUI({
   ratingAvg = 0,
   ratingCount = 0,
   city,
+  photoSrc: customPhotoSrc,
   linkHref,
   actions,
   leading,
@@ -233,9 +236,11 @@ export function ProductCardUI({
 
   const href = linkHref ?? `/dori/${item.id}`;
   const vConfig = VARIANTS[variant];
-  const photoSrc = item.photoVersion
-    ? `/api/medicines/${item.id}/photo?v=${item.photoVersion}`
-    : `/api/medicines/${item.id}/photo`;
+  const photoSrc =
+    customPhotoSrc ??
+    (item.photoVersion
+      ? `/api/medicines/${item.id}/photo?v=${item.photoVersion}`
+      : `/api/medicines/${item.id}/photo`);
 
   const effectiveCity = city ?? (pharmacy ? getShortCity(pharmacy.address, pharmacy.name) : null);
 
@@ -268,7 +273,7 @@ export function ProductCardUI({
                 src={photoSrc}
                 alt={item.name}
                 className="h-full w-full"
-                fit="cover"
+                fit="contain"
                 fallback={renderMedicinePlaceholder(item.type, 18)}
               />
             ) : (
@@ -315,7 +320,7 @@ export function ProductCardUI({
               src={photoSrc}
               alt={item.name}
               className="h-full w-full"
-              fit="cover"
+              fit="contain"
               fallback={renderMedicinePlaceholder(item.type, 16)}
             />
           ) : (
@@ -333,36 +338,37 @@ export function ProductCardUI({
     );
   }
 
-  // ===================== VARIANT: LG & MD (Tik cho'zilgan vertikal kartochka) =====================
-  const hasReviews = ratingCount > 0 && ratingAvg && ratingAvg > 0;
+  // ===================== VARIANT: LG & MD (Vertikal kartochka) =====================
+  const hasReviews = Boolean(ratingCount && ratingCount > 0 && ratingAvg && ratingAvg > 0);
+  const hasPrice = item.price !== null && item.price !== undefined && item.price > 0;
 
   return (
     <div
       onClick={handleCardClick}
       className={`${vConfig.root} ${className ?? ""}`}
     >
-      {/* 1. Rasm (aspect-[4/5] tik cho'zilgan, toza oq fonda, burchaklarda nishon va yurakcha) */}
+      {/* 1. Rasm (aspect-square, toza oq fonda, burchaklarda nishon va yurakcha) */}
       <div className={vConfig.imgWrap}>
-        {/* Nishon (Toifa yoki Maxsus badge) */}
+        {/* Nishon (Toifa yoki Maxsus badge, text-[11px]) */}
         <div className="absolute top-1.5 left-1.5 z-10 pointer-events-none">
           {badge ? (
             badge
           ) : item.type === "crop" ? (
-            <span className={`inline-flex items-center gap-1 rounded-full bg-white/95 backdrop-blur-md font-bold text-emerald-800 shadow-2xs border border-emerald-200/60 ${vConfig.badge}`}>
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/95 backdrop-blur-md font-bold text-emerald-800 shadow-2xs border border-emerald-200/60 text-[11px] px-2 py-0.5">
               <Sprout size={10} className="text-[#039e1e]" /> Ekin
             </span>
           ) : item.type === "animal" ? (
-            <span className={`inline-flex items-center gap-1 rounded-full bg-white/95 backdrop-blur-md font-bold text-amber-900 shadow-2xs border border-amber-200/60 ${vConfig.badge}`}>
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/95 backdrop-blur-md font-bold text-amber-900 shadow-2xs border border-amber-200/60 text-[11px] px-2 py-0.5">
               <Syringe size={10} className="text-amber-600" /> Hayvon
             </span>
           ) : (
-            <span className={`inline-flex items-center gap-1 rounded-full bg-white/95 backdrop-blur-md font-bold text-neutral-700 shadow-2xs border border-neutral-200/60 ${vConfig.badge}`}>
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/95 backdrop-blur-md font-bold text-neutral-700 shadow-2xs border border-neutral-200/60 text-[11px] px-2 py-0.5">
               <Pill size={10} className="text-neutral-500" /> Umumiy
             </span>
           )}
         </div>
 
-        {/* Yurakcha ❤️ (faqat onToggleFavorite mavjud bo'lsa) */}
+        {/* Yurakcha ❤️: h-8 w-8 */}
         {onToggleFavorite && (
           <button
             type="button"
@@ -372,7 +378,7 @@ export function ProductCardUI({
               onToggleFavorite();
             }}
             aria-label={isFavorite ? "Yoqtirilganlardan o'chirish" : "Sevimlilarga qo'shish"}
-            className="absolute top-1.5 right-1.5 z-10 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white/90 backdrop-blur-md shadow-2xs border border-black/5 hover:bg-white active:scale-90 transition"
+            className="absolute top-1.5 right-1.5 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 backdrop-blur-md shadow-2xs border border-black/5 hover:bg-white active:scale-90 transition"
           >
             <Heart
               size={14}
@@ -387,7 +393,7 @@ export function ProductCardUI({
               src={photoSrc}
               alt={item.name}
               className="h-full w-full transition-transform duration-300 group-hover:scale-105"
-              fit="cover"
+              fit="contain"
               fallback={renderMedicinePlaceholder(item.type, 24)}
             />
           ) : (
@@ -396,18 +402,10 @@ export function ProductCardUI({
         </Link>
       </div>
 
-      {/* 2. Ma'lumot qismi: Matnlar hech qachon kesilmaydi, overflow-hidden yo'q */}
+      {/* 2. Ma'lumot qismi: flex flex-1 flex-col justify-between */}
       <div className="flex flex-1 flex-col justify-between">
         <div>
-          {/* Manzil / Shahar */}
-          {effectiveCity && (
-            <div className={`flex items-center gap-1 font-medium text-neutral-400 mb-0.5 ${vConfig.city}`}>
-              <MapPin size={10} className="text-[#039e1e] shrink-0" />
-              <span className="truncate">{effectiveCity}</span>
-            </div>
-          )}
-
-          {/* Dori Nomi: line-clamp-2 va min-h bilan hamma kartochkalar balandligi bir xil */}
+          {/* Dori Nomi: text-[13px] font-bold leading-tight line-clamp-2, min-h-[2.4em] */}
           <Link href={href} className="block group/title">
             <h3 className={vConfig.title} title={item.name}>
               {item.name}
@@ -420,99 +418,107 @@ export function ProductCardUI({
               {item.usage}
             </p>
           )}
-        </div>
 
-        {/* 3. Pastki blok: Reyting, Dona, Narx va Savat tugmasi / Stepper */}
-        <div className="mt-2 pt-1 border-t border-neutral-100/90">
-          {/* Reyting va o'lchov birligi qatori */}
-          <div className="flex items-center justify-between gap-1 mb-1">
+          {/* 3. Reyting va dona qatori: bitta qatorda, justify-between (border yo'q, joy kamaytirilgan) */}
+          <div className="flex items-center justify-between gap-1 mt-1">
             {hasReviews ? (
-              <div className="inline-flex items-center gap-0.5 text-amber-500 font-extrabold text-[10.5px] whitespace-nowrap">
-                <Star size={10} className="fill-amber-400 text-amber-400 shrink-0" />
+              <div className="inline-flex items-center gap-0.5 text-amber-500 font-bold text-[11px] whitespace-nowrap">
+                <Star size={11} className="fill-amber-400 text-amber-400 shrink-0" />
                 <span>{ratingAvg?.toFixed(1)}</span>
-                <span className="text-[9.5px] text-neutral-400 font-medium">
+                <span className="text-neutral-400 font-normal">
                   ({ratingCount})
                 </span>
               </div>
             ) : (
-              <div className="inline-flex items-center gap-0.5 text-[10px] text-neutral-400 font-medium whitespace-nowrap">
-                <Star size={9.5} className="text-neutral-300 shrink-0" />
-                <span>Yangi</span>
-              </div>
+              <div />
             )}
 
-            <span className="text-[10px] text-neutral-400 font-medium whitespace-nowrap">
+            <span className="text-[11px] text-neutral-400 font-normal whitespace-nowrap">
               1 {formatUnit(item.stockUnit)}
             </span>
           </div>
 
-          {/* Pastki qator: Chapda narx, o'ngda yumaloq "+" tugmasi yoki [- 2 +] stepper */}
-          <div className="flex items-center justify-between gap-1 min-h-[36px]">
-            {/* Chapda narx: whitespace-nowrap */}
-            <div className="min-w-0 shrink">
-              <p className={vConfig.price} title={formatPrice(item.price)}>
+          {/* 4. Joylashuv (viloyat/shahar): pin ikonka + text-[11px] text-gray-500, truncate, bitta qator, narxdan oldin */}
+          {effectiveCity && (
+            <div className="flex items-center gap-1 text-[11px] text-gray-500 mt-1 truncate">
+              <MapPin size={11} className="text-[#039e1e] shrink-0" />
+              <span className="truncate">{effectiveCity}</span>
+            </div>
+          )}
+        </div>
+
+        {/* 5. Narx qatori va savat tugmasi */}
+        <div className="flex items-center justify-between gap-1 mt-1.5 min-h-[40px]">
+          {/* Chapda narx yoki "Kelishiladi" */}
+          <div className="min-w-0 shrink">
+            {hasPrice ? (
+              <p className="text-[15px] font-extrabold text-neutral-900 tracking-tight whitespace-nowrap" title={formatPrice(item.price)}>
                 {formatPrice(item.price)}
               </p>
-            </div>
-
-            {/* O'ngda tugma / stepper / slot */}
-            {!hideCartButton && (
-              <div className="shrink-0 ml-1">
-                {actions ? (
-                  actions
-                ) : qty > 0 && onChangeQty ? (
-                  /* Stepper: [-  2  +], kartochka kengligidan chiqib ketmaydi */
-                  <div className="flex items-center rounded-full bg-[#eaf5e1] border border-[#039e1e]/30 p-0.5 text-[#039e1e] shadow-2xs">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        onChangeQty(-1);
-                      }}
-                      className="flex h-6 w-6 min-h-[24px] min-w-[24px] items-center justify-center rounded-full bg-white text-[#039e1e] shadow-2xs active:scale-90 transition font-black hover:bg-neutral-50"
-                      aria-label="Kamaytirish"
-                    >
-                      <Minus size={11} strokeWidth={2.8} />
-                    </button>
-
-                    <span className="px-1.5 text-[11.5px] font-black tracking-tight select-none">
-                      {qty}
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        onChangeQty(1);
-                      }}
-                      className="flex h-6 w-6 min-h-[24px] min-w-[24px] items-center justify-center rounded-full bg-[#039e1e] text-white shadow-2xs active:scale-90 transition font-black hover:bg-[#028518]"
-                      aria-label="Ko'paytirish"
-                    >
-                      <Plus size={11} strokeWidth={2.8} />
-                    </button>
-                  </div>
-                ) : onAdd ? (
-                  /* Yumaloq "+" tugmasi: h-9 w-9, bosish maydoni >= 40x40px */
-                  <div className="relative p-0.5 -m-0.5 flex items-center justify-center">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        onAdd();
-                      }}
-                      className="flex h-9 w-9 min-h-[36px] min-w-[36px] items-center justify-center rounded-full bg-[#039e1e] hover:bg-[#028518] text-white shadow-2xs hover:shadow-xs active:scale-90 transition-all duration-150"
-                      aria-label="Savatga qo'shish"
-                    >
-                      <Plus size={16} strokeWidth={2.8} />
-                    </button>
-                  </div>
-                ) : null}
-              </div>
+            ) : (
+              <p className="text-[12px] font-semibold text-gray-500 whitespace-nowrap">
+                Kelishiladi
+              </p>
             )}
           </div>
+
+          {/* O'ngda savat tugmasi / stepper / slot */}
+          {!hideCartButton && (
+            <div className="shrink-0 ml-1">
+              {actions ? (
+                actions
+              ) : qty > 0 && onChangeQty ? (
+                /* Stepper: [-  2  +] */
+                <div className="flex items-center rounded-full bg-[#eaf5e1] border border-[#039e1e]/30 p-0.5 text-[#039e1e] shadow-2xs shrink-0">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onChangeQty(-1);
+                    }}
+                    className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-[#039e1e] shadow-2xs active:scale-90 transition font-black hover:bg-neutral-50"
+                    aria-label="Kamaytirish"
+                  >
+                    <Minus size={11} strokeWidth={2.8} />
+                  </button>
+
+                  <span className="px-1.5 text-[11.5px] font-black tracking-tight select-none">
+                    {qty}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onChangeQty(1);
+                    }}
+                    className="flex h-6 w-6 items-center justify-center rounded-full bg-[#039e1e] text-white shadow-2xs active:scale-90 transition font-black hover:bg-[#028518]"
+                    aria-label="Ko'paytirish"
+                  >
+                    <Plus size={11} strokeWidth={2.8} />
+                  </button>
+                </div>
+              ) : onAdd ? (
+                /* Yumaloq "+" tugmasi: h-9 w-9, bosish maydoni >= 40x40px */
+                <div className="relative flex h-10 w-10 items-center justify-center shrink-0">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onAdd();
+                    }}
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-[#039e1e] hover:bg-[#028518] text-white shadow-2xs hover:shadow-xs active:scale-90 transition-all duration-150"
+                    aria-label="Savatga qo'shish"
+                  >
+                    <Plus size={16} strokeWidth={2.8} />
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          )}
         </div>
       </div>
     </div>

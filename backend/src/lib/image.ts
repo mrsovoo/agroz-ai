@@ -33,6 +33,7 @@ export async function normalizeMedicinePhoto(
         fit: "inside",
         withoutEnlargement: true,
       })
+      .flatten({ background: "#ffffff" })
       .jpeg({ quality: MEDICINE_PHOTO_QUALITY, mozjpeg: true })
       .toBuffer();
 
@@ -47,6 +48,7 @@ export async function normalizeMedicinePhoto(
           fit: "inside",
           withoutEnlargement: true,
         })
+        .flatten({ background: "#ffffff" })
         .jpeg({ quality, mozjpeg: true })
         .toBuffer();
     }
