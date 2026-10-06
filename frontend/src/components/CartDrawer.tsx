@@ -43,6 +43,7 @@ import {
   closeCart,
 } from "@/lib/cart-store";
 import FadeImage from "@/components/FadeImage";
+import ProductCard from "@/components/ProductCard";
 import OrderTrackingStatusCard from "@/components/OrderTrackingStatusCard";
 import { onTelegramReady, getTelegramUser, requestDeviceLocation } from "@/lib/telegram";
 import { apiUrl, apiFetch } from "@/lib/api-config";
@@ -785,107 +786,55 @@ export default function CartDrawer() {
               ) : (
                 <div className="space-y-2.5">
                   {sortedRecommendations.map((m) => (
-                    <div
+                    <ProductCard
                       key={m.id}
-                      className="flex items-center gap-3 rounded-2xl border border-neutral-200/80 bg-white p-3 shadow-2xs transition hover:border-emerald-300"
-                    >
-                      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-white border border-neutral-200/80 p-1">
-                        {m.hasPhoto ? (
-                          <FadeImage
-                            src={apiUrl(`/api/medicines/${m.id}/photo${m.photoVersion ? `?v=${m.photoVersion}` : ""}`)}
-                            alt={m.name}
-                            className="h-full w-full"
-                            fit="contain"
-                            fallback={
-                              <span
-                                className={`flex h-full w-full items-center justify-center ${
-                                  m.type === "animal"
-                                    ? "bg-amber-50/70 text-amber-600"
-                                    : m.type === "crop"
-                                    ? "bg-emerald-50/70 text-[#039e1e]"
-                                    : "bg-slate-50 text-slate-500"
-                                }`}
-                              >
-                                <TypeIcon type={m.type} size={22} />
-                              </span>
-                            }
-                          />
-                        ) : (
-                          <span
-                            className={`flex h-full w-full items-center justify-center ${
-                              m.type === "animal"
-                                ? "bg-amber-50/70 text-amber-600"
-                                : m.type === "crop"
-                                ? "bg-emerald-50/70 text-[#039e1e]"
-                                : "bg-slate-50 text-slate-500"
-                            }`}
-                          >
-                            <TypeIcon type={m.type} size={22} />
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <span
-                            className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[9.5px] font-bold ${
-                              m.type === "crop"
-                                ? "bg-emerald-50 text-emerald-700"
-                                : m.type === "animal"
-                                ? "bg-amber-50 text-amber-800"
-                                : "bg-slate-100 text-slate-700"
-                            }`}
-                          >
-                            {m.type === "crop" ? "🌱 Ekin" : m.type === "animal" ? "🐄 Hayvon" : "📦 Umumiy"}
-                          </span>
-                        </div>
-                        <h5 className="mt-0.5 text-[13px] font-bold text-neutral-900 leading-snug line-clamp-1">
-                          {m.name}
-                        </h5>
-                        <p className="text-[11px] text-neutral-500 truncate mt-0.5">
+                      product={{
+                        id: m.id,
+                        name: m.name,
+                        price: m.price,
+                        type: m.type,
+                        hasPhoto: m.hasPhoto,
+                        photoVersion: m.photoVersion,
+                        usage: m.usage,
+                        stockUnit: m.stockUnit,
+                      }}
+                      variant="row"
+                      subtitle={
+                        <p className="text-[11px] text-neutral-400 truncate">
                           🏪 {m.pharmacyName}
                         </p>
-                        <div className="mt-1 flex items-center justify-between">
-                          {m.price != null && m.price > 0 ? (
-                            <span className="text-[12.5px] font-black text-[var(--brand-green)]">
-                              {shortSum(m.price)} so&apos;m
-                            </span>
-                          ) : (
-                            <span className="text-[11px] font-semibold text-neutral-400">
-                              Narxi ko&apos;rsatilmagan
-                            </span>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              addItemToCart(
-                                {
-                                  id: m.id,
-                                  name: m.name,
-                                  price: m.price,
-                                  type: m.type,
-                                  hasPhoto: m.hasPhoto,
-                                  photoVersion: m.photoVersion,
-                                  usage: m.usage,
-                                  status: "bor",
-                                },
-                                {
-                                  id: m.pharmacyId,
-                                  name: m.pharmacyName,
-                                  phone: m.pharmacyPhone,
-                                  address: m.pharmacyAddress,
-                                },
-                                1,
-                              );
-                              setSuccessOrder(null);
-                            }}
-                            className="inline-flex items-center gap-1 rounded-xl bg-[var(--brand-green)] hover:brightness-105 active:scale-95 px-2.5 py-1 text-[11px] font-bold text-white shadow-2xs transition"
-                          >
-                            <Plus size={13} strokeWidth={2.5} /> Savatga
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                      }
+                      actions={
+                        <button
+                          type="button"
+                          onClick={() => {
+                            addItemToCart(
+                              {
+                                id: m.id,
+                                name: m.name,
+                                price: m.price,
+                                type: m.type,
+                                hasPhoto: m.hasPhoto,
+                                photoVersion: m.photoVersion,
+                                usage: m.usage,
+                                status: "bor",
+                              },
+                              {
+                                id: m.pharmacyId,
+                                name: m.pharmacyName,
+                                phone: m.pharmacyPhone,
+                                address: m.pharmacyAddress,
+                              },
+                              1,
+                            );
+                            setSuccessOrder(null);
+                          }}
+                          className="inline-flex items-center gap-1 rounded-xl bg-[var(--brand-green)] hover:brightness-105 active:scale-95 px-2.5 py-1.5 text-[11px] font-bold text-white shadow-2xs transition"
+                        >
+                          <Plus size={13} strokeWidth={2.5} /> Savatga
+                        </button>
+                      }
+                    />
                   ))}
                 </div>
               )}
@@ -936,97 +885,79 @@ export default function CartDrawer() {
               </div>
 
               {/* Agro-mahsulotlar ro'yxati */}
-              <ul className="space-y-2.5">
+              <div className="space-y-2.5">
                 {cart.lines.map((line) => {
                   const isSelected = selectedIds.has(line.medicine.id);
                   return (
-                    <li
+                    <ProductCard
                       key={line.medicine.id}
-                      className={`flex items-center gap-3 rounded-2xl border p-2.5 transition-all ${
+                      product={{
+                        id: line.medicine.id,
+                        name: line.medicine.name,
+                        price: line.medicine.price,
+                        type: line.medicine.type,
+                        hasPhoto: line.medicine.hasPhoto,
+                        photoVersion: line.medicine.photoVersion,
+                        stockUnit: line.medicine.stockUnit,
+                      }}
+                      variant="row"
+                      className={`transition-all ${
                         isSelected
                           ? "border-[var(--brand-green)]/40 bg-white shadow-2xs"
                           : "border-neutral-200 bg-neutral-50/60 opacity-70"
                       }`}
-                    >
-                      {/* Tanlash checkboxi */}
-                      <button
-                        type="button"
-                        onClick={() => toggleSelect(line.medicine.id)}
-                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border transition ${
-                          isSelected
-                            ? "bg-[var(--brand-green)] border-[var(--brand-green)] text-white shadow-xs"
-                            : "border-neutral-300 bg-white hover:border-neutral-400"
-                        }`}
-                        aria-label={isSelected ? "Tanlangan" : "Tanlanmagan"}
-                      >
-                        {isSelected && <Check size={14} strokeWidth={3} />}
-                      </button>
-
-                      {/* Rasm yoki belgi */}
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white overflow-hidden border border-neutral-200/80 p-0.5">
-                        {line.medicine.hasPhoto ? (
-                          <FadeImage
-                            src={apiUrl(`/api/medicines/${line.medicine.id}/photo${line.medicine.photoVersion ? `?v=${line.medicine.photoVersion}` : ""}`)}
-                            alt={line.medicine.name}
-                            className="h-full w-full"
-                            fit="contain"
-                            fallback={
-                              <span className="text-[var(--brand-green)]">
-                                <TypeIcon type={line.medicine.type} size={20} />
-                              </span>
-                            }
-                          />
-                        ) : (
-                          <span className="text-[var(--brand-green)]">
-                            <TypeIcon type={line.medicine.type} size={20} />
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[13.5px] font-bold text-neutral-900 truncate">
-                          {line.medicine.name}
-                        </p>
-                        <p className="text-[12.5px] font-black text-[var(--brand-green)]">
-                          {shortSum(line.medicine.price || 0)} so'm
-                        </p>
-                      </div>
-
-                      {/* Miqdor tugmalari */}
-                      <div className="flex items-center gap-1 rounded-xl bg-neutral-100 p-0.5">
+                      leading={
                         <button
                           type="button"
-                          onClick={() => changeQty(line.medicine.id, -1)}
-                          className="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg bg-white text-neutral-800 shadow-xs active:scale-90 transition"
-                          aria-label="Kamaytirish"
+                          onClick={() => toggleSelect(line.medicine.id)}
+                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border transition ${
+                            isSelected
+                              ? "bg-[var(--brand-green)] border-[var(--brand-green)] text-white shadow-xs"
+                              : "border-neutral-300 bg-white hover:border-neutral-400"
+                          }`}
+                          aria-label={isSelected ? "Tanlangan" : "Tanlanmagan"}
                         >
-                          <Minus size={15} />
+                          {isSelected && <Check size={14} strokeWidth={3} />}
                         </button>
-                        <span className="w-6 text-center text-[13px] font-black text-neutral-900 select-none">
-                          {line.qty}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => changeQty(line.medicine.id, 1)}
-                          className="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg bg-white text-neutral-800 shadow-xs active:scale-90 transition"
-                          aria-label="Ko'paytirish"
-                        >
-                          <Plus size={15} />
-                        </button>
-                      </div>
+                      }
+                      actions={
+                        <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1 rounded-xl bg-neutral-100 p-0.5">
+                            <button
+                              type="button"
+                              onClick={() => changeQty(line.medicine.id, -1)}
+                              className="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg bg-white text-neutral-800 shadow-xs active:scale-90 transition"
+                              aria-label="Kamaytirish"
+                            >
+                              <Minus size={15} />
+                            </button>
+                            <span className="w-6 text-center text-[13px] font-black text-neutral-900 select-none">
+                              {line.qty}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => changeQty(line.medicine.id, 1)}
+                              className="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg bg-white text-neutral-800 shadow-xs active:scale-90 transition"
+                              aria-label="Ko'paytirish"
+                            >
+                              <Plus size={15} />
+                            </button>
+                          </div>
 
-                      <button
-                        type="button"
-                        onClick={() => changeQty(line.medicine.id, -line.qty)}
-                        className="flex h-11 w-11 min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-xl text-neutral-400 hover:bg-red-50 hover:text-red-600 transition"
-                        aria-label="O'chirish"
-                      >
-                        <Trash2 size={17} />
-                      </button>
-                    </li>
+                          <button
+                            type="button"
+                            onClick={() => changeQty(line.medicine.id, -line.qty)}
+                            className="flex h-11 w-11 min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-xl text-neutral-400 hover:bg-red-50 hover:text-red-600 transition"
+                            aria-label="O'chirish"
+                          >
+                            <Trash2 size={17} />
+                          </button>
+                        </div>
+                      }
+                    />
                   );
                 })}
-              </ul>
+              </div>
 
               {/* Tanlanganlar jami hisobi */}
               <div className="flex items-center justify-between border-t border-black/5 pt-3">
