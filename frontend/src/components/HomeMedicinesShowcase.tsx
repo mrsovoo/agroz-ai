@@ -143,10 +143,11 @@ export default function HomeMedicinesShowcase({
           </div>
 
           {/* Kartochkalar */}
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 web:grid-cols-4 web:gap-4.5">
+          <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {filtered.slice(0, 12).map((m) => (
               <ProductCard
                 key={m.id}
+                variant="md"
                 medicine={{
                   id: m.id,
                   name: m.name,
