@@ -773,8 +773,12 @@ export default function AdminPanelPage() {
         canvas.height = height;
         const ctx = canvas.getContext("2d");
         if (ctx) {
+          ctx.fillStyle = "#FFFFFF";
+          ctx.fillRect(0, 0, width, height);
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = "high";
           ctx.drawImage(img, 0, 0, width, height);
-          const compressed = canvas.toDataURL("image/jpeg", 0.85);
+          const compressed = canvas.toDataURL("image/jpeg", 0.88);
           setEditMedPhoto(compressed);
         } else {
           setEditMedPhoto(event.target?.result as string);
@@ -918,8 +922,12 @@ export default function AdminPanelPage() {
         canvas.height = height;
         const ctx = canvas.getContext("2d");
         if (ctx) {
+          ctx.fillStyle = "#FFFFFF";
+          ctx.fillRect(0, 0, width, height);
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = "high";
           ctx.drawImage(img, 0, 0, width, height);
-          const compressed = canvas.toDataURL("image/jpeg", 0.85);
+          const compressed = canvas.toDataURL("image/jpeg", 0.88);
           setNewMedPhoto(compressed);
         } else {
           setNewMedPhoto(event.target?.result as string);
@@ -3697,18 +3705,18 @@ export default function AdminPanelPage() {
                         {list.map((m) => (
                           <tr key={m.id} className="hover:bg-slate-50/60 transition">
                             <td className="py-2.5 px-3">
-                              <div className="relative h-11 w-11 overflow-hidden rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0">
+                              <div className="relative h-11 w-11 overflow-hidden rounded-xl bg-white border border-slate-200 flex items-center justify-center shrink-0 p-0.5">
                                 {m.photoData ? (
                                   <img
                                     src={m.photoData}
                                     alt={m.name}
-                                    className="h-full w-full object-cover"
+                                    className="h-full w-full object-contain"
                                   />
                                 ) : m.photoFileId ? (
                                   <img
                                     src={`/api/medicines/${m.id}/photo`}
                                     alt={m.name}
-                                    className="h-full w-full object-cover"
+                                    className="h-full w-full object-contain"
                                   />
                                 ) : (
                                   <ImageIcon size={18} className="text-slate-400" />
@@ -3821,13 +3829,13 @@ export default function AdminPanelPage() {
                     Dori rasmi (Mahsulot fotosi)
                   </label>
                   <div className="flex items-center gap-4">
-                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center">
+                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-2 border-dashed border-slate-200 bg-white flex items-center justify-center p-1">
                       {editMedPhoto ? (
                         <>
                           <img
                             src={editMedPhoto}
                             alt="Preview"
-                            className="h-full w-full object-cover"
+                            className="h-full w-full object-contain"
                           />
                           <button
                             type="button"
@@ -4046,13 +4054,13 @@ export default function AdminPanelPage() {
                     Dori rasmi (Mahsulot fotosi)
                   </label>
                   <div className="flex items-center gap-4">
-                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center">
+                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-2 border-dashed border-slate-200 bg-white flex items-center justify-center p-1">
                       {newMedPhoto ? (
                         <>
                           <img
                             src={newMedPhoto}
                             alt="Preview"
-                            className="h-full w-full object-cover"
+                            className="h-full w-full object-contain"
                           />
                           <button
                             type="button"

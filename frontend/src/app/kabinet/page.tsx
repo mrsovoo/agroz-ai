@@ -469,16 +469,13 @@ export default function PartnerKabinetPage() {
       img.onload = () => {
         let width = img.width;
         let height = img.height;
-        const maxDim = 800;
+        const maxW = 1080;
+        const maxH = 1450;
 
-        if (width > maxDim || height > maxDim) {
-          if (width > height) {
-            height = Math.round((height * maxDim) / width);
-            width = maxDim;
-          } else {
-            width = Math.round((width * maxDim) / height);
-            height = maxDim;
-          }
+        if (width > maxW || height > maxH) {
+          const ratio = Math.min(maxW / width, maxH / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
         }
 
         const canvas = document.createElement("canvas");
@@ -486,8 +483,12 @@ export default function PartnerKabinetPage() {
         canvas.height = height;
         const ctx = canvas.getContext("2d");
         if (ctx) {
+          ctx.fillStyle = "#FFFFFF";
+          ctx.fillRect(0, 0, width, height);
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = "high";
           ctx.drawImage(img, 0, 0, width, height);
-          const compressed = canvas.toDataURL("image/jpeg", 0.8);
+          const compressed = canvas.toDataURL("image/jpeg", 0.88);
           setNewMedPhoto(compressed);
         } else {
           setNewMedPhoto(event.target?.result as string);
@@ -1289,9 +1290,9 @@ export default function PartnerKabinetPage() {
                   <div key={m.id} className="rounded-2xl border border-zinc-200 bg-white p-3 shadow-xs flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5 flex-1 min-w-0">
                       {m.photoData ? (
-                        <div className="w-11 h-11 rounded-xl overflow-hidden bg-zinc-100 border border-zinc-200 shrink-0 shadow-2xs">
+                        <div className="w-11 h-11 rounded-xl overflow-hidden bg-white border border-zinc-200 shrink-0 shadow-2xs p-0.5">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={m.photoData} alt={m.name} className="w-full h-full object-cover" />
+                          <img src={m.photoData} alt={m.name} className="w-full h-full object-contain" />
                         </div>
                       ) : (
                         <div className="w-11 h-11 rounded-xl bg-zinc-100 border border-zinc-200 flex items-center justify-center text-lg shrink-0">
@@ -1571,9 +1572,9 @@ export default function PartnerKabinetPage() {
               <div>
                 <label className="font-bold text-zinc-700 block mb-1">Dori fotosurati (ixtiyoriy)</label>
                 {newMedPhoto ? (
-                  <div className="relative w-full h-36 rounded-2xl overflow-hidden border border-zinc-200 bg-zinc-100 shadow-2xs">
+                  <div className="relative w-full h-36 rounded-2xl overflow-hidden border border-zinc-200 bg-white shadow-2xs p-2">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={newMedPhoto} alt="Dori fotosurati" className="w-full h-full object-cover" />
+                    <img src={newMedPhoto} alt="Dori fotosurati" className="w-full h-full object-contain" />
                     <button
                       type="button"
                       onClick={() => {

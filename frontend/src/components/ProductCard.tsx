@@ -243,8 +243,8 @@ export default function ProductCard({
       onClick={handleCardClick}
       className="group relative flex h-full w-full cursor-pointer flex-col justify-between rounded-[22px] bg-white border border-neutral-200/80 p-2.5 sm:p-3 shadow-2xs transition-all duration-200 hover:shadow-xs hover:border-emerald-400/80 active:scale-[0.99]"
     >
-      {/* Rasm maydoni — toza, burchaklari kartochkaga mos (rounded-[16px]) */}
-      <div className="relative mb-2.5 flex aspect-[1/1] w-full items-center justify-center overflow-hidden rounded-[16px] bg-neutral-100/80 border border-neutral-200/60">
+      {/* Rasm maydoni — toza, oq fonda, burchaklari kartochkaga mos (rounded-[16px]) */}
+      <div className="relative mb-2.5 flex aspect-[1/1] w-full items-center justify-center overflow-hidden rounded-[16px] bg-white border border-neutral-200/80">
         {/* Tur ikonkasi va belgisi */}
         <div className="absolute top-2 left-2 z-10 pointer-events-none">
           {medicine.type === "crop" ? (
@@ -285,8 +285,8 @@ export default function ProductCard({
             <FadeImage
               src={medicine.photoVersion ? `/api/medicines/${medicine.id}/photo?v=${medicine.photoVersion}` : `/api/medicines/${medicine.id}/photo`}
               alt={medicine.name}
-              className="h-full w-full transition-transform duration-300 group-hover:scale-105"
-              fit="cover"
+              className="h-full w-full transition-transform duration-300 group-hover:scale-105 p-1.5"
+              fit="contain"
               fallback={renderPlaceholder()}
             />
           ) : (

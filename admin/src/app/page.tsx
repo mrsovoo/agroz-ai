@@ -345,8 +345,14 @@ function compressImageForAdmin(file: File): Promise<string> {
         if (!ctx) {
           return reject(new Error("Canvas context mavjud emas"));
         }
+        // Oq fon bilan to'ldiramiz (Shaffof / transparent PNG fonsiz yuklanganda
+        // orqasi qora bo'lib qolmasligi uchun toza oq rang bilan bo'yaymiz)
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillRect(0, 0, width, height);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
         ctx.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.88);
         resolve(dataUrl);
       };
       img.onerror = () => reject(new Error("Rasmni o'qib bo'lmadi"));
@@ -2442,18 +2448,18 @@ export default function SuperAdminPage() {
                             {list.map((m) => (
                               <tr key={m.id} className="hover:bg-zinc-50/70 transition">
                                 <td className="py-2.5 px-3">
-                                  <div className="relative h-11 w-11 overflow-hidden rounded-xl bg-zinc-100 border border-zinc-200 flex items-center justify-center shrink-0">
+                                  <div className="relative h-11 w-11 overflow-hidden rounded-xl bg-white border border-zinc-200 flex items-center justify-center shrink-0 p-0.5">
                                     {m.photoData ? (
                                       <img
                                         src={m.photoData}
                                         alt={m.name}
-                                        className="h-full w-full object-cover"
+                                        className="h-full w-full object-contain"
                                       />
                                     ) : m.photoFileId ? (
                                       <img
                                         src={`/api/medicines/${m.id}/photo`}
                                         alt={m.name}
-                                        className="h-full w-full object-cover"
+                                        className="h-full w-full object-contain"
                                       />
                                     ) : (
                                       <ImageIcon size={18} className="text-zinc-400" />
@@ -2566,13 +2572,13 @@ export default function SuperAdminPage() {
                         Dori rasmi (Mahsulot fotosi)
                       </label>
                       <div className="flex items-center gap-4">
-                        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-2 border-dashed border-zinc-200 bg-zinc-50 flex items-center justify-center">
+                        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-2 border-dashed border-zinc-200 bg-white flex items-center justify-center p-1">
                           {editMedPhoto ? (
                             <>
                               <img
                                 src={editMedPhoto}
                                 alt="Preview"
-                                className="h-full w-full object-cover"
+                                className="h-full w-full object-contain"
                               />
                               <button
                                 type="button"
@@ -2791,13 +2797,13 @@ export default function SuperAdminPage() {
                         Dori rasmi (Mahsulot fotosi)
                       </label>
                       <div className="flex items-center gap-4">
-                        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-2 border-dashed border-zinc-200 bg-zinc-50 flex items-center justify-center">
+                        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-2 border-dashed border-zinc-200 bg-white flex items-center justify-center p-1">
                           {newMedPhoto ? (
                             <>
                               <img
                                 src={newMedPhoto}
                                 alt="Preview"
-                                className="h-full w-full object-cover"
+                                className="h-full w-full object-contain"
                               />
                               <button
                                 type="button"

@@ -266,6 +266,12 @@ router.get("/:id/photo", async (req, res) => {
 
     if (medicine.photoData) {
       const comma = medicine.photoData.indexOf(",");
+      let mime = "image/jpeg";
+      if (comma >= 0) {
+        const prefix = medicine.photoData.slice(0, comma);
+        const match = prefix.match(/^data:([^;]+);/);
+        if (match) mime = match[1];
+      }
       const b64 = comma >= 0 ? medicine.photoData.slice(comma + 1) : medicine.photoData;
       const buf = Buffer.from(b64, "base64");
       const etag = `"${medicine.id}-${buf.length}"`;
@@ -273,7 +279,7 @@ router.get("/:id/photo", async (req, res) => {
         return res.status(304).end();
       }
 
-      res.setHeader("Content-Type", "image/jpeg");
+      res.setHeader("Content-Type", mime);
       res.setHeader("ETag", etag);
       res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
       return res.send(buf);

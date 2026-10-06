@@ -172,8 +172,8 @@ export default async function MedicineDetail({ medicine }: { medicine: MedicineD
 
       {/* Mahsulot: chapda rasm, o'ngda ma'lumot (katta ekranda ustma-ust emas) */}
       <div className="mt-3 grid gap-4 web:grid-cols-[420px_minmax(0,1fr)] web:gap-8">
-        {/* Katta rasm — 5:7 (250×350 proportsiyasining kattalashtirilgani), oq fon */}
-        <div className="overflow-hidden rounded-[24px] bg-white shadow-sm">
+        {/* Katta rasm — 5:7 (250×350 proportsiyasining kattalashtirilgani), toza oq fon */}
+        <div className="overflow-hidden rounded-[24px] bg-white shadow-sm border border-neutral-200/70 p-2 sm:p-4 flex items-center justify-center">
           {medicine.hasPhoto ? (
             <FadeImage
               src={medicine.photoVersion ? `/api/medicines/${medicine.id}/photo?v=${medicine.photoVersion}` : `/api/medicines/${medicine.id}/photo`}

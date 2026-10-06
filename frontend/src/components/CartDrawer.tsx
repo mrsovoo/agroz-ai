@@ -789,12 +789,13 @@ export default function CartDrawer() {
                       key={m.id}
                       className="flex items-center gap-3 rounded-2xl border border-neutral-200/80 bg-white p-3 shadow-2xs transition hover:border-emerald-300"
                     >
-                      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-neutral-100 border border-black/5">
+                      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-white border border-neutral-200/80 p-1">
                         {m.hasPhoto ? (
                           <FadeImage
                             src={apiUrl(`/api/medicines/${m.id}/photo${m.photoVersion ? `?v=${m.photoVersion}` : ""}`)}
                             alt={m.name}
-                            className="h-full w-full object-cover"
+                            className="h-full w-full"
+                            fit="contain"
                             fallback={
                               <span
                                 className={`flex h-full w-full items-center justify-center ${
@@ -962,12 +963,13 @@ export default function CartDrawer() {
                       </button>
 
                       {/* Rasm yoki belgi */}
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-neutral-100 overflow-hidden border border-black/5">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white overflow-hidden border border-neutral-200/80 p-0.5">
                         {line.medicine.hasPhoto ? (
                           <FadeImage
                             src={apiUrl(`/api/medicines/${line.medicine.id}/photo${line.medicine.photoVersion ? `?v=${line.medicine.photoVersion}` : ""}`)}
                             alt={line.medicine.name}
-                            className="h-full w-full object-cover"
+                            className="h-full w-full"
+                            fit="contain"
                             fallback={
                               <span className="text-[var(--brand-green)]">
                                 <TypeIcon type={line.medicine.type} size={20} />
