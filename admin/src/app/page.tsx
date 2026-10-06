@@ -39,7 +39,7 @@ import {
   UserCheck,
   Plus,
   Edit3,
-  Image,
+  Image as ImageIcon,
   Check,
   X,
 } from "lucide-react";
@@ -2456,7 +2456,7 @@ export default function SuperAdminPage() {
                                         className="h-full w-full object-cover"
                                       />
                                     ) : (
-                                      <Image size={18} className="text-zinc-400" />
+                                      <ImageIcon size={18} className="text-zinc-400" />
                                     )}
                                   </div>
                                 </td>
@@ -2585,7 +2585,7 @@ export default function SuperAdminPage() {
                             </>
                           ) : (
                             <div className="flex flex-col items-center justify-center text-zinc-400">
-                              <Image size={24} />
+                              <ImageIcon size={24} />
                               <span className="text-[10px] mt-0.5">Rasm yo&apos;q</span>
                             </div>
                           )}
@@ -2593,7 +2593,7 @@ export default function SuperAdminPage() {
 
                         <div className="flex-1 space-y-1.5">
                           <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-emerald-50 px-3.5 py-2 text-xs font-bold text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition active:scale-95">
-                            <Image size={15} />
+                            <ImageIcon size={15} />
                             <span>{editMedPhoto ? "Boshqa rasm yuklash" : "Yangi rasm tanlash"}</span>
                             <input
                               type="file"
@@ -2810,7 +2810,7 @@ export default function SuperAdminPage() {
                             </>
                           ) : (
                             <div className="flex flex-col items-center justify-center text-zinc-400">
-                              <Image size={24} />
+                              <ImageIcon size={24} />
                               <span className="text-[10px] mt-0.5">Rasm yo&apos;q</span>
                             </div>
                           )}
@@ -2818,7 +2818,7 @@ export default function SuperAdminPage() {
 
                         <div className="flex-1 space-y-1.5">
                           <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-emerald-50 px-3.5 py-2 text-xs font-bold text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition active:scale-95">
-                            <Image size={15} />
+                            <ImageIcon size={15} />
                             <span>{newMedPhoto ? "Boshqa rasm yuklash" : "Rasm tanlash"}</span>
                             <input
                               type="file"

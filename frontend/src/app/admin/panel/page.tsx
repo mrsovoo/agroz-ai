@@ -33,7 +33,7 @@ import {
   AlertCircle,
   Building,
   Megaphone,
-  Image,
+  Image as ImageIcon,
   Plus,
   Edit3,
   ToggleLeft,
@@ -3534,7 +3534,7 @@ export default function AdminPanelPage() {
                         </div>
                       ) : (
                         <div className="flex h-20 items-center gap-3 bg-slate-800/30 px-4">
-                          <Image size={20} className="text-slate-600" />
+                          <ImageIcon size={20} className="text-slate-600" />
                           <h4 className="text-sm font-bold text-slate-900">{ad.title}</h4>
                         </div>
                       )}
@@ -3711,7 +3711,7 @@ export default function AdminPanelPage() {
                                     className="h-full w-full object-cover"
                                   />
                                 ) : (
-                                  <Image size={18} className="text-slate-400" />
+                                  <ImageIcon size={18} className="text-slate-400" />
                                 )}
                               </div>
                             </td>
@@ -3840,7 +3840,7 @@ export default function AdminPanelPage() {
                         </>
                       ) : (
                         <div className="flex flex-col items-center justify-center text-slate-400">
-                          <Image size={24} />
+                          <ImageIcon size={24} />
                           <span className="text-[10px] mt-0.5">Rasm yo&apos;q</span>
                         </div>
                       )}
@@ -3848,7 +3848,7 @@ export default function AdminPanelPage() {
 
                     <div className="flex-1 space-y-1.5">
                       <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-emerald-50 px-3.5 py-2 text-xs font-bold text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition active:scale-95">
-                        <Image size={15} />
+                        <ImageIcon size={15} />
                         <span>{editMedPhoto ? "Boshqa rasm yuklash" : "Yangi rasm tanlash"}</span>
                         <input
                           type="file"
@@ -4065,7 +4065,7 @@ export default function AdminPanelPage() {
                         </>
                       ) : (
                         <div className="flex flex-col items-center justify-center text-slate-400">
-                          <Image size={24} />
+                          <ImageIcon size={24} />
                           <span className="text-[10px] mt-0.5">Rasm yo&apos;q</span>
                         </div>
                       )}
@@ -4073,7 +4073,7 @@ export default function AdminPanelPage() {
 
                     <div className="flex-1 space-y-1.5">
                       <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-emerald-50 px-3.5 py-2 text-xs font-bold text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition active:scale-95">
-                        <Image size={15} />
+                        <ImageIcon size={15} />
                         <span>{newMedPhoto ? "Boshqa rasm yuklash" : "Rasm tanlash"}</span>
                         <input
                           type="file"
