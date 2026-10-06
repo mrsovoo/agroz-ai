@@ -19,6 +19,7 @@ import {
   RefreshCw,
   Lock,
 } from "lucide-react";
+import ProductCard from "@/components/ProductCard";
 import { RADIUS_OPTIONS } from "@/lib/constants";
 import { distanceKm, roundKm } from "@/lib/geo";
 
@@ -684,30 +685,21 @@ export default function MapClient() {
               {p.medicines.length > 0 && (
                 <div className="mt-2.5 flex gap-2 overflow-x-auto pb-1">
                   {p.medicines.slice(0, 8).map((m) => (
-                    <div key={m.id} className="w-[64px] shrink-0">
-                      {m.hasPhoto ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={m.photoVersion ? `/api/medicines/${m.id}/photo?v=${m.photoVersion}` : `/api/medicines/${m.id}/photo`}
-                          alt={m.name}
-                          className="h-[64px] w-[64px] rounded-xl object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div
-                          className="flex h-[64px] w-[64px] items-center justify-center rounded-xl"
-                          style={{ background: "var(--brand-green-soft)", color: "var(--brand-green)" }}
-                        >
-                          <Pill size={20} />
-                        </div>
-                      )}
-                      <p className="mt-1 line-clamp-2 text-[10.5px] font-semibold leading-tight text-[var(--brand-ink)]">
-                        {m.name}
-                      </p>
-                    </div>
+                    <ProductCard
+                      key={m.id}
+                      product={{
+                        id: m.id,
+                        name: m.name,
+                        price: null,
+                        hasPhoto: m.hasPhoto,
+                        photoVersion: m.photoVersion,
+                        type: "general",
+                      }}
+                      variant="sm"
+                    />
                   ))}
                   {p.medicines.length > 8 && (
-                    <div className="flex h-[64px] w-[64px] shrink-0 items-center justify-center rounded-xl bg-slate-100 text-[12px] font-bold text-slate-600">
+                    <div className="flex w-[110px] shrink-0 items-center justify-center rounded-[14px] bg-neutral-100 text-[12px] font-bold text-neutral-600 border border-neutral-200/80">
                       +{p.medicines.length - 8}
                     </div>
                   )}

@@ -16,6 +16,7 @@ import {
   Lock,
   Star,
 } from "lucide-react";
+import ProductCard from "@/components/ProductCard";
 import { CONFIDENCE_THRESHOLD } from "@/lib/constants";
 
 type Stock = { medicine: string; status: string; price: number | null };
@@ -342,34 +343,18 @@ export default function NearbyHelp({
                 {p.medicines.length > 0 && (
                   <div className="mt-2.5 flex gap-2 overflow-x-auto pb-1">
                     {p.medicines.slice(0, 6).map((m) => (
-                      <div key={m.id} className="w-[68px] shrink-0">
-                        {m.hasPhoto ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={m.photoVersion ? `/api/medicines/${m.id}/photo?v=${m.photoVersion}` : `/api/medicines/${m.id}/photo`}
-                            alt={m.name}
-                            className={`h-[68px] w-[68px] rounded-xl object-cover ${m.status !== "bor" ? "opacity-40 grayscale" : ""}`}
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div
-                            className="flex h-[68px] w-[68px] items-center justify-center rounded-xl"
-                            style={{ background: "var(--brand-green-soft)", color: "var(--brand-green)" }}
-                          >
-                            <Pill size={22} />
-                          </div>
-                        )}
-                        <p className="mt-1 line-clamp-2 text-[10.5px] font-semibold leading-tight text-[var(--brand-ink)]">
-                          {m.name}
-                        </p>
-                        {m.price ? (
-                          <p className="text-[10px] font-bold text-[var(--brand-green)]">
-                            {shortSum(m.price)} so&apos;m
-                          </p>
-                        ) : m.status !== "bor" ? (
-                          <p className="text-[10px] font-bold text-[#d7263d]">Yo&apos;q</p>
-                        ) : null}
-                      </div>
+                      <ProductCard
+                        key={m.id}
+                        product={{
+                          id: m.id,
+                          name: m.name,
+                          price: m.price ?? null,
+                          hasPhoto: m.hasPhoto,
+                          photoVersion: m.photoVersion,
+                          type: "crop",
+                        }}
+                        variant="sm"
+                      />
                     ))}
                   </div>
                 )}
