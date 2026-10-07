@@ -88,6 +88,15 @@ function createPool(): Pool {
     connectionTimeoutMillis: 10_000,
   });
 
+  const dbName = databaseUrl.split("/").pop()?.split("?")[0] || "noma'lum";
+  if (dbName === "agroz_dev" || process.env.NODE_ENV !== "production") {
+    if (dbName === "agroz_dev") {
+      console.log(`[Database] 🟢 DEVELOPMENT: 'agroz_dev' alohida test bazasiga ulandi (Production bazasiga tegilmaydi).`);
+    } else if (dbName === "neondb") {
+      console.warn(`[Database] ⚠️ DIQQAT: 'neondb' (production) bazasiga ulandingiz! Mahalliy testlar uchun 'agroz_dev' bazasidan foydalaning.`);
+    }
+  }
+
   // Pool'dagi kutilmagan xatolar process'ni yiqitmasligi uchun.
   pool.on("error", (err) => {
     console.error("[db] idle client error:", err.message);

@@ -38,11 +38,15 @@ import { useRouter } from "next/navigation";
 import PharmacyDashboard, { LOW_STOCK_THRESHOLD } from "./PharmacyDashboard";
 import AgrozBusinessLogo from "@/components/AgrozBusinessLogo";
 
-/** Backend URL — Vercel yoki to'g'ridan-to'g'ri backend */
+/** Backend URL — Development rejimida har doim localhost:4000, production'da Railway */
 const BACKEND =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") ||
   process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/+$/, "") ||
-  "https://agroz-ai-backend-production.up.railway.app";
+  (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+    ? "http://localhost:4000"
+    : process.env.NODE_ENV === "development"
+    ? "http://localhost:4000"
+    : "https://agroz-ai-backend-production.up.railway.app");
 
 type StockFilter = "all" | "low" | "out" | "draft";
 
