@@ -1464,7 +1464,8 @@ export default function AdminPanelPage() {
                 <div>
                   <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                     <Store className="text-emerald-500" size={20} />
-                    Dorixonalar / Agro-do&apos;konlar Boshqaruvi
+                    <span>Dorixonalar / Agro-do&apos;konlar Boshqaruvi</span>
+                    <img src="/logo-business.svg" alt="AgrozGO Business" className="h-5 w-auto object-contain ml-1" />
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
                     Platformadagi barcha agro-do&apos;konlar va dorixonalar kabinetlari, mahsulotlar nazorati
@@ -1733,7 +1734,8 @@ export default function AdminPanelPage() {
                 <div>
                   <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                     <Users className="text-emerald-500" size={20} />
-                    Mutaxassislar (Agronom va Veterinarlar)
+                    <span>Mutaxassislar (Agronom va Veterinarlar)</span>
+                    <img src="/logo-business.svg" alt="AgrozGO Business" className="h-5 w-auto object-contain ml-1" />
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
                     Dehqon va chorvadorlarga joyiga borib yordam beruvchi mutaxassislarni ko&apos;rib chiqish, tasdiqlash va boshqarish

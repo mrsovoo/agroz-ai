@@ -36,6 +36,7 @@ import { haptic } from "@/lib/telegram";
 import { isNativeApp } from "@/lib/capacitor";
 import { useRouter } from "next/navigation";
 import PharmacyDashboard, { LOW_STOCK_THRESHOLD } from "./PharmacyDashboard";
+import AgrozBusinessLogo from "@/components/AgrozBusinessLogo";
 
 /** Backend URL — Vercel yoki to'g'ridan-to'g'ri backend */
 const BACKEND =
@@ -627,20 +628,19 @@ export default function PartnerKabinetPage() {
   return (
     <div className="min-h-screen bg-[#f8fafc] pb-24 text-zinc-900 font-sans antialiased">
       {/* 1. Header (Sticky App Bar) — Radikal Sodda va Aniq */}
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-zinc-200/80 bg-white/95 backdrop-blur-md px-4 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-zinc-200/80 bg-white/95 backdrop-blur-md px-4 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white font-bold text-lg shadow-xs">
-            {isPharmacy ? "🏪" : partner?.specialty?.toLowerCase().includes("vet") ? "🐾" : "🌾"}
-          </div>
+          <AgrozBusinessLogo className="h-7 w-auto shrink-0" />
+          <div className="h-5 w-px bg-zinc-200 shrink-0" />
           <div className="min-w-0">
-            <h1 className="text-sm font-black tracking-tight text-zinc-900 truncate">
-              {partner ? partner.organization || partner.name : "AgrozGO Kabinet"}
+            <h1 className="text-xs font-black tracking-tight text-zinc-900 truncate">
+              {partner ? partner.organization || partner.name : "AgrozGO Business"}
             </h1>
-            <p className="text-[11px] font-semibold text-zinc-500 flex items-center gap-1.5 truncate">
+            <p className="text-[10px] font-semibold text-zinc-500 flex items-center gap-1.5 truncate">
               <span>{isPharmacy ? "Agro-Dorixona" : partner?.specialty || "Mutaxassis"}</span>
               {partner?.rating?.avg ? (
                 <span className="flex items-center text-amber-600 font-bold">
-                  <Star size={11} fill="currentColor" className="mr-0.5" />
+                  <Star size={10} fill="currentColor" className="mr-0.5" />
                   {partner.rating.avg.toFixed(1)}
                 </span>
               ) : null}
@@ -693,10 +693,34 @@ export default function PartnerKabinetPage() {
         </div>
       )}
 
+      {/* Agar profil topilmagan bo'lsa (tashqaridan ochilganda) */}
+      {!loading && !partner && !error && (
+        <div className="mx-4 mt-6 rounded-3xl border border-zinc-200 bg-white p-6 text-center shadow-xs space-y-4">
+          <div className="flex justify-center">
+            <AgrozBusinessLogo className="h-10 w-auto" />
+          </div>
+          <h2 className="text-base font-black text-zinc-900">AgrozGO Business</h2>
+          <p className="text-xs text-zinc-600 leading-relaxed max-w-sm mx-auto">
+            Ushbu kabinet agronomlar, veterinarlar va agro-dorixona egalari uchun mo&apos;ljallangan. Profilingizni ochish uchun <b>@agroz_auth_bot</b> orqali kiring.
+          </p>
+          <a
+            href="https://t.me/agroz_auth_bot"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-xl bg-[#1b1464] px-5 py-2.5 text-xs font-bold text-white shadow-xs transition hover:opacity-90"
+          >
+            <span>Botga o&apos;tish</span>
+          </a>
+        </div>
+      )}
+
       {/* 2. Agar Foydalanuvchi Arizasi Kutilayotgan Bo'lsa (Pending Approval) */}
       {partner && !partner.isApproved && (
         <div className="mx-4 mt-4 space-y-4">
           <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-5 text-center shadow-xs">
+            <div className="flex justify-center mb-3">
+              <AgrozBusinessLogo className="h-8 w-auto" />
+            </div>
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-800">
               <Clock size={24} />
             </div>
@@ -1495,15 +1519,15 @@ export default function PartnerKabinetPage() {
 
               {/* Texnik Yordam */}
               <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-xs flex items-center justify-between">
-                <div>
-                  <h4 className="text-xs font-bold text-zinc-900">AgrozGO Texnik Yordam</h4>
-                  <p className="text-[11px] text-zinc-500">Savollar yoki takliflar bo&apos;yicha</p>
+                <div className="space-y-1">
+                  <AgrozBusinessLogo className="h-5 w-auto" />
+                  <p className="text-[11px] text-zinc-500">Texnik yordam va savollar bo&apos;yicha</p>
                 </div>
                 <a
                   href="https://t.me/agroz_support"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-xl bg-zinc-900 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-zinc-800"
+                  className="rounded-xl bg-[#1b1464] px-3.5 py-2 text-xs font-bold text-white shadow-xs transition hover:opacity-90"
                 >
                   @agroz_support
                 </a>

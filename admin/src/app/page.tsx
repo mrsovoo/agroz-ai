@@ -2080,7 +2080,8 @@ export default function SuperAdminPage() {
                 <div>
                   <h2 className="text-base font-bold text-zinc-900 flex items-center gap-2">
                     <Store className="text-zinc-900" size={20} />
-                    🏪 Dorixonalar (Agro-do&apos;konlar) Boshqaruvi
+                    <span>🏪 Dorixonalar (Agro-do&apos;konlar) Boshqaruvi</span>
+                    <img src="/logo-business.svg" alt="AgrozGO Business" className="h-5 w-auto object-contain ml-1" />
                   </h2>
                   <p className="mt-1 text-xs text-zinc-500">
                     Platformadagi barcha dorixonalar kabinetlari, dori vositalari nazorati va super boshqaruvi.
@@ -3027,7 +3028,8 @@ export default function SuperAdminPage() {
                 <div>
                   <h2 className="text-base font-bold text-zinc-900 flex items-center gap-2">
                     <Users className="text-zinc-900" size={20} />
-                    👨‍🌾 Mutaxassislar (Agronomlar va Veterinarlar)
+                    <span>👨‍🌾 Mutaxassislar (Agronomlar va Veterinarlar)</span>
+                    <img src="/logo-business.svg" alt="AgrozGO Business" className="h-5 w-auto object-contain ml-1" />
                   </h2>
                   <p className="mt-1 text-xs text-zinc-500">
                     O&apos;simlik va hayvon kasalliklarini davolash, chaqiruvlarni qabul qilish va dehqonlarga joyida maslahat berish mutaxassislari.
