@@ -77,16 +77,27 @@ export default function ProductCardActions({
     notifyCartChanged();
   }
 
+  async function handleNotifyWaitlist() {
+    setNotified(true);
+    try {
+      const res = await fetch(`/api/medicines/${medicine.id}/waitlist`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json().catch(() => null);
+      if (data?.ok) {
+        // Obuna bo'ldi
+      }
+    } catch {
+      // jim o'tadi
+    }
+  }
+
   return (
     <div className="mt-3 flex items-center gap-2">
       {isOutOfStock ? (
         <button
-          onClick={() => {
-            setNotified(true);
-            alert(
-              `Xabarnoma olindi! "${medicine.name}" dorisi agro-do'konga kelganda sizga Telegram orqali xabar yuboriladi.`,
-            );
-          }}
+          onClick={handleNotifyWaitlist}
           className={`flex flex-1 items-center justify-center gap-2 rounded-2xl py-3.5 text-[14.5px] font-bold border transition active:scale-[0.98] ${
             notified
               ? "border-emerald-300 bg-emerald-50 text-emerald-700"

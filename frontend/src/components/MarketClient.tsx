@@ -551,10 +551,11 @@ export default function MarketClient() {
           )}
         </div>
       ) : (
-        <div className="mt-4 grid grid-cols-2 gap-3.5">
+        <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           {displayCards.map((c) => (
             <ProductCard
               key={`${c.pharmacy.id}:${c.medicine.id}`}
+              variant="lg"
               medicine={c.medicine}
               pharmacy={{
                 id: c.pharmacy.id,
@@ -599,76 +600,60 @@ export default function MarketClient() {
                 </p>
               </div>
             ) : (
-              <ul className="mt-3 space-y-2 pb-2">
+              <div className="mt-3 space-y-2 pb-2">
                 {favCards.map((c) => {
                   const inCart =
                     cartState?.pharmacy.id === c.pharmacy.id
                       ? cartState.lines.find((l) => l.medicine.id === c.medicine.id)
                       : undefined;
                   return (
-                    <li key={`${c.pharmacy.id}:${c.medicine.id}`} className="flex items-center gap-3 rounded-2xl bg-[var(--brand-bg)] p-2.5">
-                      {c.medicine.hasPhoto ? (
-                        <FadeImage
-                          src={c.medicine.photoVersion ? `/api/medicines/${c.medicine.id}/photo?v=${c.medicine.photoVersion}` : `/api/medicines/${c.medicine.id}/photo`}
-                          alt={c.medicine.name}
-                          className="h-14 w-14 shrink-0 rounded-xl bg-white"
-                          fit="contain"
-                          fallback={
-                            <span
-                              className="flex h-full w-full items-center justify-center bg-white"
-                              style={{ color: c.medicine.type === "animal" ? "var(--brand-ink)" : "var(--brand-green)" }}
-                            >
-                              <TypeIcon type={c.medicine.type} size={22} />
-                            </span>
-                          }
-                        />
-                      ) : (
-                        <span
-                          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white"
-                          style={{ color: c.medicine.type === "animal" ? "var(--brand-ink)" : "var(--brand-green)" }}
-                        >
-                          <TypeIcon type={c.medicine.type} size={22} />
-                        </span>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="line-clamp-1 text-[14px] font-bold text-[var(--brand-ink)]">
-                          {c.medicine.name}
-                        </p>
-                        <p className="text-[12px] font-semibold text-[var(--brand-green)]">
-                          {shortSum(c.medicine.price || 0)} so'm
-                        </p>
-                        <p className="flex items-center gap-1 text-[11px] text-[var(--brand-muted)]">
+                    <ProductCard
+                      key={`${c.pharmacy.id}:${c.medicine.id}`}
+                      product={{
+                        id: c.medicine.id,
+                        name: c.medicine.name,
+                        price: c.medicine.price,
+                        type: c.medicine.type,
+                        hasPhoto: c.medicine.hasPhoto,
+                        photoVersion: c.medicine.photoVersion,
+                        stockUnit: c.medicine.stockUnit,
+                      }}
+                      variant="row"
+                      subtitle={
+                        <p className="flex items-center gap-1 text-[11px] text-neutral-400">
                           <Store size={10} className="shrink-0" />
                           <span className="line-clamp-1">{c.pharmacy.organization ?? c.pharmacy.name}</span>
                         </p>
-                      </div>
-                      <div className="flex shrink-0 flex-col gap-1">
-                        <button
-                          onClick={() => addToCart(c.pharmacy, c.medicine)}
-                          className="flex items-center justify-center gap-1 rounded-lg px-2.5 py-1.5 text-[11.5px] font-bold text-white"
-                          style={inCart ? { background: "var(--brand-green-soft)", color: "var(--brand-green)" } : { background: "var(--brand-green)" }}
-                        >
-                          {inCart ? <Check size={12} /> : <ShoppingCart size={12} />}
-                          {inCart ? `(${inCart.qty})` : "Savatga"}
-                        </button>
-                        <a
-                          href={`tel:${c.pharmacy.phone.replace(/\s/g, "")}`}
-                          className="flex items-center justify-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-[11.5px] font-bold text-[var(--brand-ink)] shadow-sm"
-                        >
-                          <Phone size={12} /> Qo&apos;ng&apos;iroq
-                        </a>
-                      </div>
-                      <button
-                        onClick={() => toggleFavorite(c.pharmacy.id, c.medicine.id)}
-                        aria-label="Yoqtirilganlardan olib tashlash"
-                        className="shrink-0 self-start p-0.5"
-                      >
-                        <Trash2 size={15} className="text-[var(--brand-muted)]" />
-                      </button>
-                    </li>
+                      }
+                      actions={
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => addToCart(c.pharmacy, c.medicine)}
+                            className="flex items-center justify-center gap-1 rounded-xl px-2.5 py-1.5 text-[11.5px] font-bold text-white shadow-2xs"
+                            style={inCart ? { background: "var(--brand-green-soft)", color: "var(--brand-green)" } : { background: "var(--brand-green)" }}
+                          >
+                            {inCart ? <Check size={12} /> : <ShoppingCart size={12} />}
+                            {inCart ? `(${inCart.qty})` : "Savatga"}
+                          </button>
+                          <a
+                            href={`tel:${c.pharmacy.phone.replace(/\s/g, "")}`}
+                            className="flex items-center justify-center gap-1 rounded-xl bg-white border border-neutral-200/80 px-2 py-1.5 text-[11.5px] font-bold text-neutral-700 shadow-2xs"
+                          >
+                            <Phone size={12} />
+                          </a>
+                          <button
+                            onClick={() => toggleFavorite(c.pharmacy.id, c.medicine.id)}
+                            aria-label="Yoqtirilganlardan olib tashlash"
+                            className="p-1 text-neutral-400 hover:text-red-500"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      }
+                    />
                   );
                 })}
-              </ul>
+              </div>
             )}
           </div>
         </div>
@@ -833,65 +818,49 @@ export default function MarketClient() {
                   </button>
                 </div>
 
-                <ul className="mt-3 space-y-2">
+                <div className="mt-3 space-y-2">
                   {cartState.lines.map((l) => (
-                    <li key={l.medicine.id} className="flex items-center gap-2 rounded-2xl bg-[var(--brand-bg)] p-2.5">
-                      {l.medicine.hasPhoto ? (
-                        <FadeImage
-                          src={l.medicine.photoVersion ? `/api/medicines/${l.medicine.id}/photo?v=${l.medicine.photoVersion}` : `/api/medicines/${l.medicine.id}/photo`}
-                          alt={l.medicine.name}
-                          className="h-11 w-11 shrink-0 rounded-xl bg-white"
-                          fit="contain"
-                          fallback={
-                            <span
-                              className="flex h-full w-full items-center justify-center bg-white"
-                              style={{ color: l.medicine.type === "animal" ? "var(--brand-ink)" : "var(--brand-green)" }}
-                            >
-                              <TypeIcon type={l.medicine.type} size={18} />
-                            </span>
-                          }
-                        />
-                      ) : (
-                        <span
-                          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white"
-                          style={{ color: l.medicine.type === "animal" ? "var(--brand-ink)" : "var(--brand-green)" }}
-                        >
-                          <TypeIcon type={l.medicine.type} size={18} />
-                        </span>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[14px] font-bold text-[var(--brand-ink)]">{l.medicine.name}</p>
-                        <p className="text-[12px] font-semibold text-[var(--brand-green)]">
-                          {l.medicine.price ? `${shortSum(l.medicine.price)} so'm` : "narx yo'q"}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => changeQty(l.medicine.id, -1)}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-[var(--brand-ink)] shadow-sm"
-                          aria-label="Kamaytirish"
-                        >
-                          <Minus size={14} />
-                        </button>
-                        <span className="w-5 text-center text-[14px] font-black">{l.qty}</span>
-                        <button
-                          onClick={() => changeQty(l.medicine.id, 1)}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-[var(--brand-ink)] shadow-sm"
-                          aria-label="Oshirish"
-                        >
-                          <Plus size={14} />
-                        </button>
-                      </div>
-                      <button
-                        onClick={() => changeQty(l.medicine.id, -l.qty)}
-                        className="p-1 text-[var(--brand-muted)]"
-                        aria-label="O'chirish"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </li>
+                    <ProductCard
+                      key={l.medicine.id}
+                      product={{
+                        id: l.medicine.id,
+                        name: l.medicine.name,
+                        price: l.medicine.price,
+                        type: l.medicine.type,
+                        hasPhoto: l.medicine.hasPhoto,
+                        photoVersion: l.medicine.photoVersion,
+                        stockUnit: l.medicine.stockUnit,
+                      }}
+                      variant="row"
+                      actions={
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => changeQty(l.medicine.id, -1)}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200 shadow-2xs font-bold"
+                            aria-label="Kamaytirish"
+                          >
+                            <Minus size={13} strokeWidth={2.5} />
+                          </button>
+                          <span className="w-5 text-center text-[13px] font-black">{l.qty}</span>
+                          <button
+                            onClick={() => changeQty(l.medicine.id, 1)}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200 shadow-2xs font-bold"
+                            aria-label="Oshirish"
+                          >
+                            <Plus size={13} strokeWidth={2.5} />
+                          </button>
+                          <button
+                            onClick={() => changeQty(l.medicine.id, -l.qty)}
+                            className="p-1 text-neutral-400 hover:text-red-500 ml-1"
+                            aria-label="O'chirish"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      }
+                    />
                   ))}
-                </ul>
+                </div>
                 <p className="mt-3 text-right text-[15px] font-black text-[var(--brand-ink)]">
                   Jami: <span className="text-[var(--brand-green)]">{shortSum(cartTotal)} so&apos;m</span>
                 </p>

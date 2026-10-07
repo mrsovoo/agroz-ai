@@ -165,7 +165,7 @@ export async function createOrder(input: CreateOrderInput) {
   );
 
   // Dori qoldiqlarini (stock) yangilash va kam qolgan yoki tugaganlarni aniqlash
-  const stockAlerts: { medName: string; remainingStock: number; stockUnit: string | null }[] = [];
+  const stockAlerts: { medicineId: number; medName: string; remainingStock: number; stockUnit: string | null }[] = [];
   for (const p of prepared) {
     if (p.stock !== null && p.stock !== undefined) {
       const newStock = Math.max(0, p.stock - p.qty);
@@ -178,8 +178,9 @@ export async function createOrder(input: CreateOrderInput) {
         })
         .where(eq(specialistMedicines.id, p.medicineId));
 
-      if (newStock <= 3) {
+      if (newStock <= 5) {
         stockAlerts.push({
+          medicineId: p.medicineId,
           medName: p.name,
           remainingStock: newStock,
           stockUnit: p.stockUnit,

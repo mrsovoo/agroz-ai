@@ -220,6 +220,21 @@ export const specialistMedicines = pgTable("specialist_medicines", {
 });
 
 /**
+ * Dori tugaganda mijozlar "Kelganda xabar berish" ni bosgan kutish ro'yxati.
+ * Dori zaxirasi to'ldirilganda yoki status "bor" qilinganda avtomatik Telegram xabar yuboriladi.
+ */
+export const medicineWaitlist = pgTable("medicine_waitlist", {
+  id: serial("id").primaryKey(),
+  medicineId: integer("medicine_id").notNull(),
+  telegramId: bigint("telegram_id", { mode: "number" }),
+  phone: varchar("phone", { length: 32 }),
+  userId: integer("user_id"),
+  isNotified: boolean("is_notified").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  notifiedAt: timestamp("notified_at"),
+});
+
+/**
  * Mutaxassis/dorixona reytingi (1–5 yulduz).
  * Bir mijoz (IP asosida anonim kalit) bir mutaxassisdga faqat bitta ovoz beradi —
  * qayta bossa ovozi yangilanadi.

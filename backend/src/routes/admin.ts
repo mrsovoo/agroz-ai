@@ -107,6 +107,18 @@ function getClientIp(req: any): string {
   return req.socket?.remoteAddress || "unknown-ip";
 }
 
+function parseSafePrice(val: any): number | null {
+  if (val === null || val === undefined || val === "") return null;
+  if (typeof val === "number") {
+    return Number.isFinite(val) && val > 0 ? Math.round(val) : null;
+  }
+  const str = String(val).trim();
+  const digits = str.replace(/\D/g, "");
+  if (!digits) return null;
+  const num = Number(digits);
+  return Number.isSafeInteger(num) && num > 0 ? num : null;
+}
+
 // POST /api/admin/login & POST /api/admin/session
 async function handleLogin(req: any, res: any) {
   if (!(await adminEnabled())) {
@@ -951,8 +963,7 @@ router.put("/medicines/:id", requireAdmin, async (req, res) => {
     }
 
     if (body.price !== undefined) {
-      const p = Number(body.price);
-      updates.price = Number.isFinite(p) && p > 0 ? Math.round(p) : null;
+      updates.price = parseSafePrice(body.price);
     }
 
     if (body.stock !== undefined) {
@@ -984,6 +995,14 @@ router.put("/medicines/:id", requireAdmin, async (req, res) => {
     const updated = (
       await db.select().from(specialistMedicines).where(eq(specialistMedicines.id, medId)).limit(1)
     )[0];
+
+    if (updated && updated.status === "bor" && (updates.status === "bor" || (updates.stock !== undefined && updates.stock > 0))) {
+      import("../lib/waitlist.js").then(({ notifyMedicineAvailable }) => {
+        notifyMedicineAvailable(medId).catch((err) =>
+          console.error("[admin] notifyMedicineAvailable error:", err),
+        );
+      }).catch(() => {});
+    }
 
     res.json({
       ok: true,
@@ -1047,7 +1066,7 @@ router.post("/pharmacies/:id/medicines", requireAdmin, async (req, res) => {
 
     const type = ["crop", "animal", "general"].includes(body.type) ? body.type : "general";
     const usage = body.usage ? String(body.usage).trim().slice(0, 300) : null;
-    const price = Number(body.price) > 0 ? Math.round(Number(body.price)) : null;
+    const price = parseSafePrice(body.price);
     const stock = Number(body.stock) >= 0 ? Math.round(Number(body.stock)) : 10;
     const stockUnit = String(body.stockUnit || "dona").trim().slice(0, 20);
     const status = ["bor", "yoq", "qoralama"].includes(body.status) ? body.status : "bor";

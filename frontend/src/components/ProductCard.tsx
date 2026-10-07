@@ -1,32 +1,95 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, type ReactNode, type MouseEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Minus, Heart, Pill, Sprout, Syringe, MapPin, Star, Bell } from "lucide-react";
+import { Plus, Minus, Heart, Pill, Sprout, Syringe, MapPin, Star, ShoppingCart, Bell } from "lucide-react";
 import FadeImage from "@/components/FadeImage";
-import {
-  loadCart,
-  saveCart,
-  notifyCartChanged,
-  CART_EVENT,
-  type CartStoreMedicine,
-  type CartStorePharmacy,
-  type CartStoreLine,
-} from "@/lib/cart-store";
-import { isFavorite, toggleFavorite, FAV_EVENT } from "@/lib/favorites-store";
-import { calculateMedicineRating, REVIEWS_EVENT } from "@/lib/medicine-reviews";
-import { apiUrl } from "@/lib/api-config";
+import ProductCardConnected from "@/components/ProductCardConnected";
+import type { CartStorePharmacy } from "@/lib/cart-store";
 
-export type PharmacyMedicine = CartStoreMedicine & {
+export type ProductCardMedicine = {
+  id: number;
+  name: string;
+  hasPhoto?: boolean;
+  price?: number | null;
+  type?: string | null;
   usage?: string | null;
+  photoVersion?: string | null;
+  status?: string | null;
+  stock?: number | null;
+  stockUnit?: string | null;
   ratingAvg?: number | null;
   ratingCount?: number;
   updatedAt?: string | null;
+  pharmacyName?: string | null;
 };
 
-export type ProductCardMedicine = PharmacyMedicine;
+export type PharmacyMedicine = ProductCardMedicine;
 
+export type ProductCardVariant = "lg" | "md" | "sm" | "row";
+
+export interface ProductCardProps {
+  /** Asosiy mahsulot obyekti */
+  product?: ProductCardMedicine;
+  /** Eskicha chaqiruvlar bilan moslik uchun */
+  medicine?: ProductCardMedicine;
+  /** Dorixona ma'lumotlari (agar uzatilsa, avtomatik bog'langan rejimda ishlaydi) */
+  pharmacy?: CartStorePharmacy | null;
+  /** Kartochka varianti: lg (katalog), md (bosh sahifa), sm (slayder), row (savat) */
+  variant?: ProductCardVariant;
+  /** Savatdagi soni (agar 0 dan katta bo'lsa stepper chiqadi) */
+  qty?: number;
+  /** Sevimlilar ro'yxatida bormi */
+  isFavorite?: boolean;
+  /** O'rtacha reyting */
+  ratingAvg?: number | null;
+  /** Sharhlar soni */
+  ratingCount?: number;
+  /** Joylashgan shahar yoki hudud matni */
+  city?: string | null;
+  /** Maxsus rasm manbasi (URL yoki base64) */
+  photoSrc?: string;
+  /** Havola manzili (standart: /dori/:id) */
+  linkHref?: string;
+  /** Qo'shimcha amallar slot (masalan, maxsus tugma yoki savat boshqaruvi) */
+  actions?: ReactNode;
+  /** Chap tomondagi element slot (masalan, savatdagi checkbox) */
+  leading?: ReactNode;
+  /** Pastki/o'ngdagi qo'shimcha slot */
+  subtitle?: ReactNode;
+  /** Maxsus nishon (badge) */
+  badge?: ReactNode;
+  /** Qo'shimcha CSS klasslar */
+  className?: string;
+  /** Savat tugmasini yashirish */
+  hideCartButton?: boolean;
+  /** Savatga qo'shish callback */
+  onAdd?: () => void;
+  /** Miqdorni o'zgartirish (+1 / -1) callback */
+  onChangeQty?: (delta: number) => void;
+  /** Sevimlilarga qo'shish/olib tashlash callback */
+  onToggleFavorite?: () => void;
+  /** Kartochka bosilganda maxsus callback */
+  onClick?: () => void;
+  /** Eski nom bilan moslik */
+  onCardClick?: () => void;
+}
+
+/**
+ * Yagona standart narx formatlash funksiyasi:
+ * Masalan: 12 000 so'm, 1 250 000 so'm yoki "Kelishiladi"
+ */
+export function formatPrice(price?: number | null): string {
+  if (price === null || price === undefined || price <= 0) {
+    return "Kelishiladi";
+  }
+  return new Intl.NumberFormat("ru-RU").format(price).replace(/\u00a0/g, " ") + " so'm";
+}
+
+/**
+ * O'lchov birligini qisqartirish va tozalash
+ */
 export function formatUnit(stockUnit?: string | null): string {
   if (!stockUnit) return "dona";
   const u = stockUnit.toLowerCase().trim();
@@ -36,19 +99,9 @@ export function formatUnit(stockUnit?: string | null): string {
   return u;
 }
 
-export function formatMedicineUpdatedAt(updatedAt?: string | null): string | null {
-  if (!updatedAt) return null;
-  const ts = new Date(updatedAt).getTime();
-  if (!Number.isFinite(ts)) return null;
-  const diffMs = Math.max(0, Date.now() - ts);
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  if (diffDays <= 0) return "Bugun yangilangan";
-  if (diffDays === 1) return "1 kun oldin yangilangan";
-  if (diffDays < 30) return `${diffDays} kun oldin yangilangan`;
-  const months = Math.floor(diffDays / 30);
-  return `${months} oy oldin yangilangan`;
-}
-
+/**
+ * Qisqa shahar nomini aniqlash
+ */
 export function getShortCity(address?: string | null, orgName?: string | null): string {
   const text = `${address || ""} ${orgName || ""}`.toLowerCase();
   if (text.includes("toshkent vil")) return "Toshkent vil.";
@@ -80,336 +133,444 @@ export function getShortCity(address?: string | null, orgName?: string | null): 
   return "O'zbekiston";
 }
 
-export default function ProductCard({
+/**
+ * Rasmsiz holat uchun bitta yagona toza placeholder
+ */
+export function renderMedicinePlaceholder(type?: string | null, iconSize = 22) {
+  if (type === "crop") {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-gradient-to-br from-emerald-50/80 to-emerald-100/40 p-2 text-center select-none">
+        <div className="flex items-center justify-center rounded-xl bg-white p-1.5 shadow-2xs border border-emerald-100/80">
+          <Sprout size={iconSize} className="text-[#039e1e]" />
+        </div>
+        <span className="text-[9.5px] font-bold text-emerald-900/70">Ekin</span>
+      </div>
+    );
+  }
+  if (type === "animal") {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-gradient-to-br from-amber-50/80 to-amber-100/40 p-2 text-center select-none">
+        <div className="flex items-center justify-center rounded-xl bg-white p-1.5 shadow-2xs border border-amber-100/80">
+          <Syringe size={iconSize} className="text-amber-600" />
+        </div>
+        <span className="text-[9.5px] font-bold text-amber-900/70">Veterinariya</span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-gradient-to-br from-neutral-50 to-neutral-100/70 p-2 text-center select-none">
+      <div className="flex items-center justify-center rounded-xl bg-white p-1.5 shadow-2xs border border-neutral-200/70">
+        <Pill size={iconSize} className="text-neutral-500" />
+      </div>
+      <span className="text-[9.5px] font-bold text-neutral-600/70">Dori</span>
+    </div>
+  );
+}
+
+const VARIANTS = {
+  lg: {
+    root: "group relative flex h-full w-full cursor-pointer flex-col justify-between rounded-[20px] bg-white border border-neutral-200/80 p-3 shadow-2xs transition-all duration-200 hover:shadow-xs hover:border-emerald-400/80 active:scale-[0.99]",
+    imgWrap: "relative mb-2 flex aspect-square w-full items-center justify-center overflow-hidden rounded-[14px] bg-white border border-neutral-200/70 p-2 sm:p-2.5",
+    title: "text-[13.5px] sm:text-[14.5px] font-bold leading-tight text-neutral-900 line-clamp-2 min-h-[2.4em] group-hover:text-[#039e1e] transition-colors",
+    price: "text-[15px] sm:text-[16px] font-extrabold text-neutral-900 tracking-tight whitespace-nowrap",
+    badge: "text-[11px] px-2 py-0.5",
+    city: "text-[11px]",
+  },
+  md: {
+    root: "group relative flex h-full w-full cursor-pointer flex-col justify-between rounded-[18px] bg-white border border-neutral-200/80 p-3 shadow-2xs transition-all duration-200 hover:shadow-xs hover:border-emerald-400/80 active:scale-[0.99]",
+    imgWrap: "relative mb-1.5 flex aspect-square w-full items-center justify-center overflow-hidden rounded-[13px] bg-white border border-neutral-200/70 p-2",
+    title: "text-[13px] sm:text-[14px] font-bold leading-tight text-neutral-900 line-clamp-2 min-h-[2.4em] group-hover:text-[#039e1e] transition-colors",
+    price: "text-[14.5px] sm:text-[15.5px] font-extrabold text-neutral-900 tracking-tight whitespace-nowrap",
+    badge: "text-[11px] px-2 py-0.5",
+    city: "text-[11px]",
+  },
+  sm: {
+    root: "group relative flex w-[110px] shrink-0 cursor-pointer flex-col justify-between rounded-[14px] bg-white border border-neutral-200/80 p-2 shadow-2xs transition-all duration-150 hover:border-emerald-400 active:scale-95",
+    imgWrap: "relative mb-1 flex aspect-square w-full items-center justify-center overflow-hidden rounded-[10px] bg-white border border-neutral-200/60 p-1",
+    title: "text-[11px] font-bold leading-tight text-neutral-900 line-clamp-2 min-h-[1.85rem]",
+    price: "text-[11px] font-black text-[#039e1e] tracking-tight truncate",
+    badge: "hidden",
+    city: "hidden",
+  },
+  row: {
+    root: "group relative flex w-full cursor-pointer items-center justify-between rounded-[18px] bg-white border border-neutral-200/80 p-2 sm:p-2.5 shadow-2xs transition-all duration-150 hover:border-emerald-300 active:scale-[0.995]",
+    imgWrap: "relative flex h-14 w-14 aspect-square shrink-0 items-center justify-center overflow-hidden rounded-[12px] bg-white border border-neutral-200/70 p-1",
+    title: "text-[13px] sm:text-[13.5px] font-bold text-neutral-900 line-clamp-2 leading-snug",
+    price: "text-[12.5px] sm:text-[13.5px] font-black text-[var(--brand-green)] tracking-tight whitespace-nowrap",
+    badge: "text-[9px] px-1.5 py-0.2",
+    city: "text-[10.5px]",
+  },
+};
+
+/**
+ * Sof ko'rinish (Presentational) ProductCard komponenti.
+ * Ichida loadCart/saveCart/confirm() mavjud emas, barcha ma'lumot va
+ * amallar props orqali keladi.
+ */
+export function ProductCardUI({
+  product,
   medicine,
   pharmacy,
+  variant = "md",
+  qty = 0,
+  isFavorite = false,
+  ratingAvg = 0,
+  ratingCount = 0,
+  city,
+  photoSrc: customPhotoSrc,
   linkHref,
-}: {
-  medicine: ProductCardMedicine;
-  pharmacy: CartStorePharmacy;
-  linkHref?: string;
-}) {
-  const [liked, setLiked] = useState(false);
-  const [qty, setQty] = useState(0);
-  const [ratingStats, setRatingStats] = useState({ avg: 0, count: 0 });
-
-  useEffect(() => {
-    const sync = () => {
-      setLiked(isFavorite(pharmacy.id, medicine.id));
-      const cart = loadCart();
-      const inLine = cart?.lines?.find((l) => l.medicine.id === medicine.id);
-      setQty(inLine ? inLine.qty : 0);
-
-      // Reyting hisoblash: avval mahsulotga qoldirilgan sharhlar, bo'lmasa mavjud reyting
-      const calculated = calculateMedicineRating(medicine.id);
-      if (calculated.count > 0) {
-        setRatingStats({ avg: calculated.avg, count: calculated.count });
-      } else if (medicine.ratingAvg && medicine.ratingAvg > 0) {
-        setRatingStats({ avg: Number(medicine.ratingAvg.toFixed(1)), count: medicine.ratingCount ?? 0 });
-      } else {
-        setRatingStats({ avg: 0, count: 0 });
-      }
-    };
-    sync();
-    window.addEventListener(FAV_EVENT, sync);
-    window.addEventListener(CART_EVENT, sync);
-    window.addEventListener(REVIEWS_EVENT, sync);
-    window.addEventListener("storage", sync);
-    return () => {
-      window.removeEventListener(FAV_EVENT, sync);
-      window.removeEventListener(CART_EVENT, sync);
-      window.removeEventListener(REVIEWS_EVENT, sync);
-      window.removeEventListener("storage", sync);
-    };
-  }, [pharmacy.id, medicine.id, medicine.ratingAvg, medicine.ratingCount]);
-
-  function add() {
-    const cart = loadCart();
-    const newPharmacy: CartStorePharmacy = {
-      id: pharmacy.id,
-      name: pharmacy.name,
-      phone: pharmacy.phone,
-      address: pharmacy.address ?? null,
-    };
-
-    if (cart && cart.pharmacy && cart.pharmacy.id !== pharmacy.id && cart.lines.length > 0) {
-      if (
-        !confirm(
-          `Savatda boshqa agro-do'kon (${cart.pharmacy.name}) dorilari bor. Yangi agro-do'kon dorilari savatni almashtiradi. Davom etamizmi?`,
-        )
-      ) {
-        return;
-      }
-      saveCart({
-        pharmacy: newPharmacy,
-        lines: [{ medicine, pharmacy: newPharmacy, qty: 1 }],
-      });
-      notifyCartChanged();
-      return;
-    }
-
-    if (!cart || !Array.isArray(cart.lines) || cart.lines.length === 0) {
-      saveCart({
-        pharmacy: newPharmacy,
-        lines: [{ medicine, pharmacy: newPharmacy, qty: 1 }],
-      });
-    } else {
-      const existing = cart.lines.find((l) => l.medicine.id === medicine.id);
-      const lines: CartStoreLine[] = existing
-        ? cart.lines.map((l) =>
-            l.medicine.id === medicine.id ? { ...l, qty: Math.min(99, l.qty + 1) } : l,
-          )
-        : [...cart.lines, { medicine, pharmacy: newPharmacy, qty: 1 }];
-      saveCart({ pharmacy: cart.pharmacy || newPharmacy, lines });
-    }
-    notifyCartChanged();
-  }
-
-  function changeQty(delta: number) {
-    const cart = loadCart();
-    if (!cart || !Array.isArray(cart.lines) || cart.lines.length === 0) {
-      if (delta > 0) add();
-      return;
-    }
-    const existing = cart.lines.find((l) => l.medicine.id === medicine.id);
-    if (!existing) {
-      if (delta > 0) add();
-      return;
-    }
-
-    const nextQty = existing.qty + delta;
-    if (nextQty <= 0) {
-      const lines = cart.lines.filter((l) => l.medicine.id !== medicine.id);
-      saveCart(
-        lines.length > 0
-          ? { pharmacy: lines[0].pharmacy || cart.pharmacy, lines }
-          : null,
-      );
-    } else {
-      const lines = cart.lines.map((l) =>
-        l.medicine.id === medicine.id ? { ...l, qty: Math.min(99, nextQty) } : l,
-      );
-      saveCart({ ...cart, lines });
-    }
-    notifyCartChanged();
-  }
-
+  actions,
+  leading,
+  subtitle,
+  badge,
+  className,
+  hideCartButton = false,
+  onAdd,
+  onChangeQty,
+  onToggleFavorite,
+  onClick,
+  onCardClick,
+}: ProductCardProps) {
   const router = useRouter();
-  const href = linkHref ?? `/dori/${medicine.id}`;
+  const [notified, setNotified] = useState(false);
+  const item = product ?? medicine;
+  if (!item) return null;
 
-  const handleCardClick = (e: React.MouseEvent) => {
-    // Agar foydalanuvchi tugmani (savatga qo'shish, ayirish va h.k.) bosgan bo'lsa, sahifaga o'tmaydi
-    if ((e.target as HTMLElement).closest("button")) {
+  const isOutOfStock =
+    item.status === "yoq" ||
+    (item.stock !== null && item.stock !== undefined && item.stock <= 0);
+
+  const href = linkHref ?? `/dori/${item.id}`;
+  const vConfig = VARIANTS[variant];
+  const photoSrc =
+    customPhotoSrc ??
+    (item.photoVersion
+      ? `/api/medicines/${item.id}/photo?v=${item.photoVersion}`
+      : `/api/medicines/${item.id}/photo`);
+
+  const effectiveCity = city ?? (pharmacy ? getShortCity(pharmacy.address, pharmacy.name) : null);
+
+  const handleCardClick = (e: MouseEvent) => {
+    if ((e.target as HTMLElement).closest("button") || (e.target as HTMLElement).closest("input")) {
+      return;
+    }
+    const cb = onClick ?? onCardClick;
+    if (cb) {
+      cb();
       return;
     }
     router.push(href);
   };
 
-  const renderPlaceholder = () => {
-    if (medicine.type === "crop") {
-      return (
-        <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-emerald-50 via-[#f0fae8] to-green-100/60 p-3 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-xs border border-emerald-100/80">
-            <Sprout size={28} className="text-[#039e1e]" />
-          </div>
-          <span className="text-[11px] font-bold text-emerald-900/80 tracking-tight">Ekin dorisi</span>
-        </div>
-      );
-    }
-    if (medicine.type === "animal") {
-      return (
-        <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-amber-50 via-[#fff8eb] to-yellow-100/60 p-3 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-xs border border-amber-100/80">
-            <Syringe size={28} className="text-amber-600" />
-          </div>
-          <span className="text-[11px] font-bold text-amber-900/80 tracking-tight">Veterinariya</span>
-        </div>
-      );
-    }
+  // ===================== VARIANT: ROW (Savat va Buyurtma gorizontal) =====================
+  if (variant === "row") {
     return (
-      <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-neutral-50 via-neutral-100 to-neutral-200/50 p-3 text-center">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-xs border border-neutral-200/60">
-          <Pill size={28} className="text-neutral-500" />
+      <div
+        onClick={handleCardClick}
+        className={`${vConfig.root} ${className ?? ""}`}
+      >
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+          {leading && <div className="shrink-0">{leading}</div>}
+
+          {/* Kvadrat Rasm */}
+          <div className={vConfig.imgWrap}>
+            {item.hasPhoto ? (
+              <FadeImage
+                src={photoSrc}
+                alt={item.name}
+                className="h-full w-full"
+                fit="contain"
+                fallback={renderMedicinePlaceholder(item.type, 18)}
+              />
+            ) : (
+              renderMedicinePlaceholder(item.type, 18)
+            )}
+          </div>
+
+          {/* Ma'lumot: Nom, Narx, Dona */}
+          <div className="min-w-0 flex-1">
+            <Link href={href} className="block group/title">
+              <h4 className={`${vConfig.title} group-hover/title:text-[#039e1e] transition-colors`} title={item.name}>
+                {item.name}
+              </h4>
+            </Link>
+
+            {subtitle && <div className="mt-0.5">{subtitle}</div>}
+
+            <div className="mt-1 flex items-baseline gap-1.5 flex-wrap">
+              <span className={vConfig.price}>{formatPrice(item.price)}</span>
+              <span className="text-[10.5px] text-neutral-400 font-medium">
+                / 1 {formatUnit(item.stockUnit)}
+              </span>
+            </div>
+          </div>
         </div>
-        <span className="text-[11px] font-bold text-neutral-600 tracking-tight">Agro dori</span>
+
+        {/* O'ng tomon amallari (stepper yoki o'chirish) */}
+        {actions && <div className="shrink-0 ml-2">{actions}</div>}
       </div>
     );
-  };
+  }
 
-  const updatedText = formatMedicineUpdatedAt(medicine.updatedAt);
+  // ===================== VARIANT: SM (Gorizontal slayder / Xarita) =====================
+  if (variant === "sm") {
+    return (
+      <div
+        onClick={handleCardClick}
+        className={`${vConfig.root} ${className ?? ""}`}
+        title={item.name}
+      >
+        <div className={vConfig.imgWrap}>
+          {item.hasPhoto ? (
+            <FadeImage
+              src={photoSrc}
+              alt={item.name}
+              className="h-full w-full"
+              fit="contain"
+              fallback={renderMedicinePlaceholder(item.type, 16)}
+            />
+          ) : (
+            renderMedicinePlaceholder(item.type, 16)
+          )}
+        </div>
+
+        <div className="flex flex-col justify-between flex-1">
+          <h4 className={vConfig.title}>{item.name}</h4>
+          <p className={`mt-0.5 ${vConfig.price}`}>
+            {formatPrice(item.price)}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ===================== VARIANT: LG & MD (Vertikal kartochka) =====================
+  const hasReviews = Boolean(ratingCount && ratingCount > 0 && ratingAvg && ratingAvg > 0);
+  const hasPrice = item.price !== null && item.price !== undefined && item.price > 0;
 
   return (
     <div
       onClick={handleCardClick}
-      className="group relative flex h-full w-full cursor-pointer flex-col justify-between rounded-[22px] bg-white border border-neutral-200/80 p-2.5 sm:p-3 shadow-2xs transition-all duration-200 hover:shadow-xs hover:border-emerald-400/80 active:scale-[0.99]"
+      className={`${vConfig.root} ${className ?? ""}`}
     >
-      {/* Rasm maydoni — toza, oq fonda, burchaklari kartochkaga mos (rounded-[16px]) */}
-      <div className="relative mb-2.5 flex aspect-[1/1] w-full items-center justify-center overflow-hidden rounded-[16px] bg-white border border-neutral-200/80">
-        {/* Tur ikonkasi va belgisi */}
-        <div className="absolute top-2 left-2 z-10 pointer-events-none">
-          {medicine.type === "crop" ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-white/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-bold text-emerald-800 shadow-2xs border border-emerald-200/60">
-              <Sprout size={11} className="text-[#039e1e]" /> Ekin
+      {/* 1. Rasm (aspect-square, toza oq fonda, burchaklarda nishon va yurakcha) */}
+      <div className={vConfig.imgWrap}>
+        {/* Nishon (Toifa yoki Maxsus badge, text-[11px]) */}
+        <div className="absolute top-1.5 left-1.5 z-10 pointer-events-none">
+          {badge ? (
+            badge
+          ) : item.type === "crop" ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/95 backdrop-blur-md font-bold text-emerald-800 shadow-2xs border border-emerald-200/60 text-[11px] px-2 py-0.5">
+              <Sprout size={10} className="text-[#039e1e]" /> Ekin
             </span>
-          ) : medicine.type === "animal" ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-white/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-bold text-amber-900 shadow-2xs border border-amber-200/60">
-              <Syringe size={11} className="text-amber-600" /> Hayvon
+          ) : item.type === "animal" ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/95 backdrop-blur-md font-bold text-amber-900 shadow-2xs border border-amber-200/60 text-[11px] px-2 py-0.5">
+              <Syringe size={10} className="text-amber-600" /> Hayvon
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 rounded-full bg-white/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-bold text-neutral-700 shadow-2xs border border-neutral-200/60">
-              <Pill size={11} className="text-neutral-500" /> Umumiy
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/95 backdrop-blur-md font-bold text-neutral-700 shadow-2xs border border-neutral-200/60 text-[11px] px-2 py-0.5">
+              <Pill size={10} className="text-neutral-500" /> Umumiy
             </span>
           )}
         </div>
 
-        {/* Sevimlilar ❤️ tugmasi */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const next = toggleFavorite(pharmacy.id, medicine.id);
-            setLiked(next);
-          }}
-          aria-label={liked ? "Yoqtirilganlardan o'chirish" : "Sevimlilarga qo'shish"}
-          className="absolute top-2 right-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 backdrop-blur-md shadow-2xs border border-black/5 hover:bg-white active:scale-90 transition"
-        >
-          <Heart
-            size={16}
-            className={liked ? "text-red-500 fill-red-500" : "text-neutral-400 hover:text-red-400"}
-          />
-        </button>
+        {/* Yurakcha ❤️: h-8 w-8 */}
+        {onToggleFavorite && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onToggleFavorite();
+            }}
+            aria-label={isFavorite ? "Yoqtirilganlardan o'chirish" : "Sevimlilarga qo'shish"}
+            className="absolute top-1.5 right-1.5 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 backdrop-blur-md shadow-2xs border border-black/5 hover:bg-white active:scale-90 transition"
+          >
+            <Heart
+              size={14}
+              className={isFavorite ? "text-red-500 fill-red-500" : "text-neutral-400 hover:text-red-400"}
+            />
+          </button>
+        )}
 
-        <Link href={href} aria-label={medicine.name} className="block h-full w-full">
-          {medicine.hasPhoto ? (
+        <Link href={href} aria-label={item.name} className="block h-full w-full">
+          {item.hasPhoto ? (
             <FadeImage
-              src={medicine.photoVersion ? `/api/medicines/${medicine.id}/photo?v=${medicine.photoVersion}` : `/api/medicines/${medicine.id}/photo`}
-              alt={medicine.name}
-              className="h-full w-full transition-transform duration-300 group-hover:scale-105 p-1.5"
+              src={photoSrc}
+              alt={item.name}
+              className="h-full w-full transition-transform duration-300 group-hover:scale-105"
               fit="contain"
-              fallback={renderPlaceholder()}
+              fallback={renderMedicinePlaceholder(item.type, 24)}
             />
           ) : (
-            renderPlaceholder()
+            renderMedicinePlaceholder(item.type, 24)
           )}
         </Link>
       </div>
 
-      {/* Ma'lumot: Turgan manzil, Dori nomi, Tavsifi, Reyting, Narxi / donasi (kg / litr) va Savatga */}
+      {/* 2. Ma'lumot qismi: flex flex-1 flex-col justify-between */}
       <div className="flex flex-1 flex-col justify-between">
         <div>
-          {/* 1. O'sha turgan manzil (Dorixona nomi yo'q) */}
-          <div className="flex items-center gap-1 text-[11px] sm:text-[11.5px] font-medium text-neutral-400 mb-1">
-            <MapPin size={11} className="text-[#039e1e] shrink-0" />
-            <span className="truncate">{getShortCity(pharmacy.address)}</span>
-          </div>
-
-          {/* 2. Dori Nomi */}
+          {/* Nomi - kattaroqda */}
           <Link href={href} className="block group/title">
-            <h3
-              className="text-[14px] sm:text-[15px] font-black leading-snug text-neutral-900 line-clamp-1 group-hover/title:text-[#039e1e] transition-colors"
-              title={medicine.name}
-            >
-              {medicine.name}
+            <h3 className={vConfig.title} title={item.name}>
+              {item.name}
             </h3>
           </Link>
 
-          {/* 3. Dorining nomi tagida qisqartirilgan ixcham tavsifi (To'liq tavsif ustiga bosganda chiqadi) */}
-          <p className="mt-0.5 text-[11px] sm:text-[11.5px] leading-normal text-neutral-500 line-clamp-1 font-medium">
-            {medicine.usage || "Qo'llanilishi bo'yicha batafsil ko'rish"}
-          </p>
+          {/* Tavsifi - kichikroqda (tavsif va/yoki manzil) */}
+          {(item.usage || effectiveCity) && (
+            <p className="mt-0.5 text-[11px] sm:text-[11.5px] leading-snug text-neutral-500 line-clamp-1 font-medium">
+              {item.usage ? (
+                <>
+                  {item.usage}
+                  {effectiveCity && (
+                    <span className="text-neutral-400 font-normal"> · {effectiveCity}</span>
+                  )}
+                </>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-neutral-400">
+                  <MapPin size={10} className="text-[#039e1e] shrink-0" />
+                  {effectiveCity}
+                </span>
+              )}
+            </p>
+          )}
         </div>
 
-        <div className="mt-2 pt-1.5 border-t border-neutral-100">
-          {/* 4. Reyting va birligi */}
-          <div className="flex items-center justify-between gap-1 mb-1">
-            {ratingStats.count > 0 ? (
-              <div className="inline-flex items-center gap-0.5 text-amber-500 font-extrabold text-[11px]">
-                <Star size={11} className="fill-amber-400 text-amber-400" />
-                <span>{ratingStats.avg.toFixed(1)}</span>
-                <span className="text-[10px] text-neutral-400 font-medium">
-                  ({ratingStats.count})
+        {/* Pastki qism: Narxi (chapda) va Reyting (o'ngda) bitta qatorda + Savat tugmasi */}
+        <div className="mt-2 pt-1 border-t border-neutral-100/90">
+          {/* Narx kartochkani chap tarafida, reyting o'ng tarafida (bitta qatorda) */}
+          <div className="flex items-center justify-between gap-1.5 min-h-[24px]">
+            {/* Chapda: Narxi - kattaroqda va dona yokida kg yokida litr */}
+            <div className="min-w-0 flex items-baseline gap-1">
+              {hasPrice ? (
+                <>
+                  <span
+                    className="text-[14.5px] sm:text-[15.5px] font-extrabold text-neutral-900 tracking-tight whitespace-nowrap"
+                    title={formatPrice(item.price)}
+                  >
+                    {formatPrice(item.price)}
+                  </span>
+                  <span className="text-[10.5px] sm:text-[11px] text-neutral-400 font-medium whitespace-nowrap">
+                    / {formatUnit(item.stockUnit)}
+                  </span>
+                </>
+              ) : (
+                <span className="text-[12px] font-semibold text-gray-500 whitespace-nowrap">
+                  Kelishiladi
                 </span>
-              </div>
-            ) : (
-              <div className="inline-flex items-center gap-0.5 text-[10.5px] text-neutral-400 font-medium">
-                <Star size={10} className="text-neutral-300" />
-                <span>Yangi</span>
-              </div>
-            )}
+              )}
+            </div>
 
-            {/* Birlik (dona / kg / litr) */}
-            <span className="text-[10.5px] sm:text-[11px] font-bold text-neutral-600 bg-neutral-100 px-1.5 py-0.5 rounded-md">
-              1 {formatUnit(medicine.stockUnit)}
-            </span>
+            {/* O'ngda: Reyting (bitta qatorda) */}
+            <div className="shrink-0">
+              {hasReviews ? (
+                <div className="inline-flex items-center gap-0.5 text-amber-500 font-bold text-[11px] whitespace-nowrap bg-amber-50/90 px-1.5 py-0.5 rounded-md">
+                  <Star size={11} className="fill-amber-400 text-amber-400 shrink-0" />
+                  <span>{ratingAvg?.toFixed(1)}</span>
+                  <span className="text-neutral-400 font-normal">({ratingCount})</span>
+                </div>
+              ) : null}
+            </div>
           </div>
 
-          {/* 5. Narxi */}
-          <div className="flex items-baseline gap-1">
-            {medicine.price && medicine.price > 0 ? (
-              <p className="text-[14.5px] sm:text-[15.5px] font-black text-neutral-900 tracking-tight">
-                {new Intl.NumberFormat("uz-UZ").format(medicine.price).replace(/\s/g, ".")}{" "}
-                <span className="text-[11.5px] font-bold text-neutral-500">so&apos;m</span>
-              </p>
-            ) : (
-              <span className="inline-flex items-center rounded-lg bg-neutral-100 px-2 py-0.5 text-[11.5px] sm:text-[12px] font-bold text-neutral-700 tracking-tight">
-                Kelishiladi
-              </span>
-            )}
-          </div>
+          {/* Keyin shu savat tugmasi bo'sa bo'ldi */}
+          {!hideCartButton && (
+            <div className="mt-2">
+              {actions ? (
+                actions
+              ) : qty > 0 && onChangeQty ? (
+                /* Stepper: [-  1 dona  +] to'liq kenglikda */
+                <div className="flex h-8.5 w-full items-center justify-between rounded-xl bg-[#eaf5e1] border border-[#039e1e]/30 px-1.5 text-[#039e1e] shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onChangeQty(-1);
+                    }}
+                    className="flex h-6.5 w-7 items-center justify-center rounded-lg bg-white text-[#039e1e] shadow-2xs active:scale-90 transition font-black hover:bg-neutral-50"
+                    aria-label="Kamaytirish"
+                  >
+                    <Minus size={11} strokeWidth={2.8} />
+                  </button>
 
-          {/* 6. Savatga qo'shish buttoni — toza va moslashuvchan */}
-          <div className="mt-2.5">
-            {qty > 0 ? (
-              <div className="flex h-10 min-h-[40px] w-full items-center justify-between rounded-[14px] bg-[#eaf5e1] border border-[#039e1e]/25 px-1 text-[#039e1e] shadow-2xs">
+                  <span className="px-1.5 text-[11.5px] sm:text-[12px] font-black tracking-tight select-none">
+                    {qty} {formatUnit(item.stockUnit)}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onChangeQty(1);
+                    }}
+                    className="flex h-6.5 w-7 items-center justify-center rounded-lg bg-[#039e1e] text-white shadow-2xs active:scale-90 transition font-black hover:bg-[#028518]"
+                    aria-label="Ko'paytirish"
+                  >
+                    <Plus size={11} strokeWidth={2.8} />
+                  </button>
+                </div>
+              ) : isOutOfStock ? (
+                /* Dori tugaganda: Kelganda xabar berish */
+                <button
+                  type="button"
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setNotified(true);
+                    try {
+                      await fetch(`/api/medicines/${item.id}/waitlist`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                      });
+                    } catch {}
+                  }}
+                  className={`flex h-8.5 w-full items-center justify-center gap-1.5 rounded-xl border px-2.5 text-[11.5px] font-bold shadow-2xs transition-all active:scale-[0.98] whitespace-nowrap ${
+                    notified
+                      ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                      : "border-neutral-200 bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
+                  }`}
+                  aria-label="Dori kelganda xabar berish"
+                >
+                  <Bell size={13} className={notified ? "text-emerald-700 fill-emerald-700" : "text-neutral-500"} />
+                  <span>{notified ? "Xabar beriladi ✓" : "Kelganda xabar berish"}</span>
+                </button>
+              ) : onAdd ? (
+                /* Savatga tugmasi: keng, qulay va yashil fonda [🛒 Savatga] */
                 <button
                   type="button"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    changeQty(-1);
+                    onAdd();
                   }}
-                  className="flex h-8 w-8 min-h-[32px] min-w-[32px] items-center justify-center rounded-[10px] bg-white text-[#039e1e] shadow-xs active:scale-90 transition font-black hover:bg-neutral-50"
-                  aria-label="Kamaytirish"
+                  className="flex h-8.5 w-full items-center justify-center gap-1.5 rounded-xl bg-[#039e1e] hover:bg-[#028518] px-3 text-[12px] font-bold text-white shadow-2xs hover:shadow-xs active:scale-[0.98] transition-all whitespace-nowrap"
+                  aria-label="Savatga qo'shish"
                 >
-                  <Minus size={14} strokeWidth={2.8} />
+                  <ShoppingCart size={13.5} strokeWidth={2.5} className="shrink-0" />
+                  <span>Savatga</span>
                 </button>
-
-                <span className="text-[12px] sm:text-[12.5px] font-black tracking-tight select-none">
-                  {qty} {formatUnit(medicine.stockUnit)}
-                </span>
-
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    changeQty(1);
-                  }}
-                  className="flex h-8 w-8 min-h-[32px] min-w-[32px] items-center justify-center rounded-[10px] bg-[#039e1e] text-white shadow-xs active:scale-90 transition font-black hover:bg-[#028518]"
-                  aria-label="Ko'paytirish"
-                >
-                  <Plus size={14} strokeWidth={2.8} />
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  add();
-                }}
-                className="flex h-10 min-h-[40px] w-full items-center justify-center gap-1.5 rounded-[14px] bg-[#039e1e] hover:bg-[#028518] px-3 text-[13px] font-black text-white shadow-2xs hover:shadow-xs active:scale-[0.98] transition-all duration-150"
-              >
-                <Plus size={15} strokeWidth={2.8} />
-                <span>Savatga</span>
-              </button>
-            )}
-          </div>
+              ) : null}
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
+/**
+ * Standart eksport:
+ * Agar onAdd va actions berilmagan bo'lsa, avtomatik ravishda ProductCardConnected
+ * orqali to'liq savat/sevimli/reyting mantiqi bilan ulanadi (haptic feedback va xavfsiz dorixona fallback bilan).
+ * Aks holda toza ProductCardUI sifatida render bo'ladi.
+ */
+export default function ProductCard(props: ProductCardProps) {
+  if (!props.onAdd && !props.actions) {
+    return <ProductCardConnected {...props} />;
+  }
+  return <ProductCardUI {...props} />;
+}

@@ -337,10 +337,11 @@ export default async function MedicineDetail({ medicine }: { medicine: MedicineD
       {similar.length > 0 && (
         <section className="mt-7 web:mt-10">
           <p className="ios-section-title">O&apos;xshash mahsulotlar</p>
-          <div className="mt-2 grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 web:grid-cols-4 web:gap-4.5">
+          <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {similar.map((s) => (
               <ProductCard
                 key={s.id}
+                variant="md"
                 medicine={{
                   id: s.id,
                   name: s.name,

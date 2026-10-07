@@ -325,6 +325,10 @@ async function adminFetch(url: string, options: RequestInit = {}) {
 
 function compressImageForAdmin(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
+    const isPng =
+      file.type === "image/png" ||
+      file.name.toLowerCase().endsWith(".png");
+
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new window.Image();
@@ -345,15 +349,25 @@ function compressImageForAdmin(file: File): Promise<string> {
         if (!ctx) {
           return reject(new Error("Canvas context mavjud emas"));
         }
-        // Oq fon bilan to'ldiramiz (Shaffof / transparent PNG fonsiz yuklanganda
-        // orqasi qora bo'lib qolmasligi uchun toza oq rang bilan bo'yaymiz)
-        ctx.fillStyle = "#FFFFFF";
-        ctx.fillRect(0, 0, width, height);
+
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.88);
-        resolve(dataUrl);
+
+        if (isPng) {
+          // Shaffof / transparent PNG fonsiz yuklanganda:
+          // orqa fonni oq yoki qora qilib qotirib qo'ymaymiz, toza shaffoflik (alpha) saqlanadi
+          ctx.clearRect(0, 0, width, height);
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL("image/png");
+          resolve(dataUrl);
+        } else {
+          // Boshqa formatlar (JPEG va h.k.) uchun:
+          ctx.fillStyle = "#FFFFFF";
+          ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.88);
+          resolve(dataUrl);
+        }
       };
       img.onerror = () => reject(new Error("Rasmni o'qib bo'lmadi"));
       img.src = e.target?.result as string;
@@ -361,6 +375,21 @@ function compressImageForAdmin(file: File): Promise<string> {
     reader.onerror = () => reject(new Error("Faylni o'qishda xatolik"));
     reader.readAsDataURL(file);
   });
+}
+
+function formatPriceWithDots(val: string | number | null | undefined): string {
+  if (!val && val !== 0) return "";
+  const digits = String(val).replace(/\D/g, "");
+  if (!digits) return "";
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+function parsePriceNumber(val: string | null | undefined): number | null {
+  if (!val) return null;
+  const digits = String(val).replace(/\D/g, "");
+  if (!digits) return null;
+  const n = Number(digits);
+  return Number.isFinite(n) && n > 0 ? n : null;
 }
 
 export default function SuperAdminPage() {
@@ -638,7 +667,7 @@ export default function SuperAdminPage() {
     setEditingMedicine(med);
     setEditMedName(med.name || "");
     setEditMedType((["crop", "animal", "general"].includes(med.type) ? med.type : "general") as any);
-    setEditMedPrice(med.price ? String(med.price) : "");
+    setEditMedPrice(med.price ? formatPriceWithDots(med.price) : "");
     setEditMedStock(med.stock !== null && med.stock !== undefined ? String(med.stock) : "");
     setEditMedUnit(med.stockUnit || "dona");
     setEditMedUsage(med.usage || "");
@@ -675,7 +704,7 @@ export default function SuperAdminPage() {
         body: JSON.stringify({
           name: editMedName.trim(),
           type: editMedType,
-          price: editMedPrice ? Number(editMedPrice) : null,
+          price: parsePriceNumber(editMedPrice),
           stock: editMedStock !== "" ? Number(editMedStock) : null,
           stockUnit: editMedUnit,
           usage: editMedUsage.trim() || null,
@@ -702,6 +731,39 @@ export default function SuperAdminPage() {
       alert("Tarmoq xatosi tufayli saqlab bo'lmadi");
     } finally {
       setSavingMedChanges(false);
+    }
+  }
+
+  async function handleToggleMedicineStatus(med: any) {
+    const nextStatus = med.status === "bor" ? "yoq" : "bor";
+    // Optimistic update
+    setPharmacyMeds((prev) =>
+      prev.map((m) => (m.id === med.id ? { ...m, status: nextStatus } : m))
+    );
+    try {
+      const res = await adminFetch(`/api/admin/medicines/${med.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      const data = await res.json();
+      if (!data?.ok) {
+        // Rollback
+        setPharmacyMeds((prev) =>
+          prev.map((m) => (m.id === med.id ? { ...m, status: med.status } : m))
+        );
+        alert(data?.error || "Holatni o'zgartirib bo'lmadi");
+      } else {
+        setNotice({
+          kind: "ok",
+          text: `"${med.name}" holati ${nextStatus === "bor" ? "Mavjud (Bor)" : "Mavjud emas (Yo'q)"} ga o'zgartirildi`,
+        });
+      }
+    } catch {
+      setPharmacyMeds((prev) =>
+        prev.map((m) => (m.id === med.id ? { ...m, status: med.status } : m))
+      );
+      alert("Tarmoq xatosi");
     }
   }
 
@@ -771,7 +833,7 @@ export default function SuperAdminPage() {
         body: JSON.stringify({
           name: newMedName.trim(),
           type: newMedType,
-          price: newMedPrice ? Number(newMedPrice) : null,
+          price: parsePriceNumber(newMedPrice),
           stock: newMedStock !== "" ? Number(newMedStock) : 10,
           stockUnit: newMedUnit,
           usage: newMedUsage.trim() || null,
@@ -2051,7 +2113,8 @@ export default function SuperAdminPage() {
                 <div>
                   <h2 className="text-base font-bold text-zinc-900 flex items-center gap-2">
                     <Store className="text-zinc-900" size={20} />
-                    🏪 Dorixonalar (Agro-do&apos;konlar) Boshqaruvi
+                    <span>🏪 Dorixonalar (Agro-do&apos;konlar) Boshqaruvi</span>
+                    <img src="/logo-business.svg" alt="AgrozGO Business" className="h-5 w-auto object-contain ml-1" />
                   </h2>
                   <p className="mt-1 text-xs text-zinc-500">
                     Platformadagi barcha dorixonalar kabinetlari, dori vositalari nazorati va super boshqaruvi.
@@ -2485,15 +2548,22 @@ export default function SuperAdminPage() {
                                   {m.stock !== null && m.stock !== undefined ? `${m.stock} ${m.stockUnit || "dona"}` : "-"}
                                 </td>
                                 <td className="py-3 px-4">
-                                  <span
-                                    className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-black ${
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleMedicineStatus(m)}
+                                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-black border transition active:scale-95 shadow-2xs ${
                                       m.status === "bor"
-                                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                        : "bg-red-50 text-red-700 border border-red-200"
+                                        ? "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
+                                        : "bg-red-50 text-red-700 border-red-300 hover:bg-red-100"
                                     }`}
+                                    title={
+                                      m.status === "bor"
+                                        ? "Bosing: Yo'q (Ko'rsatilmaydi) ga o'tkazish"
+                                        : "Bosing: Bor (Ko'rsatiladi) ga o'tkazish"
+                                    }
                                   >
-                                    {m.status === "bor" ? "Mavjud" : m.status === "yoq" ? "Tugagan" : "Qoralama"}
-                                  </span>
+                                    {m.status === "bor" ? "🟢 Bor" : "🔴 Yo'q"}
+                                  </button>
                                 </td>
                                 <td className="py-3 px-4 text-right">
                                   <div className="flex items-center justify-end gap-1.5">
@@ -2676,12 +2746,11 @@ export default function SuperAdminPage() {
                           Narxi (so&apos;m)
                         </label>
                         <input
-                          type="number"
-                          min="0"
-                          step="1000"
+                          type="text"
+                          inputMode="numeric"
                           value={editMedPrice}
-                          onChange={(e) => setEditMedPrice(e.target.value)}
-                          placeholder="Masalan: 45000"
+                          onChange={(e) => setEditMedPrice(formatPriceWithDots(e.target.value))}
+                          placeholder="Masalan: 45.000"
                           className="w-full rounded-xl border border-zinc-200 bg-zinc-50 p-2.5 text-xs text-zinc-900 focus:border-emerald-500 focus:bg-white focus:outline-none font-mono"
                         />
                       </div>
@@ -2901,12 +2970,11 @@ export default function SuperAdminPage() {
                           Narxi (so&apos;m)
                         </label>
                         <input
-                          type="number"
-                          min="0"
-                          step="1000"
+                          type="text"
+                          inputMode="numeric"
                           value={newMedPrice}
-                          onChange={(e) => setNewMedPrice(e.target.value)}
-                          placeholder="Masalan: 45000"
+                          onChange={(e) => setNewMedPrice(formatPriceWithDots(e.target.value))}
+                          placeholder="Masalan: 45.000"
                           className="w-full rounded-xl border border-zinc-200 bg-zinc-50 p-2.5 text-xs text-zinc-900 focus:border-emerald-500 focus:bg-white focus:outline-none font-mono"
                         />
                       </div>
@@ -3000,7 +3068,8 @@ export default function SuperAdminPage() {
                 <div>
                   <h2 className="text-base font-bold text-zinc-900 flex items-center gap-2">
                     <Users className="text-zinc-900" size={20} />
-                    👨‍🌾 Mutaxassislar (Agronomlar va Veterinarlar)
+                    <span>👨‍🌾 Mutaxassislar (Agronomlar va Veterinarlar)</span>
+                    <img src="/logo-business.svg" alt="AgrozGO Business" className="h-5 w-auto object-contain ml-1" />
                   </h2>
                   <p className="mt-1 text-xs text-zinc-500">
                     O&apos;simlik va hayvon kasalliklarini davolash, chaqiruvlarni qabul qilish va dehqonlarga joyida maslahat berish mutaxassislari.

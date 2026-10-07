@@ -74,10 +74,11 @@ export default async function FeaturedMedicines() {
         </a>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2.5 sm:gap-3.5 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 web:grid-cols-4 web:gap-4.5">
+      <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
         {items.map((m) => (
           <ProductCard
             key={m.id}
+            variant="md"
             medicine={{
               id: m.id,
               name: m.name,

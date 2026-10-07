@@ -540,6 +540,7 @@ export async function notifyCustomerOrderStatusChange(
  */
 export async function notifyPharmacyStockAlert(
   telegramId: number,
+  medicineId: number,
   medName: string,
   stock: number,
   unit?: string | null,
@@ -548,28 +549,43 @@ export async function notifyPharmacyStockAlert(
 
   const unitStr = unit?.trim() || "dona";
   let text = "";
+  const inlineRows: any[] = [];
+
   if (stock <= 0) {
     text = [
-      "❌ <b>DIQQAT: DORI VOSITASI TUGADI!</b>",
+      "❌ <b>DIQQAT: DORI VOSITASI BUTUNLAY TUGADI!</b>",
       "",
-      `💊 <b>${escapeHtml(medName)}</b> dori vositasi dorixonangizda butunlay tugadi!`,
+      `💊 <b>«${escapeHtml(medName)}»</b> dori vositasi do'koningizda butunlay tugadi (0 ${escapeHtml(unitStr)})!`,
       `Holat: <b>Mavjud emas (yo'q)</b> ga o'zgartirildi.`,
       "",
-      "Mijozlarga sayt va ilovada <i>\"Kelganda xabar berish\"</i> tugmasi ko'rinadi.",
-      "Dorixonangizga yangi partiya kelganda, botdagi <b>Dorilar</b> bo'limi orqali qoldiqni yangilang.",
+      "Sayt va ilovada xaridorlarga <i>\"Kelganda xabar berish\"</i> tugmasi ko'rinadi.",
+      "",
+      "❓ Yangi partiya kelgan bo'lsa, zaxirani to'ldirasizmi?",
     ].join("\n");
+
+    inlineRows.push([
+      { text: "📦 Ha, keldi (Qo'shish)", callback_data: `stk:yes:${medicineId}` },
+      { text: "❌ Yo'q, hozircha yo'q", callback_data: `stk:no:${medicineId}` },
+    ]);
   } else {
     text = [
       "⚠️ <b>DIQQAT: DORI QOLDIG'I OZ QOLDI!</b>",
       "",
-      `💊 <b>${escapeHtml(medName)}</b> dori vositasidan dorixonangizda atigi <b>${stock} ${escapeHtml(unitStr)}</b> qoldi!`,
+      `💊 <b>«${escapeHtml(medName)}»</b> dori vositasidan dorixonangizda atigi <b>${stock} ${escapeHtml(unitStr)}</b> qoldi!`,
       "",
-      "Iltimos, zaxirangizni tekshirib, botdagi <b>Dorilar</b> menyusi orqali qoldiqni to'ldirib qo'yishingiz so'raladi.",
+      "❓ Ushbu doridan zaxirangizda yana bormi?",
     ].join("\n");
+
+    inlineRows.push([
+      { text: "✅ Ha, bor", callback_data: `stk:yes:${medicineId}` },
+      { text: "❌ Yo'q, hozircha yo'q", callback_data: `stk:no:${medicineId}` },
+    ]);
   }
 
   try {
-    await sendAuthMessage(telegramId, text);
+    await sendAuthMessage(telegramId, text, {
+      inline: { inline_keyboard: inlineRows },
+    });
     console.log(`[orders-bot] Dorixona (#${telegramId}) uchun qoldiq ogohlantirishi (${medName}: ${stock}) yuborildi`);
   } catch (err) {
     console.error("[orders-bot] Stock alert yuborishda xato:", err);

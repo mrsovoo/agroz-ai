@@ -183,6 +183,22 @@ export async function ensureSchema(): Promise<void> {
       );
     `);
 
+    // 10. Dori kelganda xabar berish (waitlist) jadvali
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS medicine_waitlist (
+        id serial PRIMARY KEY NOT NULL,
+        medicine_id integer NOT NULL,
+        telegram_id bigint,
+        phone varchar(32),
+        user_id integer,
+        is_notified boolean DEFAULT false NOT NULL,
+        created_at timestamp DEFAULT now() NOT NULL,
+        notified_at timestamp
+      );
+      CREATE INDEX IF NOT EXISTS medicine_waitlist_med_notified_idx
+        ON medicine_waitlist (medicine_id, is_notified);
+    `);
+
     console.log("[db] ensureSchema: Barcha jadvallar va ustunlar muvaffaqiyatli tekshirildi/yaratildi.");
   } catch (err: any) {
     console.warn("[db] ensureSchema ogohlantirish (bazaga ulanish yoki migratsiya):", err?.message || err);

@@ -182,7 +182,9 @@ type Step =
   // Murojaat / Yordam matnini kutish
   | "support_text"
   // Cross-bot OTP tasdiqlash (@agrozai_bot dagi foydalanuvchini tekshirish)
-  | "cross_otp";
+  | "cross_otp"
+  // Qoldiq kamayganda zaxirani to'ldirish (Telegram bot)
+  | "restock_input";
 
 type Draft = {
   role?: SpecialistRole;
@@ -218,6 +220,8 @@ type Draft = {
   editingPriceFor?: number;
   /** /dorilarim → rasmini o'zgartirayotgan dori id'si. */
   editingPhotoFor?: number;
+  /** Qoldiqni to'ldirish uchun dori id'si. */
+  restockMedId?: number;
 };
 
 type StateRow = typeof botStates.$inferSelect;
@@ -1431,6 +1435,84 @@ async function handleIndependentCallback(
       await sendAuthMessage(chatId, medicinesListMessage(rest.medicines), {
         inline: medicinesListKeyboard(rest.medicines),
       });
+    }
+    return true;
+  }
+
+  // 5.1. Dori qoldig'i kamayganda zaxirani to'ldirish yoki tugashini tasdiqlash (stk:yes:, stk:no:, stk:cancel)
+  if (data.startsWith("stk:")) {
+    await answerCallbackQuery(query.id);
+    const msgId = query.message?.message_id;
+    if (msgId && chatId) {
+      const { editAuthMessageReplyMarkup } = await import("@/lib/auth-bot");
+      await editAuthMessageReplyMarkup(chatId, msgId).catch(() => {});
+    }
+
+    if (data === "stk:cancel") {
+      await clearState(telegramId);
+      await sendAuthMessage(chatId, "Amal bekor qilindi.");
+      return true;
+    }
+
+    if (data.startsWith("stk:no:")) {
+      const medId = Number(data.slice("stk:no:".length));
+      if (!Number.isSafeInteger(medId)) return true;
+
+      const { specialistMedicines } = await import("@/db/schema");
+      const { eq } = await import("drizzle-orm");
+
+      const [med] = await db
+        .select()
+        .from(specialistMedicines)
+        .where(eq(specialistMedicines.id, medId))
+        .limit(1);
+
+      if (med && med.stock <= 0) {
+        await db
+          .update(specialistMedicines)
+          .set({ status: "yoq" })
+          .where(eq(specialistMedicines.id, medId));
+      }
+
+      await sendAuthMessage(
+        chatId,
+        `ℹ️ <b>Qabul qilindi.</b>\n\n«${escapeHtml(med?.name || "Dori")}» vositasi qoldig'i tugaganda (yoki hozirdanoq), sayt va ilovada <b>«Mavjud emas»</b> deb belgilanadi va xaridorlarga <b>«Kelganda xabar berish»</b> tugmasi taqdim etiladi.`,
+      );
+      return true;
+    }
+
+    if (data.startsWith("stk:yes:")) {
+      const medId = Number(data.slice("stk:yes:".length));
+      if (!Number.isSafeInteger(medId)) return true;
+
+      const { specialistMedicines } = await import("@/db/schema");
+      const { eq } = await import("drizzle-orm");
+
+      const [med] = await db
+        .select()
+        .from(specialistMedicines)
+        .where(eq(specialistMedicines.id, medId))
+        .limit(1);
+
+      if (!med) {
+        await sendAuthMessage(chatId, "⚠️ Dori topilmadi.");
+        return true;
+      }
+
+      await setState(telegramId, "restock_input", { restockMedId: medId });
+
+      await sendAuthMessage(
+        chatId,
+        `📦 <b>«${escapeHtml(med.name)}»</b> dorisidan yana nechta bor?\n\n` +
+          `Joriy qoldiq: <b>${med.stock} ${escapeHtml(med.stockUnit || "dona")}</b>\n\n` +
+          `Iltimos, zaxiraga <b>qo'shmoqchi bo'lgan miqdoringizni</b> butun raqamda yozing (masalan: <b>10</b> yoki <b>50</b>):`,
+        {
+          inline: {
+            inline_keyboard: [[{ text: "🔙 Bekor qilish", callback_data: "stk:cancel" }]],
+          },
+        },
+      );
+      return true;
     }
     return true;
   }
@@ -2988,6 +3070,79 @@ async function handleText(
         `⚠️ <b>Mahsulot rasmini yuklash majburiy (kamida 400×400 px)!</b>\n\nIltimos, dorining aniq rasmini yuboring (telefon kamerasi orqali yoki galereyadan 📸).\nRasm qabul qilingandan so'ng dorining nomini kiritish bosqichiga o'tiladi.`,
         { inline: MEDICINE_PHOTO_KEYBOARD },
       );
+      return;
+    }
+
+    // Dori qoldig'i kamayganda zaxirani to'ldirish
+    case "restock_input": {
+      const medId = draft.restockMedId;
+      if (!medId) {
+        await clearState(telegramId);
+        await sendAuthMessage(chatId, "Amal bekor qilindi.");
+        return;
+      }
+
+      const cleanNum = parseInt(text.replace(/\D/g, ""), 10);
+      if (!cleanNum || cleanNum <= 0) {
+        await sendAuthMessage(
+          chatId,
+          "⚠️ <b>Noto'g'ri miqdor!</b> Iltimos, musbat butun son kiriting (masalan: <b>10</b> yoki <b>25</b>):",
+          {
+            inline: {
+              inline_keyboard: [[{ text: "🔙 Bekor qilish", callback_data: "stk:cancel" }]],
+            },
+          },
+        );
+        return;
+      }
+
+      const { specialistMedicines } = await import("@/db/schema");
+      const { eq } = await import("drizzle-orm");
+
+      const [med] = await db
+        .select()
+        .from(specialistMedicines)
+        .where(eq(specialistMedicines.id, medId))
+        .limit(1);
+
+      if (!med) {
+        await clearState(telegramId);
+        await sendAuthMessage(chatId, "⚠️ Dori topilmadi.");
+        return;
+      }
+
+      const currentStock = med.stock || 0;
+      const newStock = currentStock + cleanNum;
+
+      await db
+        .update(specialistMedicines)
+        .set({
+          stock: newStock,
+          status: "bor",
+          updatedAt: new Date(),
+        })
+        .where(eq(specialistMedicines.id, medId));
+
+      await clearState(telegramId);
+
+      await sendAuthMessage(
+        chatId,
+        `✅ <b>«${escapeHtml(med.name)}»</b> dori zaxirasi muvaffaqiyatli to'ldirildi!\n\n` +
+          `• Avvalgi qoldiq: <b>${currentStock} ta</b>\n` +
+          `• Qo'shildi: <b>+${cleanNum} ta</b>\n` +
+          `• <b>Jami yangi qoldiq: ${newStock} ${escapeHtml(med.stockUnit || "dona")}</b>\n` +
+          `• Holat: 🟢 <b>Bor (Sotuvda mavjud)</b>`,
+      );
+
+      // Kutayotgan xaridorlarga (waitlist) avtomatik xushxabar yuborish!
+      try {
+        const { notifyMedicineAvailable } = await import("@/lib/waitlist");
+        notifyMedicineAvailable(medId).catch((err) =>
+          console.error("[auth-bot-flow] notifyMedicineAvailable error:", err),
+        );
+      } catch (e) {
+        console.error("[auth-bot-flow] notifyMedicineAvailable import error:", e);
+      }
       return;
     }
 

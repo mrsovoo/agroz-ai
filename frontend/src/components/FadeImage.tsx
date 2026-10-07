@@ -41,13 +41,13 @@ export default function FadeImage({
   }, []);
 
   return (
-    <div className={`relative overflow-hidden ${className ?? ""}`}>
+    <div className={`relative overflow-hidden bg-white ${className ?? ""}`}>
       {state !== "loaded" && (
         <div className="absolute inset-0" aria-hidden="true">
           {state === "error" ? (
             fallback
           ) : (
-            <div className="skeleton h-full w-full" />
+            <div className="skeleton bg-gray-100 h-full w-full" />
           )}
         </div>
       )}

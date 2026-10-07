@@ -52,6 +52,21 @@ import {
 } from "lucide-react";
 import { formatOrderNumber } from "@/lib/format";
 
+function formatPriceWithDots(val: string | number | null | undefined): string {
+  if (!val && val !== 0) return "";
+  const digits = String(val).replace(/\D/g, "");
+  if (!digits) return "";
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+function parsePriceNumber(val: string | null | undefined): number | null {
+  if (!val) return null;
+  const digits = String(val).replace(/\D/g, "");
+  if (!digits) return null;
+  const n = Number(digits);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 type Me = { enabled: boolean; authenticated: boolean; username: string | null };
 
 type Stats = {
@@ -730,7 +745,7 @@ export default function AdminPanelPage() {
     setEditingMedicine(med);
     setEditMedName(med.name || "");
     setEditMedType((med.type as any) || "general");
-    setEditMedPrice(med.price ? String(med.price) : "");
+    setEditMedPrice(med.price ? formatPriceWithDots(med.price) : "");
     setEditMedStock(med.stock !== null && med.stock !== undefined ? String(med.stock) : "10");
     setEditMedUnit(med.stockUnit || "dona");
     setEditMedUsage(med.usage || "");
@@ -772,14 +787,22 @@ export default function AdminPanelPage() {
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext("2d");
+        const isPng = file.type === "image/png" || file.name.toLowerCase().endsWith(".png");
         if (ctx) {
-          ctx.fillStyle = "#FFFFFF";
-          ctx.fillRect(0, 0, width, height);
           ctx.imageSmoothingEnabled = true;
           ctx.imageSmoothingQuality = "high";
-          ctx.drawImage(img, 0, 0, width, height);
-          const compressed = canvas.toDataURL("image/jpeg", 0.88);
-          setEditMedPhoto(compressed);
+          if (isPng) {
+            ctx.clearRect(0, 0, width, height);
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressed = canvas.toDataURL("image/png");
+            setEditMedPhoto(compressed);
+          } else {
+            ctx.fillStyle = "#FFFFFF";
+            ctx.fillRect(0, 0, width, height);
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressed = canvas.toDataURL("image/jpeg", 0.88);
+            setEditMedPhoto(compressed);
+          }
         } else {
           setEditMedPhoto(event.target?.result as string);
         }
@@ -815,7 +838,7 @@ export default function AdminPanelPage() {
         body: JSON.stringify({
           name: editMedName.trim(),
           type: editMedType,
-          price: editMedPrice ? Number(editMedPrice) : null,
+          price: parsePriceNumber(editMedPrice),
           stock: editMedStock ? Number(editMedStock) : 0,
           stockUnit: editMedUnit,
           usage: editMedUsage.trim() || null,
@@ -853,6 +876,39 @@ export default function AdminPanelPage() {
       alert("Serverga ulanishda xatolik yuz berdi");
     } finally {
       setSavingMedChanges(false);
+    }
+  }
+
+  async function handleToggleMedicineStatus(med: PharmacyMedicine) {
+    const nextStatus = med.status === "bor" ? "yoq" : "bor";
+    // Optimistic update
+    setPharmacyMedicines((prev) =>
+      prev.map((m) => (m.id === med.id ? { ...m, status: nextStatus } : m))
+    );
+    try {
+      const res = await adminFetch(`/api/admin/medicines/${med.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.ok) {
+        // Rollback
+        setPharmacyMedicines((prev) =>
+          prev.map((m) => (m.id === med.id ? { ...m, status: med.status } : m))
+        );
+        alert(data?.error || "Holatni o'zgartirib bo'lmadi");
+      } else {
+        setNotice({
+          kind: "ok",
+          text: `"${med.name}" holati ${nextStatus === "bor" ? "Mavjud (Bor)" : "Mavjud emas (Yo'q)"} ga o'zgartirildi`,
+        });
+      }
+    } catch {
+      setPharmacyMedicines((prev) =>
+        prev.map((m) => (m.id === med.id ? { ...m, status: med.status } : m))
+      );
+      alert("Tarmoq xatosi");
     }
   }
 
@@ -921,14 +977,22 @@ export default function AdminPanelPage() {
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext("2d");
+        const isPng = file.type === "image/png" || file.name.toLowerCase().endsWith(".png");
         if (ctx) {
-          ctx.fillStyle = "#FFFFFF";
-          ctx.fillRect(0, 0, width, height);
           ctx.imageSmoothingEnabled = true;
           ctx.imageSmoothingQuality = "high";
-          ctx.drawImage(img, 0, 0, width, height);
-          const compressed = canvas.toDataURL("image/jpeg", 0.88);
-          setNewMedPhoto(compressed);
+          if (isPng) {
+            ctx.clearRect(0, 0, width, height);
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressed = canvas.toDataURL("image/png");
+            setNewMedPhoto(compressed);
+          } else {
+            ctx.fillStyle = "#FFFFFF";
+            ctx.fillRect(0, 0, width, height);
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressed = canvas.toDataURL("image/jpeg", 0.88);
+            setNewMedPhoto(compressed);
+          }
         } else {
           setNewMedPhoto(event.target?.result as string);
         }
@@ -964,7 +1028,7 @@ export default function AdminPanelPage() {
         body: JSON.stringify({
           name: newMedName.trim(),
           type: newMedType,
-          price: newMedPrice ? Number(newMedPrice) : null,
+          price: parsePriceNumber(newMedPrice),
           stock: newMedStock ? Number(newMedStock) : 10,
           stockUnit: newMedUnit,
           usage: newMedUsage.trim() || null,
@@ -1433,7 +1497,8 @@ export default function AdminPanelPage() {
                 <div>
                   <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                     <Store className="text-emerald-500" size={20} />
-                    Dorixonalar / Agro-do&apos;konlar Boshqaruvi
+                    <span>Dorixonalar / Agro-do&apos;konlar Boshqaruvi</span>
+                    <img src="/logo-business.svg" alt="AgrozGO Business" className="h-5 w-auto object-contain ml-1" />
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
                     Platformadagi barcha agro-do&apos;konlar va dorixonalar kabinetlari, mahsulotlar nazorati
@@ -1702,7 +1767,8 @@ export default function AdminPanelPage() {
                 <div>
                   <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                     <Users className="text-emerald-500" size={20} />
-                    Mutaxassislar (Agronom va Veterinarlar)
+                    <span>Mutaxassislar (Agronom va Veterinarlar)</span>
+                    <img src="/logo-business.svg" alt="AgrozGO Business" className="h-5 w-auto object-contain ml-1" />
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
                     Dehqon va chorvadorlarga joyiga borib yordam beruvchi mutaxassislarni ko&apos;rib chiqish, tasdiqlash va boshqarish
@@ -3742,15 +3808,22 @@ export default function AdminPanelPage() {
                               {m.stock !== null ? `${m.stock} ${m.stockUnit || "dona"}` : "-"}
                             </td>
                             <td className="py-3 px-4">
-                              <span
-                                className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-black ${
+                              <button
+                                type="button"
+                                onClick={() => handleToggleMedicineStatus(m)}
+                                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-black border transition active:scale-95 shadow-2xs ${
                                   m.status === "bor"
-                                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                    : "bg-red-50 text-red-700 border border-red-200"
+                                    ? "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
+                                    : "bg-red-50 text-red-700 border-red-300 hover:bg-red-100"
                                 }`}
+                                title={
+                                  m.status === "bor"
+                                    ? "Bosing: Yo'q (Ko'rsatilmaydi) ga o'tkazish"
+                                    : "Bosing: Bor (Ko'rsatiladi) ga o'tkazish"
+                                }
                               >
-                                {m.status === "bor" ? "Mavjud" : m.status === "yoq" ? "Tugagan" : "Qoralama"}
-                              </span>
+                                {m.status === "bor" ? "🟢 Bor" : "🔴 Yo'q"}
+                              </button>
                             </td>
                             <td className="py-3 px-4 text-right">
                               <div className="flex items-center justify-end gap-1.5">
@@ -3933,12 +4006,11 @@ export default function AdminPanelPage() {
                       Narxi (so&apos;m)
                     </label>
                     <input
-                      type="number"
-                      min="0"
-                      step="1000"
+                      type="text"
+                      inputMode="numeric"
                       value={editMedPrice}
-                      onChange={(e) => setEditMedPrice(e.target.value)}
-                      placeholder="Masalan: 45000"
+                      onChange={(e) => setEditMedPrice(formatPriceWithDots(e.target.value))}
+                      placeholder="Masalan: 45.000"
                       className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none font-mono"
                     />
                   </div>
@@ -4158,12 +4230,11 @@ export default function AdminPanelPage() {
                       Narxi (so&apos;m)
                     </label>
                     <input
-                      type="number"
-                      min="0"
-                      step="1000"
+                      type="text"
+                      inputMode="numeric"
                       value={newMedPrice}
-                      onChange={(e) => setNewMedPrice(e.target.value)}
-                      placeholder="Masalan: 45000"
+                      onChange={(e) => setNewMedPrice(formatPriceWithDots(e.target.value))}
+                      placeholder="Masalan: 45.000"
                       className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none font-mono"
                     />
                   </div>

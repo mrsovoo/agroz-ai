@@ -39,3 +39,23 @@ export function clientIp(req: Request): string {
   }
   return req.headers.get("x-real-ip") ?? "unknown";
 }
+
+/**
+ * Narxni xavfsiz son formatiga o'tkazadi:
+ * 10000 -> 10000
+ * "10.000" -> 10000
+ * "10 500" -> 10500
+ * "10500 so'm" -> 10500
+ * Yaroqsiz yoki noldan kichik bo'lsa null qaytaradi.
+ */
+export function parseSafePrice(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value === "number") {
+    return Number.isFinite(value) && value > 0 && value <= 1_000_000_000 ? Math.round(value) : null;
+  }
+  const str = String(value).trim();
+  const digits = str.replace(/\D/g, "");
+  if (!digits) return null;
+  const num = Number(digits);
+  return Number.isSafeInteger(num) && num > 0 && num <= 1_000_000_000 ? num : null;
+}
