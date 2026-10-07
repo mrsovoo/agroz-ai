@@ -12,28 +12,24 @@ function isVeterinarian(s: HomeSpecialist): boolean {
   );
 }
 
+const MAX_SPECIALIST_RADIUS_KM = 5;
+
 function selectTopSpecialists(specs: HomeSpecialist[]): HomeSpecialist[] {
   const sorted = [...specs].sort((a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999));
   const vets = sorted.filter((s) => isVeterinarian(s));
   const agrs = sorted.filter((s) => !isVeterinarian(s));
 
+  // 1. Maksimum 5 km gacha radiusdagi eng yaqin agronom
+  const nearbyAgrs = agrs.filter((s) => s.distanceKm != null && s.distanceKm <= MAX_SPECIALIST_RADIUS_KM);
+  const bestAgr = nearbyAgrs.length > 0 ? nearbyAgrs[0] : agrs[0];
+
+  // 2. Maksimum 5 km gacha radiusdagi eng yaqin veterinar
+  const nearbyVets = vets.filter((s) => s.distanceKm != null && s.distanceKm <= MAX_SPECIALIST_RADIUS_KM);
+  const bestVet = nearbyVets.length > 0 ? nearbyVets[0] : vets[0];
+
   const result: HomeSpecialist[] = [];
-  const addedIds = new Set<number>();
-
-  for (const s of [...vets.slice(0, 2), ...agrs.slice(0, 2)]) {
-    if (!addedIds.has(s.id)) {
-      result.push(s);
-      addedIds.add(s.id);
-    }
-  }
-
-  for (const s of sorted) {
-    if (result.length >= 4) break;
-    if (!addedIds.has(s.id)) {
-      result.push(s);
-      addedIds.add(s.id);
-    }
-  }
+  if (bestAgr) result.push(bestAgr);
+  if (bestVet && (!bestAgr || bestVet.id !== bestAgr.id)) result.push(bestVet);
 
   return result.sort((a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999));
 }
@@ -132,7 +128,7 @@ export default async function HomePage() {
       }
     }
 
-    initialMedicines = Array.from(medMap.values()).sort((a, b) => b.id - a.id);
+    initialMedicines = Array.from(medMap.values()).sort((a, b) => b.id - a.id).slice(0, 4);
   } catch {
     // Tarmoq xatosi bo'lsa HomeClientView o'zidagi standart fallback'ini ishlatadi
   }

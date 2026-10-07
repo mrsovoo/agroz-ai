@@ -22,6 +22,7 @@ import {
 } from "@/lib/cart-store";
 import { haptic } from "@/lib/telegram";
 import { Minus, Plus } from "lucide-react";
+import { distanceKm, roundKm } from "@/lib/geo";
 
 export type HomeMedicine = {
   id: number;
@@ -40,36 +41,53 @@ export type HomeMedicine = {
   pharmacyAddress?: string;
 };
 
+export const MAX_SPECIALIST_RADIUS_KM = 5;
+
 function isVeterinarian(s: Specialist): boolean {
   return (
     s.helpsWith === "animal" ||
-    Boolean(s.specialty && /veterinar|chorva|parranda|hayvon/i.test(s.specialty)) ||
-    Boolean(s.bio && /veterinar|chorva|parranda|hayvon/i.test(s.bio))
+    Boolean(s.specialty && /veterinar|chorva|parranda|hayvon|mol|shifokor|vrach/i.test(s.specialty)) ||
+    Boolean(s.bio && /veterinar|chorva|parranda|hayvon|mol|tuyoq|emlash/i.test(s.bio))
   );
 }
 
-function selectNearbySpecialists(allSpecs: Specialist[]): Specialist[] {
-  const sorted = [...allSpecs].sort((a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999));
+function selectNearbySpecialists(
+  allSpecs: Specialist[],
+  userCoords?: { lat: number; lng: number } | null
+): Specialist[] {
+  if (!allSpecs || allSpecs.length === 0) return [];
+
+  // Agar foydalanuvchi koordinatalari ma'lum bo'lsa, har bir mutaxassis uchun masofani hisoblaymiz/yangilaymiz
+  const listWithDist = allSpecs.map((s) => {
+    let d = s.distanceKm;
+    if (userCoords && s.lat && s.lng) {
+      d = roundKm(distanceKm(userCoords.lat, userCoords.lng, s.lat, s.lng));
+    }
+    return { ...s, distanceKm: d };
+  });
+
+  const sorted = [...listWithDist].sort(
+    (a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999)
+  );
+
   const vets = sorted.filter((s) => isVeterinarian(s));
   const agrs = sorted.filter((s) => !isVeterinarian(s));
 
+  // 1. Maksimum 5 km gacha radiusdagi eng yaqin agronom
+  const nearbyAgrs = agrs.filter(
+    (s) => s.distanceKm != null && s.distanceKm <= MAX_SPECIALIST_RADIUS_KM
+  );
+  const bestAgr = nearbyAgrs.length > 0 ? nearbyAgrs[0] : agrs[0];
+
+  // 2. Maksimum 5 km gacha radiusdagi eng yaqin veterinar
+  const nearbyVets = vets.filter(
+    (s) => s.distanceKm != null && s.distanceKm <= MAX_SPECIALIST_RADIUS_KM
+  );
+  const bestVet = nearbyVets.length > 0 ? nearbyVets[0] : vets[0];
+
   const result: Specialist[] = [];
-  const addedIds = new Set<number>();
-
-  for (const s of [...vets.slice(0, 2), ...agrs.slice(0, 2)]) {
-    if (!addedIds.has(s.id)) {
-      result.push(s);
-      addedIds.add(s.id);
-    }
-  }
-
-  for (const s of sorted) {
-    if (result.length >= 4) break;
-    if (!addedIds.has(s.id)) {
-      result.push(s);
-      addedIds.add(s.id);
-    }
-  }
+  if (bestAgr) result.push(bestAgr);
+  if (bestVet && (!bestAgr || bestVet.id !== bestAgr.id)) result.push(bestVet);
 
   return result.sort((a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999));
 }
@@ -134,20 +152,21 @@ export default function HomeClientView({
     fetchRandomMedicines();
   }, [initialMedicines]);
 
-  // Mutaxassislar: foydalanuvchi lokatsiyasi bo'yicha yaqin 2 ta veterinar va 2 ta agronom (tasodifiy yangilanmaydi, lokatsiyaga qarab barqaror turadi)
+  // Mutaxassislar: foydalanuvchi lokatsiyasi bo'yicha maksimum 5 km radiusda eng yaqin 1 agronom va 1 veterinar
   useEffect(() => {
     async function loadNearbySpecialists(lat?: number, lng?: number) {
       try {
         const url = lat && lng
-          ? `/api/specialists?role=specialist&lat=${lat}&lng=${lng}`
-          : `/api/specialists?role=specialist`;
+          ? `/api/specialists?role=specialist&lat=${lat}&lng=${lng}&radius=5`
+          : `/api/specialists?role=specialist&radius=5`;
         const res = await fetch(url);
         if (!res.ok) return;
         const data = await res.json();
         const items = Array.isArray(data?.items) ? data.items : [];
         const specsOnly = items.filter((s: any) => s.role === "specialist" || (s.role !== "pharmacy" && !s.organization));
         if (specsOnly.length > 0) {
-          setSpecialists(selectNearbySpecialists(specsOnly));
+          const userCoords = lat && lng ? { lat, lng } : null;
+          setSpecialists(selectNearbySpecialists(specsOnly, userCoords));
         }
       } catch {}
     }
@@ -158,11 +177,11 @@ export default function HomeClientView({
           loadNearbySpecialists(pos.coords.latitude, pos.coords.longitude);
         },
         () => {
-          if (specialists.length === 0) loadNearbySpecialists();
+          loadNearbySpecialists();
         },
         { timeout: 8000, maximumAge: 300000 }
       );
-    } else if (specialists.length === 0) {
+    } else {
       loadNearbySpecialists();
     }
   }, []);
@@ -297,16 +316,21 @@ export default function HomeClientView({
         )}
       </section>
 
-      {/* 4. Mutaxassislar bo'limi — lokatsiya orqali yaqin 2 ta veterinar va 2 ta agronom */}
+      {/* 4. Mutaxassislar bo'limi — maksimum 5 km radiusda eng yaqin 1 ta agronom va 1 ta veterinar */}
       {specialists.length > 0 && (
         <section className="mt-7">
           <div className="flex items-center justify-between mb-3 px-0.5">
             <div>
-              <h2 className="text-[20px] font-black tracking-tight text-neutral-900">
-                Mutaxassislar
-              </h2>
-              <p className="text-[12px] text-neutral-500 font-medium">
-                Sizga eng yaqin malakali agronom va veterinarlar
+              <div className="flex items-center gap-2">
+                <h2 className="text-[20px] font-black tracking-tight text-neutral-900">
+                  Mutaxassislar
+                </h2>
+                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-800 border border-emerald-200">
+                  5 km gacha radius
+                </span>
+              </div>
+              <p className="text-[12px] text-neutral-500 font-medium mt-0.5">
+                Sizga eng yaqin 1 ta agronom va 1 ta veterinar
               </p>
             </div>
             <Link
@@ -318,9 +342,9 @@ export default function HomeClientView({
             </Link>
           </div>
 
-          {/* Mutaxassislar bo'limi bilan 100% bir xil standart kartochkalar (2 veterinar va 2 agronom) */}
+          {/* Aniq 1 ta agronom va 1 ta veterinar ko'rsatiladi */}
           <div className="space-y-3">
-            {specialists.map((s) => (
+            {specialists.slice(0, 2).map((s) => (
               <SpecialistCard
                 key={s.id}
                 specialist={s}
