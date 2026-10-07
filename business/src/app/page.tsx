@@ -1231,86 +1231,33 @@ export default function PartnerKabinetPage() {
                     {/* Mijoz va Tezkor Bog'lanish */}
                     <div className="space-y-2 text-xs">
                       <div className="flex items-center justify-between gap-2">
-                        <div className="min-w-0">
-                          <span className="text-[11px] text-zinc-400 block font-medium">Mijoz / Fermer</span>
-                          <span className="text-sm font-extrabold text-zinc-900 truncate block">{c.customerName}</span>
-                        </div>
+                        <span className="text-sm font-extrabold text-zinc-900 truncate">{c.customerName}</span>
 
-                        {/* Bog'lanish tugmasi: bosilganda raqam chiqadi va ulanish imkoni beriladi */}
                         {c.customerPhone && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              haptic("medium");
-                              setRevealedPhones((prev) => ({
-                                ...prev,
-                                [`call_${c.id}`]: !prev[`call_${c.id}`],
-                              }));
-                            }}
-                            className="flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-3.5 py-2 text-xs font-bold text-white shadow-xs active:scale-95 transition shrink-0"
+                          <a
+                            href={`tel:${c.customerPhone}`}
+                            className="flex items-center gap-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 text-xs font-bold active:scale-95 transition shrink-0"
                           >
                             <Phone size={13} />
-                            <span>Bog&apos;lanish</span>
-                          </button>
+                            <span>{c.customerPhone}</span>
+                          </a>
                         )}
                       </div>
 
-                      {/* Bog'lanish bosilganda ko'rinadigan telefon raqami qutisi */}
-                      {revealedPhones[`call_${c.id}`] && c.customerPhone && (
-                        <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-2.5 flex items-center justify-between gap-2 animate-in fade-in duration-150">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <Phone size={13} className="text-emerald-700 shrink-0" />
-                            <a
-                              href={`tel:${c.customerPhone}`}
-                              onClick={() => haptic("light")}
-                              className="font-mono font-black text-xs text-emerald-950 hover:underline truncate"
-                            >
-                              {c.customerPhone}
-                            </a>
-                          </div>
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <a
-                              href={`tel:${c.customerPhone}`}
-                              onClick={() => haptic("light")}
-                              className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-emerald-700 transition"
-                            >
-                              Qo&apos;ng&apos;iroq
-                            </a>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                navigator.clipboard?.writeText(c.customerPhone || "");
-                                haptic("light");
-                                alert("Telefon raqami nusxalandi: " + c.customerPhone);
-                              }}
-                              className="rounded-lg bg-white border border-emerald-300 px-2 py-1 text-[11px] font-bold text-emerald-800 hover:bg-emerald-100 transition"
-                            >
-                              Nusxa
-                            </button>
-                          </div>
-                        </div>
-                      )}
+                      {/* Muammo tavsifi */}
+                      <p className="text-xs text-zinc-700 bg-zinc-50 border border-zinc-100 p-2.5 rounded-xl font-medium">
+                        {c.problem}
+                      </p>
 
-                      {/* Muammo / Alomatlar tavsifi */}
-                      <div className="rounded-xl bg-amber-50/70 p-3 border border-amber-200/80">
-                        <span className="text-[10px] font-bold uppercase text-amber-800 tracking-wider block mb-1">
-                          Muammo tavsifi:
-                        </span>
-                        <p className="text-xs text-zinc-900 leading-relaxed font-sans">{c.problem}</p>
-                      </div>
-
-                      {/* Manzil va 1-Tap Navigator havolasi */}
+                      {/* Manzil va Xarita */}
                       {c.address && (
-                        <div className="rounded-xl bg-zinc-50 p-2.5 border border-zinc-100 flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <MapPin size={14} className="text-zinc-500 shrink-0" />
-                            <span className="text-xs text-zinc-800 truncate font-medium">{c.address}</span>
-                          </div>
+                        <div className="flex items-center justify-between gap-2 text-[11px] text-zinc-500">
+                          <span className="truncate">{c.address}</span>
                           <a
                             href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(c.address)}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="shrink-0 flex items-center gap-1 rounded-lg bg-blue-50 px-2 py-1 text-[11px] font-bold text-blue-700 hover:bg-blue-100 transition"
+                            className="shrink-0 flex items-center gap-1 text-blue-600 font-bold hover:underline"
                           >
                             <Navigation size={11} />
                             <span>Xarita</span>
