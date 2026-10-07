@@ -163,34 +163,32 @@ export default function ProfileOrdersAndCalls({ userPhone }: { userPhone?: strin
 
   const getCallStatusBadge = (status: string) => {
     switch (status) {
-      case "yangi":
-        return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-700 border border-amber-200">
-            <Clock size={11} /> Kutilmoqda
-          </span>
-        );
-      case "qabul_qilindi":
-        return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-bold text-blue-700 border border-blue-200">
-            <CheckCircle2 size={11} /> Qabul qilindi
-          </span>
-        );
       case "bajarildi":
+      case "completed":
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-200">
-            <CheckCircle2 size={11} /> Bajarildi
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11.5px] font-bold text-emerald-700 border border-emerald-200">
+            <CheckCircle2 size={12} /> Yakunlandi
           </span>
         );
       case "bekor":
+      case "bekor_qilindi":
+      case "cancelled":
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-0.5 text-[11px] font-bold text-red-700 border border-red-200">
-            <AlertCircle size={11} /> Bekor qilindi
+          <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-[11.5px] font-bold text-red-600 border border-red-200">
+            <AlertCircle size={12} /> Bekor qilindi
+          </span>
+        );
+      case "qabul_qilindi":
+      case "tasdiqlandi":
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-[11.5px] font-bold text-blue-700 border border-blue-200">
+            <CheckCircle2 size={12} /> Qabul qilindi
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2.5 py-0.5 text-[11px] font-bold text-neutral-600">
-            {status}
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[11.5px] font-bold text-amber-700 border border-amber-200">
+            <Clock size={12} /> So&apos;rov yuborildi
           </span>
         );
     }
@@ -409,61 +407,55 @@ export default function ProfileOrdersAndCalls({ userPhone }: { userPhone?: strin
               </Link>
             </div>
           ) : (
-            calls.map((call) => (
-              <div
-                key={call.id}
-                className="rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-2xs transition hover:border-[var(--brand-green)]/40"
-              >
-                <div className="flex items-center justify-between border-b border-neutral-100 pb-2.5 mb-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-extrabold text-neutral-900">
-                      Chaqiruv #{call.id}
-                    </span>
-                    {getCallStatusBadge(call.status)}
-                  </div>
-                  <span className="text-[11px] font-mono text-neutral-400">
-                    {new Date(call.createdAt).toLocaleDateString("uz-UZ")}
-                  </span>
-                </div>
+            calls.map((call) => {
+              const roleText = (() => {
+                const spec = (call.specialistSpecialty || "").toLowerCase();
+                if (/veterinar|chorva|parranda|hayvon|mol|emlash/i.test(spec)) return "Veterinar";
+                if (/agronom|ekin|o'simlik|fitopatolog|bog'bon|tuproq/i.test(spec)) return "Agronom";
+                return call.specialistSpecialty || "Agronom / Veterinar";
+              })();
 
-                <div className="space-y-1.5 text-xs">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-extrabold text-[13.5px] text-neutral-900">
-                        👨‍⚕️ {call.specialistName}
-                      </p>
-                      <p className="text-[11px] text-neutral-500">
-                        {call.specialistSpecialty || "Agronom / Veterinar"}
+              return (
+                <div
+                  key={call.id}
+                  className="rounded-2xl border border-neutral-200/80 bg-white p-3.5 sm:p-4 shadow-2xs transition hover:border-neutral-300"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0 pr-2">
+                      {/* 1. #0000 chaqiruv raqami va Mutaxassis yo'nalishi (Agronom / Veterinar) */}
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[14.5px] sm:text-[15.5px] font-black text-neutral-900 tracking-tight">
+                          #{String(call.id).padStart(4, "0")}
+                        </span>
+                        <span className="text-neutral-300 font-bold">•</span>
+                        <span className="text-[14px] sm:text-[15px] font-extrabold text-neutral-800 truncate">
+                          {roleText}
+                        </span>
+                      </div>
+
+                      {/* 2. Pastda sal kichikroqda va opasitisi tushgan holatda mutaxassis ismi */}
+                      <p className="text-[12px] font-medium text-neutral-400 mt-0.5 truncate">
+                        {call.specialistName || "Mutaxassis"}
                       </p>
                     </div>
-                    {call.specialistPhone && (
-                      <a
-                        href={`tel:${call.specialistPhone}`}
-                        className="flex items-center gap-1 rounded-xl bg-neutral-100 px-3 py-1.5 font-bold text-neutral-800 hover:bg-neutral-200 transition"
-                      >
-                        <Phone size={12} /> Qo&apos;ng&apos;iroq
-                      </a>
-                    )}
-                  </div>
 
-                  {call.address && (
-                    <div className="flex items-center gap-1.5 text-neutral-600 pt-1">
-                      <MapPin size={13} className="text-neutral-400 shrink-0" />
-                      <span>{call.address}</span>
+                    {/* 3. O'ng tomonda toza status va telefon tugmasi */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {call.specialistPhone && (call.status === "qabul_qilindi" || call.status === "tasdiqlandi") && (
+                        <a
+                          href={`tel:${String(call.specialistPhone).replace(/[^\d+]/g, "")}`}
+                          className="flex h-8 w-8 items-center justify-center rounded-xl bg-neutral-100 text-neutral-700 hover:bg-neutral-200 active:scale-95 transition"
+                          title="Mutaxassisga qo'ng'iroq qilish"
+                        >
+                          <Phone size={14} />
+                        </a>
+                      )}
+                      {getCallStatusBadge(call.status)}
                     </div>
-                  )}
-
-                  <div className="rounded-xl bg-neutral-50 p-2.5 mt-2 border border-neutral-100">
-                    <p className="text-[10.5px] uppercase font-mono font-bold text-neutral-400 mb-0.5">
-                      Muammo tavsifi:
-                    </p>
-                    <p className="text-xs text-neutral-800 italic">
-                      {call.problem}
-                    </p>
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       )}

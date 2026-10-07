@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronRight, LogOut, Check, Trash2, Shield, FileText } from "lucide-react";
+import { ChevronRight, LogOut, Check, Trash2, Shield, FileText, Phone } from "lucide-react";
 import OrderTrackingStatusCard from "@/components/OrderTrackingStatusCard";
 import SupportTicketsPanel from "@/components/SupportTicketsPanel";
 import { AddToHomeScreenButton } from "@/components/HomeScreenPromptBanner";
@@ -12,6 +12,43 @@ import { apiUrl, apiFetch } from "@/lib/api-config";
 import { loadLastOrder } from "@/lib/cart-store";
 import { getSpecialistCalls, saveSpecialistCalls } from "@/lib/specialist-calls";
 import { unregisterPushTokenOnBackend } from "@/lib/capacitor";
+
+function getCallRoleLabel(call: { specialistSpecialty?: string | null; specialistRole?: string | null }): string {
+  const text = `${call.specialistRole || ""} ${call.specialistSpecialty || ""}`.toLowerCase();
+  if (/veterinar|chorva|parranda|hayvon|mol|emlash/i.test(text)) return "Veterinar";
+  if (/agronom|ekin|o'simlik|fitopatolog|bog'bon|tuproq/i.test(text)) return "Agronom";
+  if (call.specialistSpecialty) return call.specialistSpecialty;
+  return "Agronom / Veterinar";
+}
+
+function getCallStatusMeta(status: string) {
+  if (status === "bajarildi" || status === "completed") {
+    return {
+      label: "Yakunlandi",
+      badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200/80",
+      dotClass: "bg-emerald-500",
+    };
+  }
+  if (status === "bekor" || status === "bekor_qilindi" || status === "cancelled") {
+    return {
+      label: "Bekor qilindi",
+      badgeClass: "bg-red-50 text-red-600 border-red-200/80",
+      dotClass: "bg-red-500",
+    };
+  }
+  if (status === "qabul_qilindi" || status === "tasdiqlandi" || status === "accepted") {
+    return {
+      label: "Qabul qilindi",
+      badgeClass: "bg-blue-50 text-blue-700 border-blue-200/80",
+      dotClass: "bg-blue-500",
+    };
+  }
+  return {
+    label: "So'rov yuborildi",
+    badgeClass: "bg-amber-50 text-amber-700 border-amber-200/80",
+    dotClass: "bg-amber-500",
+  };
+}
 
 type UserProfile = {
   id?: number;
@@ -385,127 +422,53 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
         ) : (
           <div className="space-y-2.5">
             {displayCalls.map((call) => {
-              const isExpanded = expandedCallId === call.id;
-              const isDone = call.status === "completed" || call.status === "bajarildi";
-              const isAccepted = call.status === "tasdiqlandi" || call.status === "qabul_qilindi" || isDone;
-
-              const statusLabel =
-                call.status === "pending" || call.status === "yangi"
-                  ? "So'rov yuborildi"
-                  : call.status === "tasdiqlandi" || call.status === "qabul_qilindi"
-                  ? "Qabul qilindi"
-                  : isDone
-                  ? "Yakunlandi"
-                  : "So'rov yuborildi";
+              const statusMeta = getCallStatusMeta(call.status);
+              const roleLabel = getCallRoleLabel(call);
+              const phone = call.specialistPhone || call.phone;
 
               return (
                 <div
                   key={call.id}
-                  className="overflow-hidden rounded-2xl bg-white border border-neutral-200/90 transition-all shadow-2xs"
+                  className="rounded-2xl bg-white border border-neutral-200/90 p-3.5 sm:p-4 transition-all shadow-2xs hover:border-neutral-300"
                 >
-                  <button
-                    type="button"
-                    onClick={() => handleToggleCall(call.id)}
-                    className="flex w-full items-center justify-between p-4 text-left hover:bg-neutral-50 active:scale-[0.99] transition"
-                  >
-                    <div>
-                      <p className="text-[16px] font-bold text-neutral-900 tracking-tight">
-                        #{call.id} · {call.specialistSpecialty ? `${call.specialistSpecialty} ` : ""}{call.specialistName || "Mutaxassis"}
-                      </p>
-                      <p className="text-[13px] text-neutral-500 font-medium mt-0.5">
-                        {statusLabel}
-                      </p>
-                    </div>
-                    <ChevronRight
-                      size={20}
-                      className={`text-neutral-400 transition-transform duration-200 ${
-                        isExpanded ? "rotate-90 text-[#039e1e]" : ""
-                      }`}
-                    />
-                  </button>
-
-                  {/* Bosilganda faqat tarix va 3 bosqichli status ma'lumotlari ochiladi (qayta chaqiruv so'rovi yuborilmaydi) */}
-                  {isExpanded && (
-                    <div className="border-t border-neutral-100 bg-neutral-50/70 p-4 animate-in fade-in duration-200 space-y-4">
-                      {/* 3 ta bosqich (faqat tarixni ko'rish uchun) */}
-                      <div className="rounded-2xl bg-white border border-neutral-200/90 p-4 space-y-3.5 shadow-2xs">
-                        {/* 1-bosqich: So'rov yuborildi */}
-                        <div className="relative flex items-center gap-3">
-                          <div className="absolute left-[13px] top-[26px] h-4 w-[2px] bg-[#039e1e]" />
-                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#039e1e] text-white shadow-xs">
-                            <Check size={16} strokeWidth={3} />
-                          </div>
-                          <span className="text-[14.5px] font-bold text-neutral-900">
-                            So&apos;rov yuborildi
-                          </span>
-                        </div>
-
-                        {/* 2-bosqich: Qabul qilindi */}
-                        <div className="relative flex items-center gap-3">
-                          <div
-                            className={`absolute left-[13px] top-[26px] h-4 w-[2px] ${
-                              isDone ? "bg-[#039e1e]" : "bg-neutral-200"
-                            }`}
-                          />
-                          {isAccepted ? (
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#039e1e] text-white shadow-xs">
-                              <Check size={16} strokeWidth={3} />
-                            </div>
-                          ) : (
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-neutral-300 bg-neutral-100" />
-                          )}
-                          <span
-                            className={`text-[14.5px] ${
-                              isAccepted ? "font-bold text-neutral-900" : "font-medium text-neutral-400"
-                            }`}
-                          >
-                            Qabul qilindi
-                          </span>
-                        </div>
-
-                        {/* 3-bosqich: Yakunlandi */}
-                        <div className="relative flex items-center gap-3">
-                          {isDone ? (
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#039e1e] text-white shadow-xs">
-                              <Check size={16} strokeWidth={3} />
-                            </div>
-                          ) : (
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-neutral-300 bg-neutral-100" />
-                          )}
-                          <span
-                            className={`text-[14.5px] ${
-                              isDone ? "font-bold text-neutral-900" : "font-medium text-neutral-400"
-                            }`}
-                          >
-                            Yakunlandi
-                          </span>
-                        </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0 pr-2">
+                      {/* 1. #0000 chaqiruv raqami va Mutaxassis yo'nalishi (Agronom / Veterinar) */}
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[14.5px] sm:text-[15.5px] font-black text-neutral-900 tracking-tight">
+                          #{String(call.id).padStart(4, "0")}
+                        </span>
+                        <span className="text-neutral-300 font-bold">•</span>
+                        <span className="text-[14px] sm:text-[15px] font-extrabold text-neutral-800 truncate">
+                          {roleLabel}
+                        </span>
                       </div>
 
-                      {/* Qo'shimcha ma'lumotlar bloki */}
-                      <div className="rounded-2xl bg-white border border-neutral-200/90 p-3.5 text-[13.5px] text-neutral-600 space-y-1.5 shadow-2xs">
-                        {(call.specialistPhone || call.phone) && (
-                          <p className="flex items-center justify-between">
-                            <span className="text-neutral-500">Mutaxassis telefoni:</span>
-                            <a href={`tel:${String(call.specialistPhone || call.phone).replace(/[^\d+]/g, "")}`} className="font-bold text-[#039e1e] hover:underline">
-                              {call.specialistPhone || call.phone}
-                            </a>
-                          </p>
-                        )}
-                        {call.address && (
-                          <p className="flex items-center justify-between">
-                            <span className="text-neutral-500">Manzil:</span>
-                            <span className="font-semibold text-neutral-800 text-right">{call.address}</span>
-                          </p>
-                        )}
-                        {call.problem && (
-                          <p className="pt-1 text-[12.5px] text-neutral-500 border-t border-neutral-100">
-                            Masala: <span className="text-neutral-700 font-medium">{call.problem}</span>
-                          </p>
-                        )}
-                      </div>
+                      {/* 2. Pastda sal kichikroqda va opasitisi tushgan holatda mutaxassis ismi */}
+                      <p className="text-[12px] font-medium text-neutral-400 mt-0.5 truncate">
+                        {call.specialistName || "Mutaxassis"}
+                      </p>
                     </div>
-                  )}
+
+                    {/* 3. O'ng tomonda toza status (Yakunlandi / Bekor qilindi / Qabul qilindi) va telefon tugmasi */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {phone && (call.status === "qabul_qilindi" || call.status === "tasdiqlandi") && (
+                        <a
+                          href={`tel:${String(phone).replace(/[^\d+]/g, "")}`}
+                          className="flex h-8 w-8 items-center justify-center rounded-xl bg-neutral-100 text-neutral-700 hover:bg-neutral-200 active:scale-95 transition"
+                          title="Mutaxassisga qo'ng'iroq qilish"
+                        >
+                          <Phone size={14} />
+                        </a>
+                      )}
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-bold border ${statusMeta.badgeClass}`}
+                      >
+                        <span className={`h-1.5 w-1.5 rounded-full ${statusMeta.dotClass}`} />
+                        <span>{statusMeta.label}</span>
+                      </span>
+                    </div>
+                  </div>
                 </div>
               );
             })}
