@@ -59,7 +59,9 @@ export function SpecialistAvatar({
   return (
     <div className="relative shrink-0">
       <div
-        className={`flex ${dimClasses} items-center justify-center font-black text-white shadow-xs select-none transition-transform group-hover:scale-105 ${
+        className={`flex ${dimClasses} items-center justify-center font-black text-white shadow-xs select-none transition-transform group-hover:scale-105 ring-2 ring-offset-2 ${
+          isBusy ? "ring-red-500" : "ring-emerald-500"
+        } ${
           isVeterinar
             ? "bg-gradient-to-br from-[#0284c7] via-[#0369a1] to-[#075985]"
             : "bg-gradient-to-br from-[#039e1e] via-[#028518] to-[#016812]"
@@ -79,7 +81,11 @@ export function SpecialistAvatar({
 
 /**
  * Yagona standart Mutaxassis kartochkasi:
- * Asosiy sahifa (Home) va Mutaxassislar bo'limida bir xil dizayn, faqat haqiqiy ma'lumotlar bilan ishlaydi.
+ * Sodda, toza va ixcham dizayn:
+ * - Ism, nima qilishi (yo'nalishi)
+ * - Reyting va staji
+ * - Bo'sh/band holati avatar atrofidagi yashil/qizil ramka va chaqirish tugmasi orqali bildiriladi
+ * - Profil va Chaqirish / Hozirda chaqiruvda tugmalari
  */
 export function SpecialistCard({
   specialist,
@@ -101,58 +107,34 @@ export function SpecialistCard({
   const ratingText =
     specialist.ratingAvg && specialist.ratingAvg > 0 ? specialist.ratingAvg.toFixed(1) : null;
 
-  // Haqiqiy ma'lumot: agar tajriba kiritilmagan bo'lsa, soxta "5+ yil" qo'yilmaydi!
+  // Haqiqiy ma'lumot: agar tajriba kiritilgan bo'lsa
   const expText =
     specialist.experienceYears != null && specialist.experienceYears > 0
       ? `${specialist.experienceYears} yil staj`
       : null;
 
   return (
-    <div className="rounded-[24px] bg-white border border-neutral-100 p-4 shadow-sm hover:shadow-md transition-all group">
-      {/* Yuqori qism: Avatar, Mutaxassislik, Ism va Badge'lar */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3.5 min-w-0">
+    <div className="rounded-[22px] bg-white border border-neutral-100 p-3.5 sm:p-4 shadow-sm hover:shadow-md transition-all group">
+      {/* Yuqori qism: Avatar (cheti yashil/qizil ramka bilan), Ism, Yo'nalishi, Reyting va Staji */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           <SpecialistAvatar
             name={specialist.name}
             isVeterinar={isVet}
             isBusy={specialist.isBusy}
           />
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[12px] font-bold text-neutral-500 tracking-tight truncate">
-                {specialtyText}
-              </span>
-              {specialist.isBusy ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.2 text-[10px] font-bold text-red-700 border border-red-200 shrink-0">
-                  <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                  Band
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.2 text-[10px] font-bold text-emerald-700 border border-emerald-200 shrink-0">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  Bo&apos;sh
-                </span>
-              )}
-            </div>
-            <h3 className="text-[16.5px] sm:text-[17px] font-black text-neutral-900 leading-snug truncate group-hover:text-[#039e1e] transition-colors">
+            <h3 className="text-[16px] sm:text-[17px] font-black text-neutral-900 leading-snug truncate group-hover:text-[#039e1e] transition-colors">
               {specialist.name}
             </h3>
-            <div className="flex items-center gap-2 mt-1 text-[12px] text-neutral-500">
-              <span className="flex items-center gap-1 truncate max-w-[140px]">
-                <MapPin size={12} className="text-neutral-400 shrink-0" />
-                <span className="truncate">{specialist.address || "O'zbekiston"}</span>
-              </span>
-              {specialist.distanceKm != null && (
-                <span className="font-semibold text-neutral-600 shrink-0">
-                  • {specialist.distanceKm < 1 ? "<1 km" : `${specialist.distanceKm.toFixed(1)} km`}
-                </span>
-              )}
-            </div>
+            <p className="text-[12.5px] font-semibold text-neutral-500 tracking-tight truncate mt-0.5">
+              {specialtyText}
+            </p>
           </div>
         </div>
 
-        {/* O'ng tomonda reyting va tajriba */}
-        <div className="flex flex-col items-end gap-1.5 shrink-0">
+        {/* O'ng tomonda reyting va staj */}
+        <div className="flex flex-col items-end gap-1 shrink-0">
           {ratingText ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-black text-amber-700 border border-amber-200/80 shadow-2xs">
               <Star size={11} className="fill-amber-400 text-amber-400" />
@@ -170,13 +152,6 @@ export function SpecialistCard({
           )}
         </div>
       </div>
-
-      {/* Mutaxassis xizmat ko'rsatish yo'nalishi / Bio (faqat mutaxassis o'zi kiritgan bo'lsa) */}
-      {specialist.bio && (
-        <p className="mt-2 text-[12px] leading-relaxed text-neutral-500 line-clamp-1 italic bg-neutral-50/80 rounded-xl px-2.5 py-1">
-          &ldquo;{specialist.bio}&rdquo;
-        </p>
-      )}
 
       {/* Pastki qism: 2 ta tugma (Profil va Chaqirish) */}
       <div className="mt-3.5 pt-3 border-t border-neutral-100 grid grid-cols-2 gap-2.5">
