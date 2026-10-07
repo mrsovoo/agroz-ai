@@ -1518,31 +1518,143 @@ router.post("/partner", async (req, res) => {
 // 4. MINI APP (HAMKOR KABINETI) BACKEND API
 // ---------------------------------------------------------------------------
 
+// Helper: Telegram InitData yoki Web Session Token (Bearer / x-partner-token) orqali hamkorni aniqlash
+async function getPartnerFromReq(req: any): Promise<typeof specialists.$inferSelect | null> {
+  try {
+    // 1. Telegram InitData
+    const initData = String(
+      req.headers["x-telegram-init-data"] ||
+      req.body?.initData ||
+      req.query?.initData ||
+      ""
+    );
+    if (initData) {
+      const token = await partnerBotToken();
+      if (token && verifyInitData(initData, token, 24 * 60 * 60)) {
+        const params = new URLSearchParams(initData);
+        const tgUser = JSON.parse(params.get("user") || "{}");
+        const telegramId = Number(tgUser.id);
+        if (telegramId) {
+          const spec = (await db.select().from(specialists).where(eq(specialists.telegramId, telegramId)).limit(1))[0];
+          if (spec && spec.isActive) return spec;
+        }
+      }
+    }
+
+    // 2. Web Token (Authorization: Bearer <token> yoki x-partner-token)
+    const authHeader = String(req.headers["authorization"] || req.headers["x-partner-token"] || "").trim();
+    const tokenStr = authHeader.replace(/^Bearer\s+/i, "").trim();
+    if (tokenStr) {
+      // Sessions jadvalidan qidirish
+      const sessionRows = await db.select().from(sessions).where(eq(sessions.id, tokenStr)).limit(1);
+      if (sessionRows[0]) {
+        const userRows = await db.select().from(users).where(eq(users.id, sessionRows[0].userId)).limit(1);
+        const u = userRows[0];
+        if (u) {
+          const conditions = [];
+          if (u.phone) conditions.push(eq(specialists.phone, u.phone));
+          if (u.telegramId) conditions.push(eq(specialists.telegramId, u.telegramId));
+          if (conditions.length > 0) {
+            const spec = (await db.select().from(specialists).where(and(or(...conditions), eq(specialists.isActive, true))).limit(1))[0];
+            if (spec) return spec;
+          }
+        }
+      }
+
+      // Maxsus demo yoki sinov tokenlari
+      if (tokenStr === "biz_demo_pharmacy") {
+        const spec = (await db.select().from(specialists).where(and(eq(specialists.role, "pharmacy"), eq(specialists.isActive, true))).limit(1))[0];
+        if (spec) return spec;
+      } else if (tokenStr === "biz_demo_specialist") {
+        const spec = (await db.select().from(specialists).where(and(eq(specialists.role, "specialist"), eq(specialists.isActive, true))).limit(1))[0];
+        if (spec) return spec;
+      }
+    }
+  } catch (err) {
+    console.error("[getPartnerFromReq error]:", err);
+  }
+  return null;
+}
+
+// POST /api/bot/partner/web-login (Web brauzerdan yoki mobil ilovadan AgrozGO Business kabinetiga kirish)
+router.post("/partner/web-login", async (req, res) => {
+  try {
+    const { phone, demoRole } = req.body || {};
+
+    // 1. Agar demo rol so'ralsa
+    if (demoRole === "pharmacy" || demoRole === "specialist") {
+      const spec = (
+        await db
+          .select()
+          .from(specialists)
+          .where(and(eq(specialists.role, demoRole), eq(specialists.isActive, true)))
+          .limit(1)
+      )[0];
+
+      if (!spec) {
+        return res.status(404).json({ ok: false, error: `${demoRole === "pharmacy" ? "Agro-dorixona" : "Mutaxassis"} profili topilmadi` });
+      }
+
+      const token = demoRole === "pharmacy" ? "biz_demo_pharmacy" : "biz_demo_specialist";
+      return res.json({
+        ok: true,
+        token,
+        partnerId: spec.id,
+        role: spec.role,
+        name: spec.name,
+      });
+    }
+
+    // 2. Telefon raqam orqali qidirish
+    const cleanPhone = normalizePhone(phone || "");
+    if (!cleanPhone) {
+      return res.status(400).json({ ok: false, error: "Telefon raqami kiritilmadi (namuna: +998 90 123 45 67)" });
+    }
+
+    const spec = (
+      await db
+        .select()
+        .from(specialists)
+        .where(and(eq(specialists.phone, cleanPhone), eq(specialists.isActive, true)))
+        .limit(1)
+    )[0];
+
+    if (!spec) {
+      return res.status(404).json({
+        ok: false,
+        error: "Ushbu telefon raqam bilan ro'yxatdan o'tgan dorixona yoki mutaxassis topilmadi. Avval @agroz_auth_bot orqali ariza topshiring.",
+      });
+    }
+
+    // Sessiya yaratish
+    let user = (await db.select().from(users).where(eq(users.phone, cleanPhone)).limit(1))[0];
+    if (!user) {
+      const [createdUser] = await db.insert(users).values({ phone: cleanPhone, name: spec.name }).returning();
+      user = createdUser;
+    }
+
+    const sessionToken = `biz_${randomBytes(24).toString("hex")}`;
+    await db.insert(sessions).values({ id: sessionToken, userId: user.id });
+
+    return res.json({
+      ok: true,
+      token: sessionToken,
+      partnerId: spec.id,
+      role: spec.role,
+      name: spec.name,
+    });
+  } catch (err: any) {
+    console.error("[partner:web-login error]:", err);
+    res.status(500).json({ ok: false, error: "Tizimga kirishda server xatosi yuz berdi" });
+  }
+});
+
 // POST /api/bot/partner/init
 router.post("/partner/init", async (req, res) => {
   try {
-    const { initData } = req.body || {};
-    const token = await partnerBotToken();
-    if (!token || !initData) {
-      return res.status(401).json({ ok: false, error: "Token yoki initData mavjud emas" });
-    }
-
-    // HMAC verification (24 soatlik limit bilan)
-    const valid = verifyInitData(initData, token, 24 * 60 * 60);
-    if (!valid) {
-      return res.status(401).json({ ok: false, error: "Telegram ma'lumotlari haqiqiy emas yoki muddati o'tgan" });
-    }
-
-    const params = new URLSearchParams(initData);
-    const tgUser = JSON.parse(params.get("user") || "{}");
-    const telegramId = Number(tgUser.id);
-    if (!telegramId) {
-      return res.status(401).json({ ok: false, error: "Telegram foydalanuvchi aniqlanmadi" });
-    }
-
-    const spec = (await db.select().from(specialists).where(eq(specialists.telegramId, telegramId)).limit(1))[0];
+    const spec = await getPartnerFromReq(req);
     if (!spec || !spec.isActive) {
-      return res.status(404).json({ ok: false, error: "Hamkor profili topilmadi yoki faol emas" });
+      return res.status(401).json({ ok: false, error: "Hamkor profili topilmadi yoki avtorizatsiya talab etiladi" });
     }
 
     if (!spec.isApproved) {
@@ -1655,15 +1767,7 @@ router.post("/partner/init", async (req, res) => {
 // GET /api/bot/partner/orders
 router.get("/partner/orders", async (req, res) => {
   try {
-    const initData = String(req.headers["x-telegram-init-data"] || req.query.initData || "");
-    const token = await partnerBotToken();
-    if (!token || !initData || !verifyInitData(initData, token, 24 * 60 * 60)) {
-      return res.status(401).json({ ok: false, error: "Avtorizatsiya talab etiladi" });
-    }
-
-    const params = new URLSearchParams(initData);
-    const tgUser = JSON.parse(params.get("user") || "{}");
-    const spec = (await db.select().from(specialists).where(eq(specialists.telegramId, Number(tgUser.id))).limit(1))[0];
+    const spec = await getPartnerFromReq(req);
     if (!spec || spec.role !== "pharmacy") {
       return res.status(403).json({ ok: false, error: "Faqat agro-do'kon egalari uchun" });
     }
@@ -1715,15 +1819,7 @@ router.get("/partner/orders", async (req, res) => {
 // GET /api/bot/partner/medicines (dorixona dorilari)
 router.get("/partner/medicines", async (req, res) => {
   try {
-    const initData = String(req.headers["x-telegram-init-data"] || req.query.initData || "");
-    const token = await partnerBotToken();
-    if (!token || !initData || !verifyInitData(initData, token, 24 * 60 * 60)) {
-      return res.status(401).json({ ok: false, error: "Avtorizatsiya talab etiladi" });
-    }
-
-    const params = new URLSearchParams(initData);
-    const tgUser = JSON.parse(params.get("user") || "{}");
-    const spec = (await db.select().from(specialists).where(eq(specialists.telegramId, Number(tgUser.id))).limit(1))[0];
+    const spec = await getPartnerFromReq(req);
     if (!spec || spec.role !== "pharmacy") {
       return res.status(403).json({ ok: false, error: "Faqat agro-do'kon egalari uchun" });
     }
@@ -1744,15 +1840,7 @@ router.get("/partner/medicines", async (req, res) => {
 // POST /api/bot/partner/medicines (yangi dori qo'shish)
 router.post("/partner/medicines", async (req, res) => {
   try {
-    const initData = String(req.headers["x-telegram-init-data"] || req.body?.initData || "");
-    const token = await partnerBotToken();
-    if (!token || !initData || !verifyInitData(initData, token, 24 * 60 * 60)) {
-      return res.status(401).json({ ok: false, error: "Avtorizatsiya talab etiladi" });
-    }
-
-    const params = new URLSearchParams(initData);
-    const tgUser = JSON.parse(params.get("user") || "{}");
-    const spec = (await db.select().from(specialists).where(eq(specialists.telegramId, Number(tgUser.id))).limit(1))[0];
+    const spec = await getPartnerFromReq(req);
     if (!spec || spec.role !== "pharmacy") {
       return res.status(403).json({ ok: false, error: "Faqat dorixona rahbarlari dori qo'sha oladi" });
     }
@@ -1787,18 +1875,10 @@ router.post("/partner/medicines", async (req, res) => {
 // PATCH /api/bot/partner/medicines/:id (tahrirlash yoki mavjudligini o'zgartirish)
 router.patch("/partner/medicines/:id", async (req, res) => {
   try {
-    const initData = String(req.headers["x-telegram-init-data"] || req.body?.initData || "");
-    const token = await partnerBotToken();
-    if (!token || !initData || !verifyInitData(initData, token, 24 * 60 * 60)) {
-      return res.status(401).json({ ok: false, error: "Avtorizatsiya talab etiladi" });
-    }
-
-    const medId = Number(req.params.id);
-    const params = new URLSearchParams(initData);
-    const tgUser = JSON.parse(params.get("user") || "{}");
-    const spec = (await db.select().from(specialists).where(eq(specialists.telegramId, Number(tgUser.id))).limit(1))[0];
+    const spec = await getPartnerFromReq(req);
     if (!spec) return res.status(403).json({ ok: false, error: "Hamkor topilmadi" });
 
+    const medId = Number(req.params.id);
     const med = (await db.select().from(specialistMedicines).where(eq(specialistMedicines.id, medId)).limit(1))[0];
     if (!med || med.specialistId !== spec.id) {
       return res.status(403).json({ ok: false, error: "Dori topilmadi yoki sizga tegishli emas" });
@@ -1834,18 +1914,10 @@ router.patch("/partner/medicines/:id", async (req, res) => {
 // DELETE /api/bot/partner/medicines/:id (dorini o'chirish)
 router.delete("/partner/medicines/:id", async (req, res) => {
   try {
-    const initData = String(req.headers["x-telegram-init-data"] || req.query.initData || "");
-    const token = await partnerBotToken();
-    if (!token || !initData || !verifyInitData(initData, token, 24 * 60 * 60)) {
-      return res.status(401).json({ ok: false, error: "Avtorizatsiya talab etiladi" });
-    }
-
-    const medId = Number(req.params.id);
-    const params = new URLSearchParams(initData);
-    const tgUser = JSON.parse(params.get("user") || "{}");
-    const spec = (await db.select().from(specialists).where(eq(specialists.telegramId, Number(tgUser.id))).limit(1))[0];
+    const spec = await getPartnerFromReq(req);
     if (!spec) return res.status(403).json({ ok: false, error: "Hamkor topilmadi" });
 
+    const medId = Number(req.params.id);
     await db.delete(specialistMedicines).where(and(eq(specialistMedicines.id, medId), eq(specialistMedicines.specialistId, spec.id)));
     res.json({ ok: true });
   } catch (err: any) {
@@ -1857,19 +1929,13 @@ router.delete("/partner/medicines/:id", async (req, res) => {
 // POST /api/bot/partner/orders/:id/action
 router.post("/partner/orders/:id/action", async (req, res) => {
   try {
-    const initData = String(req.headers["x-telegram-init-data"] || req.body?.initData || "");
-    const token = await partnerBotToken();
-    if (!token || !initData || !verifyInitData(initData, token, 24 * 60 * 60)) {
-      return res.status(401).json({ ok: false, error: "Avtorizatsiya talab etiladi" });
+    const spec = await getPartnerFromReq(req);
+    if (!spec || spec.role !== "pharmacy") {
+      return res.status(403).json({ ok: false, error: "Hamkor topilmadi yoki do'kon egasi emassiz" });
     }
 
     const orderId = Number(req.params.id);
     const { action } = req.body || {}; // confirm | cancel | ready | done
-
-    const params = new URLSearchParams(initData);
-    const tgUser = JSON.parse(params.get("user") || "{}");
-    const spec = (await db.select().from(specialists).where(eq(specialists.telegramId, Number(tgUser.id))).limit(1))[0];
-    if (!spec) return res.status(403).json({ ok: false, error: "Hamkor topilmadi" });
 
     const order = (await db.select().from(orders).where(eq(orders.id, orderId)).limit(1))[0];
     if (!order || order.pharmacySpecialistId !== spec.id) {
@@ -1905,15 +1971,7 @@ router.post("/partner/orders/:id/action", async (req, res) => {
 // GET /api/bot/partner/calls
 router.get("/partner/calls", async (req, res) => {
   try {
-    const initData = String(req.headers["x-telegram-init-data"] || req.query.initData || "");
-    const token = await partnerBotToken();
-    if (!token || !initData || !verifyInitData(initData, token, 24 * 60 * 60)) {
-      return res.status(401).json({ ok: false, error: "Avtorizatsiya talab etiladi" });
-    }
-
-    const params = new URLSearchParams(initData);
-    const tgUser = JSON.parse(params.get("user") || "{}");
-    const spec = (await db.select().from(specialists).where(eq(specialists.telegramId, Number(tgUser.id))).limit(1))[0];
+    const spec = await getPartnerFromReq(req);
     if (!spec) return res.status(403).json({ ok: false, error: "Mutaxassis topilmadi" });
 
     const rows = await db
@@ -1969,19 +2027,11 @@ router.get("/partner/calls", async (req, res) => {
 // POST /api/bot/partner/calls/:id/action
 router.post("/partner/calls/:id/action", async (req, res) => {
   try {
-    const initData = String(req.headers["x-telegram-init-data"] || req.body?.initData || "");
-    const token = await partnerBotToken();
-    if (!token || !initData || !verifyInitData(initData, token, 24 * 60 * 60)) {
-      return res.status(401).json({ ok: false, error: "Avtorizatsiya talab etiladi" });
-    }
+    const spec = await getPartnerFromReq(req);
+    if (!spec) return res.status(403).json({ ok: false, error: "Mutaxassis topilmadi" });
 
     const callId = Number(req.params.id);
     const { action } = req.body || {}; // accept | reject | done
-
-    const params = new URLSearchParams(initData);
-    const tgUser = JSON.parse(params.get("user") || "{}");
-    const spec = (await db.select().from(specialists).where(eq(specialists.telegramId, Number(tgUser.id))).limit(1))[0];
-    if (!spec) return res.status(403).json({ ok: false, error: "Mutaxassis topilmadi" });
 
     const call = (await db.select().from(specialistCalls).where(eq(specialistCalls.id, callId)).limit(1))[0];
     if (!call || call.specialistId !== spec.id) {
@@ -2007,18 +2057,10 @@ router.post("/partner/calls/:id/action", async (req, res) => {
 // POST /api/bot/partner/busy
 router.post("/partner/busy", async (req, res) => {
   try {
-    const initData = String(req.headers["x-telegram-init-data"] || req.body?.initData || "");
-    const token = await partnerBotToken();
-    if (!token || !initData || !verifyInitData(initData, token, 24 * 60 * 60)) {
-      return res.status(401).json({ ok: false, error: "Avtorizatsiya talab etiladi" });
-    }
+    const spec = await getPartnerFromReq(req);
+    if (!spec) return res.status(403).json({ ok: false, error: "Hamkor topilmadi" });
 
     const { isBusy } = req.body || {};
-    const params = new URLSearchParams(initData);
-    const tgUser = JSON.parse(params.get("user") || "{}");
-    const spec = (await db.select().from(specialists).where(eq(specialists.telegramId, Number(tgUser.id))).limit(1))[0];
-    if (!spec) return res.status(403).json({ ok: false, error: "Mutaxassis topilmadi" });
-
     await db.update(specialists).set({ isBusy: Boolean(isBusy) }).where(eq(specialists.id, spec.id));
     res.json({ ok: true, isBusy: Boolean(isBusy) });
   } catch (err: any) {

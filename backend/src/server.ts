@@ -50,9 +50,11 @@ const defaultAllowedOrigins = [
   "http://localhost:3002",
   "http://127.0.0.1:3000",
   "http://127.0.0.1:3001",
+  "http://127.0.0.1:3002",
   "https://agroz.uz",
   "https://www.agroz.uz",
   "https://admin.agroz.uz",
+  "https://business.agroz.uz",
 ];
 
 const envOrigins = [
@@ -61,6 +63,7 @@ const envOrigins = [
   process.env.APP_URL,
   process.env.FRONTEND_URL,
   process.env.ADMIN_URL,
+  process.env.BUSINESS_URL,
   process.env.NEXT_PUBLIC_APP_URL,
 ]
   .filter(Boolean)

@@ -140,6 +140,10 @@ type PartnerMedicine = {
 
 export default function PartnerKabinetPage() {
   const [initData, setInitData] = useState<string>("");
+  const [webToken, setWebToken] = useState<string>("");
+  const [loginPhone, setLoginPhone] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [isTelegram, setIsTelegram] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -186,39 +190,52 @@ export default function PartnerKabinetPage() {
   const [showConsentModal, setShowConsentModal] = useState(false);
 
   const [revealedPhones, setRevealedPhones] = useState<Record<string, boolean>>({});
-  const router = useRouter();
+
+  function getHeaders(customInitData = initData, customToken = webToken) {
+    const h: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (customInitData) {
+      h["x-telegram-init-data"] = customInitData;
+    }
+    if (customToken) {
+      h["Authorization"] = `Bearer ${customToken}`;
+      h["x-partner-token"] = customToken;
+    }
+    return h;
+  }
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (isNativeApp()) {
-      router.replace("/");
-      return;
-    }
     const tg = (window as any).Telegram?.WebApp;
-    if (tg) {
+    if (tg && tg.initData) {
       tg.ready?.();
       tg.expand?.();
-      tg.setHeaderColor?.("#039e1e");
+      tg.setHeaderColor?.("#1b1464");
       tg.setBackgroundColor?.("#f8fafc");
-      if (tg.initData) {
-        setInitData(tg.initData);
-        setIsTelegram(true);
+      setInitData(tg.initData);
+      setIsTelegram(true);
+      loadData(tg.initData, "");
+    } else {
+      const stored = localStorage.getItem("agroz_business_token");
+      if (stored) {
+        setWebToken(stored);
+        loadData("", stored);
+      } else {
+        setLoading(false);
       }
     }
-  }, [router]);
+  }, []);
 
-  async function loadData(tgData = initData) {
-    if (!tgData) {
+  async function loadData(tgData = initData, token = webToken) {
+    if (!tgData && !token) {
       setLoading(false);
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      const headers = {
-        "Content-Type": "application/json",
-        "x-telegram-init-data": tgData,
-      };
+      const headers = getHeaders(tgData, token);
 
       // 1. Profil va statistikani olish
       const initRes = await fetch(`${BACKEND}/api/bot/partner/init`, {
@@ -277,6 +294,10 @@ export default function PartnerKabinetPage() {
           }
         }
       } else {
+        if (token && !tgData) {
+          localStorage.removeItem("agroz_business_token");
+          setWebToken("");
+        }
         setError(initJson?.error || "Hamkor profili topilmadi.");
       }
     } catch {
@@ -286,13 +307,71 @@ export default function PartnerKabinetPage() {
     }
   }
 
+  // Real-vaqtda sinxronizatsiya: har 20 soniyada buyurtmalar yoki chaqiruvlarni fonda avtomatik yangilash
   useEffect(() => {
-    if (initData) {
-      loadData(initData);
-    } else {
-      setLoading(false);
+    if (!partner || !partner.isApproved) return;
+    const interval = setInterval(async () => {
+      try {
+        const headers = getHeaders();
+        if (partner.role === "pharmacy") {
+          const res = await fetch(`${BACKEND}/api/bot/partner/orders`, { headers });
+          if (res.ok) {
+            const d = await res.json();
+            if (d?.ok && Array.isArray(d.orders)) {
+              setOrders(d.orders);
+            }
+          }
+        } else {
+          const res = await fetch(`${BACKEND}/api/bot/partner/calls`, { headers });
+          if (res.ok) {
+            const d = await res.json();
+            if (d?.ok && Array.isArray(d.calls)) {
+              setCalls(d.calls);
+            }
+          }
+        }
+      } catch {
+        // silent
+      }
+    }, 20000);
+    return () => clearInterval(interval);
+  }, [partner, initData, webToken]);
+
+  async function handleWebLogin(phoneToUse?: string, demoRole?: "pharmacy" | "specialist") {
+    setLoginLoading(true);
+    setLoginError(null);
+    try {
+      const res = await fetch(`${BACKEND}/api/bot/partner/web-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: phoneToUse || loginPhone,
+          demoRole,
+        }),
+      });
+      const data = await res.json();
+      if (data?.ok && data.token) {
+        setWebToken(data.token);
+        localStorage.setItem("agroz_business_token", data.token);
+        await loadData(initData, data.token);
+      } else {
+        setLoginError(data?.error || "Kirishda xatolik yuz berdi");
+      }
+    } catch {
+      setLoginError("Server bilan aloqa o'rnatib bo'lmadi");
+    } finally {
+      setLoginLoading(false);
     }
-  }, [initData]);
+  }
+
+  function handleLogout() {
+    localStorage.removeItem("agroz_business_token");
+    setWebToken("");
+    setPartner(null);
+    setOrders([]);
+    setMedicines([]);
+    setCalls([]);
+  }
 
   // Bandlik holatini almashtirish (1-tap toggle)
   async function toggleBusy() {
@@ -302,10 +381,7 @@ export default function PartnerKabinetPage() {
     try {
       const res = await fetch(`${BACKEND}/api/bot/partner/busy`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-telegram-init-data": initData,
-        },
+        headers: getHeaders(),
         body: JSON.stringify({ isBusy: next }),
       });
       const data = await res.json();
@@ -326,10 +402,7 @@ export default function PartnerKabinetPage() {
     try {
       const res = await fetch(`${BACKEND}/api/bot/partner/calls/${callId}/action`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-telegram-init-data": initData,
-        },
+        headers: getHeaders(),
         body: JSON.stringify({ action }),
       });
       const data = await res.json();
@@ -355,10 +428,7 @@ export default function PartnerKabinetPage() {
     try {
       const res = await fetch(`${BACKEND}/api/bot/partner/orders/${orderId}/action`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-telegram-init-data": initData,
-        },
+        headers: getHeaders(),
         body: JSON.stringify({ action }),
       });
       const data = await res.json();
@@ -388,11 +458,8 @@ export default function PartnerKabinetPage() {
     try {
       const res = await fetch(`${BACKEND}/api/bot/partner/medicines/${medId}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "x-telegram-init-data": initData,
-        },
-        body: JSON.stringify({ status: nextStatus, initData }),
+        headers: getHeaders(),
+        body: JSON.stringify({ status: nextStatus }),
       });
       const data = await res.json();
       if (!data?.ok) {
@@ -431,11 +498,8 @@ export default function PartnerKabinetPage() {
       try {
         const res = await fetch(`${BACKEND}/api/bot/partner/medicines/${medId}`, {
           method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            "x-telegram-init-data": initData,
-          },
-          body: JSON.stringify({ stock: nextStock, initData }),
+          headers: getHeaders(),
+          body: JSON.stringify({ stock: nextStock }),
         });
         const data = await res.json();
         if (!data?.ok) throw new Error();
@@ -453,10 +517,7 @@ export default function PartnerKabinetPage() {
     try {
       const res = await fetch(`${BACKEND}/api/bot/partner/medicines/${medId}`, {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          "x-telegram-init-data": initData,
-        },
+        headers: getHeaders(),
       });
       const data = await res.json();
       if (data?.ok) {
@@ -544,10 +605,7 @@ export default function PartnerKabinetPage() {
     try {
       const res = await fetch(`${BACKEND}/api/bot/partner/medicines`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-telegram-init-data": initData,
-        },
+        headers: getHeaders(),
         body: JSON.stringify({
           name: newMedName.trim(),
           type: newMedType,
@@ -556,7 +614,6 @@ export default function PartnerKabinetPage() {
           stockUnit: newMedUnit,
           usage: newMedUsage.trim() || null,
           photoData: newMedPhoto,
-          initData,
         }),
       });
       const data = await res.json();
@@ -649,10 +706,22 @@ export default function PartnerKabinetPage() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {/* Chiqish tugmasi (Web rejimida) */}
+          {partner && webToken && (
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="rounded-xl px-2.5 py-1.5 text-xs font-semibold text-zinc-500 hover:text-red-600 hover:bg-red-50 transition"
+              title="Chiqish"
+            >
+              Chiqish
+            </button>
+          )}
+
           {/* Yangilash tugmasi */}
           <button
             type="button"
-            onClick={() => loadData(initData)}
+            onClick={() => loadData(initData, webToken)}
             className="flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 hover:text-zinc-900 active:scale-95 transition"
             title="Yangilash"
           >
@@ -677,40 +746,106 @@ export default function PartnerKabinetPage() {
         </div>
       </header>
 
-      {/* Telegram Tashqarisidan Kirish Eslatmasi */}
-      {!isTelegram && (
-        <div className="mx-4 mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 flex items-start gap-2 shadow-2xs">
-          <AlertCircle size={16} className="shrink-0 mt-0.5 text-amber-600" />
-          <div>
-            <b>Telegram WebApp rejimi:</b> Ushbu kabinet <b>@agroz_auth_bot</b> orqali avtomatik profil bilan ochiladi.
-          </div>
-        </div>
-      )}
-
       {error && (
         <div className="mx-4 mt-3 rounded-xl bg-red-50 p-3 text-xs font-semibold text-red-700 border border-red-200">
           {error}
         </div>
       )}
 
-      {/* Agar profil topilmagan bo'lsa (tashqaridan ochilganda) */}
-      {!loading && !partner && !error && (
-        <div className="mx-4 mt-6 rounded-3xl border border-zinc-200 bg-white p-6 text-center shadow-xs space-y-4">
-          <div className="flex justify-center">
-            <AgrozBusinessLogo className="h-10 w-auto" />
+      {/* 2. Agar profil kirmagan bo'lsa (Web yoki Tashqaridan ochilganda) */}
+      {!loading && !partner && (
+        <div className="mx-4 mt-6 max-w-md md:mx-auto rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm space-y-5">
+          <div className="flex flex-col items-center text-center">
+            <AgrozBusinessLogo className="h-10 w-auto mb-2" />
+            <span className="text-[11px] font-black tracking-widest text-[#1b1464] uppercase bg-[#1b1464]/10 px-2.5 py-1 rounded-full">
+              Boshqaruv Paneli
+            </span>
+            <h2 className="text-lg font-black text-zinc-900 mt-2">AgrozGO Business</h2>
+            <p className="text-xs text-zinc-600 mt-1">
+              Agro-dorixona egalari, agronomlar va veterinarlar uchun boshqaruv markazi.
+            </p>
           </div>
-          <h2 className="text-base font-black text-zinc-900">AgrozGO Business</h2>
-          <p className="text-xs text-zinc-600 leading-relaxed max-w-sm mx-auto">
-            Ushbu kabinet agronomlar, veterinarlar va agro-dorixona egalari uchun mo&apos;ljallangan. Profilingizni ochish uchun <b>@agroz_auth_bot</b> orqali kiring.
-          </p>
-          <a
-            href="https://t.me/agroz_auth_bot"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-xl bg-[#1b1464] px-5 py-2.5 text-xs font-bold text-white shadow-xs transition hover:opacity-90"
+
+          {loginError && (
+            <div className="rounded-xl bg-red-50 p-3 text-xs font-semibold text-red-700 border border-red-200">
+              {loginError}
+            </div>
+          )}
+
+          {/* Telefon raqam orqali kirish */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleWebLogin();
+            }}
+            className="space-y-3"
           >
-            <span>Botga o&apos;tish</span>
-          </a>
+            <div>
+              <label className="block text-xs font-bold text-zinc-700 mb-1">
+                Ro&apos;yxatdan o&apos;tgan telefon raqamingiz:
+              </label>
+              <input
+                type="tel"
+                value={loginPhone}
+                onChange={(e) => setLoginPhone(e.target.value)}
+                placeholder="+998 90 123 45 67"
+                className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-sm font-medium text-zinc-900 focus:border-[#1b1464] focus:bg-white focus:outline-none transition"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loginLoading}
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#1b1464] py-2.5 text-xs font-bold text-white shadow-xs transition hover:opacity-90 active:scale-98 disabled:opacity-50"
+            >
+              {loginLoading ? (
+                <RefreshCw size={14} className="animate-spin" />
+              ) : (
+                <span>Kabinetga Kirish</span>
+              )}
+            </button>
+          </form>
+
+          {/* Tezkor sinov (Demo) tugmalari */}
+          <div className="pt-2 border-t border-zinc-100">
+            <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block mb-2 text-center">
+              ⚡️ Tezkor Sinov (Demo Rejimi)
+            </span>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => handleWebLogin(undefined, "pharmacy")}
+                disabled={loginLoading}
+                className="rounded-xl border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 p-2.5 text-center text-xs font-bold text-zinc-800 transition active:scale-95"
+              >
+                🏢 Agro-Dorixona
+              </button>
+              <button
+                type="button"
+                onClick={() => handleWebLogin(undefined, "specialist")}
+                disabled={loginLoading}
+                className="rounded-xl border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 p-2.5 text-center text-xs font-bold text-zinc-800 transition active:scale-95"
+              >
+                👨‍⚕️ Mutaxassis
+              </button>
+            </div>
+          </div>
+
+          {/* Telegram orqali kirish / Bot havolasi */}
+          <div className="pt-2 border-t border-zinc-100 text-center space-y-2">
+            <p className="text-[11px] text-zinc-500">
+              Yangi hamkor bo&apos;lsangiz yoki bot orqali kirmoqchi bo&apos;lsangiz:
+            </p>
+            <a
+              href="https://t.me/agroz_auth_bot"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#1b1464] hover:underline"
+            >
+              <span>@agroz_auth_bot orqali ariza topshirish / ochish</span>
+              <ExternalLink size={12} />
+            </a>
+          </div>
         </div>
       )}
 
