@@ -148,6 +148,24 @@ export default function PartnerKabinetPage() {
   const [loginPhone, setLoginPhone] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [quickList, setQuickList] = useState<{
+    pharmacies: Array<{
+      id: number;
+      name: string;
+      phone: string;
+      address?: string | null;
+      workHours?: string | null;
+    }>;
+    experts: Array<{
+      id: number;
+      name: string;
+      phone: string;
+      specialty?: string | null;
+      experienceYears?: number | null;
+    }>;
+  }>({ pharmacies: [], experts: [] });
+  const [quickTab, setQuickTab] = useState<"pharmacy" | "specialist" | "phone">("pharmacy");
+  const [selectedPartnerId, setSelectedPartnerId] = useState<number | null>(null);
   const [isTelegram, setIsTelegram] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -229,6 +247,19 @@ export default function PartnerKabinetPage() {
         setLoading(false);
       }
     }
+
+    // Quick-list hamkorlarni yuklab olish (web yoki local dev uchun)
+    fetch(`${BACKEND}/api/bot/partner/quick-list`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.ok) {
+          setQuickList({
+            pharmacies: Array.isArray(d.pharmacies) ? d.pharmacies : [],
+            experts: Array.isArray(d.experts) ? d.experts : [],
+          });
+        }
+      })
+      .catch(() => {});
   }, []);
 
   async function loadData(tgData = initData, token = webToken) {
@@ -341,16 +372,18 @@ export default function PartnerKabinetPage() {
     return () => clearInterval(interval);
   }, [partner, initData, webToken]);
 
-  async function handleWebLogin(phoneToUse?: string, demoRole?: "pharmacy" | "specialist") {
+  async function handleWebLogin(phoneToUse?: string, demoRole?: "pharmacy" | "specialist", partnerId?: number) {
     setLoginLoading(true);
     setLoginError(null);
+    setSelectedPartnerId(partnerId || null);
     try {
       const res = await fetch(`${BACKEND}/api/bot/partner/web-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          phone: phoneToUse || loginPhone,
+          phone: phoneToUse || (partnerId ? undefined : loginPhone),
           demoRole,
+          partnerId,
         }),
       });
       const data = await res.json();
@@ -365,6 +398,7 @@ export default function PartnerKabinetPage() {
       setLoginError("Server bilan aloqa o'rnatib bo'lmadi");
     } finally {
       setLoginLoading(false);
+      setSelectedPartnerId(null);
     }
   }
 
@@ -758,15 +792,15 @@ export default function PartnerKabinetPage() {
 
       {/* 2. Agar profil kirmagan bo'lsa (Web yoki Tashqaridan ochilganda) */}
       {!loading && !partner && (
-        <div className="mx-4 mt-6 max-w-md md:mx-auto rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm space-y-5">
+        <div className="mx-4 mt-6 max-w-xl md:mx-auto rounded-3xl border border-zinc-200 bg-white p-5 sm:p-6 shadow-sm space-y-4">
           <div className="flex flex-col items-center text-center">
             <AgrozBusinessLogo className="h-10 w-auto mb-2" />
-            <span className="text-[11px] font-black tracking-widest text-[#1b1464] uppercase bg-[#1b1464]/10 px-2.5 py-1 rounded-full">
+            <span className="text-[11px] font-black tracking-widest text-[#1b1464] uppercase bg-[#1b1464]/10 px-3 py-1 rounded-full">
               Boshqaruv Paneli
             </span>
-            <h2 className="text-lg font-black text-zinc-900 mt-2">AgrozGO Business</h2>
-            <p className="text-xs text-zinc-600 mt-1">
-              Agro-dorixona egalari, agronomlar va veterinarlar uchun boshqaruv markazi.
+            <h2 className="text-xl font-black text-zinc-900 mt-2">AgrozGO Business</h2>
+            <p className="text-xs text-zinc-600 mt-1 max-w-sm">
+              Agro-dorixona egalari, agronomlar va veterinarlar uchun professional boshqaruv markazi.
             </p>
           </div>
 
@@ -776,69 +810,232 @@ export default function PartnerKabinetPage() {
             </div>
           )}
 
-          {/* Telefon raqam orqali kirish */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleWebLogin();
-            }}
-            className="space-y-3"
-          >
-            <div>
-              <label className="block text-xs font-bold text-zinc-700 mb-1">
-                Ro&apos;yxatdan o&apos;tgan telefon raqamingiz:
-              </label>
-              <input
-                type="tel"
-                value={loginPhone}
-                onChange={(e) => setLoginPhone(e.target.value)}
-                placeholder="+998 90 123 45 67"
-                className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-sm font-medium text-zinc-900 focus:border-[#1b1464] focus:bg-white focus:outline-none transition"
-              />
-            </div>
-
+          {/* Tab Selector: Dorixonalar | Mutaxassislar | Telefon */}
+          <div className="grid grid-cols-3 gap-1 rounded-2xl bg-zinc-100 p-1 text-xs font-bold">
             <button
-              type="submit"
-              disabled={loginLoading}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#1b1464] py-2.5 text-xs font-bold text-white shadow-xs transition hover:opacity-90 active:scale-98 disabled:opacity-50"
+              type="button"
+              onClick={() => setQuickTab("pharmacy")}
+              className={`flex items-center justify-center gap-1.5 rounded-xl py-2 transition ${
+                quickTab === "pharmacy" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-600 hover:text-zinc-900"
+              }`}
             >
-              {loginLoading ? (
-                <RefreshCw size={14} className="animate-spin" />
-              ) : (
-                <span>Kabinetga Kirish</span>
+              <Store size={14} className="text-[#1b1464]" />
+              <span>Dorixonalar</span>
+              {quickList.pharmacies.length > 0 && (
+                <span className="rounded-full bg-emerald-100 text-emerald-800 text-[10px] px-1.5 font-extrabold">
+                  {quickList.pharmacies.length}
+                </span>
               )}
             </button>
-          </form>
-
-          {/* Tezkor sinov (Demo) tugmalari */}
-          <div className="pt-2 border-t border-zinc-100">
-            <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block mb-2 text-center">
-              ⚡️ Tezkor Sinov (Demo Rejimi)
-            </span>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleWebLogin(undefined, "pharmacy")}
-                disabled={loginLoading}
-                className="rounded-xl border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 p-2.5 text-center text-xs font-bold text-zinc-800 transition active:scale-95"
-              >
-                🏢 Agro-Dorixona
-              </button>
-              <button
-                type="button"
-                onClick={() => handleWebLogin(undefined, "specialist")}
-                disabled={loginLoading}
-                className="rounded-xl border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 p-2.5 text-center text-xs font-bold text-zinc-800 transition active:scale-95"
-              >
-                👨‍⚕️ Mutaxassis
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setQuickTab("specialist")}
+              className={`flex items-center justify-center gap-1.5 rounded-xl py-2 transition ${
+                quickTab === "specialist" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-600 hover:text-zinc-900"
+              }`}
+            >
+              <UserCheck size={14} className="text-[#1b1464]" />
+              <span>Mutaxassislar</span>
+              {quickList.experts.length > 0 && (
+                <span className="rounded-full bg-blue-100 text-blue-800 text-[10px] px-1.5 font-extrabold">
+                  {quickList.experts.length}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setQuickTab("phone")}
+              className={`flex items-center justify-center gap-1.5 rounded-xl py-2 transition ${
+                quickTab === "phone" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-600 hover:text-zinc-900"
+              }`}
+            >
+              <Phone size={13} className="text-zinc-500" />
+              <span>Telefon</span>
+            </button>
           </div>
 
+          {/* TAB 1: DORIXONALAR RO'YXATI */}
+          {quickTab === "pharmacy" && (
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between text-[11px] text-zinc-500 font-medium px-1">
+                <span>🏢 Sinov uchun istalgan dorixonaga 1-bosishda kiring:</span>
+              </div>
+              <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+                {quickList.pharmacies.map((p) => {
+                  const isThisLoading = loginLoading && selectedPartnerId === p.id;
+                  return (
+                    <div
+                      key={p.id}
+                      className="group flex items-center justify-between gap-3 p-3 rounded-2xl border border-zinc-200 bg-zinc-50/50 hover:bg-white hover:border-[#1b1464]/30 hover:shadow-xs transition"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-xs text-zinc-900 truncate">{p.name}</span>
+                          <span className="shrink-0 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200">
+                            Dorixona
+                          </span>
+                        </div>
+                        <div className="mt-1 flex items-center gap-1 text-[11px] text-zinc-500 truncate">
+                          <MapPin size={11} className="shrink-0 text-zinc-400" />
+                          <span className="truncate">{p.address || "Manzil ko'rsatilmagan"}</span>
+                        </div>
+                        <div className="text-[10px] text-zinc-400 font-mono mt-0.5">
+                          {p.phone}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleWebLogin(undefined, undefined, p.id)}
+                        disabled={loginLoading}
+                        className="shrink-0 flex items-center gap-1 px-3 py-2 rounded-xl bg-[#1b1464] text-white text-xs font-bold shadow-xs hover:bg-[#150f4f] active:scale-95 transition disabled:opacity-50"
+                      >
+                        {isThisLoading ? (
+                          <RefreshCw size={13} className="animate-spin" />
+                        ) : (
+                          <>
+                            <span>Kirish</span>
+                            <ChevronRight size={13} />
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
+                {quickList.pharmacies.length === 0 && (
+                  <div className="p-6 text-center text-xs text-zinc-500 space-y-2">
+                    <RefreshCw size={16} className="animate-spin mx-auto text-[#1b1464]" />
+                    <p>Dorixonalar ro&apos;yxati yuklanmoqda...</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: MUTAXASSISLAR RO'YXATI */}
+          {quickTab === "specialist" && (
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between text-[11px] text-zinc-500 font-medium px-1">
+                <span>👨‍⚕️ Sinov uchun istalgan mutaxassis profiliga 1-bosishda kiring:</span>
+              </div>
+              <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+                {quickList.experts.map((e) => {
+                  const isThisLoading = loginLoading && selectedPartnerId === e.id;
+                  return (
+                    <div
+                      key={e.id}
+                      className="group flex items-center justify-between gap-3 p-3 rounded-2xl border border-zinc-200 bg-zinc-50/50 hover:bg-white hover:border-[#1b1464]/30 hover:shadow-xs transition"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-xs text-zinc-900 truncate">{e.name}</span>
+                          <span className="shrink-0 text-[10px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-md border border-blue-200">
+                            {e.specialty || "Mutaxassis"}
+                          </span>
+                        </div>
+                        {e.experienceYears && (
+                          <div className="mt-1 text-[11px] text-zinc-500">
+                            ⭐ {e.experienceYears} yil amaliy tajriba
+                          </div>
+                        )}
+                        <div className="text-[10px] text-zinc-400 font-mono mt-0.5">
+                          {e.phone}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleWebLogin(undefined, undefined, e.id)}
+                        disabled={loginLoading}
+                        className="shrink-0 flex items-center gap-1 px-3 py-2 rounded-xl bg-[#1b1464] text-white text-xs font-bold shadow-xs hover:bg-[#150f4f] active:scale-95 transition disabled:opacity-50"
+                      >
+                        {isThisLoading ? (
+                          <RefreshCw size={13} className="animate-spin" />
+                        ) : (
+                          <>
+                            <span>Kirish</span>
+                            <ChevronRight size={13} />
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
+                {quickList.experts.length === 0 && (
+                  <div className="p-6 text-center text-xs text-zinc-500 space-y-2">
+                    <RefreshCw size={16} className="animate-spin mx-auto text-[#1b1464]" />
+                    <p>Mutaxassislar ro&apos;yxati yuklanmoqda...</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: TELEFON RAQAM ORQALI KIRISH */}
+          {quickTab === "phone" && (
+            <div className="space-y-4">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleWebLogin();
+                }}
+                className="space-y-3"
+              >
+                <div>
+                  <label className="block text-xs font-bold text-zinc-700 mb-1">
+                    Ro&apos;yxatdan o&apos;tgan telefon raqamingiz:
+                  </label>
+                  <input
+                    type="tel"
+                    value={loginPhone}
+                    onChange={(e) => setLoginPhone(e.target.value)}
+                    placeholder="+998 90 123 45 67"
+                    className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-sm font-medium text-zinc-900 focus:border-[#1b1464] focus:bg-white focus:outline-none transition"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loginLoading}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#1b1464] py-2.5 text-xs font-bold text-white shadow-xs transition hover:opacity-90 active:scale-98 disabled:opacity-50"
+                >
+                  {loginLoading ? (
+                    <RefreshCw size={14} className="animate-spin" />
+                  ) : (
+                    <span>Kabinetga Kirish</span>
+                  )}
+                </button>
+              </form>
+
+              {/* Tezkor sinov (Demo) fallback */}
+              <div className="pt-2 border-t border-zinc-100">
+                <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block mb-2 text-center">
+                  ⚡️ Tezkor Demo Rol
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleWebLogin(undefined, "pharmacy")}
+                    disabled={loginLoading}
+                    className="rounded-xl border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 p-2.5 text-center text-xs font-bold text-zinc-800 transition active:scale-95"
+                  >
+                    🏢 Standart Dorixona
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleWebLogin(undefined, "specialist")}
+                    disabled={loginLoading}
+                    className="rounded-xl border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 p-2.5 text-center text-xs font-bold text-zinc-800 transition active:scale-95"
+                  >
+                    👨‍⚕️ Standart Mutaxassis
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Telegram orqali kirish / Bot havolasi */}
-          <div className="pt-2 border-t border-zinc-100 text-center space-y-2">
+          <div className="pt-2 border-t border-zinc-100 text-center space-y-1">
             <p className="text-[11px] text-zinc-500">
-              Yangi hamkor bo&apos;lsangiz yoki bot orqali kirmoqchi bo&apos;lsangiz:
+              Yangi hamkor bo&apos;lsangiz yoki Telegram orqali kirmoqchi bo&apos;lsangiz:
             </p>
             <a
               href="https://t.me/agroz_auth_bot"

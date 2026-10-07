@@ -1576,10 +1576,70 @@ async function getPartnerFromReq(req: any): Promise<typeof specialists.$inferSel
   return null;
 }
 
+// GET /api/bot/partner/quick-list (Login sahifasida mavjud dorixona va mutaxassislar ro'yxatini tezkor tanlash uchun)
+router.get("/partner/quick-list", async (_req, res) => {
+  try {
+    const list = await db
+      .select({
+        id: specialists.id,
+        name: specialists.name,
+        role: specialists.role,
+        organization: specialists.organization,
+        specialty: specialists.specialty,
+        phone: specialists.phone,
+        address: specialists.address,
+      })
+      .from(specialists)
+      .where(eq(specialists.isActive, true))
+      .orderBy(specialists.id);
+
+    const pharmacies = list.filter((s) => s.role === "pharmacy");
+    const experts = list.filter((s) => s.role === "specialist");
+
+    res.json({ ok: true, pharmacies, experts });
+  } catch (err: any) {
+    console.error("[partner:quick-list error]:", err);
+    res.status(500).json({ ok: false, error: "Ro'yxatni yuklab bo'lmadi" });
+  }
+});
+
 // POST /api/bot/partner/web-login (Web brauzerdan yoki mobil ilovadan AgrozGO Business kabinetiga kirish)
 router.post("/partner/web-login", async (req, res) => {
   try {
-    const { phone, demoRole } = req.body || {};
+    const { phone, demoRole, partnerId } = req.body || {};
+
+    // 0. Agar aniq partnerId berilgan bo'lsa (tezkor tanlash)
+    if (partnerId) {
+      const pId = Number(partnerId);
+      const spec = (
+        await db
+          .select()
+          .from(specialists)
+          .where(and(eq(specialists.id, pId), eq(specialists.isActive, true)))
+          .limit(1)
+      )[0];
+
+      if (!spec) {
+        return res.status(404).json({ ok: false, error: "Tanlangan hamkor profili topilmadi" });
+      }
+
+      let user = (await db.select().from(users).where(eq(users.phone, spec.phone)).limit(1))[0];
+      if (!user) {
+        const [createdUser] = await db.insert(users).values({ phone: spec.phone, name: spec.name }).returning();
+        user = createdUser;
+      }
+
+      const sessionToken = `biz_${randomBytes(24).toString("hex")}`;
+      await db.insert(sessions).values({ id: sessionToken, userId: user.id });
+
+      return res.json({
+        ok: true,
+        token: sessionToken,
+        partnerId: spec.id,
+        role: spec.role,
+        name: spec.name,
+      });
+    }
 
     // 1. Agar demo rol so'ralsa
     if (demoRole === "pharmacy" || demoRole === "specialist") {
