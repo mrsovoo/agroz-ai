@@ -1,8 +1,8 @@
 {
-  "name": "agroz-ai-mobile",
+  "name": "agroz-ai-mobile-user",
   "version": "1.0.0",
   "private": true,
-  "description": "AgrozGO Native Mobile Application for Android (Google Play) & iOS (Apple App Store)",
+  "description": "AgrozGO User & Farmer Native Mobile Application for Android (Google Play) & iOS (Apple App Store)",
   "scripts": {
     "sync": "cap sync",
     "sync:android": "cap sync android",

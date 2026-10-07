@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+:root {
+  --business-navy: #1b1464;
+  --business-navy-light: #261e7d;
+  --business-green: #028e11;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
