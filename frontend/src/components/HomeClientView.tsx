@@ -41,8 +41,6 @@ export type HomeMedicine = {
   pharmacyAddress?: string;
 };
 
-export const MAX_SPECIALIST_RADIUS_KM = 5;
-
 function isVeterinarian(s: Specialist): boolean {
   return (
     s.helpsWith === "animal" ||
@@ -73,25 +71,11 @@ function selectNearbySpecialists(
   const vets = sorted.filter((s) => isVeterinarian(s));
   const agrs = sorted.filter((s) => !isVeterinarian(s));
 
-  // 1. Maksimum 5 km gacha radiusdagi eng yaqin agronom (avval bo'sh bo'lganlari)
-  const nearbyAgrs = agrs.filter(
-    (s) => s.distanceKm != null && s.distanceKm <= MAX_SPECIALIST_RADIUS_KM
-  );
-  const bestAgr =
-    nearbyAgrs.find((s) => !s.isBusy) ||
-    nearbyAgrs[0] ||
-    agrs.find((s) => !s.isBusy) ||
-    agrs[0];
+  // 1. Eng yaqin agronom (avval bo'sh bo'lganlari)
+  const bestAgr = agrs.find((s) => !s.isBusy) || agrs[0];
 
-  // 2. Maksimum 5 km gacha radiusdagi eng yaqin veterinar (avval bo'sh bo'lganlari)
-  const nearbyVets = vets.filter(
-    (s) => s.distanceKm != null && s.distanceKm <= MAX_SPECIALIST_RADIUS_KM
-  );
-  const bestVet =
-    nearbyVets.find((s) => !s.isBusy) ||
-    nearbyVets[0] ||
-    vets.find((s) => !s.isBusy) ||
-    vets[0];
+  // 2. Eng yaqin veterinar (avval bo'sh bo'lganlari)
+  const bestVet = vets.find((s) => !s.isBusy) || vets[0];
 
   const result: Specialist[] = [];
   if (bestAgr) result.push(bestAgr);
@@ -165,8 +149,8 @@ export default function HomeClientView({
     async function loadNearbySpecialists(lat?: number, lng?: number) {
       try {
         const url = lat && lng
-          ? `/api/specialists?role=specialist&lat=${lat}&lng=${lng}&radius=5`
-          : `/api/specialists?role=specialist&radius=5`;
+          ? `/api/specialists?role=specialist&lat=${lat}&lng=${lng}`
+          : `/api/specialists?role=specialist`;
         const res = await fetch(url);
         if (!res.ok) return;
         const data = await res.json();
@@ -324,19 +308,14 @@ export default function HomeClientView({
         )}
       </section>
 
-      {/* 4. Mutaxassislar bo'limi — maksimum 5 km radiusda eng yaqin 1 ta agronom va 1 ta veterinar */}
+      {/* 4. Mutaxassislar bo'limi — eng yaqin 1 ta agronom va 1 ta veterinar */}
       {specialists.length > 0 && (
         <section className="mt-7">
           <div className="flex items-center justify-between mb-3 px-0.5">
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-[20px] font-black tracking-tight text-neutral-900">
-                  Mutaxassislar
-                </h2>
-                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-800 border border-emerald-200">
-                  5 km gacha radius
-                </span>
-              </div>
+              <h2 className="text-[20px] font-black tracking-tight text-neutral-900">
+                Mutaxassislar
+              </h2>
               <p className="text-[12px] text-neutral-500 font-medium mt-0.5">
                 Sizga eng yaqin 1 ta agronom va 1 ta veterinar
               </p>

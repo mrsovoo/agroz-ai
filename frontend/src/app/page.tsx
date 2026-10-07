@@ -12,28 +12,16 @@ function isVeterinarian(s: HomeSpecialist): boolean {
   );
 }
 
-const MAX_SPECIALIST_RADIUS_KM = 5;
-
 function selectTopSpecialists(specs: HomeSpecialist[]): HomeSpecialist[] {
   const sorted = [...specs].sort((a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999));
   const vets = sorted.filter((s) => isVeterinarian(s));
   const agrs = sorted.filter((s) => !isVeterinarian(s));
 
-  // 1. Maksimum 5 km gacha radiusdagi eng yaqin agronom (avval bo'sh bo'lganlari)
-  const nearbyAgrs = agrs.filter((s) => s.distanceKm != null && s.distanceKm <= MAX_SPECIALIST_RADIUS_KM);
-  const bestAgr =
-    nearbyAgrs.find((s) => !s.isBusy) ||
-    nearbyAgrs[0] ||
-    agrs.find((s) => !s.isBusy) ||
-    agrs[0];
+  // 1. Eng yaqin agronom (avval bo'sh bo'lganlari)
+  const bestAgr = agrs.find((s) => !s.isBusy) || agrs[0];
 
-  // 2. Maksimum 5 km gacha radiusdagi eng yaqin veterinar (avval bo'sh bo'lganlari)
-  const nearbyVets = vets.filter((s) => s.distanceKm != null && s.distanceKm <= MAX_SPECIALIST_RADIUS_KM);
-  const bestVet =
-    nearbyVets.find((s) => !s.isBusy) ||
-    nearbyVets[0] ||
-    vets.find((s) => !s.isBusy) ||
-    vets[0];
+  // 2. Eng yaqin veterinar (avval bo'sh bo'lganlari)
+  const bestVet = vets.find((s) => !s.isBusy) || vets[0];
 
   const result: HomeSpecialist[] = [];
   if (bestAgr) result.push(bestAgr);
