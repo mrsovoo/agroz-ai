@@ -170,16 +170,16 @@ const VARIANTS = {
   lg: {
     root: "group relative flex h-full w-full cursor-pointer flex-col justify-between rounded-[20px] bg-white border border-neutral-200/80 p-3 shadow-2xs transition-all duration-200 hover:shadow-xs hover:border-emerald-400/80 active:scale-[0.99]",
     imgWrap: "relative mb-2 flex aspect-square w-full items-center justify-center overflow-hidden rounded-[14px] bg-white border border-neutral-200/70 p-2 sm:p-2.5",
-    title: "text-[13px] font-bold leading-tight text-neutral-900 line-clamp-2 min-h-[2.4em] group-hover:text-[#039e1e] transition-colors",
-    price: "text-[15px] font-extrabold text-neutral-900 tracking-tight whitespace-nowrap",
+    title: "text-[13.5px] sm:text-[14.5px] font-bold leading-tight text-neutral-900 line-clamp-2 min-h-[2.4em] group-hover:text-[#039e1e] transition-colors",
+    price: "text-[15px] sm:text-[16px] font-extrabold text-neutral-900 tracking-tight whitespace-nowrap",
     badge: "text-[11px] px-2 py-0.5",
     city: "text-[11px]",
   },
   md: {
     root: "group relative flex h-full w-full cursor-pointer flex-col justify-between rounded-[18px] bg-white border border-neutral-200/80 p-3 shadow-2xs transition-all duration-200 hover:shadow-xs hover:border-emerald-400/80 active:scale-[0.99]",
     imgWrap: "relative mb-1.5 flex aspect-square w-full items-center justify-center overflow-hidden rounded-[13px] bg-white border border-neutral-200/70 p-2",
-    title: "text-[13px] font-bold leading-tight text-neutral-900 line-clamp-2 min-h-[2.4em] group-hover:text-[#039e1e] transition-colors",
-    price: "text-[15px] font-extrabold text-neutral-900 tracking-tight whitespace-nowrap",
+    title: "text-[13px] sm:text-[14px] font-bold leading-tight text-neutral-900 line-clamp-2 min-h-[2.4em] group-hover:text-[#039e1e] transition-colors",
+    price: "text-[14.5px] sm:text-[15.5px] font-extrabold text-neutral-900 tracking-tight whitespace-nowrap",
     badge: "text-[11px] px-2 py-0.5",
     city: "text-[11px]",
   },
@@ -405,71 +405,78 @@ export function ProductCardUI({
       {/* 2. Ma'lumot qismi: flex flex-1 flex-col justify-between */}
       <div className="flex flex-1 flex-col justify-between">
         <div>
-          {/* Dori Nomi: text-[13px] font-bold leading-tight line-clamp-2, min-h-[2.4em] */}
+          {/* Nomi - kattaroqda */}
           <Link href={href} className="block group/title">
             <h3 className={vConfig.title} title={item.name}>
               {item.name}
             </h3>
           </Link>
 
-          {/* lg variantda qisqa tavsifdan 1 qator */}
-          {variant === "lg" && item.usage && (
-            <p className="mt-0.5 text-[11px] leading-snug text-neutral-500 line-clamp-1 font-medium">
-              {item.usage}
-            </p>
-          )}
-
-          {/* 3. Reyting va dona qatori: bitta qatorda, justify-between (border yo'q, joy kamaytirilgan) */}
-          <div className="flex items-center justify-between gap-1 mt-1">
-            {hasReviews ? (
-              <div className="inline-flex items-center gap-0.5 text-amber-500 font-bold text-[11px] whitespace-nowrap">
-                <Star size={11} className="fill-amber-400 text-amber-400 shrink-0" />
-                <span>{ratingAvg?.toFixed(1)}</span>
-                <span className="text-neutral-400 font-normal">
-                  ({ratingCount})
+          {/* Tavsifi - kichikroqda (tavsif va/yoki manzil) */}
+          {(item.usage || effectiveCity) && (
+            <p className="mt-0.5 text-[11px] sm:text-[11.5px] leading-snug text-neutral-500 line-clamp-1 font-medium">
+              {item.usage ? (
+                <>
+                  {item.usage}
+                  {effectiveCity && (
+                    <span className="text-neutral-400 font-normal"> · {effectiveCity}</span>
+                  )}
+                </>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-neutral-400">
+                  <MapPin size={10} className="text-[#039e1e] shrink-0" />
+                  {effectiveCity}
                 </span>
-              </div>
-            ) : (
-              <div />
-            )}
-
-            <span className="text-[11px] text-neutral-400 font-normal whitespace-nowrap">
-              1 {formatUnit(item.stockUnit)}
-            </span>
-          </div>
-
-          {/* 4. Joylashuv (viloyat/shahar): pin ikonka + text-[11px] text-gray-500, truncate, bitta qator, narxdan oldin */}
-          {effectiveCity && (
-            <div className="flex items-center gap-1 text-[11px] text-gray-500 mt-1 truncate">
-              <MapPin size={11} className="text-[#039e1e] shrink-0" />
-              <span className="truncate">{effectiveCity}</span>
-            </div>
+              )}
+            </p>
           )}
         </div>
 
-        {/* 5. Narx qatori va savat tugmasi */}
-        <div className="flex items-center justify-between gap-1 mt-1.5 min-h-[40px]">
-          {/* Chapda narx yoki "Kelishiladi" */}
-          <div className="min-w-0 shrink">
-            {hasPrice ? (
-              <p className="text-[15px] font-extrabold text-neutral-900 tracking-tight whitespace-nowrap" title={formatPrice(item.price)}>
-                {formatPrice(item.price)}
-              </p>
-            ) : (
-              <p className="text-[12px] font-semibold text-gray-500 whitespace-nowrap">
-                Kelishiladi
-              </p>
-            )}
+        {/* Pastki qism: Narxi (chapda) va Reyting (o'ngda) bitta qatorda + Savat tugmasi */}
+        <div className="mt-2 pt-1 border-t border-neutral-100/90">
+          {/* Narx kartochkani chap tarafida, reyting o'ng tarafida (bitta qatorda) */}
+          <div className="flex items-center justify-between gap-1.5 min-h-[24px]">
+            {/* Chapda: Narxi - kattaroqda va dona yokida kg yokida litr */}
+            <div className="min-w-0 flex items-baseline gap-1">
+              {hasPrice ? (
+                <>
+                  <span
+                    className="text-[14.5px] sm:text-[15.5px] font-extrabold text-neutral-900 tracking-tight whitespace-nowrap"
+                    title={formatPrice(item.price)}
+                  >
+                    {formatPrice(item.price)}
+                  </span>
+                  <span className="text-[10.5px] sm:text-[11px] text-neutral-400 font-medium whitespace-nowrap">
+                    / {formatUnit(item.stockUnit)}
+                  </span>
+                </>
+              ) : (
+                <span className="text-[12px] font-semibold text-gray-500 whitespace-nowrap">
+                  Kelishiladi
+                </span>
+              )}
+            </div>
+
+            {/* O'ngda: Reyting (bitta qatorda) */}
+            <div className="shrink-0">
+              {hasReviews ? (
+                <div className="inline-flex items-center gap-0.5 text-amber-500 font-bold text-[11px] whitespace-nowrap bg-amber-50/90 px-1.5 py-0.5 rounded-md">
+                  <Star size={11} className="fill-amber-400 text-amber-400 shrink-0" />
+                  <span>{ratingAvg?.toFixed(1)}</span>
+                  <span className="text-neutral-400 font-normal">({ratingCount})</span>
+                </div>
+              ) : null}
+            </div>
           </div>
 
-          {/* O'ngda savat tugmasi / stepper / slot */}
+          {/* Keyin shu savat tugmasi bo'sa bo'ldi */}
           {!hideCartButton && (
-            <div className="shrink-0 ml-1">
+            <div className="mt-2">
               {actions ? (
                 actions
               ) : qty > 0 && onChangeQty ? (
-                /* Stepper: [-  1  +] */
-                <div className="flex items-center h-8 sm:h-8.5 rounded-xl bg-[#eaf5e1] border border-[#039e1e]/30 px-1 py-0.5 text-[#039e1e] shadow-2xs shrink-0">
+                /* Stepper: [-  1 dona  +] to'liq kenglikda */
+                <div className="flex h-8.5 w-full items-center justify-between rounded-xl bg-[#eaf5e1] border border-[#039e1e]/30 px-1.5 text-[#039e1e] shadow-2xs">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -477,14 +484,14 @@ export function ProductCardUI({
                       e.stopPropagation();
                       onChangeQty(-1);
                     }}
-                    className="flex h-6.5 w-6.5 items-center justify-center rounded-lg bg-white text-[#039e1e] shadow-2xs active:scale-90 transition font-black hover:bg-neutral-50"
+                    className="flex h-6.5 w-7 items-center justify-center rounded-lg bg-white text-[#039e1e] shadow-2xs active:scale-90 transition font-black hover:bg-neutral-50"
                     aria-label="Kamaytirish"
                   >
                     <Minus size={11} strokeWidth={2.8} />
                   </button>
 
-                  <span className="px-1.5 text-[11.5px] sm:text-[12px] font-black tracking-tight select-none min-w-[18px] text-center">
-                    {qty}
+                  <span className="px-1.5 text-[11.5px] sm:text-[12px] font-black tracking-tight select-none">
+                    {qty} {formatUnit(item.stockUnit)}
                   </span>
 
                   <button
@@ -494,14 +501,14 @@ export function ProductCardUI({
                       e.stopPropagation();
                       onChangeQty(1);
                     }}
-                    className="flex h-6.5 w-6.5 items-center justify-center rounded-lg bg-[#039e1e] text-white shadow-2xs active:scale-90 transition font-black hover:bg-[#028518]"
+                    className="flex h-6.5 w-7 items-center justify-center rounded-lg bg-[#039e1e] text-white shadow-2xs active:scale-90 transition font-black hover:bg-[#028518]"
                     aria-label="Ko'paytirish"
                   >
                     <Plus size={11} strokeWidth={2.8} />
                   </button>
                 </div>
               ) : onAdd ? (
-                /* Ixcham "Savatga" tugmasi: yashil fonda savatcha ikonka va "Savatga" matni [🛒 Savatga] */
+                /* Savatga tugmasi: keng, qulay va yashil fonda [🛒 Savatga] */
                 <button
                   type="button"
                   onClick={(e) => {
@@ -509,10 +516,10 @@ export function ProductCardUI({
                     e.stopPropagation();
                     onAdd();
                   }}
-                  className="inline-flex h-8 sm:h-8.5 items-center justify-center gap-1.5 rounded-xl bg-[#039e1e] hover:bg-[#028518] px-2.5 sm:px-3 text-[11.5px] sm:text-[12px] font-bold text-white shadow-2xs hover:shadow-xs active:scale-95 transition-all whitespace-nowrap shrink-0"
+                  className="flex h-8.5 w-full items-center justify-center gap-1.5 rounded-xl bg-[#039e1e] hover:bg-[#028518] px-3 text-[12px] font-bold text-white shadow-2xs hover:shadow-xs active:scale-[0.98] transition-all whitespace-nowrap"
                   aria-label="Savatga qo'shish"
                 >
-                  <ShoppingCart size={13} strokeWidth={2.5} className="shrink-0" />
+                  <ShoppingCart size={13.5} strokeWidth={2.5} className="shrink-0" />
                   <span>Savatga</span>
                 </button>
               ) : null}
