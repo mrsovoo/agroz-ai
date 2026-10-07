@@ -53,6 +53,21 @@ function medStockState(m: { status: string; stock: number }): "ok" | "low" | "ou
   return "ok";
 }
 
+function formatPriceWithDots(val: string | number | null | undefined): string {
+  if (!val && val !== 0) return "";
+  const digits = String(val).replace(/\D/g, "");
+  if (!digits) return "";
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+function parsePriceNumber(val: string | null | undefined): number | null {
+  if (!val) return null;
+  const digits = String(val).replace(/\D/g, "");
+  if (!digits) return null;
+  const n = Number(digits);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 type PartnerProfile = {
   id: number;
   name: string;
@@ -535,7 +550,7 @@ export default function PartnerKabinetPage() {
         body: JSON.stringify({
           name: newMedName.trim(),
           type: newMedType,
-          price: Number(newMedPrice) || null,
+          price: parsePriceNumber(newMedPrice),
           stock: Number(newMedStock) || 10,
           stockUnit: newMedUnit,
           usage: newMedUsage.trim() || null,
@@ -1649,11 +1664,12 @@ export default function PartnerKabinetPage() {
                 <div>
                   <label className="font-bold text-zinc-700 block mb-1">Narxi (so&apos;m)</label>
                   <input
-                    type="number"
-                    placeholder="45000"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Masalan: 45.000"
                     value={newMedPrice}
-                    onChange={(e) => setNewMedPrice(e.target.value)}
-                    className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-zinc-900"
+                    onChange={(e) => setNewMedPrice(formatPriceWithDots(e.target.value))}
+                    className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-zinc-900 focus:outline-none focus:border-zinc-400"
                   />
                 </div>
               </div>

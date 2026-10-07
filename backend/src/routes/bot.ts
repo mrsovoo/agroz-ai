@@ -19,7 +19,7 @@ import {
 import { sendToSpecialist, sendToUser } from "../lib/bot-sender.js";
 import { addMedicine } from "../lib/specialists.js";
 import { verifyInitData } from "../lib/tg-auth.js";
-import { cleanText, normalizePhone } from "../lib/validate.js";
+import { cleanText, normalizePhone, parseSafePrice } from "../lib/validate.js";
 import { purgeUserAccount } from "../lib/user-auth.js";
 import { escapeHtml } from "../lib/tg-escape.js";
 import { randomBytes } from "node:crypto";
@@ -1772,7 +1772,7 @@ router.post("/partner/medicines", async (req, res) => {
       photoData: cleanPhotoData,
       type: type === "animal" || type === "crop" ? type : "general",
       usage: usage ? cleanText(usage, 300) : null,
-      price: Number(price) > 0 ? Number(price) : null,
+      price: parseSafePrice(price),
       stock: Number(stock) >= 0 ? Number(stock) : 10,
       stockUnit: cleanText(stockUnit, 20) || "dona",
     });
@@ -1807,7 +1807,7 @@ router.patch("/partner/medicines/:id", async (req, res) => {
     const { status, price, stock, usage, photoData } = req.body || {};
     const updates: Record<string, any> = { updatedAt: new Date() };
     if (status === "bor" || status === "yoq") updates.status = status;
-    if (price !== undefined) updates.price = Number(price) > 0 ? Number(price) : null;
+    if (price !== undefined) updates.price = parseSafePrice(price);
     if (stock !== undefined) updates.stock = Number(stock) >= 0 ? Number(stock) : 0;
     if (usage !== undefined) updates.usage = usage ? cleanText(usage, 300) : null;
     if (photoData !== undefined) {

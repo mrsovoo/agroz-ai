@@ -52,6 +52,21 @@ import {
 } from "lucide-react";
 import { formatOrderNumber } from "@/lib/format";
 
+function formatPriceWithDots(val: string | number | null | undefined): string {
+  if (!val && val !== 0) return "";
+  const digits = String(val).replace(/\D/g, "");
+  if (!digits) return "";
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+function parsePriceNumber(val: string | null | undefined): number | null {
+  if (!val) return null;
+  const digits = String(val).replace(/\D/g, "");
+  if (!digits) return null;
+  const n = Number(digits);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 type Me = { enabled: boolean; authenticated: boolean; username: string | null };
 
 type Stats = {
@@ -730,7 +745,7 @@ export default function AdminPanelPage() {
     setEditingMedicine(med);
     setEditMedName(med.name || "");
     setEditMedType((med.type as any) || "general");
-    setEditMedPrice(med.price ? String(med.price) : "");
+    setEditMedPrice(med.price ? formatPriceWithDots(med.price) : "");
     setEditMedStock(med.stock !== null && med.stock !== undefined ? String(med.stock) : "10");
     setEditMedUnit(med.stockUnit || "dona");
     setEditMedUsage(med.usage || "");
@@ -823,7 +838,7 @@ export default function AdminPanelPage() {
         body: JSON.stringify({
           name: editMedName.trim(),
           type: editMedType,
-          price: editMedPrice ? Number(editMedPrice) : null,
+          price: parsePriceNumber(editMedPrice),
           stock: editMedStock ? Number(editMedStock) : 0,
           stockUnit: editMedUnit,
           usage: editMedUsage.trim() || null,
@@ -980,7 +995,7 @@ export default function AdminPanelPage() {
         body: JSON.stringify({
           name: newMedName.trim(),
           type: newMedType,
-          price: newMedPrice ? Number(newMedPrice) : null,
+          price: parsePriceNumber(newMedPrice),
           stock: newMedStock ? Number(newMedStock) : 10,
           stockUnit: newMedUnit,
           usage: newMedUsage.trim() || null,
@@ -3949,12 +3964,11 @@ export default function AdminPanelPage() {
                       Narxi (so&apos;m)
                     </label>
                     <input
-                      type="number"
-                      min="0"
-                      step="1000"
+                      type="text"
+                      inputMode="numeric"
                       value={editMedPrice}
-                      onChange={(e) => setEditMedPrice(e.target.value)}
-                      placeholder="Masalan: 45000"
+                      onChange={(e) => setEditMedPrice(formatPriceWithDots(e.target.value))}
+                      placeholder="Masalan: 45.000"
                       className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none font-mono"
                     />
                   </div>
@@ -4174,12 +4188,11 @@ export default function AdminPanelPage() {
                       Narxi (so&apos;m)
                     </label>
                     <input
-                      type="number"
-                      min="0"
-                      step="1000"
+                      type="text"
+                      inputMode="numeric"
                       value={newMedPrice}
-                      onChange={(e) => setNewMedPrice(e.target.value)}
-                      placeholder="Masalan: 45000"
+                      onChange={(e) => setNewMedPrice(formatPriceWithDots(e.target.value))}
+                      placeholder="Masalan: 45.000"
                       className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none font-mono"
                     />
                   </div>
