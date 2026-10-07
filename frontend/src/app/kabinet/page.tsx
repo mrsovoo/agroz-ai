@@ -482,14 +482,22 @@ export default function PartnerKabinetPage() {
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext("2d");
+        const isPng = file.type === "image/png" || file.name.toLowerCase().endsWith(".png");
         if (ctx) {
-          ctx.fillStyle = "#FFFFFF";
-          ctx.fillRect(0, 0, width, height);
           ctx.imageSmoothingEnabled = true;
           ctx.imageSmoothingQuality = "high";
-          ctx.drawImage(img, 0, 0, width, height);
-          const compressed = canvas.toDataURL("image/jpeg", 0.88);
-          setNewMedPhoto(compressed);
+          if (isPng) {
+            ctx.clearRect(0, 0, width, height);
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressed = canvas.toDataURL("image/png");
+            setNewMedPhoto(compressed);
+          } else {
+            ctx.fillStyle = "#FFFFFF";
+            ctx.fillRect(0, 0, width, height);
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressed = canvas.toDataURL("image/jpeg", 0.88);
+            setNewMedPhoto(compressed);
+          }
         } else {
           setNewMedPhoto(event.target?.result as string);
         }

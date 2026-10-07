@@ -274,6 +274,9 @@ router.get("/:id/photo", async (req, res) => {
       }
       const b64 = comma >= 0 ? medicine.photoData.slice(comma + 1) : medicine.photoData;
       const buf = Buffer.from(b64, "base64");
+      if (buf.length >= 4 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
+        mime = "image/png";
+      }
       const etag = `"${medicine.id}-${buf.length}"`;
       if (req.headers["if-none-match"] === etag) {
         return res.status(304).end();

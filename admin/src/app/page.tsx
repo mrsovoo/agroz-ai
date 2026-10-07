@@ -325,6 +325,10 @@ async function adminFetch(url: string, options: RequestInit = {}) {
 
 function compressImageForAdmin(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
+    const isPng =
+      file.type === "image/png" ||
+      file.name.toLowerCase().endsWith(".png");
+
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new window.Image();
@@ -345,15 +349,25 @@ function compressImageForAdmin(file: File): Promise<string> {
         if (!ctx) {
           return reject(new Error("Canvas context mavjud emas"));
         }
-        // Oq fon bilan to'ldiramiz (Shaffof / transparent PNG fonsiz yuklanganda
-        // orqasi qora bo'lib qolmasligi uchun toza oq rang bilan bo'yaymiz)
-        ctx.fillStyle = "#FFFFFF";
-        ctx.fillRect(0, 0, width, height);
+
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.88);
-        resolve(dataUrl);
+
+        if (isPng) {
+          // Shaffof / transparent PNG fonsiz yuklanganda:
+          // orqa fonni oq yoki qora qilib qotirib qo'ymaymiz, toza shaffoflik (alpha) saqlanadi
+          ctx.clearRect(0, 0, width, height);
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL("image/png");
+          resolve(dataUrl);
+        } else {
+          // Boshqa formatlar (JPEG va h.k.) uchun:
+          ctx.fillStyle = "#FFFFFF";
+          ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.88);
+          resolve(dataUrl);
+        }
       };
       img.onerror = () => reject(new Error("Rasmni o'qib bo'lmadi"));
       img.src = e.target?.result as string;
