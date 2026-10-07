@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   loadCart,
   saveCart,
@@ -12,6 +12,7 @@ import {
 } from "@/lib/cart-store";
 import { isFavorite, toggleFavorite, FAV_EVENT } from "@/lib/favorites-store";
 import { calculateMedicineRating, REVIEWS_EVENT } from "@/lib/medicine-reviews";
+import { haptic } from "@/lib/telegram";
 
 export interface UseProductActionsMedicine {
   id: number;
@@ -25,6 +26,10 @@ export interface UseProductActionsMedicine {
   status?: string | null;
   ratingAvg?: number | null;
   ratingCount?: number;
+  pharmacyId?: number;
+  pharmacyName?: string | null;
+  pharmacyPhone?: string | null;
+  pharmacyAddress?: string | null;
 }
 
 export function useProductActions(
@@ -38,12 +43,27 @@ export function useProductActions(
     count: 0,
   });
 
-  const effectivePharmacyId = pharmacy?.id ?? 1;
+  const resolvedPharmacy: CartStorePharmacy = useMemo(
+    () =>
+      pharmacy ?? {
+        id: medicine.pharmacyId || 1,
+        name: medicine.pharmacyName || "Agroz Agro-do'kon",
+        phone: medicine.pharmacyPhone || "",
+        address: medicine.pharmacyAddress || null,
+      },
+    [
+      pharmacy,
+      medicine.pharmacyId,
+      medicine.pharmacyName,
+      medicine.pharmacyPhone,
+      medicine.pharmacyAddress,
+    ],
+  );
+
+  const effectivePharmacyId = resolvedPharmacy.id;
 
   const sync = useCallback(() => {
-    if (pharmacy) {
-      setLiked(isFavorite(effectivePharmacyId, medicine.id));
-    }
+    setLiked(isFavorite(effectivePharmacyId, medicine.id));
     const cart = loadCart();
     const inLine = cart?.lines?.find((l) => l.medicine.id === medicine.id);
     setQty(inLine ? inLine.qty : 0);
@@ -64,7 +84,6 @@ export function useProductActions(
     medicine.id,
     medicine.ratingAvg,
     medicine.ratingCount,
-    pharmacy,
   ]);
 
   useEffect(() => {
@@ -82,19 +101,18 @@ export function useProductActions(
   }, [sync]);
 
   const handleToggleFavorite = useCallback(() => {
-    if (!pharmacy) return;
-    const next = toggleFavorite(pharmacy.id, medicine.id);
+    const next = toggleFavorite(effectivePharmacyId, medicine.id);
     setLiked(next);
-  }, [pharmacy, medicine.id]);
+  }, [effectivePharmacyId, medicine.id]);
 
   const addToCart = useCallback(() => {
-    if (!pharmacy) return;
+    haptic("medium");
     const cart = loadCart();
     const newPharmacy: CartStorePharmacy = {
-      id: pharmacy.id,
-      name: pharmacy.name,
-      phone: pharmacy.phone,
-      address: pharmacy.address ?? null,
+      id: resolvedPharmacy.id,
+      name: resolvedPharmacy.name,
+      phone: resolvedPharmacy.phone,
+      address: resolvedPharmacy.address ?? null,
     };
 
     const cartMed: CartStoreMedicine = {
@@ -112,7 +130,7 @@ export function useProductActions(
     if (
       cart &&
       cart.pharmacy &&
-      cart.pharmacy.id !== pharmacy.id &&
+      cart.pharmacy.id !== resolvedPharmacy.id &&
       cart.lines.length > 0
     ) {
       if (
@@ -147,11 +165,11 @@ export function useProductActions(
       saveCart({ pharmacy: cart.pharmacy || newPharmacy, lines });
     }
     notifyCartChanged();
-  }, [pharmacy, medicine]);
+  }, [resolvedPharmacy, medicine]);
 
   const changeQty = useCallback(
     (delta: number) => {
-      if (!pharmacy) return;
+      haptic(delta > 0 ? "medium" : "light");
       const cart = loadCart();
       if (!cart || !Array.isArray(cart.lines) || cart.lines.length === 0) {
         if (delta > 0) addToCart();
@@ -181,7 +199,7 @@ export function useProductActions(
       }
       notifyCartChanged();
     },
-    [pharmacy, medicine, addToCart],
+    [addToCart, medicine.id],
   );
 
   return {

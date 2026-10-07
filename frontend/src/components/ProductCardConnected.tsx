@@ -28,9 +28,9 @@ export default function ProductCardConnected(props: ProductCardProps) {
       isFavorite={props.isFavorite !== undefined ? props.isFavorite : liked}
       ratingAvg={props.ratingAvg !== undefined ? props.ratingAvg : ratingStats.avg}
       ratingCount={props.ratingCount !== undefined ? props.ratingCount : ratingStats.count}
-      onAdd={props.onAdd ?? (props.pharmacy ? addToCart : undefined)}
-      onChangeQty={props.onChangeQty ?? (props.pharmacy ? changeQty : undefined)}
-      onToggleFavorite={props.onToggleFavorite ?? (props.pharmacy ? toggleFavorite : undefined)}
+      onAdd={props.onAdd ?? addToCart}
+      onChangeQty={props.onChangeQty ?? changeQty}
+      onToggleFavorite={props.onToggleFavorite ?? toggleFavorite}
     />
   );
 }

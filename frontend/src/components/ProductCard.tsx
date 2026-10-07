@@ -3,7 +3,7 @@
 import type { ReactNode, MouseEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Minus, Heart, Pill, Sprout, Syringe, MapPin, Star } from "lucide-react";
+import { Plus, Minus, Heart, Pill, Sprout, Syringe, MapPin, Star, ShoppingCart } from "lucide-react";
 import FadeImage from "@/components/FadeImage";
 import ProductCardConnected from "@/components/ProductCardConnected";
 import type { CartStorePharmacy } from "@/lib/cart-store";
@@ -468,8 +468,8 @@ export function ProductCardUI({
               {actions ? (
                 actions
               ) : qty > 0 && onChangeQty ? (
-                /* Stepper: [-  2  +] */
-                <div className="flex items-center rounded-full bg-[#eaf5e1] border border-[#039e1e]/30 p-0.5 text-[#039e1e] shadow-2xs shrink-0">
+                /* Stepper: [-  1  +] */
+                <div className="flex items-center h-8 sm:h-8.5 rounded-xl bg-[#eaf5e1] border border-[#039e1e]/30 px-1 py-0.5 text-[#039e1e] shadow-2xs shrink-0">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -477,13 +477,13 @@ export function ProductCardUI({
                       e.stopPropagation();
                       onChangeQty(-1);
                     }}
-                    className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-[#039e1e] shadow-2xs active:scale-90 transition font-black hover:bg-neutral-50"
+                    className="flex h-6.5 w-6.5 items-center justify-center rounded-lg bg-white text-[#039e1e] shadow-2xs active:scale-90 transition font-black hover:bg-neutral-50"
                     aria-label="Kamaytirish"
                   >
                     <Minus size={11} strokeWidth={2.8} />
                   </button>
 
-                  <span className="px-1.5 text-[11.5px] font-black tracking-tight select-none">
+                  <span className="px-1.5 text-[11.5px] sm:text-[12px] font-black tracking-tight select-none min-w-[18px] text-center">
                     {qty}
                   </span>
 
@@ -494,28 +494,27 @@ export function ProductCardUI({
                       e.stopPropagation();
                       onChangeQty(1);
                     }}
-                    className="flex h-6 w-6 items-center justify-center rounded-full bg-[#039e1e] text-white shadow-2xs active:scale-90 transition font-black hover:bg-[#028518]"
+                    className="flex h-6.5 w-6.5 items-center justify-center rounded-lg bg-[#039e1e] text-white shadow-2xs active:scale-90 transition font-black hover:bg-[#028518]"
                     aria-label="Ko'paytirish"
                   >
                     <Plus size={11} strokeWidth={2.8} />
                   </button>
                 </div>
               ) : onAdd ? (
-                /* Yumaloq "+" tugmasi: h-9 w-9, bosish maydoni >= 40x40px */
-                <div className="relative flex h-10 w-10 items-center justify-center shrink-0">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onAdd();
-                    }}
-                    className="flex h-9 w-9 items-center justify-center rounded-full bg-[#039e1e] hover:bg-[#028518] text-white shadow-2xs hover:shadow-xs active:scale-90 transition-all duration-150"
-                    aria-label="Savatga qo'shish"
-                  >
-                    <Plus size={16} strokeWidth={2.8} />
-                  </button>
-                </div>
+                /* Ixcham "Savatga" tugmasi: yashil fonda savatcha ikonka va "Savatga" matni [🛒 Savatga] */
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onAdd();
+                  }}
+                  className="inline-flex h-8 sm:h-8.5 items-center justify-center gap-1.5 rounded-xl bg-[#039e1e] hover:bg-[#028518] px-2.5 sm:px-3 text-[11.5px] sm:text-[12px] font-bold text-white shadow-2xs hover:shadow-xs active:scale-95 transition-all whitespace-nowrap shrink-0"
+                  aria-label="Savatga qo'shish"
+                >
+                  <ShoppingCart size={13} strokeWidth={2.5} className="shrink-0" />
+                  <span>Savatga</span>
+                </button>
               ) : null}
             </div>
           )}
@@ -527,12 +526,12 @@ export function ProductCardUI({
 
 /**
  * Standart eksport:
- * Agar props ichida pharmacy berilgan bo'lsa va onAdd/actions berilmagan bo'lsa,
- * avtomatik ravishda ProductCardConnected orqali to'liq savat/sevimli/reyting bilan ishlaydi.
+ * Agar onAdd va actions berilmagan bo'lsa, avtomatik ravishda ProductCardConnected
+ * orqali to'liq savat/sevimli/reyting mantiqi bilan ulanadi (haptic feedback va xavfsiz dorixona fallback bilan).
  * Aks holda toza ProductCardUI sifatida render bo'ladi.
  */
 export default function ProductCard(props: ProductCardProps) {
-  if (props.pharmacy && !props.onAdd && !props.actions) {
+  if (!props.onAdd && !props.actions) {
     return <ProductCardConnected {...props} />;
   }
   return <ProductCardUI {...props} />;
