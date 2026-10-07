@@ -118,9 +118,22 @@ export function SpecialistCard({
             isBusy={specialist.isBusy}
           />
           <div className="min-w-0">
-            <span className="text-[12px] font-bold text-neutral-500 tracking-tight block truncate">
-              {specialtyText}
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[12px] font-bold text-neutral-500 tracking-tight truncate">
+                {specialtyText}
+              </span>
+              {specialist.isBusy ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.2 text-[10px] font-bold text-red-700 border border-red-200 shrink-0">
+                  <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                  Band
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.2 text-[10px] font-bold text-emerald-700 border border-emerald-200 shrink-0">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  Bo&apos;sh
+                </span>
+              )}
+            </div>
             <h3 className="text-[16.5px] sm:text-[17px] font-black text-neutral-900 leading-snug truncate group-hover:text-[#039e1e] transition-colors">
               {specialist.name}
             </h3>
@@ -176,14 +189,26 @@ export function SpecialistCard({
           <span>Profil</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => onCall?.(specialist)}
-          className="flex items-center justify-center gap-1.5 rounded-xl bg-[#039e1e] hover:bg-[#028518] py-2.5 text-[13px] font-black text-white shadow-xs active:scale-95 transition"
-        >
-          <Car size={14} />
-          <span>Chaqirish</span>
-        </button>
+        {specialist.isBusy ? (
+          <button
+            type="button"
+            disabled
+            className="flex items-center justify-center gap-1.5 rounded-xl bg-red-50 border border-red-200 py-2.5 text-[12px] font-bold text-red-700 cursor-not-allowed select-none opacity-95"
+            title="Mutaxassis hozir chaqiruvda"
+          >
+            <Clock size={13} className="text-red-500" />
+            <span>Hozirda chaqiruvda</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onCall?.(specialist)}
+            className="flex items-center justify-center gap-1.5 rounded-xl bg-[#039e1e] hover:bg-[#028518] py-2.5 text-[13px] font-black text-white shadow-xs active:scale-95 transition"
+          >
+            <Car size={14} />
+            <span>Chaqirish</span>
+          </button>
+        )}
       </div>
     </div>
   );
@@ -432,17 +457,28 @@ export function SpecialistProfileModal({
             <Phone size={21} />
           </a>
 
-          <button
-            type="button"
-            onClick={() => {
-              onClose();
-              onCall(specialist);
-            }}
-            className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-[#039e1e] py-3.5 text-[15px] font-black text-white shadow-md hover:bg-[#028518] active:scale-[0.99] transition"
-          >
-            <span>Mutaxassisni chaqirish</span>
-            <span>➔</span>
-          </button>
+          {specialist.isBusy ? (
+            <button
+              type="button"
+              disabled
+              className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-red-50 border border-red-200 py-3.5 text-[14.5px] font-bold text-red-700 cursor-not-allowed select-none opacity-95"
+            >
+              <Clock size={17} className="text-red-500" />
+              <span>Hozirda chaqiruvda</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onCall(specialist);
+              }}
+              className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-[#039e1e] py-3.5 text-[15px] font-black text-white shadow-md hover:bg-[#028518] active:scale-[0.99] transition"
+            >
+              <span>Mutaxassisni chaqirish</span>
+              <span>➔</span>
+            </button>
+          )}
         </div>
       </div>
     </div>

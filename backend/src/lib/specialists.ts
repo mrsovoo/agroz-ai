@@ -280,13 +280,12 @@ export async function addMedicine(params: {
   stock?: number;
   stockUnit?: string;
 }) {
-  const hasPhoto = Boolean(params.photoFileId || params.photoData);
   const hasPrice = typeof params.price === "number" && params.price > 0;
   const computedStatus =
-    !hasPhoto || !hasPrice
-      ? "qoralama"
-      : params.stock !== undefined && params.stock <= 0
+    params.stock !== undefined && params.stock <= 0
       ? "yoq"
+      : !hasPrice
+      ? "qoralama"
       : "bor";
 
   const rows = await db
@@ -330,9 +329,8 @@ export async function setMedicineStatus(
   const med = existing[0];
   if (!med) return false;
 
-  const hasPhoto = Boolean(med.photoFileId || med.photoData);
   const hasPrice = typeof med.price === "number" && med.price > 0;
-  const nextStatus = status === "bor" && (!hasPhoto || !hasPrice) ? "qoralama" : status;
+  const nextStatus = status === "bor" && !hasPrice ? "qoralama" : status;
 
   const rows = await db
     .update(specialistMedicines)

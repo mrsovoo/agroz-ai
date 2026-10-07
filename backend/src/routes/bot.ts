@@ -1061,6 +1061,24 @@ async function _legacyHandlePartnerUpdate(update: any) {
       if (newStatus && newStatus !== call.status) {
         await db.update(specialistCalls).set({ status: newStatus, updatedAt: new Date() }).where(eq(specialistCalls.id, callId));
 
+        // Mutaxassis bandlik (isBusy) holatini avtomatik yangilash
+        if (newStatus === "qabul_qilindi") {
+          await db.update(specialists).set({ isBusy: true }).where(eq(specialists.id, call.specialistId));
+        } else if (newStatus === "bajarildi" || newStatus === "bekor") {
+          const remaining = await db
+            .select({ id: specialistCalls.id })
+            .from(specialistCalls)
+            .where(and(
+              eq(specialistCalls.specialistId, call.specialistId),
+              eq(specialistCalls.status, "qabul_qilindi"),
+              ne(specialistCalls.id, callId)
+            ))
+            .limit(1);
+          if (remaining.length === 0) {
+            await db.update(specialists).set({ isBusy: false }).where(eq(specialists.id, call.specialistId));
+          }
+        }
+
         if (msg && msg.message_id && msg.chat) {
           const updatedCall = { ...call, status: newStatus };
           await sendPartnerCallCard(token, msg.chat.id, updatedCall, msg.message_id);
@@ -1946,7 +1964,7 @@ router.patch("/partner/medicines/:id", async (req, res) => {
 
     const { status, price, stock, usage, photoData } = req.body || {};
     const updates: Record<string, any> = { updatedAt: new Date() };
-    if (status === "bor" || status === "yoq") updates.status = status;
+    if (status === "bor" || status === "yoq" || status === "qoralama") updates.status = status;
     if (price !== undefined) updates.price = parseSafePrice(price);
     if (stock !== undefined) updates.stock = Number(stock) >= 0 ? Number(stock) : 0;
     if (usage !== undefined) updates.usage = usage ? cleanText(usage, 300) : null;
@@ -2105,6 +2123,24 @@ router.post("/partner/calls/:id/action", async (req, res) => {
 
     if (nextStatus) {
       await db.update(specialistCalls).set({ status: nextStatus, updatedAt: new Date() }).where(eq(specialistCalls.id, callId));
+
+      // Mutaxassis bandlik (isBusy) holatini avtomatik yangilash
+      if (nextStatus === "qabul_qilindi") {
+        await db.update(specialists).set({ isBusy: true }).where(eq(specialists.id, spec.id));
+      } else if (nextStatus === "bajarildi" || nextStatus === "bekor") {
+        const remaining = await db
+          .select({ id: specialistCalls.id })
+          .from(specialistCalls)
+          .where(and(
+            eq(specialistCalls.specialistId, spec.id),
+            eq(specialistCalls.status, "qabul_qilindi"),
+            ne(specialistCalls.id, callId)
+          ))
+          .limit(1);
+        if (remaining.length === 0) {
+          await db.update(specialists).set({ isBusy: false }).where(eq(specialists.id, spec.id));
+        }
+      }
     }
 
     res.json({ ok: true, status: nextStatus || call.status });

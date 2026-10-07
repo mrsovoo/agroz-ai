@@ -37,6 +37,7 @@ export default function SpecialistCallModal({
     role?: string | null;
     helpsWith?: string | null;
     customerName?: string | null;
+    customerPhone?: string | null;
     customerAddress?: string | null;
     problem?: string | null;
   } | null;
@@ -117,6 +118,18 @@ export default function SpecialistCallModal({
       if (specialist.customerName) setName(specialist.customerName);
       if (specialist.customerAddress) setAddress(specialist.customerAddress);
       if (specialist.problem) setProblem(specialist.problem);
+
+      let pDigits = "";
+      if (specialist.customerPhone) {
+        pDigits = specialist.customerPhone.replace(/\D/g, "").slice(-9);
+      } else {
+        try {
+          const sp = localStorage.getItem("agroz_customer_phone");
+          if (sp) pDigits = sp.replace(/\D/g, "").slice(-9);
+        } catch {}
+      }
+      if (pDigits) setPhoneDigits(pDigits);
+
       setRatingSubmitted(false);
       setReviewComment("");
       setRatingStars(5);
@@ -178,27 +191,43 @@ export default function SpecialistCallModal({
     if (!isOpen || !callId || mode !== "tracking") return;
 
     let cancelled = false;
-    const phoneFull = `+998${phoneDigits}`;
-    const interval = setInterval(async () => {
+    let effectiveDigits = phoneDigits;
+    if (!effectiveDigits) {
       try {
-        const res = await fetch(
-          apiUrl(`/api/specialists/call/${callId}/status?phone=${encodeURIComponent(phoneFull)}`)
-        );
+        const sp = localStorage.getItem("agroz_customer_phone");
+        if (sp) effectiveDigits = sp.replace(/\D/g, "").slice(-9);
+      } catch {}
+    }
+    const phoneFull = effectiveDigits ? `+998${effectiveDigits}` : "";
+
+    const checkStatus = async () => {
+      try {
+        const query = phoneFull ? `?phone=${encodeURIComponent(phoneFull)}` : "";
+        const res = await fetch(apiUrl(`/api/specialists/call/${callId}/status${query}`));
         if (!res.ok) return;
         const d = await res.json();
         if (cancelled || !d?.ok || !d?.status) return;
 
-        if (d.status === "qabul_qilindi") {
+        if (d.status === "qabul_qilindi" || d.status === "tasdiqlandi") {
           setIsCancelled(false);
-          setCallProgress((prev) => (prev < 2 ? 2 : prev));
-        } else if (d.status === "bajarildi") {
+          setCallProgress(2);
+        } else if (d.status === "bajarildi" || d.status === "completed") {
           setIsCancelled(false);
           setCallProgress(3);
-        } else if (d.status === "bekor") {
+        } else if (d.status === "bekor" || d.status === "cancelled") {
           setIsCancelled(true);
+        } else if (d.status === "yangi" || d.status === "pending") {
+          setIsCancelled(false);
+          setCallProgress(1);
         }
       } catch {}
-    }, 4000);
+    };
+
+    // Darhol tekshirish
+    checkStatus();
+
+    // Har 3 soniyada davriy so'rash (real-time yangilanish)
+    const interval = setInterval(checkStatus, 3000);
 
     return () => {
       cancelled = true;

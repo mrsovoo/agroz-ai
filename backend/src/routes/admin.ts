@@ -19,7 +19,7 @@ import {
   broadcastDeliveries,
   dataConsents,
 } from "../db/schema.js";
-import { sql, eq, desc, asc, isNotNull, and, or, inArray } from "drizzle-orm";
+import { sql, eq, desc, asc, isNotNull, and, or, inArray, ne } from "drizzle-orm";
 import { sendOrderStatusPush, sendSpecialistCallPush } from "../lib/push.js";
 import { sendToSpecialist, sendToUser } from "../lib/bot-sender.js";
 import {
@@ -1370,12 +1370,31 @@ router.post("/specialist-calls/:id/status", requireAdmin, async (req, res) => {
       return res.status(400).json({ error: "Holat noto'g'ri" });
     }
     const [existingCall] = await db
-      .select({ customerPhone: specialistCalls.customerPhone })
+      .select({ customerPhone: specialistCalls.customerPhone, specialistId: specialistCalls.specialistId })
       .from(specialistCalls)
       .where(eq(specialistCalls.id, callId))
       .limit(1);
 
     await db.update(specialistCalls).set({ status, updatedAt: new Date() }).where(eq(specialistCalls.id, callId));
+
+    if (existingCall?.specialistId) {
+      if (status === "qabul_qilindi") {
+        await db.update(specialists).set({ isBusy: true }).where(eq(specialists.id, existingCall.specialistId));
+      } else if (status === "bajarildi" || status === "bekor") {
+        const remaining = await db
+          .select({ id: specialistCalls.id })
+          .from(specialistCalls)
+          .where(and(
+            eq(specialistCalls.specialistId, existingCall.specialistId),
+            eq(specialistCalls.status, "qabul_qilindi"),
+            ne(specialistCalls.id, callId)
+          ))
+          .limit(1);
+        if (remaining.length === 0) {
+          await db.update(specialists).set({ isBusy: false }).where(eq(specialists.id, existingCall.specialistId));
+        }
+      }
+    }
 
     if (existingCall?.customerPhone) {
       sendSpecialistCallPush(existingCall.customerPhone, callId, status).catch(() => {});

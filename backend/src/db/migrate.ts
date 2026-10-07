@@ -69,7 +69,7 @@ export async function ensureSchema(): Promise<void> {
       ALTER TABLE specialist_medicines ADD COLUMN IF NOT EXISTS updated_at timestamp DEFAULT now() NOT NULL;
       UPDATE specialist_medicines
       SET status = 'qoralama'
-      WHERE (price IS NULL OR price <= 0 OR (photo_file_id IS NULL AND photo_data IS NULL))
+      WHERE (price IS NULL OR price <= 0)
         AND status != 'qoralama';
     `);
 

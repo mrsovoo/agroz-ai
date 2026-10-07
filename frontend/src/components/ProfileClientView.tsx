@@ -10,7 +10,7 @@ import { AddToHomeScreenButton } from "@/components/HomeScreenPromptBanner";
 import { getTelegramUser } from "@/lib/telegram";
 import { apiUrl, apiFetch } from "@/lib/api-config";
 import { loadLastOrder } from "@/lib/cart-store";
-import { getSpecialistCalls } from "@/lib/specialist-calls";
+import { getSpecialistCalls, saveSpecialistCalls } from "@/lib/specialist-calls";
 import { unregisterPushTokenOnBackend } from "@/lib/capacitor";
 
 type UserProfile = {
@@ -69,17 +69,46 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
       })
       .catch(() => {});
 
-    // 2. Buyurtma va chaqiruvlarni yuklash
-    apiFetch("/api/profile/activity")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data?.ok) {
-          if (Array.isArray(data.orders)) setOrders(data.orders);
-          if (Array.isArray(data.specialistCalls)) setCalls(data.specialistCalls);
-        }
-      })
-      .catch(() => {});
-  }, []);
+    // 2. Buyurtma va chaqiruvlarni yuklash (va real-time davriy yangilash)
+    const loadActivity = () => {
+      let storedPhone = "";
+      try {
+        storedPhone = localStorage.getItem("agroz_customer_phone") || "";
+      } catch {}
+      const phoneToUse = storedPhone || user?.phone || "";
+      const url = phoneToUse
+        ? `/api/profile/activity?phone=${encodeURIComponent(phoneToUse)}`
+        : "/api/profile/activity";
+
+      apiFetch(url)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (data?.ok) {
+            if (Array.isArray(data.orders)) setOrders(data.orders);
+            if (Array.isArray(data.specialistCalls)) {
+              setCalls(data.specialistCalls);
+
+              // Serverdagi yangilangan holatlarni lokal ombor bilan ham sinxronlashtirish
+              const localCalls = getSpecialistCalls();
+              let changed = false;
+              for (const sc of data.specialistCalls) {
+                const match = localCalls.find((lc) => String(lc.id) === String(sc.id));
+                if (match && match.status !== sc.status) {
+                  match.status = sc.status;
+                  changed = true;
+                }
+              }
+              if (changed) saveSpecialistCalls(localCalls);
+            }
+          }
+        })
+        .catch(() => {});
+    };
+
+    loadActivity();
+    const pollInterval = setInterval(loadActivity, 4000);
+    return () => clearInterval(pollInterval);
+  }, [user?.phone]);
 
   // Mahaliy (local) buyurtma va chaqiruvlarni birlashtirish (faqat real ma'lumotlar)
   const displayOrders = useMemo(() => {
@@ -104,12 +133,49 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
     const list = [...calls];
     const localCalls = getSpecialistCalls();
     for (const lc of localCalls) {
-      if (!list.some((c) => String(c.id) === String(lc.id))) {
+      const matchIndex = list.findIndex((c) => String(c.id) === String(lc.id));
+      if (matchIndex >= 0) {
+        list[matchIndex] = {
+          ...lc,
+          ...list[matchIndex],
+          status: list[matchIndex].status || lc.status,
+        };
+      } else {
         list.unshift(lc);
       }
     }
     return list;
   }, [calls]);
+
+  const handleToggleCall = (callId: string | number) => {
+    if (expandedCallId === callId) {
+      setExpandedCallId(null);
+    } else {
+      setExpandedCallId(callId);
+      // Darhol serverdan chaqiruv holatini yangilash
+      let storedPhone = "";
+      try {
+        storedPhone = localStorage.getItem("agroz_customer_phone") || "";
+      } catch {}
+      const query = storedPhone ? `?phone=${encodeURIComponent(storedPhone)}` : "";
+      fetch(apiUrl(`/api/specialists/call/${callId}/status${query}`))
+        .then((r) => r.json())
+        .then((d) => {
+          if (d?.ok && d?.status) {
+            setCalls((prev) =>
+              prev.map((c) => (String(c.id) === String(callId) ? { ...c, status: d.status } : c))
+            );
+            const localCalls = getSpecialistCalls();
+            const target = localCalls.find((c) => String(c.id) === String(callId));
+            if (target && target.status !== d.status) {
+              target.status = d.status;
+              saveSpecialistCalls(localCalls);
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  };
 
   const displayName = user?.name?.trim() || "Sizning ismingiz";
   const displayPhone = user?.phone || "Telefon raqam kiritilmagan";
@@ -339,12 +405,12 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
                 >
                   <button
                     type="button"
-                    onClick={() => setExpandedCallId(isExpanded ? null : call.id)}
+                    onClick={() => handleToggleCall(call.id)}
                     className="flex w-full items-center justify-between p-4 text-left hover:bg-neutral-50 active:scale-[0.99] transition"
                   >
                     <div>
                       <p className="text-[16px] font-bold text-neutral-900 tracking-tight">
-                        #{call.id} · {call.specialistSpecialty ? `${call.specialistSpecialty} ` : ""}{call.specialistName || "Agronom B. Rahmonov"}
+                        #{call.id} · {call.specialistSpecialty ? `${call.specialistSpecialty} ` : ""}{call.specialistName || "Mutaxassis"}
                       </p>
                       <p className="text-[13px] text-neutral-500 font-medium mt-0.5">
                         {statusLabel}
@@ -418,11 +484,11 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
 
                       {/* Qo'shimcha ma'lumotlar bloki */}
                       <div className="rounded-2xl bg-white border border-neutral-200/90 p-3.5 text-[13.5px] text-neutral-600 space-y-1.5 shadow-2xs">
-                        {call.phone && (
+                        {(call.specialistPhone || call.phone) && (
                           <p className="flex items-center justify-between">
                             <span className="text-neutral-500">Mutaxassis telefoni:</span>
-                            <a href={`tel:${call.phone.replace(/[^\d+]/g, "")}`} className="font-bold text-[#039e1e] hover:underline">
-                              {call.phone}
+                            <a href={`tel:${String(call.specialistPhone || call.phone).replace(/[^\d+]/g, "")}`} className="font-bold text-[#039e1e] hover:underline">
+                              {call.specialistPhone || call.phone}
                             </a>
                           </p>
                         )}

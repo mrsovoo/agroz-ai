@@ -224,9 +224,13 @@ router.get("/activity", async (req, res) => {
         const spec = specMap.get(c.specialistId);
         return {
           id: c.id,
-          specialistName: spec?.name || "Mutaxassis",
+          specialistId: c.specialistId,
+          specialistName: spec?.organization || spec?.name || "Mutaxassis",
           specialistPhone: spec?.phone || null,
           specialistSpecialty: spec?.specialty || (spec?.role === "pharmacy" ? "Dorixona" : "Mutaxassis"),
+          specialistRole: spec?.role || "specialist",
+          customerName: c.customerName,
+          customerPhone: c.customerPhone,
           problem: c.problem,
           address: c.address,
           status: c.status,

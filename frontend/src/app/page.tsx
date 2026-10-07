@@ -19,13 +19,21 @@ function selectTopSpecialists(specs: HomeSpecialist[]): HomeSpecialist[] {
   const vets = sorted.filter((s) => isVeterinarian(s));
   const agrs = sorted.filter((s) => !isVeterinarian(s));
 
-  // 1. Maksimum 5 km gacha radiusdagi eng yaqin agronom
+  // 1. Maksimum 5 km gacha radiusdagi eng yaqin agronom (avval bo'sh bo'lganlari)
   const nearbyAgrs = agrs.filter((s) => s.distanceKm != null && s.distanceKm <= MAX_SPECIALIST_RADIUS_KM);
-  const bestAgr = nearbyAgrs.length > 0 ? nearbyAgrs[0] : agrs[0];
+  const bestAgr =
+    nearbyAgrs.find((s) => !s.isBusy) ||
+    nearbyAgrs[0] ||
+    agrs.find((s) => !s.isBusy) ||
+    agrs[0];
 
-  // 2. Maksimum 5 km gacha radiusdagi eng yaqin veterinar
+  // 2. Maksimum 5 km gacha radiusdagi eng yaqin veterinar (avval bo'sh bo'lganlari)
   const nearbyVets = vets.filter((s) => s.distanceKm != null && s.distanceKm <= MAX_SPECIALIST_RADIUS_KM);
-  const bestVet = nearbyVets.length > 0 ? nearbyVets[0] : vets[0];
+  const bestVet =
+    nearbyVets.find((s) => !s.isBusy) ||
+    nearbyVets[0] ||
+    vets.find((s) => !s.isBusy) ||
+    vets[0];
 
   const result: HomeSpecialist[] = [];
   if (bestAgr) result.push(bestAgr);
@@ -46,7 +54,7 @@ export default async function HomePage() {
 
     const [medRes, specRes] = await Promise.allSettled([
       fetch(apiUrl("/api/medicines?limit=60&random=1"), fetchOptions),
-      fetch(apiUrl("/api/specialists?role=specialist"), fetchOptions),
+      fetch(apiUrl("/api/specialists"), fetchOptions),
     ]);
 
     const medMap = new Map<number, HomeMedicine>();

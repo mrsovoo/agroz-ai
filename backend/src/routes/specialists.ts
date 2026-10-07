@@ -147,7 +147,7 @@ async function handleRateSpecialist(req: any, res: any) {
       await db
         .update(specialists)
         .set({ isBusy: false, currentCallId: null, updatedAt: new Date() })
-        .where(eq(specialists.currentCallId, verifiedCallId))
+        .where(eq(specialists.id, specialistId))
         .catch(() => {});
     }
 
