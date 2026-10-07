@@ -996,6 +996,14 @@ router.put("/medicines/:id", requireAdmin, async (req, res) => {
       await db.select().from(specialistMedicines).where(eq(specialistMedicines.id, medId)).limit(1)
     )[0];
 
+    if (updated && updated.status === "bor" && (updates.status === "bor" || (updates.stock !== undefined && updates.stock > 0))) {
+      import("../lib/waitlist.js").then(({ notifyMedicineAvailable }) => {
+        notifyMedicineAvailable(medId).catch((err) =>
+          console.error("[admin] notifyMedicineAvailable error:", err),
+        );
+      }).catch(() => {});
+    }
+
     res.json({
       ok: true,
       message: "Dori ma'lumotlari muvaffaqiyatli yangilandi",

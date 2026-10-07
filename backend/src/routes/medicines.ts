@@ -3,6 +3,8 @@ import { db } from "../db/index.js";
 import { specialistMedicines, specialists, specialistRatings } from "../db/schema.js";
 import { and, eq, ne, sql, ilike, or } from "drizzle-orm";
 import { resolveAuthBotToken } from "../lib/auth-bot.js";
+import { addToMedicineWaitlist } from "../lib/waitlist.js";
+import { getUserFromReq } from "../lib/user-auth.js";
 
 const router = Router();
 
@@ -15,7 +17,7 @@ router.get("/", async (req, res) => {
     const isRandom = req.query.random === "1" || req.query.shuffle === "1";
 
     const conditions = [
-      ne(specialistMedicines.status, "yoq"),
+      eq(specialistMedicines.status, "bor"),
       eq(specialists.isActive, true),
     ];
     if (type === "crop" || type === "animal") {
@@ -48,7 +50,9 @@ router.get("/", async (req, res) => {
         type: specialistMedicines.type,
         usage: specialistMedicines.usage,
         price: specialistMedicines.price,
+        stock: specialistMedicines.stock,
         stockUnit: specialistMedicines.stockUnit,
+        status: specialistMedicines.status,
         hasPhoto: sql<boolean>`(${specialistMedicines.photoFileId} is not null or ${specialistMedicines.photoData} is not null)`,
         photoVersion: sql<string>`coalesce(length(${specialistMedicines.photoData})::text, right(${specialistMedicines.photoFileId}, 12), ${specialistMedicines.id}::text)`,
         pharmacyId: specialists.id,
@@ -212,7 +216,7 @@ router.get("/:id", async (req, res) => {
       .innerJoin(specialists, eq(specialists.id, specialistMedicines.specialistId))
       .where(
         and(
-          ne(specialistMedicines.status, "yoq"),
+          eq(specialistMedicines.status, "bor"),
           eq(specialists.isActive, true),
           ne(specialistMedicines.id, medicine.id),
         )
@@ -354,6 +358,42 @@ router.patch("/:id/price", async (req, res) => {
   } catch (err: any) {
     console.error("[medicine price update error]:", err);
     res.status(500).json({ error: err.message || "Server xatosi" });
+  }
+});
+
+// POST /api/medicines/:id/waitlist — Dori tugaganda mijoz "Kelganda xabar berish" obunasini saqlash
+router.post("/:id/waitlist", async (req, res) => {
+  try {
+    const medicineId = Number(req.params.id);
+    if (!Number.isSafeInteger(medicineId) || medicineId <= 0) {
+      return res.status(400).json({ ok: false, error: "Noto'g'ri dori ID" });
+    }
+
+    const user = await getUserFromReq(req).catch(() => null);
+    const body = req.body || {};
+    const telegramId = body.telegramId ? Number(body.telegramId) : user?.telegramId ? Number(user.telegramId) : null;
+    const phone = body.phone || user?.phone || null;
+    const userId = user?.id || null;
+
+    const result = await addToMedicineWaitlist({
+      medicineId,
+      telegramId,
+      phone,
+      userId,
+    });
+
+    if (!result.ok) {
+      return res.status(400).json({ ok: false, error: result.error });
+    }
+
+    res.json({
+      ok: true,
+      alreadySubscribed: Boolean(result.alreadySubscribed),
+      message: "Dori sotuvga chiqqanda sizga darhol xabar beriladi!",
+    });
+  } catch (err: any) {
+    console.error("[medicine waitlist error]:", err);
+    res.status(500).json({ ok: false, error: err?.message || "Server xatosi" });
   }
 });
 

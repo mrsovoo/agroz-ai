@@ -734,6 +734,39 @@ export default function SuperAdminPage() {
     }
   }
 
+  async function handleToggleMedicineStatus(med: any) {
+    const nextStatus = med.status === "bor" ? "yoq" : "bor";
+    // Optimistic update
+    setPharmacyMeds((prev) =>
+      prev.map((m) => (m.id === med.id ? { ...m, status: nextStatus } : m))
+    );
+    try {
+      const res = await adminFetch(`/api/admin/medicines/${med.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      const data = await res.json();
+      if (!data?.ok) {
+        // Rollback
+        setPharmacyMeds((prev) =>
+          prev.map((m) => (m.id === med.id ? { ...m, status: med.status } : m))
+        );
+        alert(data?.error || "Holatni o'zgartirib bo'lmadi");
+      } else {
+        setNotice({
+          kind: "ok",
+          text: `"${med.name}" holati ${nextStatus === "bor" ? "Mavjud (Bor)" : "Mavjud emas (Yo'q)"} ga o'zgartirildi`,
+        });
+      }
+    } catch {
+      setPharmacyMeds((prev) =>
+        prev.map((m) => (m.id === med.id ? { ...m, status: med.status } : m))
+      );
+      alert("Tarmoq xatosi");
+    }
+  }
+
   async function handleDeleteMedicine(med: any) {
     if (!confirm(`Haqiqatan ham "${med.name}" dori vositasini katalogdan o'chirmoqchimisiz?`)) return;
     try {
@@ -2515,15 +2548,22 @@ export default function SuperAdminPage() {
                                   {m.stock !== null && m.stock !== undefined ? `${m.stock} ${m.stockUnit || "dona"}` : "-"}
                                 </td>
                                 <td className="py-3 px-4">
-                                  <span
-                                    className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-black ${
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleMedicineStatus(m)}
+                                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-black border transition active:scale-95 shadow-2xs ${
                                       m.status === "bor"
-                                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                        : "bg-red-50 text-red-700 border border-red-200"
+                                        ? "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
+                                        : "bg-red-50 text-red-700 border-red-300 hover:bg-red-100"
                                     }`}
+                                    title={
+                                      m.status === "bor"
+                                        ? "Bosing: Yo'q (Ko'rsatilmaydi) ga o'tkazish"
+                                        : "Bosing: Bor (Ko'rsatiladi) ga o'tkazish"
+                                    }
                                   >
-                                    {m.status === "bor" ? "Mavjud" : m.status === "yoq" ? "Tugagan" : "Qoralama"}
-                                  </span>
+                                    {m.status === "bor" ? "🟢 Bor" : "🔴 Yo'q"}
+                                  </button>
                                 </td>
                                 <td className="py-3 px-4 text-right">
                                   <div className="flex items-center justify-end gap-1.5">

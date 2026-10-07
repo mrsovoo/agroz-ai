@@ -1395,17 +1395,22 @@ export default function PartnerKabinetPage() {
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0">
-                      {/* 1-Tap Bor/Tugadi tugmasi */}
+                      {/* 1-Tap Bor / Yo'q (Qoralama) toggle */}
                       <button
                         type="button"
                         onClick={() => handleToggleMedicineStatus(m.id, m.status)}
-                        className={`rounded-xl px-3 py-2 text-xs font-black border transition active:scale-95 ${
+                        className={`rounded-xl px-3 py-2 text-xs font-black border transition active:scale-95 shadow-2xs ${
                           m.status === "bor"
                             ? "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
-                            : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                            : "bg-red-50 text-red-700 border-red-300 hover:bg-red-100"
                         }`}
+                        title={
+                          m.status === "bor"
+                            ? "Bosing: Yo'q (Ko'rsatilmaydi) qilish"
+                            : "Bosing: Bor (Mijozlarga ko'rsatiladi) qilish"
+                        }
                       >
-                        {m.status === "bor" ? "🟢 Bor" : "🔴 Tugadi"}
+                        {m.status === "bor" ? "🟢 Bor" : "🔴 Yo'q"}
                       </button>
 
                       <button

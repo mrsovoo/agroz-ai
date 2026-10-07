@@ -1815,6 +1815,15 @@ router.patch("/partner/medicines/:id", async (req, res) => {
     }
 
     await db.update(specialistMedicines).set(updates).where(eq(specialistMedicines.id, medId));
+
+    if (updates.status === "bor" || (updates.stock !== undefined && updates.stock > 0)) {
+      import("../lib/waitlist.js").then(({ notifyMedicineAvailable }) => {
+        notifyMedicineAvailable(medId).catch((err) =>
+          console.error("[partner] notifyMedicineAvailable error:", err),
+        );
+      }).catch(() => {});
+    }
+
     res.json({ ok: true, medicine: { ...med, ...updates } });
   } catch (err: any) {
     console.error("[partner:updateMedicine error]:", err);

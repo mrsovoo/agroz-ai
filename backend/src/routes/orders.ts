@@ -128,6 +128,7 @@ router.post("/", async (req, res) => {
         for (const alert of result.stockAlerts) {
           notifyPharmacyStockAlert(
             Number(result.pharmacy.telegramId),
+            alert.medicineId,
             alert.medName,
             alert.remainingStock,
             alert.stockUnit,

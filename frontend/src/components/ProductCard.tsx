@@ -1,9 +1,9 @@
 "use client";
 
-import type { ReactNode, MouseEvent } from "react";
+import { useState, type ReactNode, type MouseEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Minus, Heart, Pill, Sprout, Syringe, MapPin, Star, ShoppingCart } from "lucide-react";
+import { Plus, Minus, Heart, Pill, Sprout, Syringe, MapPin, Star, ShoppingCart, Bell } from "lucide-react";
 import FadeImage from "@/components/FadeImage";
 import ProductCardConnected from "@/components/ProductCardConnected";
 import type { CartStorePharmacy } from "@/lib/cart-store";
@@ -17,6 +17,7 @@ export type ProductCardMedicine = {
   usage?: string | null;
   photoVersion?: string | null;
   status?: string | null;
+  stock?: number | null;
   stockUnit?: string | null;
   ratingAvg?: number | null;
   ratingCount?: number;
@@ -231,8 +232,13 @@ export function ProductCardUI({
   onCardClick,
 }: ProductCardProps) {
   const router = useRouter();
+  const [notified, setNotified] = useState(false);
   const item = product ?? medicine;
   if (!item) return null;
+
+  const isOutOfStock =
+    item.status === "yoq" ||
+    (item.stock !== null && item.stock !== undefined && item.stock <= 0);
 
   const href = linkHref ?? `/dori/${item.id}`;
   const vConfig = VARIANTS[variant];
@@ -507,6 +513,31 @@ export function ProductCardUI({
                     <Plus size={11} strokeWidth={2.8} />
                   </button>
                 </div>
+              ) : isOutOfStock ? (
+                /* Dori tugaganda: Kelganda xabar berish */
+                <button
+                  type="button"
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setNotified(true);
+                    try {
+                      await fetch(`/api/medicines/${item.id}/waitlist`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                      });
+                    } catch {}
+                  }}
+                  className={`flex h-8.5 w-full items-center justify-center gap-1.5 rounded-xl border px-2.5 text-[11.5px] font-bold shadow-2xs transition-all active:scale-[0.98] whitespace-nowrap ${
+                    notified
+                      ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                      : "border-neutral-200 bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
+                  }`}
+                  aria-label="Dori kelganda xabar berish"
+                >
+                  <Bell size={13} className={notified ? "text-emerald-700 fill-emerald-700" : "text-neutral-500"} />
+                  <span>{notified ? "Xabar beriladi ✓" : "Kelganda xabar berish"}</span>
+                </button>
               ) : onAdd ? (
                 /* Savatga tugmasi: keng, qulay va yashil fonda [🛒 Savatga] */
                 <button
