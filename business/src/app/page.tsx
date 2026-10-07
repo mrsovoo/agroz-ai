@@ -36,6 +36,7 @@ import { haptic } from "@/lib/telegram";
 import { isNativeApp } from "@/lib/capacitor";
 import { useRouter } from "next/navigation";
 import PharmacyDashboard, { LOW_STOCK_THRESHOLD } from "./PharmacyDashboard";
+import SpecialistDashboard from "./SpecialistDashboard";
 import AgrozBusinessLogo from "@/components/AgrozBusinessLogo";
 
 /** Backend URL — Development rejimida har doim localhost:4000, production'da Railway */
@@ -289,7 +290,7 @@ export default function PartnerKabinetPage() {
         if (p.role === "pharmacy") {
           setActiveTab((prev) => (prev === "calls" ? "dashboard" : prev));
         } else {
-          setActiveTab((prev) => (prev === "orders" || prev === "medicines" || prev === "dashboard" ? "calls" : prev));
+          setActiveTab((prev) => (prev === "orders" || prev === "medicines" ? "dashboard" : prev));
         }
 
         // Agar tasdiqlanmagan bo'lsa
@@ -1097,43 +1098,64 @@ export default function PartnerKabinetPage() {
       {/* 3. Tasdiqlangan Hamkor Boshqaruv Markazi */}
       {partner && partner.isApproved && (
         <div className="space-y-4 pt-3">
-          {/* Navigatsiya Tablari (Mutaxassis) — Dorixona uchun pastki nav bar ishlatiladi */}
+          {/* Navigatsiya Tablari (Mutaxassis) */}
           {!isPharmacy && (
-          <div className="px-4">
-            <div className="grid grid-cols-2 gap-1 rounded-2xl bg-zinc-200/80 p-1 text-xs font-bold">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      haptic("light");
-                      setActiveTab("calls");
-                    }}
-                    className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 transition ${
-                      activeTab === "calls" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-600 hover:text-zinc-900"
-                    }`}
-                  >
-                    <PhoneCall size={15} />
-                    <span>Chaqiruvlar</span>
-                    {pendingCallsCount > 0 && (
-                      <span className="rounded-full bg-emerald-600 px-1.5 py-0.2 text-[10px] text-white font-extrabold">
-                        {pendingCallsCount}
-                      </span>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      haptic("light");
-                      setActiveTab("profile");
-                    }}
-                    className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 transition ${
-                      activeTab === "profile" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-600 hover:text-zinc-900"
-                    }`}
-                  >
+            <div className="px-4">
+              <div className="grid grid-cols-3 gap-1 rounded-2xl bg-zinc-200/80 p-1 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => goTab("dashboard")}
+                  className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 transition ${
+                    activeTab === "dashboard" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-600 hover:text-zinc-900"
+                  }`}
+                >
+                  <LayoutDashboard size={15} />
+                  <span>Asosiy</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goTab("calls")}
+                  className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 transition ${
+                    activeTab === "calls" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-600 hover:text-zinc-900"
+                  }`}
+                >
+                  <PhoneCall size={15} />
+                  <span>Chaqiruvlar</span>
+                  {pendingCallsCount > 0 && (
+                    <span className="rounded-full bg-emerald-600 px-1.5 py-0.2 text-[10px] text-white font-extrabold">
+                      {pendingCallsCount}
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goTab("profile")}
+                  className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 transition ${
+                    activeTab === "profile" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-600 hover:text-zinc-900"
+                  }`}
+                >
                   <UserCheck size={15} />
                   <span>Profilim</span>
                 </button>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* 3.1a. MUTAXASSIS: ASOSIY TAHLIL (DASHBOARD) */}
+          {!isPharmacy && activeTab === "dashboard" && (
+            <SpecialistDashboard
+              partner={partner}
+              calls={calls}
+              isBusy={isBusy}
+              onToggleBusy={toggleBusy}
+              onGoCalls={(f) => {
+                haptic("light");
+                setCallStatusFilter(f ?? "all");
+                goTab("calls");
+              }}
+              onCallAction={handleCallAction}
+              actionBusyId={actionBusyId}
+            />
           )}
 
           {/* 3.1. MUTAXASSIS: CHAQIRUVLAR TABI */}
@@ -1926,6 +1948,46 @@ export default function PartnerKabinetPage() {
                   {badge > 0 && (
                     <span
                       className={`absolute top-0 right-2 min-w-[17px] rounded-full px-1 text-[9px] leading-[17px] text-white font-extrabold ring-2 ring-white ${badgeCls}`}
+                    >
+                      {badge > 99 ? "99+" : badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      )}
+
+      {/* 3.6. MUTAXASSIS: PASTKI NAVIGATSIYA */}
+      {!isPharmacy && partner?.isApproved && (
+        <nav
+          className="fixed bottom-0 inset-x-0 z-40 border-t border-zinc-200 bg-white/95 backdrop-blur-md shadow-[0_-2px_10px_rgba(0,0,0,0.04)]"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        >
+          <div className="mx-auto max-w-md grid grid-cols-3 items-end px-4 pt-1.5 pb-1.5">
+            {[
+              { id: "dashboard", label: "Asosiy", Icon: LayoutDashboard, badge: 0, badgeCls: "" },
+              { id: "calls", label: "Chaqiruvlar", Icon: PhoneCall, badge: pendingCallsCount, badgeCls: "bg-emerald-600" },
+              { id: "profile", label: "Profilim", Icon: UserCheck, badge: 0, badgeCls: "" },
+            ].map(({ id, label, Icon, badge, badgeCls }) => {
+              const active = activeTab === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => goTab(id)}
+                  className={`relative flex flex-col items-center gap-0.5 rounded-xl py-1 text-[11px] font-bold transition active:scale-95 ${
+                    active ? "text-emerald-700" : "text-zinc-500"
+                  }`}
+                >
+                  <span className={`flex h-8 w-14 items-center justify-center rounded-full transition ${active ? "bg-emerald-50 text-emerald-700" : ""}`}>
+                    <Icon size={20} strokeWidth={active ? 2.5 : 2} />
+                  </span>
+                  <span>{label}</span>
+                  {badge > 0 && (
+                    <span
+                      className={`absolute top-0.5 right-6 min-w-[18px] rounded-full px-1 text-[10px] leading-[18px] text-white font-extrabold ring-2 ring-white ${badgeCls}`}
                     >
                       {badge > 99 ? "99+" : badge}
                     </span>
