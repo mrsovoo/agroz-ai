@@ -304,7 +304,7 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 px-5 pt-8 pb-32 text-neutral-900 max-w-[500px] mx-auto animate-in fade-in duration-200">
+    <div className="min-h-screen bg-neutral-50 px-5 pt-8 pb-32 text-neutral-900 max-w-[500px] web:max-w-[860px] web:bg-transparent web:pt-2 web:px-0 web:pb-12 mx-auto animate-in fade-in duration-200">
       {/* 1. Foydalanuvchi ma'lumoti bosh qismi (Light UI) */}
       <div className="flex items-center gap-3.5">
         <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[#039e1e] text-[20px] font-bold shadow-2xs">

@@ -65,30 +65,38 @@ export const viewport: Viewport = {
  */
 const LAYOUT_DETECT_SCRIPT = `
 (function () {
-  try {
-    var tg = window.Telegram && window.Telegram.WebApp;
-    if (tg) {
-      try {
-        tg.ready();
-        tg.expand();
-        if (typeof tg.disableVerticalSwipes === "function") tg.disableVerticalSwipes();
-        if (typeof tg.setHeaderColor === "function") tg.setHeaderColor("#fcbd00");
-        if (typeof tg.setBackgroundColor === "function") tg.setBackgroundColor("#f2f3f5");
-      } catch (e) {}
+  function updateLayout() {
+    try {
+      var tg = window.Telegram && window.Telegram.WebApp;
+      if (tg) {
+        try {
+          tg.ready();
+          tg.expand();
+          if (typeof tg.disableVerticalSwipes === "function") tg.disableVerticalSwipes();
+          if (typeof tg.setHeaderColor === "function") tg.setHeaderColor("#fcbd00");
+          if (typeof tg.setBackgroundColor === "function") tg.setBackgroundColor("#f2f3f5");
+        } catch (e) {}
+      }
+      var ua = navigator.userAgent || "";
+      var ref = document.referrer || "";
+      var session = !!(tg && ((tg.initData && tg.initData.length) || (tg.initDataUnsafe && (tg.initDataUnsafe.user || tg.initDataUnsafe.query_id))));
+      var refTelegram = /(^|\\/\\/)([a-z0-9-]+\\.)*telegram\\.(org|me|dev)\\//i.test(ref);
+      var inTelegram = session || /Telegram/i.test(ua) || refTelegram;
+      var wide = (window.innerWidth || 0) >= 900;
+      var isWeb = !inTelegram && wide;
+      if (isWeb) {
+        document.documentElement.classList.add("is-web");
+        document.documentElement.classList.remove("is-telegram");
+      } else {
+        document.documentElement.classList.add("is-telegram");
+        document.documentElement.classList.remove("is-web");
+      }
+    } catch (e) {
+      document.documentElement.classList.add("is-telegram");
     }
-    var ua = navigator.userAgent || "";
-    var ref = document.referrer || "";
-    // SDK tashqi brauzerda ham yuklanadi — haqiqiy belgi: initData/user/query_id.
-    var session = !!(tg && ((tg.initData && tg.initData.length) || (tg.initDataUnsafe && (tg.initDataUnsafe.user || tg.initDataUnsafe.query_id))));
-    var refTelegram = /(^|\\/\\/)([a-z0-9-]+\\.)*telegram\\.(org|me|dev)\\//i.test(ref);
-    var inTelegram = session || /Telegram/i.test(ua) || refTelegram;
-    // Keng va baland ekran (telefon yotiq holatda ham mobil ko'rinishda qoladi).
-    // CSS media query bilan aynan bir xil shart: min-width 900px + min-height 500px.
-    var wide = (window.innerWidth || 0) >= 900 && (window.innerHeight || 0) >= 500;
-    document.documentElement.classList.add(!inTelegram && wide ? "is-web" : "is-telegram");
-  } catch (e) {
-    document.documentElement.classList.add("is-telegram");
   }
+  updateLayout();
+  window.addEventListener("resize", updateLayout);
 })();
 `;
 

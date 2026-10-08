@@ -245,9 +245,9 @@ export default function HomeClientView({
   }
 
   return (
-    <div className="min-h-screen bg-white px-4 pt-3 pb-24 text-neutral-900">
-      {/* 1. Header: AgrozGO + Ekranimga + NotificationBell */}
-      <header className="flex items-center justify-between py-2">
+    <div className="min-h-screen bg-white px-4 pt-3 pb-24 text-neutral-900 web:bg-transparent web:px-0 web:pt-0 web:pb-12">
+      {/* 1. Header: AgrozGO + Ekranimga + NotificationBell (faqat Mini App/mobil rejimida, vebda WebTopNav bor) */}
+      <header className="flex items-center justify-between py-2 web:hidden">
         <AgrozLogo className="h-8" />
         <div className="flex items-center gap-2">
           <NotificationBell />
@@ -329,8 +329,8 @@ export default function HomeClientView({
             </Link>
           </div>
 
-          {/* Aniq 1 ta agronom va 1 ta veterinar ko'rsatiladi */}
-          <div className="space-y-3">
+          {/* Aniq 1 ta agronom va 1 ta veterinar ko'rsatiladi (vebda 2 ustunli toza qator) */}
+          <div className="grid grid-cols-1 web:grid-cols-2 gap-3.5">
             {specialists.slice(0, 2).map((s) => (
               <SpecialistCard
                 key={s.id}

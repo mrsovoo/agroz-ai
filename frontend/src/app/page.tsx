@@ -37,7 +37,7 @@ export default async function HomePage() {
   try {
     const fetchOptions: RequestInit = {
       next: { revalidate: 60 },
-      signal: AbortSignal.timeout(2000), // Server kechiksa ham foydalanuvchini kutdirmaydi
+      signal: AbortSignal.timeout(6000), // Server kechiksa ham barqaror javob kutadi
     } as any;
 
     const [medRes, specRes] = await Promise.allSettled([

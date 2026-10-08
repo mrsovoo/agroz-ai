@@ -452,10 +452,10 @@ export default function MarketClient() {
   /** Kartochka tanasi — bozor grid'i va yoqtirilganlar ro'yxatida umumiy. */
 
   return (
-    <div className="min-h-screen bg-white px-4 pt-3 pb-24 text-neutral-900">
+    <div className="min-h-screen bg-white px-4 pt-3 pb-24 text-neutral-900 web:bg-transparent web:px-0 web:pt-0 web:pb-12">
       {/* 1. Header: Dorilar + Heart (Sevimlilar) tugmasi */}
       <div className="flex items-center justify-between pt-1 pb-2">
-        <h1 className="text-[28px] font-black tracking-tight text-neutral-900">Dorilar</h1>
+        <h1 className="text-[28px] font-black tracking-tight text-neutral-900 web:text-[34px]">Dorilar</h1>
         <button
           onClick={() => setFavsOpen(true)}
           className="relative flex h-11 w-11 items-center justify-center rounded-full bg-white border border-neutral-200/90 shadow-2xs transition active:scale-95 hover:bg-neutral-50"

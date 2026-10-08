@@ -22,6 +22,7 @@ export default function MobileSwipeNavigation() {
   useEffect(() => {
     // Faqat touch ekranlarda va mobil/telegram rejimida ishlaydi
     if (typeof window === "undefined") return;
+    if (document.documentElement.classList.contains("is-web")) return;
 
     function isInteractiveOrScrollable(target: EventTarget | null): boolean {
       if (!target || !(target instanceof HTMLElement)) return false;

@@ -160,13 +160,13 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
   }, [items, activeCategory, searchQuery]);
 
   return (
-    <div className="px-4 sm:px-5 pt-3 pb-32 max-w-xl mx-auto">
+    <div className="px-4 sm:px-5 pt-3 pb-32 max-w-xl web:max-w-none mx-auto web:px-0 web:pt-0 web:pb-12">
       {/* 1. Sarlavha (Header) */}
       <div className="pt-2 pb-1">
-        <h1 className="text-[24px] sm:text-[26px] font-black text-neutral-900 tracking-tight leading-tight">
+        <h1 className="text-[24px] sm:text-[26px] font-black text-neutral-900 tracking-tight leading-tight web:text-[32px]">
           Mutaxassislar
         </h1>
-        <p className="text-[13px] sm:text-[13.5px] text-neutral-500 font-medium mt-0.5">
+        <p className="text-[13px] sm:text-[13.5px] text-neutral-500 font-medium mt-0.5 web:text-[15px]">
           Malakali agronom va veterinarlardan tezkor amaliy yordam
         </p>
       </div>
@@ -289,7 +289,7 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
           </p>
         </div>
       ) : (
-        <ul className="mt-3 space-y-3">
+        <ul className="mt-3 grid grid-cols-1 web:grid-cols-2 gap-3.5">
           {filteredSpecialists.map((s) => (
             <li key={s.id}>
               <SpecialistCard

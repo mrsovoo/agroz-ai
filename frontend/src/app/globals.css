@@ -279,7 +279,7 @@ body.modal-open {
   margin: 8px auto 14px;
 }
 
-@media (min-width: 900px) and (min-height: 500px) {
+@media (min-width: 900px) {
   html.is-web {
     background:
       linear-gradient(180deg, rgba(252, 189, 0, 0.12), transparent 340px),
@@ -462,7 +462,7 @@ body.modal-open {
 /* ===========================================================================
    WEB: nav holatlari, brend matni va footer
    =========================================================================== */
-@media (min-width: 900px) and (min-height: 500px) {
+@media (min-width: 900px) {
   html.is-web .web-brand-text strong,
   html.is-web .web-brand-text small {
     display: block;
