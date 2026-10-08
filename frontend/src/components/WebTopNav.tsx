@@ -15,7 +15,6 @@ const links = [
   { href: "/", label: "Asosiy" },
   { href: "/dorilar", label: "Dorilar" },
   { href: "/mutaxassislar", label: "Mutaxassislar" },
-  { href: "/xarita", label: "Xarita" },
   { href: "/yangiliklar", label: "Maslahatlar" },
 ];
 

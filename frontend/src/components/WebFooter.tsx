@@ -6,7 +6,6 @@ const columns = [
     title: "Xizmatlar",
     links: [
       { href: "/dorilar", label: "Dorilar" },
-      { href: "/xarita", label: "Xarita" },
       { href: "/mutaxassislar", label: "Mutaxassislar" },
       { href: "/yangiliklar", label: "Maslahatlar" },
     ],
