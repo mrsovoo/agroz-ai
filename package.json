@@ -9,6 +9,8 @@
     "business",
     "admin",
     "backend",
+    "packages/*",
+    "apps/*",
     "mobile/user",
     "mobile/business"
   ],
