@@ -140,7 +140,7 @@ export default function DesktopComingSoon({ type }: DesktopComingSoonProps) {
       </div>
 
       {/* Floating Support Button */}
-      <a href="https://t.me/sovo_ss" target="_blank" rel="noopener noreferrer" className={styles.supportBtn}>
+      <a href="https://t.me/bydsgn" target="_blank" rel="noopener noreferrer" className={styles.supportBtn}>
         💬 Hamkorlik
       </a>
     </div>
