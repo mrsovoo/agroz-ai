@@ -25,153 +25,180 @@ class HomeHeader extends ConsumerWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.sm,
+        horizontal: AppSpacing.sm,
+        vertical: 8,
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Profile Button
+          // Left Profile Button
           Semantics(
             label: AppStrings.profile,
             button: true,
-            child: Material(
-              color: tokens.headerButtonBg,
-              shape: CircleBorder(
-                side: BorderSide(color: tokens.headerButtonBorder),
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: tokens.headerButtonBg,
+                shape: BoxShape.circle,
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x19000000),
+                    blurRadius: 20,
+                    offset: Offset(0, 0),
+                  ),
+                ],
               ),
-              elevation: 0.5,
-              shadowColor: Colors.black12,
-              child: InkWell(
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  if (onProfileTap != null) {
-                    onProfileTap!();
-                  } else {
-                    context.push('/profile');
-                  }
-                },
-                customBorder: const CircleBorder(),
-                child: const SizedBox(
-                  width: AppSpacing.minTouchTarget,
-                  height: AppSpacing.minTouchTarget,
-                  child: Icon(
-                    Icons.person_outline,
-                    color: Color(0xFF1E293B),
-                    size: 22,
+              child: Material(
+                color: Colors.transparent,
+                shape: const CircleBorder(),
+                child: InkWell(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    if (onProfileTap != null) {
+                      onProfileTap!();
+                    } else {
+                      context.push('/profile');
+                    }
+                  },
+                  customBorder: const CircleBorder(),
+                  child: Center(
+                    child: Icon(
+                      Icons.person_outline,
+                      color: tokens.weatherTextPrimary,
+                      size: 22,
+                    ),
                   ),
                 ),
               ),
             ),
           ),
 
-          // Logo & Location
+          // Center Logo & Location
           Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Row(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.baseline,
                 textBaseline: TextBaseline.alphabetic,
                 children: [
-                  const Text(
+                  Text(
                     'AGROZ',
                     style: TextStyle(
-                      fontFamily: 'sans-serif',
+                      fontFamily: 'Arial',
                       fontSize: 20,
                       fontWeight: FontWeight.w900,
                       letterSpacing: -0.5,
-                      color: Color(0xFF1E293B),
+                      color: tokens.weatherTextPrimary,
                     ),
                   ),
                   Text(
                     'GO',
                     style: TextStyle(
-                      fontFamily: 'sans-serif',
+                      fontFamily: 'Arial',
                       fontSize: 20,
                       fontWeight: FontWeight.w900,
                       letterSpacing: -0.5,
                       color: AppConfig.flavor.isBusiness
                           ? const Color(0xFF0F766E)
-                          : const Color(0xFF22C55E),
+                          : tokens.actionMedicinesBg,
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 2),
-              const Text(
+              Text(
                 AppStrings.defaultLocation,
                 style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF64748B),
+                  color: tokens.weatherTextPrimary,
+                  fontSize: 10,
+                  fontFamily: 'Arial',
+                  fontWeight: FontWeight.w400,
                 ),
               ),
             ],
           ),
 
-          // Notification Button with Badge
+          // Right Notification Button with Badge
           Semantics(
             label: AppStrings.notifications,
             button: true,
-            child: Material(
-              color: tokens.headerButtonBg,
-              shape: CircleBorder(
-                side: BorderSide(color: tokens.headerButtonBorder),
-              ),
-              elevation: 0.5,
-              shadowColor: Colors.black12,
-              child: InkWell(
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  if (onNotificationTap != null) {
-                    onNotificationTap!();
-                  } else {
-                    context.push('/notifications');
-                  }
-                },
-                customBorder: const CircleBorder(),
-                child: SizedBox(
-                  width: AppSpacing.minTouchTarget,
-                  height: AppSpacing.minTouchTarget,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      const Icon(
-                        Icons.notifications_none,
-                        color: Color(0xFF1E293B),
-                        size: 24,
-                      ),
-                      if (unreadCount > 0)
-                        Positioned(
-                          top: 6,
-                          right: 6,
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            constraints: const BoxConstraints(
-                              minWidth: 16,
-                              minHeight: 16,
-                            ),
-                            decoration: BoxDecoration(
-                              color: tokens.badgeBg,
-                              shape: BoxShape.circle,
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              '$unreadCount',
-                              style: TextStyle(
-                                color: tokens.badgeText,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                    ],
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: tokens.headerButtonBg,
+                shape: BoxShape.circle,
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x19000000),
+                    blurRadius: 20,
+                    offset: Offset(0, 0),
                   ),
-                ),
+                ],
+              ),
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.center,
+                children: [
+                  Material(
+                    color: Colors.transparent,
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        if (onNotificationTap != null) {
+                          onNotificationTap!();
+                        } else {
+                          context.push('/notifications');
+                        }
+                      },
+                      customBorder: const CircleBorder(),
+                      child: Center(
+                        child: Icon(
+                          Icons.notifications_none_rounded,
+                          color: tokens.weatherTextPrimary,
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (unreadCount > 0)
+                    Positioned(
+                      left: 26,
+                      top: -4,
+                      child: Container(
+                        constraints: const BoxConstraints(minWidth: 18),
+                        height: 18,
+                        padding: const EdgeInsets.symmetric(horizontal: 5),
+                        decoration: BoxDecoration(
+                          color: tokens.badgeBg,
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x0C000000),
+                              blurRadius: 2,
+                              offset: Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          '$unreadCount',
+                          style: TextStyle(
+                            color: tokens.badgeText,
+                            fontSize: 10,
+                            fontFamily: 'Arial',
+                            fontWeight: FontWeight.w700,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),

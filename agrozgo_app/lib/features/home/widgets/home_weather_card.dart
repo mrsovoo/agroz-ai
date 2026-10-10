@@ -16,7 +16,7 @@ class HomeWeatherCard extends ConsumerWidget {
     final weatherAsync = ref.watch(homeWeatherProvider);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
       child: weatherAsync.when(
         data: (weather) {
           final isDay = weather.isDay;
@@ -26,29 +26,35 @@ class HomeWeatherCard extends ConsumerWidget {
           final humidityString = '${weather.humidity}%';
 
           return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // 1. Temp & Time Segment
+              // 1. Left Weather Card
               Expanded(
-                flex: 4,
+                flex: 5,
                 child: Container(
-                  constraints: const BoxConstraints(minHeight: 64),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xs,
-                    vertical: AppSpacing.xs,
-                  ),
+                  constraints: const BoxConstraints(minHeight: 52),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: tokens.weatherCardBg,
                     borderRadius: BorderRadius.circular(tokens.radiusWeatherCard),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x19000000),
+                        blurRadius: 20,
+                        offset: Offset(0, 0),
+                      ),
+                    ],
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Icon(
                         isDay ? Icons.wb_sunny_rounded : Icons.nightlight_round,
                         color: isDay ? Colors.amber.shade600 : Colors.indigo.shade400,
-                        size: 26,
+                        size: 32,
                       ),
-                      const SizedBox(width: AppSpacing.xxs),
+                      const SizedBox(width: 8),
                       Flexible(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -59,8 +65,9 @@ class HomeWeatherCard extends ConsumerWidget {
                               timeOfDayTitle,
                               style: TextStyle(
                                 color: tokens.weatherTextPrimary,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
+                                fontFamily: 'Arial',
+                                fontWeight: FontWeight.w400,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -68,9 +75,10 @@ class HomeWeatherCard extends ConsumerWidget {
                             Text(
                               tempString,
                               style: TextStyle(
-                                color: tokens.weatherTextPrimary,
+                                color: tokens.weatherTextSecondary,
                                 fontSize: 13,
-                                fontWeight: FontWeight.w800,
+                                fontFamily: 'Arial',
+                                fontWeight: FontWeight.w400,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -82,23 +90,21 @@ class HomeWeatherCard extends ConsumerWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: AppSpacing.xs),
+              const SizedBox(width: 8),
 
-              // 2. Wind Segment
+              // 2. Wind Pill
               Expanded(
-                flex: 3,
+                flex: 4,
                 child: Container(
-                  constraints: const BoxConstraints(minHeight: 64),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xs,
-                    vertical: AppSpacing.xs,
-                  ),
+                  constraints: const BoxConstraints(minHeight: 52),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
                   decoration: BoxDecoration(
-                    color: tokens.weatherCardBg,
-                    borderRadius: BorderRadius.circular(tokens.radiusWeatherCard),
+                    color: tokens.weatherPillBg,
+                    borderRadius: BorderRadius.circular(tokens.radiusWeatherPill),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Row(
@@ -106,17 +112,19 @@ class HomeWeatherCard extends ConsumerWidget {
                         children: [
                           Icon(
                             Icons.air,
-                            size: 13,
-                            color: tokens.weatherTextSecondary,
+                            size: 11,
+                            color: tokens.weatherTextPrimary.withValues(alpha: 0.85),
                           ),
-                          const SizedBox(width: AppSpacing.xxs),
+                          const SizedBox(width: 4),
                           Flexible(
                             child: Text(
                               AppStrings.wind,
                               style: TextStyle(
-                                fontSize: 10,
-                                color: tokens.weatherTextSecondary,
-                                fontWeight: FontWeight.w500,
+                                color: tokens.weatherTextPrimary.withValues(alpha: 0.85),
+                                fontSize: 11,
+                                fontFamily: 'Arial',
+                                fontWeight: FontWeight.w400,
+                                letterSpacing: -0.16,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -124,13 +132,14 @@ class HomeWeatherCard extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 2),
                       Text(
                         windString,
                         style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
                           color: tokens.weatherTextPrimary,
+                          fontSize: 14,
+                          fontFamily: 'Arial',
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.16,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -139,23 +148,21 @@ class HomeWeatherCard extends ConsumerWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: AppSpacing.xs),
+              const SizedBox(width: 8),
 
-              // 3. Humidity Segment
+              // 3. Humidity Pill
               Expanded(
-                flex: 3,
+                flex: 4,
                 child: Container(
-                  constraints: const BoxConstraints(minHeight: 64),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xs,
-                    vertical: AppSpacing.xs,
-                  ),
+                  constraints: const BoxConstraints(minHeight: 52),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
                   decoration: BoxDecoration(
-                    color: tokens.weatherCardBg,
-                    borderRadius: BorderRadius.circular(tokens.radiusWeatherCard),
+                    color: tokens.weatherPillBg,
+                    borderRadius: BorderRadius.circular(tokens.radiusWeatherPill),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Row(
@@ -163,17 +170,19 @@ class HomeWeatherCard extends ConsumerWidget {
                         children: [
                           Icon(
                             Icons.water_drop_outlined,
-                            size: 13,
-                            color: tokens.weatherTextSecondary,
+                            size: 11,
+                            color: tokens.weatherTextPrimary.withValues(alpha: 0.85),
                           ),
-                          const SizedBox(width: AppSpacing.xxs),
+                          const SizedBox(width: 4),
                           Flexible(
                             child: Text(
                               AppStrings.humidity,
                               style: TextStyle(
-                                fontSize: 10,
-                                color: tokens.weatherTextSecondary,
-                                fontWeight: FontWeight.w500,
+                                color: tokens.weatherTextPrimary.withValues(alpha: 0.85),
+                                fontSize: 11,
+                                fontFamily: 'Arial',
+                                fontWeight: FontWeight.w400,
+                                letterSpacing: -0.16,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -181,13 +190,14 @@ class HomeWeatherCard extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 2),
                       Text(
                         humidityString,
                         style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
                           color: tokens.weatherTextPrimary,
+                          fontSize: 14,
+                          fontFamily: 'Arial',
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.16,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -202,29 +212,29 @@ class HomeWeatherCard extends ConsumerWidget {
         loading: () => Row(
           children: [
             Expanded(
+              flex: 5,
+              child: SkeletonLoader(
+                width: double.infinity,
+                height: 52,
+                borderRadius: tokens.radiusWeatherCard,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
               flex: 4,
               child: SkeletonLoader(
                 width: double.infinity,
-                height: 64,
-                borderRadius: tokens.radiusWeatherCard,
+                height: 52,
+                borderRadius: tokens.radiusWeatherPill,
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
+            const SizedBox(width: 8),
             Expanded(
-              flex: 3,
+              flex: 4,
               child: SkeletonLoader(
                 width: double.infinity,
-                height: 64,
-                borderRadius: tokens.radiusWeatherCard,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              flex: 3,
-              child: SkeletonLoader(
-                width: double.infinity,
-                height: 64,
-                borderRadius: tokens.radiusWeatherCard,
+                height: 52,
+                borderRadius: tokens.radiusWeatherPill,
               ),
             ),
           ],

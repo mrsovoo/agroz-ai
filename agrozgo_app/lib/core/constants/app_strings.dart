@@ -40,6 +40,10 @@ class AppStrings {
   static const String medicinesSectionTitle = 'Dorilar';
   static const String medicinesEmpty = 'Hozircha dorilar mavjud emas';
   static const String medicinesError = 'Dorilarni yuklashda xatolik yuz berdi';
+  static const String specialistsSectionTitle = 'Mutaxasislar';
+  static const String specialistsEmpty = 'Hozircha mutaxassislar mavjud emas';
+  static const String specialistsError = 'Mutaxassislarni yuklashda xatolik yuz berdi';
+  static const String details = 'Batafsil';
   static const String currency = 'so‘m';
 
   // Navigation

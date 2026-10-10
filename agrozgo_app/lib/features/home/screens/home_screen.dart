@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/home_theme_tokens.dart';
 import '../../../shared/widgets/network_banner.dart';
 import '../providers/home_providers.dart';
-import '../widgets/home_action_cards.dart';
 import '../widgets/home_floating_nav.dart';
 import '../widgets/home_header.dart';
 import '../widgets/home_medicines_section.dart';
-import '../widgets/home_promo_section.dart';
+import '../widgets/home_specialists_section.dart';
 import '../widgets/home_weather_card.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -17,9 +15,11 @@ class HomeScreen extends ConsumerWidget {
   Future<void> _handleRefresh(WidgetRef ref) async {
     ref.invalidate(homeWeatherProvider);
     ref.invalidate(homeMedicinesProvider);
+    ref.invalidate(homeSpecialistsProvider);
     await Future.wait([
       ref.read(homeWeatherProvider.future),
       ref.read(homeMedicinesProvider.future),
+      ref.read(homeSpecialistsProvider.future),
     ]);
   }
 
@@ -38,7 +38,7 @@ class HomeScreen extends ConsumerWidget {
               // Scrollable Content
               RefreshIndicator(
                 onRefresh: () => _handleRefresh(ref),
-                color: Theme.of(context).colorScheme.primary,
+                color: const Color(0xFF35CA56),
                 child: ListView(
                   physics: const BouncingScrollPhysics(
                     parent: AlwaysScrollableScrollPhysics(),
@@ -47,24 +47,20 @@ class HomeScreen extends ConsumerWidget {
                     // Offline banner
                     NetworkBanner(),
 
-                    // Header
+                    // Header (Avatar, AGROZGO logo, Bell with badge)
                     HomeHeader(),
-                    SizedBox(height: AppSpacing.sm),
+                    SizedBox(height: 8),
 
-                    // Weather Section
+                    // Weather Section (Kunduzi + Shamol + Namlik pills)
                     HomeWeatherCard(),
-                    SizedBox(height: AppSpacing.lg),
+                    SizedBox(height: 14),
 
-                    // Quick Actions (Mutaxassislar, Dorilar)
-                    HomeActionCards(),
-                    SizedBox(height: AppSpacing.xl),
-
-                    // Siz uchun (Promo / Banner)
-                    HomePromoSection(),
-                    SizedBox(height: AppSpacing.xl),
-
-                    // Dorilar Showcase
+                    // Dorilar Section (White container with horizontal product cards)
                     HomeMedicinesSection(),
+                    SizedBox(height: 14),
+
+                    // Mutaxasislar Section (Specialist cards with 4.5 rating and Batafsil)
+                    HomeSpecialistsSection(),
 
                     // Bottom padding so content is not obscured by floating nav
                     SizedBox(height: 110),

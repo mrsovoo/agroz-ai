@@ -17,7 +17,8 @@ void main() {
       expect(find.text('AGROZ'), findsOneWidget);
       expect(find.text('GO'), findsOneWidget);
       expect(find.text('Farg‘ona shahar'), findsOneWidget);
-      expect(find.text('Siz uchun'), findsOneWidget);
+      expect(find.text('Dorilar'), findsWidgets);
+      expect(find.text('Mutaxasislar'), findsWidgets);
     });
   });
 

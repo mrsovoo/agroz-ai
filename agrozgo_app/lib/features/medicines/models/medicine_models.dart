@@ -8,6 +8,7 @@ class MedicineModel {
   final String stockUnit;
   final String status;
   final bool hasPhoto;
+  final String? imageUrl;
   final int? pharmacyId;
   final String? pharmacyName;
   final String? pharmacyPhone;
@@ -25,6 +26,7 @@ class MedicineModel {
     this.stockUnit = 'dona',
     this.status = 'bor',
     this.hasPhoto = false,
+    this.imageUrl,
     this.pharmacyId,
     this.pharmacyName,
     this.pharmacyPhone,
@@ -44,6 +46,7 @@ class MedicineModel {
       stockUnit: json['stockUnit'] as String? ?? 'dona',
       status: json['status'] as String? ?? 'bor',
       hasPhoto: json['hasPhoto'] as bool? ?? false,
+      imageUrl: json['imageUrl'] as String?,
       pharmacyId: json['pharmacyId'] as int?,
       pharmacyName: json['pharmacyName'] as String?,
       pharmacyPhone: json['pharmacyPhone'] as String?,
@@ -63,6 +66,7 @@ class MedicineModel {
         'stockUnit': stockUnit,
         'status': status,
         'hasPhoto': hasPhoto,
+        'imageUrl': imageUrl,
         'pharmacyId': pharmacyId,
         'pharmacyName': pharmacyName,
         'pharmacyPhone': pharmacyPhone,

@@ -7,6 +7,7 @@ import 'package:agrozgo_app/features/cart/providers/cart_provider.dart';
 import 'package:agrozgo_app/features/home/providers/home_providers.dart';
 import 'package:agrozgo_app/features/home/screens/home_screen.dart';
 import 'package:agrozgo_app/features/medicines/models/medicine_models.dart';
+import 'package:agrozgo_app/features/specialists/models/specialist_models.dart';
 import 'package:agrozgo_app/features/weather/models/weather_models.dart';
 
 void main() {
@@ -37,9 +38,24 @@ void main() {
     ),
   ];
 
+  const sampleSpecialists = [
+    SpecialistModel(
+      id: 1,
+      name: 'Sohibjon Sulaymonov',
+      phone: '+998901234567',
+      role: 'specialist',
+      specialty: 'Veterinar',
+      address: 'Farg‘ona shahar',
+      lat: 40.3864,
+      lng: 71.7864,
+      rating: 4.5,
+    ),
+  ];
+
   Widget createHomeScreenWidget({
     AsyncValue<WeatherModel>? weatherOverride,
     AsyncValue<List<MedicineModel>>? medicinesOverride,
+    AsyncValue<List<SpecialistModel>>? specialistsOverride,
     Size surfaceSize = const Size(390, 844),
     double textScale = 1.0,
   }) {
@@ -49,6 +65,8 @@ void main() {
           homeWeatherProvider.overrideWith((ref) => weatherOverride.value!),
         if (medicinesOverride != null)
           homeMedicinesProvider.overrideWith((ref) => medicinesOverride.value!),
+        if (specialistsOverride != null)
+          homeSpecialistsProvider.overrideWith((ref) => specialistsOverride.value!),
       ],
       child: MaterialApp(
         home: MediaQuery(
@@ -71,6 +89,7 @@ void main() {
         createHomeScreenWidget(
           weatherOverride: const AsyncValue.data(sampleWeather),
           medicinesOverride: const AsyncValue.data(sampleMedicines),
+          specialistsOverride: const AsyncValue.data(sampleSpecialists),
         ),
       );
       await tester.pumpAndSettle();
@@ -86,19 +105,18 @@ void main() {
       expect(find.text('2.9 m/s'), findsOneWidget);
       expect(find.text('46%'), findsOneWidget);
 
-      // Action cards
-      expect(find.text(AppStrings.specialistsTitle), findsWidgets);
-      expect(find.text(AppStrings.medicinesTitle), findsWidgets);
-
-      // Promo banner
-      expect(find.text(AppStrings.forYouTitle), findsOneWidget);
-      expect(find.text(AppStrings.promoTitle), findsOneWidget);
-      expect(find.text(AppStrings.view), findsOneWidget);
-
-      // Medicines showcase
+      // Medicines section
+      expect(find.text(AppStrings.medicinesSectionTitle), findsWidgets);
       expect(find.text('Bento Max'), findsOneWidget);
       expect(find.text('35.000 so‘m'), findsOneWidget);
       expect(find.text(AppStrings.addToCart), findsWidgets);
+
+      // Specialists section
+      expect(find.text(AppStrings.specialistsSectionTitle), findsWidgets);
+      expect(find.text('Sohibjon Sulaymonov'), findsOneWidget);
+      expect(find.text('Veterinar'), findsOneWidget);
+      expect(find.text('4.5'), findsOneWidget);
+      expect(find.text(AppStrings.details), findsOneWidget);
 
       // Floating nav
       expect(find.text(AppStrings.navHome), findsOneWidget);
@@ -114,6 +132,7 @@ void main() {
           overrides: [
             homeWeatherProvider.overrideWith((ref) => Future.delayed(const Duration(minutes: 5))),
             homeMedicinesProvider.overrideWith((ref) => Future.delayed(const Duration(minutes: 5))),
+            homeSpecialistsProvider.overrideWith((ref) => Future.delayed(const Duration(minutes: 5))),
           ],
           child: const MaterialApp(home: HomeScreen()),
         ),
@@ -122,10 +141,10 @@ void main() {
 
       expect(find.byType(HomeScreen), findsOneWidget);
       expect(find.text('AGROZ'), findsOneWidget);
-      expect(find.text(AppStrings.forYouTitle), findsOneWidget);
+      expect(find.text(AppStrings.medicinesSectionTitle), findsWidgets);
     });
 
-    testWidgets('3. Empty state: renders empty view when no medicines exist', (tester) async {
+    testWidgets('3. Empty state: renders empty view when data is empty', (tester) async {
       await tester.binding.setSurfaceSize(const Size(390, 844));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -133,11 +152,13 @@ void main() {
         createHomeScreenWidget(
           weatherOverride: const AsyncValue.data(sampleWeather),
           medicinesOverride: const AsyncValue.data([]),
+          specialistsOverride: const AsyncValue.data([]),
         ),
       );
       await tester.pumpAndSettle();
 
       expect(find.text(AppStrings.medicinesEmpty), findsOneWidget);
+      expect(find.text(AppStrings.specialistsEmpty), findsOneWidget);
     });
 
     testWidgets('4. Error state: renders error view with retry button', (tester) async {
@@ -149,6 +170,7 @@ void main() {
           overrides: [
             homeWeatherProvider.overrideWith((ref) => throw Exception('API Error')),
             homeMedicinesProvider.overrideWith((ref) => throw Exception('API Error')),
+            homeSpecialistsProvider.overrideWith((ref) => throw Exception('API Error')),
           ],
           child: const MaterialApp(home: HomeScreen()),
         ),
@@ -157,6 +179,7 @@ void main() {
 
       expect(find.text(AppStrings.weatherError), findsOneWidget);
       expect(find.text(AppStrings.medicinesError), findsOneWidget);
+      expect(find.text(AppStrings.specialistsError), findsOneWidget);
       expect(find.text(AppStrings.retry), findsWidgets);
     });
   });
@@ -170,6 +193,7 @@ void main() {
         createHomeScreenWidget(
           weatherOverride: const AsyncValue.data(sampleWeather),
           medicinesOverride: const AsyncValue.data(sampleMedicines),
+          specialistsOverride: const AsyncValue.data(sampleSpecialists),
           surfaceSize: const Size(360, 640),
         ),
       );
@@ -186,6 +210,7 @@ void main() {
         createHomeScreenWidget(
           weatherOverride: const AsyncValue.data(sampleWeather),
           medicinesOverride: const AsyncValue.data(sampleMedicines),
+          specialistsOverride: const AsyncValue.data(sampleSpecialists),
           surfaceSize: const Size(390, 844),
         ),
       );
@@ -202,6 +227,7 @@ void main() {
         createHomeScreenWidget(
           weatherOverride: const AsyncValue.data(sampleWeather),
           medicinesOverride: const AsyncValue.data(sampleMedicines),
+          specialistsOverride: const AsyncValue.data(sampleSpecialists),
           surfaceSize: const Size(430, 932),
         ),
       );
@@ -218,6 +244,7 @@ void main() {
         createHomeScreenWidget(
           weatherOverride: const AsyncValue.data(sampleWeather),
           medicinesOverride: const AsyncValue.data(sampleMedicines),
+          specialistsOverride: const AsyncValue.data(sampleSpecialists),
           textScale: 1.3,
         ),
       );
@@ -236,6 +263,7 @@ void main() {
         overrides: [
           homeWeatherProvider.overrideWith((ref) => sampleWeather),
           homeMedicinesProvider.overrideWith((ref) => sampleMedicines),
+          homeSpecialistsProvider.overrideWith((ref) => sampleSpecialists),
         ],
       );
 
@@ -273,6 +301,7 @@ void main() {
           overrides: [
             homeWeatherProvider.overrideWith((ref) => sampleWeather),
             homeMedicinesProvider.overrideWith((ref) => sampleMedicines),
+            homeSpecialistsProvider.overrideWith((ref) => sampleSpecialists),
           ],
           child: const AgrozApp(),
         ),

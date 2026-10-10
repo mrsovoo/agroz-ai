@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,79 +26,108 @@ class HomeMedicinesSection extends ConsumerWidget {
     final tokens = Theme.of(context).extension<HomeThemeTokens>() ?? HomeThemeTokens.light;
     final medicinesAsync = ref.watch(homeMedicinesProvider);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: tokens.productSectionBg,
+        borderRadius: BorderRadius.circular(tokens.radiusProductCard),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 15,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Section Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Expanded(
-                child: Text(
-                  AppStrings.medicinesSectionTitle,
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.4,
+          Padding(
+            padding: const EdgeInsets.only(left: 16, right: 10, bottom: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Text(
+                    AppStrings.medicinesSectionTitle,
+                    style: TextStyle(
+                      color: tokens.productTitle,
+                      fontSize: 25,
+                      fontFamily: 'PingFang SC',
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Semantics(
-                label: '${AppStrings.medicinesSectionTitle} - ${AppStrings.viewAll}',
-                button: true,
-                child: Material(
-                  color: tokens.viewAllDarkBg,
-                  borderRadius: BorderRadius.circular(tokens.radiusPill),
-                  child: InkWell(
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      if (onViewAllTap != null) {
-                        onViewAllTap!();
-                      } else {
-                        context.push('/medicines');
-                      }
-                    },
+                Semantics(
+                  label: '${AppStrings.medicinesSectionTitle} - ${AppStrings.viewAll}',
+                  button: true,
+                  child: Material(
+                    color: tokens.viewAllDarkBg,
                     borderRadius: BorderRadius.circular(tokens.radiusPill),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.lg,
-                        vertical: 6,
-                      ),
-                      child: Text(
-                        AppStrings.viewAll,
-                        style: TextStyle(
-                          color: tokens.viewAllText,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
+                    child: InkWell(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        if (onViewAllTap != null) {
+                          onViewAllTap!();
+                        } else {
+                          context.push('/medicines');
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(tokens.radiusPill),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(tokens.radiusPill),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x19000000),
+                              blurRadius: 20,
+                              offset: Offset(0, 0),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          AppStrings.viewAll,
+                          style: TextStyle(
+                            color: tokens.viewAllText,
+                            fontSize: 12.2,
+                            fontFamily: 'PingFang SC',
+                            fontWeight: FontWeight.w500,
+                            height: 1.43,
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: AppSpacing.md),
 
           // 4-state Data Representation
           medicinesAsync.when(
             data: (medicines) {
               if (medicines.isEmpty) {
-                return const EmptyView(message: AppStrings.medicinesEmpty);
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: EmptyView(message: AppStrings.medicinesEmpty),
+                );
               }
 
               return SizedBox(
-                height: 290,
+                height: 335,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
                   itemCount: medicines.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
                   itemBuilder: (context, index) {
                     final item = medicines[index];
                     return _MedicineCard(
@@ -109,33 +139,32 @@ class HomeMedicinesSection extends ConsumerWidget {
               );
             },
             loading: () => SizedBox(
-              height: 290,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: SkeletonLoader(
-                      width: double.infinity,
-                      height: 290,
+              height: 335,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Row(
+                  children: [
+                    SkeletonLoader(
+                      width: 190,
+                      height: 335,
                       borderRadius: tokens.radiusProductCard,
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: SkeletonLoader(
-                      width: double.infinity,
-                      height: 290,
+                    const SizedBox(width: 8),
+                    SkeletonLoader(
+                      width: 190,
+                      height: 335,
                       borderRadius: tokens.radiusProductCard,
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             error: (error, _) => Container(
-              height: 180,
+              margin: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
                 color: tokens.productCardBg,
                 borderRadius: BorderRadius.circular(tokens.radiusProductCard),
-                border: Border.all(color: tokens.productCardBorder),
               ),
               child: ErrorView(
                 message: AppStrings.medicinesError,
@@ -178,72 +207,103 @@ class _MedicineCard extends ConsumerWidget {
     final formattedPrice = _formatPrice(medicine.price);
 
     return Container(
-      width: 170,
-      padding: const EdgeInsets.all(AppSpacing.sm),
+      width: 190,
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: tokens.productCardBg,
         borderRadius: BorderRadius.circular(tokens.radiusProductCard),
-        border: Border.all(color: tokens.productCardBorder),
-        boxShadow: tokens.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image / Placeholder container
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(tokens.radiusAddToCartBtn),
-              ),
-              alignment: Alignment.center,
-              child: Icon(
-                Icons.medication_rounded,
-                color: Colors.grey.shade400,
-                size: 50,
+          // Image / Placeholder container (height: 182, radius: 20)
+          Container(
+            width: double.infinity,
+            height: 182,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(tokens.radiusProductImage),
+              border: Border.all(
+                color: tokens.productCardBorder,
+                width: 0.3,
               ),
             ),
+            clipBehavior: Clip.antiAlias,
+            child: medicine.imageUrl != null && medicine.imageUrl!.isNotEmpty
+                ? CachedNetworkImage(
+                    imageUrl: medicine.imageUrl!,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => Center(
+                      child: Icon(
+                        Icons.medication_rounded,
+                        color: Colors.grey.shade400,
+                        size: 40,
+                      ),
+                    ),
+                    errorWidget: (_, __, ___) => Center(
+                      child: Icon(
+                        Icons.medication_rounded,
+                        color: Colors.grey.shade400,
+                        size: 40,
+                      ),
+                    ),
+                  )
+                : Center(
+                    child: Icon(
+                      Icons.medication_rounded,
+                      color: Colors.grey.shade400,
+                      size: 48,
+                    ),
+                  ),
           ),
-          const SizedBox(height: AppSpacing.xs),
+          const SizedBox(height: 6),
 
           // Title
           Text(
             medicine.name,
             style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+              fontFamily: 'PingFang SC',
               color: tokens.productTitle,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 2),
 
-          // Usage / subtitle
-          Text(
-            medicine.usage ?? 'Tabiiy minerallarga boy ozuqa',
-            style: TextStyle(
-              fontSize: 11,
-              color: tokens.productSubtitle,
+          // Usage / Subtitle
+          SizedBox(
+            height: 24,
+            child: Text(
+              medicine.usage ?? 'Tabiiy minerallarga boy ozuqa',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w400,
+                fontFamily: 'PingFang SC',
+                color: tokens.productSubtitle,
+                height: 1.2,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: AppSpacing.xs),
+          const Spacer(),
 
           // Price
           Text(
             formattedPrice,
             style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'PingFang SC',
               color: tokens.productPrice,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: 6),
 
-          // Add to Cart button
+          // + Savatga Button
           Semantics(
             label: '${medicine.name} - ${AppStrings.addToCart}',
             button: true,
@@ -271,15 +331,17 @@ class _MedicineCard extends ConsumerWidget {
                 },
                 borderRadius: BorderRadius.circular(tokens.radiusAddToCartBtn),
                 child: Container(
-                  height: 38,
                   width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
                   alignment: Alignment.center,
                   child: Text(
                     AppStrings.addToCart,
                     style: TextStyle(
                       color: tokens.addToCartText,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 12.2,
+                      fontWeight: FontWeight.w500,
+                      fontFamily: 'PingFang SC',
+                      height: 1.43,
                     ),
                   ),
                 ),
