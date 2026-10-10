@@ -52,6 +52,9 @@ const defaultAllowedOrigins = [
   "http://127.0.0.1:3000",
   "http://127.0.0.1:3001",
   "http://127.0.0.1:3002",
+  "https://localhost",
+  "capacitor://localhost",
+  "ionic://localhost",
   "https://agroz.uz",
   "https://www.agroz.uz",
   "https://admin.agroz.uz",
@@ -112,6 +115,15 @@ app.use(
       return callback(null, false);
     },
     credentials: true,
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "x-telegram-init-data",
+      "x-session-id",
+      "x-admin-session",
+      "x-super-admin",
+      "x-partner-token",
+    ],
   })
 );
 
