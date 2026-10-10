@@ -19,8 +19,8 @@ class AgrozApp extends ConsumerWidget {
     return MaterialApp.router(
       title: AppConfig.flavor.appTitle,
       theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      darkTheme: AppTheme.lightTheme,
+      themeMode: ThemeMode.light,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
     );

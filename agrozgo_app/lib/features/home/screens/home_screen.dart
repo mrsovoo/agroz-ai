@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/home_theme_tokens.dart';
-import '../../../shared/widgets/network_banner.dart';
 import '../providers/home_providers.dart';
 import '../widgets/home_floating_nav.dart';
 import '../widgets/home_header.dart';
@@ -44,9 +43,6 @@ class HomeScreen extends ConsumerWidget {
                     parent: AlwaysScrollableScrollPhysics(),
                   ),
                   children: const [
-                    // Offline banner
-                    NetworkBanner(),
-
                     // Header (Avatar, AGROZGO logo, Bell with badge)
                     HomeHeader(),
                     SizedBox(height: 8),
