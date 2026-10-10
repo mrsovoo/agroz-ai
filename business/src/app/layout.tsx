@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import "./globals.css";
+import EnvWrapper from "@/components/EnvWrapper";
 
 export const metadata: Metadata = {
   title: "AgrozGO Business — Agro-do'kon va Mutaxassislar Boshqaruvi",
@@ -24,9 +25,10 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-slate-50 antialiased text-slate-900">
-        {children}
+        <EnvWrapper>
+          {children}
+        </EnvWrapper>
       </body>
     </html>
   );
 }
-
