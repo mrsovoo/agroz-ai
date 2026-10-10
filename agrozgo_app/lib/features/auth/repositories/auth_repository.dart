@@ -81,3 +81,4 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
   final tokenStorage = ref.watch(tokenStorageProvider);
   return AuthRepositoryImpl(apiClient: apiClient, tokenStorage: tokenStorage);
 });
+

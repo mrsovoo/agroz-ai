@@ -19,3 +19,4 @@ final isOnlineProvider = FutureProvider<bool>((ref) async {
   if (results.isEmpty) return false;
   return results.any((result) => result != ConnectivityResult.none);
 });
+

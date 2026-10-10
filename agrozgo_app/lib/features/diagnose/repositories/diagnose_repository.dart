@@ -64,3 +64,4 @@ final diagnoseRepositoryProvider = Provider<DiagnoseRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
   return DiagnoseRepositoryImpl(apiClient: apiClient);
 });
+

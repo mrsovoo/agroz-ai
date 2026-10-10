@@ -59,3 +59,4 @@ final medicinesRepositoryProvider = Provider<MedicinesRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
   return MedicinesRepositoryImpl(apiClient: apiClient);
 });
+

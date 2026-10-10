@@ -65,3 +65,4 @@ class AuthSession {
         'user': user.toJson(),
       };
 }
+

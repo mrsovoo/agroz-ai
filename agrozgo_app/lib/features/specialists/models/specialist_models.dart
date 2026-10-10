@@ -71,3 +71,4 @@ class SpecialistModel {
         'bio': bio,
       };
 }
+

@@ -32,3 +32,4 @@ class SecureTokenStorage implements TokenStorage {
     await _storage.delete(key: _keySessionId);
   }
 }
+

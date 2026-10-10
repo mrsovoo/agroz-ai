@@ -12,3 +12,4 @@ class AuthEventBus {
     _controller.add(null);
   }
 }
+

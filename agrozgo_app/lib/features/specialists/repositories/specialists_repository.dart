@@ -88,3 +88,4 @@ final specialistsRepositoryProvider = Provider<SpecialistsRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
   return SpecialistsRepositoryImpl(apiClient: apiClient);
 });
+

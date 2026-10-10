@@ -137,3 +137,4 @@ class WeatherModel {
         'daily': daily.map((e) => e.toJson()).toList(),
       };
 }
+

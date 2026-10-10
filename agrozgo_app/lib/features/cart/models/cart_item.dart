@@ -50,3 +50,4 @@ class CartItem {
         'stockUnit': stockUnit,
       };
 }
+

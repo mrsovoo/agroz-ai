@@ -71,3 +71,4 @@ class MedicineModel {
         'ratingCount': ratingCount,
       };
 }
+

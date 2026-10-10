@@ -40,3 +40,4 @@ final notificationsRepositoryProvider = Provider<NotificationsRepository>((ref) 
   final apiClient = ref.watch(apiClientProvider);
   return NotificationsRepositoryImpl(apiClient: apiClient);
 });
+

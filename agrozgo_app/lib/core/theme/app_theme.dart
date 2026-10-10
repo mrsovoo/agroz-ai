@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../config/app_config.dart';
 import 'app_colors.dart';
+import 'home_theme_tokens.dart';
 
 class AppTheme {
   AppTheme._();
@@ -33,6 +34,9 @@ class AppTheme {
           side: BorderSide(color: AppColors.borderLight),
         ),
       ),
+      extensions: [
+        HomeThemeTokens.light,
+      ],
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryColor,
@@ -66,6 +70,10 @@ class AppTheme {
         elevation: 0,
         centerTitle: true,
       ),
+      extensions: [
+        HomeThemeTokens.dark,
+      ],
     );
   }
 }
+

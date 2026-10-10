@@ -9,14 +9,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 void main() {
   group('App smoke & widget tests', () {
-    testWidgets('AgrozApp smoke test - renders TestScreen', (WidgetTester tester) async {
+    testWidgets('AgrozApp smoke test - renders HomeScreen', (WidgetTester tester) async {
       await tester.pumpWidget(const ProviderScope(child: AgrozApp()));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.textContaining('Poydevor Sinovi'), findsOneWidget);
-      expect(find.text('Ilova Muhiti (Flavor)'), findsOneWidget);
-      expect(find.text('Tarmoq Holati'), findsOneWidget);
-      expect(find.text('API Sinovi (/api/weather)'), findsOneWidget);
+      expect(find.text('AGROZ'), findsOneWidget);
+      expect(find.text('GO'), findsOneWidget);
+      expect(find.text('Farg‘ona shahar'), findsOneWidget);
+      expect(find.text('Siz uchun'), findsOneWidget);
     });
   });
 

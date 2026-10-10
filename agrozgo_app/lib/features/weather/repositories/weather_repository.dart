@@ -34,3 +34,4 @@ final weatherRepositoryProvider = Provider<WeatherRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
   return WeatherRepositoryImpl(apiClient: apiClient);
 });
+

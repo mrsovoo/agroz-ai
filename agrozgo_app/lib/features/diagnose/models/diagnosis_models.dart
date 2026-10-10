@@ -67,3 +67,4 @@ class DiagnosisModel {
         'disclaimer': disclaimer,
       };
 }
+
