@@ -1,0 +1,295 @@
+.wrapper {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  background-color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.header {
+  margin-top: 50px;
+  z-index: 10;
+}
+
+.logo {
+  font-size: 40px;
+  font-weight: 900;
+  letter-spacing: -1.5px;
+  color: #2b2b2b;
+  display: flex;
+  align-items: center;
+}
+
+.logoImage {
+  height: 40px;
+  width: auto;
+}
+
+.logoGo {
+  color: #148f2b;
+}
+
+.bgTextContainer {
+  position: absolute;
+  top: 125px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.bgText {
+  font-family: "Impact", Arial, sans-serif;
+  font-size: 260px;
+  font-weight: 400;
+  color: #f2f2f2;
+  white-space: nowrap;
+  letter-spacing: -2px;
+  background: linear-gradient(180deg, #e5e5e5 0%, #ffffff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.cardsWrapper {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 40px;
+  margin-top: 260px;
+  width: 100%;
+  max-width: 1300px;
+  padding: 0 20px;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 30px;
+  padding: 10px 20px 20px 20px;
+  width: 320px; /* giving it a bit more width so text fits, or 282px as per figma */
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+}
+
+.cardCenter {
+  width: 400px; /* giving a bit of space, matching ~390px from Figma */
+  margin-top: 110px;
+  align-items: center;
+  text-align: center;
+  padding: 10px 20px 20px 20px;
+  gap: 10px;
+}
+
+.cardTopBar {
+  text-align: center;
+  margin-bottom: 0;
+}
+
+.cardTopBarCenter {
+  text-align: center;
+  margin-bottom: 0;
+}
+
+.cardTopUsername {
+  font-size: 16px;
+  font-weight: 800;
+  color: #000;
+}
+
+.profileRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.avatarRed {
+  flex-shrink: 0;
+  width: 72px;
+  height: 72px;
+  background-color: #8b0000;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 14px;
+  line-height: 1.1;
+}
+
+.avatarOutline {
+  flex-shrink: 0;
+  width: 72px;
+  height: 72px;
+  background-color: #fff;
+  color: #000;
+  border: 2px solid #ff9800;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 14px;
+  line-height: 1.1;
+}
+
+.profileInfoRight {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.profileName {
+  font-size: 11px;
+  color: #666;
+  margin-bottom: 0;
+}
+
+.stats {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+}
+
+.statVal {
+  font-size: 15px;
+  font-weight: 800;
+  color: #000;
+}
+
+.statLbl {
+  font-size: 10px;
+  color: #999;
+  margin-top: 2px;
+}
+
+.bio {
+  font-size: 11px;
+  line-height: 1.4;
+  color: #000;
+  font-weight: 500;
+  width: 100%;
+}
+
+.bio p {
+  margin: 0 0 2px 0;
+}
+
+.bioMuted {
+  color: #888 !important;
+  margin-bottom: 8px !important;
+}
+
+.linkBlue {
+  color: #0088cc;
+}
+
+.profileLink {
+  color: #000;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  width: 100%;
+  text-align: left;
+}
+
+.actionBtn {
+  width: 100%;
+  background: #0088cc;
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: auto;
+}
+
+.badgeGray {
+  background: #f5f5f5;
+  color: #333;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  width: 90%;
+  margin-bottom: 0;
+}
+
+.badgesRow {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 0;
+}
+
+.badgeGreen {
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.badgeOrange {
+  color: #ef6c00;
+  border: 1px solid #ffe0b2;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.centerText {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #333;
+  margin-top: 16px;
+  font-weight: 500;
+}
+
+/* Support Floating Button */
+.supportBtn {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #148f2b;
+  color: #ffffff;
+  padding: 16px 24px;
+  border-radius: 50px;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 8px 24px rgba(20, 143, 43, 0.4);
+  z-index: 50;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.supportBtn:hover {
+  transform: translate(-50%, -2px);
+  box-shadow: 0 12px 32px rgba(20, 143, 43, 0.5);
+}
