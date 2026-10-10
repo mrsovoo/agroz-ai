@@ -140,3 +140,4 @@ export function addItemToCart(
   notifyCartChanged();
   return true;
 }
+

@@ -33,3 +33,4 @@ export const REGIONS = [
 
 export const DEFAULT_AUTH_BOT_USERNAME = "agroz_auth_bot";
 export const DEFAULT_USER_BOT_USERNAME = "agrozai_bot";
+

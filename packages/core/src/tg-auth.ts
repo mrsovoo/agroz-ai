@@ -19,3 +19,4 @@ export function parseInitDataUser(initData: string): TelegramUser | null {
     return null;
   }
 }
+

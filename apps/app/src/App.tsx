@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import { detectEnvironment, initNativeApp, type AppEnvironment } from "@agroz/core";
+import { useNetwork } from "./useNetwork";
 
 declare const __APP_VARIANT__: string;
 
@@ -8,6 +9,7 @@ const appVariant: string = typeof __APP_VARIANT__ !== "undefined" ? __APP_VARIAN
 
 function EnvTestPage() {
   const [env, setEnv] = useState<AppEnvironment>("desktop");
+  const { isOnline, connectionType } = useNetwork();
 
   useEffect(() => {
     // 1. Native platform sozlamalarini (StatusBar, Splash) ishga tushirish
@@ -40,6 +42,21 @@ function EnvTestPage() {
           }}
         >
           {env}
+        </span>
+      </p>
+      <p style={{ fontSize: "1.1rem", marginTop: "0.75rem" }}>
+        <strong>Tarmoq holati (Network):</strong>{" "}
+        <span
+          style={{
+            display: "inline-block",
+            padding: "0.25rem 0.75rem",
+            borderRadius: "6px",
+            background: isOnline ? "#dcfce7" : "#fee2e2",
+            color: isOnline ? "#166534" : "#991b1b",
+            fontWeight: "bold",
+          }}
+        >
+          {isOnline ? `Online (${connectionType})` : "Offline (aloqa yo'q)"}
         </span>
       </p>
       <div style={{ marginTop: "2rem", textAlign: "left", fontSize: "0.9rem", color: "#64748b", borderTop: "1px solid #e2e8f0", paddingTop: "1rem" }}>
@@ -81,3 +98,4 @@ export default function App() {
     </BrowserRouter>
   );
 }
+

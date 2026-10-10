@@ -147,3 +147,4 @@ export async function getNativeLocation(): Promise<{ latitude: number; longitude
     return null;
   }
 }
+

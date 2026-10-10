@@ -51,3 +51,4 @@ export function detectEnvironment(): AppEnvironment {
 
   return "desktop";
 }
+

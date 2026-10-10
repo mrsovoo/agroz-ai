@@ -13,3 +13,4 @@ export function formatOrderNumber(orderId: number | string): string {
   const overflow = num - 999999;
   return `#000000-${overflow}`;
 }
+

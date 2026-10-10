@@ -41,3 +41,4 @@ export function toggleFavorite(pharmacyId: number, medicineId: number): boolean 
 export function isFavorite(pharmacyId: number, medicineId: number): boolean {
   return loadFavorites().some((f) => f.pharmacyId === pharmacyId && f.medicineId === medicineId);
 }
+

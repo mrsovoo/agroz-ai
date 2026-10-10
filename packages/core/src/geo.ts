@@ -27,3 +27,4 @@ export function parseCoords(lat: unknown, lng: unknown): { lat: number; lng: num
   if (a < -90 || a > 90 || b < -180 || b > 180) return null;
   return { lat: a, lng: b };
 }
+
