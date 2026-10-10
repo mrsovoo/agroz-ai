@@ -308,6 +308,36 @@ export async function fetchRealAppNotifications(userRegion: string = "Toshkent")
     timestamp: now - 24 * 3600 * 1000,
   });
 
+  // Sort descending by timestamp
+  items.sort((a, b) => b.timestamp - a.timestamp);
+  
+  // Format dateText
+  items.forEach(item => {
+    item.dateText = formatDateRelative(item.timestamp);
+  });
+
   return items;
 }
 
+
+
+function formatDateRelative(ts: number): string {
+  const d = new Date(ts);
+  const nowD = new Date();
+  
+  const isToday = d.getDate() === nowD.getDate() && d.getMonth() === nowD.getMonth() && d.getFullYear() === nowD.getFullYear();
+  
+  const yesterday = new Date(nowD);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday = d.getDate() === yesterday.getDate() && d.getMonth() === yesterday.getMonth() && d.getFullYear() === yesterday.getFullYear();
+  
+  const hh = d.getHours().toString().padStart(2, '0');
+  const mm = d.getMinutes().toString().padStart(2, '0');
+  const time = `${hh}:${mm}`;
+  
+  if (isToday) return `Bugun, ${time}`;
+  if (isYesterday) return `Kecha, ${time}`;
+  
+  const months = ["Yanvar","Fevral","Mart","Aprel","May","Iyun","Iyul","Avgust","Sentabr","Oktabr","Noyabr","Dekabr"];
+  return `${d.getDate()} ${months[d.getMonth()]}, ${time}`;
+}
