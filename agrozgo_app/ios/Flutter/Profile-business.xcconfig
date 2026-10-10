@@ -1,0 +1,5 @@
+#include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.profile-business.xcconfig"
+#include "Generated.xcconfig"
+
+APP_DISPLAY_NAME = AgrozGO Business
+PRODUCT_BUNDLE_IDENTIFIER = uz.agrozgo.business
