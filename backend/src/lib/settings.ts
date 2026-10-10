@@ -141,6 +141,7 @@ export function envFallback(key: SettingKey): string | null {
     [SETTING_KEYS.deliveryPricePerKm]: process.env.DELIVERY_PRICE_PER_KM || "3000",
     [SETTING_KEYS.deliveryBasePrice]: process.env.DELIVERY_BASE_PRICE || "10000",
     [SETTING_KEYS.deliveryMaxDistanceKm]: process.env.DELIVERY_MAX_DISTANCE_KM || "50",
+    [SETTING_KEYS.webComingSoon]: process.env.WEB_COMING_SOON || "true",
   };
   const raw = envMap[key]?.trim();
   return raw ? raw : null;
