@@ -27,6 +27,7 @@ final homeMedicinesProvider = FutureProvider.autoDispose<List<MedicineModel>>((r
       usage: 'Tabiiy minerallarga boy ozuqa',
       price: 35000,
       stock: 20,
+      imageUrl: 'https://placehold.co/173x181',
     ),
     MedicineModel(
       id: 2,
@@ -34,6 +35,7 @@ final homeMedicinesProvider = FutureProvider.autoDispose<List<MedicineModel>>((r
       usage: 'Tabiiy minerallarga boy ozuqa',
       price: 35000,
       stock: 20,
+      imageUrl: 'https://placehold.co/173x181',
     ),
   ];
 });
