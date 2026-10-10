@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-config";
 "use client";
 
 import { useEffect, useState, useMemo, useRef } from "react";
@@ -250,7 +251,7 @@ export default function PartnerKabinetPage() {
     }
 
     // Quick-list hamkorlarni yuklab olish (web yoki local dev uchun)
-    fetch(`${BACKEND}/api/bot/partner/quick-list`)
+    apiFetch(`/api/bot/partner/quick-list`)
       .then((r) => r.json())
       .then((d) => {
         if (d?.ok) {
@@ -274,7 +275,7 @@ export default function PartnerKabinetPage() {
       const headers = getHeaders(tgData, token);
 
       // 1. Profil va statistikani olish
-      const initRes = await fetch(`${BACKEND}/api/bot/partner/init`, {
+      const initRes = await apiFetch(`/api/bot/partner/init`, {
         method: "POST",
         headers,
         body: JSON.stringify({ initData: tgData }),
@@ -302,8 +303,8 @@ export default function PartnerKabinetPage() {
         // 2. Rolga qarab ma'lumotlarni yuklash
         if (p.role === "pharmacy") {
           const [ordersRes, medsRes] = await Promise.allSettled([
-            fetch(`${BACKEND}/api/bot/partner/orders`, { headers }),
-            fetch(`${BACKEND}/api/bot/partner/medicines`, { headers }),
+            apiFetch(`/api/bot/partner/orders`, { headers }),
+            apiFetch(`/api/bot/partner/medicines`, { headers }),
           ]);
 
           if (ordersRes.status === "fulfilled" && ordersRes.value.ok) {
@@ -321,7 +322,7 @@ export default function PartnerKabinetPage() {
           }
         } else {
           // Mutaxassis (Agronom yoki Veterinar)
-          const callsRes = await fetch(`${BACKEND}/api/bot/partner/calls`, { headers });
+          const callsRes = await apiFetch(`/api/bot/partner/calls`, { headers });
           if (callsRes.ok) {
             const d = await callsRes.json();
             if (d?.ok && Array.isArray(d.calls)) {
@@ -350,7 +351,7 @@ export default function PartnerKabinetPage() {
       try {
         const headers = getHeaders();
         if (partner.role === "pharmacy") {
-          const res = await fetch(`${BACKEND}/api/bot/partner/orders`, { headers });
+          const res = await apiFetch(`/api/bot/partner/orders`, { headers });
           if (res.ok) {
             const d = await res.json();
             if (d?.ok && Array.isArray(d.orders)) {
@@ -358,7 +359,7 @@ export default function PartnerKabinetPage() {
             }
           }
         } else {
-          const res = await fetch(`${BACKEND}/api/bot/partner/calls`, { headers });
+          const res = await apiFetch(`/api/bot/partner/calls`, { headers });
           if (res.ok) {
             const d = await res.json();
             if (d?.ok && Array.isArray(d.calls)) {
@@ -378,7 +379,7 @@ export default function PartnerKabinetPage() {
     setLoginError(null);
     setSelectedPartnerId(partnerId || null);
     try {
-      const res = await fetch(`${BACKEND}/api/bot/partner/web-login`, {
+      const res = await apiFetch(`/api/bot/partner/web-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -418,7 +419,7 @@ export default function PartnerKabinetPage() {
     const next = !isBusy;
     setIsBusy(next);
     try {
-      const res = await fetch(`${BACKEND}/api/bot/partner/busy`, {
+      const res = await apiFetch(`/api/bot/partner/busy`, {
         method: "POST",
         headers: getHeaders(),
         body: JSON.stringify({ isBusy: next }),
@@ -439,7 +440,7 @@ export default function PartnerKabinetPage() {
     haptic("medium");
     setActionBusyId(callId);
     try {
-      const res = await fetch(`${BACKEND}/api/bot/partner/calls/${callId}/action`, {
+      const res = await apiFetch(`/api/bot/partner/calls/${callId}/action`, {
         method: "POST",
         headers: getHeaders(),
         body: JSON.stringify({ action }),
@@ -465,7 +466,7 @@ export default function PartnerKabinetPage() {
     haptic("medium");
     setActionBusyId(orderId);
     try {
-      const res = await fetch(`${BACKEND}/api/bot/partner/orders/${orderId}/action`, {
+      const res = await apiFetch(`/api/bot/partner/orders/${orderId}/action`, {
         method: "POST",
         headers: getHeaders(),
         body: JSON.stringify({ action }),
@@ -495,7 +496,7 @@ export default function PartnerKabinetPage() {
       prev.map((m) => (m.id === medId ? { ...m, status: nextStatus } : m))
     );
     try {
-      const res = await fetch(`${BACKEND}/api/bot/partner/medicines/${medId}`, {
+      const res = await apiFetch(`/api/bot/partner/medicines/${medId}`, {
         method: "PATCH",
         headers: getHeaders(),
         body: JSON.stringify({ status: nextStatus }),
@@ -535,7 +536,7 @@ export default function PartnerKabinetPage() {
       delete stockOriginalRef.current[medId];
       delete stockTimersRef.current[medId];
       try {
-        const res = await fetch(`${BACKEND}/api/bot/partner/medicines/${medId}`, {
+        const res = await apiFetch(`/api/bot/partner/medicines/${medId}`, {
           method: "PATCH",
           headers: getHeaders(),
           body: JSON.stringify({ stock: nextStock }),
@@ -554,7 +555,7 @@ export default function PartnerKabinetPage() {
     if (!confirm("Haqiqatan ham ushbu dorini katalogdan o'chirmoqchimisiz?")) return;
     haptic("heavy");
     try {
-      const res = await fetch(`${BACKEND}/api/bot/partner/medicines/${medId}`, {
+      const res = await apiFetch(`/api/bot/partner/medicines/${medId}`, {
         method: "DELETE",
         headers: getHeaders(),
       });
@@ -642,7 +643,7 @@ export default function PartnerKabinetPage() {
     }
     setSavingMed(true);
     try {
-      const res = await fetch(`${BACKEND}/api/bot/partner/medicines`, {
+      const res = await apiFetch(`/api/bot/partner/medicines`, {
         method: "POST",
         headers: getHeaders(),
         body: JSON.stringify({

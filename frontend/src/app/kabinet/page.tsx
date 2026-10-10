@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-config";
 "use client";
 
 import { useEffect, useState, useMemo, useRef } from "react";
@@ -225,7 +226,7 @@ export default function PartnerKabinetPage() {
       };
 
       // 1. Profil va statistikani olish
-      const initRes = await fetch(`${BACKEND}/api/bot/partner/init`, {
+      const initRes = await apiFetch(`/api/bot/partner/init`, {
         method: "POST",
         headers,
         body: JSON.stringify({ initData: tgData }),
@@ -253,8 +254,8 @@ export default function PartnerKabinetPage() {
         // 2. Rolga qarab ma'lumotlarni yuklash
         if (p.role === "pharmacy") {
           const [ordersRes, medsRes] = await Promise.allSettled([
-            fetch(`${BACKEND}/api/bot/partner/orders`, { headers }),
-            fetch(`${BACKEND}/api/bot/partner/medicines`, { headers }),
+            apiFetch(`/api/bot/partner/orders`, { headers }),
+            apiFetch(`/api/bot/partner/medicines`, { headers }),
           ]);
 
           if (ordersRes.status === "fulfilled" && ordersRes.value.ok) {
@@ -272,7 +273,7 @@ export default function PartnerKabinetPage() {
           }
         } else {
           // Mutaxassis (Agronom yoki Veterinar)
-          const callsRes = await fetch(`${BACKEND}/api/bot/partner/calls`, { headers });
+          const callsRes = await apiFetch(`/api/bot/partner/calls`, { headers });
           if (callsRes.ok) {
             const d = await callsRes.json();
             if (d?.ok && Array.isArray(d.calls)) {
@@ -304,7 +305,7 @@ export default function PartnerKabinetPage() {
     const next = !isBusy;
     setIsBusy(next);
     try {
-      const res = await fetch(`${BACKEND}/api/bot/partner/busy`, {
+      const res = await apiFetch(`/api/bot/partner/busy`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -328,7 +329,7 @@ export default function PartnerKabinetPage() {
     haptic("medium");
     setActionBusyId(callId);
     try {
-      const res = await fetch(`${BACKEND}/api/bot/partner/calls/${callId}/action`, {
+      const res = await apiFetch(`/api/bot/partner/calls/${callId}/action`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -357,7 +358,7 @@ export default function PartnerKabinetPage() {
     haptic("medium");
     setActionBusyId(orderId);
     try {
-      const res = await fetch(`${BACKEND}/api/bot/partner/orders/${orderId}/action`, {
+      const res = await apiFetch(`/api/bot/partner/orders/${orderId}/action`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -390,7 +391,7 @@ export default function PartnerKabinetPage() {
       prev.map((m) => (m.id === medId ? { ...m, status: nextStatus } : m))
     );
     try {
-      const res = await fetch(`${BACKEND}/api/bot/partner/medicines/${medId}`, {
+      const res = await apiFetch(`/api/bot/partner/medicines/${medId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -433,7 +434,7 @@ export default function PartnerKabinetPage() {
       delete stockOriginalRef.current[medId];
       delete stockTimersRef.current[medId];
       try {
-        const res = await fetch(`${BACKEND}/api/bot/partner/medicines/${medId}`, {
+        const res = await apiFetch(`/api/bot/partner/medicines/${medId}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -455,7 +456,7 @@ export default function PartnerKabinetPage() {
     if (!confirm("Haqiqatan ham ushbu dorini katalogdan o'chirmoqchimisiz?")) return;
     haptic("heavy");
     try {
-      const res = await fetch(`${BACKEND}/api/bot/partner/medicines/${medId}`, {
+      const res = await apiFetch(`/api/bot/partner/medicines/${medId}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -546,7 +547,7 @@ export default function PartnerKabinetPage() {
     }
     setSavingMed(true);
     try {
-      const res = await fetch(`${BACKEND}/api/bot/partner/medicines`, {
+      const res = await apiFetch(`/api/bot/partner/medicines`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

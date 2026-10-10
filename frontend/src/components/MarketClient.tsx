@@ -214,7 +214,7 @@ export default function MarketClient() {
         const lng = pos.coords.longitude;
         setCoords({ lat, lng });
         setLocError(null);
-        fetch(`/api/location?lat=${lat}&lng=${lng}`)
+        apiFetch(`/api/location?lat=${lat}&lng=${lng}`)
           .then((r) => r.json())
           .then((d: { region?: string | null }) => {
             if (d?.region) setUserRegion(d.region);
@@ -238,7 +238,7 @@ export default function MarketClient() {
     }
     let cancelled = false;
     setLoading(true);
-    fetch(`/api/specialists?${params.toString()}`)
+    apiFetch(`/api/specialists?${params.toString()}`)
       .then((r) => r.json())
       .then((d: { items?: Pharmacy[] }) => {
         if (cancelled) return;
@@ -358,7 +358,7 @@ export default function MarketClient() {
         try {
           const lat = pos.coords.latitude;
           const lng = pos.coords.longitude;
-          const res = await fetch(`/api/location?lat=${lat}&lng=${lng}&full=1`);
+          const res = await apiFetch(`/api/location?lat=${lat}&lng=${lng}&full=1`);
           const data = (await res.json()) as { ok?: boolean; place?: string | null };
           if (data.ok && data.place) {
             setCartAddress(data.place);
@@ -400,7 +400,7 @@ export default function MarketClient() {
     setCartBusy(true);
     setCartError(null);
     try {
-      const res = await fetch("/api/orders", {
+      const res = await apiFetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

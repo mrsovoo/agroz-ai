@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-config";
 "use client";
 
 import { useRef, useState } from "react";
@@ -86,7 +87,7 @@ export default function DiagnoseForm({ category }: { category: "crop" | "animal"
         const form = new FormData();
         form.append("audio", blob);
         try {
-          const res = await fetch("/api/transcribe", { method: "POST", body: form });
+          const res = await apiFetch("/api/transcribe", { method: "POST", body: form });
           const data = (await res.json()) as { text?: string; note?: string };
           if (data.text) setText((prev) => (prev ? `${prev} ${data.text}` : data.text!));
           setStatus(data.note ?? "Ovoz yozib olindi");
@@ -112,7 +113,7 @@ export default function DiagnoseForm({ category }: { category: "crop" | "animal"
     }
     setLoading(true);
     try {
-      const res = await fetch("/api/diagnose", {
+      const res = await apiFetch("/api/diagnose", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ category, text, imageDataUrl: image }),

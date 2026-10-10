@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-config";
 "use client";
 
 /**
@@ -84,7 +85,7 @@ export async function registerPushTokenOnBackend(tokenValue?: string): Promise<b
   if (!token) return false;
 
   try {
-    const res = await fetch("/api/push/register", {
+    const res = await apiFetch("/api/push/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -109,7 +110,7 @@ export async function unregisterPushTokenOnBackend(): Promise<void> {
   if (!token) return;
 
   try {
-    await fetch("/api/push/unregister", {
+    await apiFetch("/api/push/unregister", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
