@@ -1,5 +1,5 @@
-import { apiFetch } from "@/lib/api-config";
 "use client";
+import { apiFetch } from "@/lib/api-config";
 
 import { useEffect, useState, useMemo, useRef } from "react";
 import {
