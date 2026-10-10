@@ -43,3 +43,7 @@ service-account*.json
 *.secret
 secrets/
 *.credentials
+
+# Mobile Apps (Not tracked in repo)
+mobile/
+
