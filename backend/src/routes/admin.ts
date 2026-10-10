@@ -1,3 +1,5 @@
+import { adminLoginLimiter } from "./auth-rate-limits.js";
+import crypto from "crypto";
 import { Router } from "express";
 import { db } from "../db/index.js";
 import {
@@ -76,7 +78,7 @@ export async function requireAdmin(req: any, res: any, next: any) {
 // -------------------------------------------------------------
 
 // GET /api/admin/me
-router.get("/me", async (req, res) => {
+router.get("/me", requireAdmin, async (req, res) => {
   try {
     const enabled = await adminEnabled();
     const sid = getAdminSid(req);
@@ -181,11 +183,11 @@ async function handleLogin(req: any, res: any) {
   res.json({ ok: true, sessionId: result.sessionId });
 }
 
-router.post("/login", handleLogin);
+router.post("/login", adminLoginLimiter, handleLogin);
 router.post("/session", handleLogin);
 
 // POST /api/admin/logout
-router.post("/logout", async (req, res) => {
+router.post("/logout", requireAdmin, async (req, res) => {
   try {
     const sid = getAdminSid(req);
     await adminLogout(sid);

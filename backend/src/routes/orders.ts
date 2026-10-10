@@ -1,3 +1,4 @@
+import { requireAuth } from "../middleware/auth";
 import { Router } from "express";
 import { createOrder, rateOrder, type OrderInputItem } from "../lib/orders.js";
 import { normalizePhone, cleanText } from "../lib/validate.js";
@@ -22,7 +23,7 @@ router.get("/delivery-config", async (_req, res) => {
 });
 
 // POST /api/orders
-router.post("/", async (req, res) => {
+router.post("/", requireAuth, async (req, res) => {
   try {
     const body = req.body || {};
     const pharmacySpecialistId = Number(body.pharmacySpecialistId);
@@ -205,7 +206,7 @@ router.post("/", async (req, res) => {
 });
 
 // GET /api/orders/track
-router.get("/track", async (req, res) => {
+router.get("/track", requireAuth, async (req, res) => {
   try {
     const user = await getUserFromReq(req);
     if (!user) {
@@ -289,7 +290,7 @@ router.get("/track", async (req, res) => {
 });
 
 // POST /api/orders/rate
-router.post("/rate", async (req, res) => {
+router.post("/rate", requireAuth, async (req, res) => {
   try {
     const user = await getUserFromReq(req);
     if (!user) {

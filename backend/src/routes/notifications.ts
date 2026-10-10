@@ -1,3 +1,4 @@
+import { requireAuth } from "../middleware/auth";
 import { Router, Request, Response } from "express";
 import { and, eq } from "drizzle-orm";
 import { db } from "../db/index.js";
@@ -10,7 +11,7 @@ const router = Router();
  * GET /api/notifications/read-status
  * Joriy foydalanuvchining o'qilgan bildirishnoma kalitlari ro'yxatini qaytaradi.
  */
-router.get("/read-status", async (req: Request, res: Response) => {
+router.get("/read-status", requireAuth, async (req: Request, res: Response) => {
   try {
     const user = await getUserFromReq(req);
     if (!user) {
@@ -36,7 +37,7 @@ router.get("/read-status", async (req: Request, res: Response) => {
  * POST /api/notifications/:id/read
  * Bitta (yoki body.ids orqali bir nechta) bildirishnomani joriy foydalanuvchi uchun o'qilgan deb belgilaydi.
  */
-router.post("/:id/read", async (req: Request, res: Response) => {
+router.post("/:id/read", requireAuth, async (req: Request, res: Response) => {
   try {
     const user = await getUserFromReq(req);
     if (!user) {

@@ -1,0 +1,128 @@
+import { Request, Response, NextFunction } from "express";
+import { db } from "../db/index.js";
+import { users, adminSessions, sessions, specialists, pharmacies } from "../db/schema.js";
+import { eq } from "drizzle-orm";
+import { verifyInitData } from "../lib/tg-auth.js";
+
+const TG_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
+const TG_AUTH_BOT_TOKEN = process.env.TELEGRAM_AUTH_BOT_TOKEN || "";
+
+export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // 1. Telegram InitData
+    const initData = (req.headers["x-telegram-init-data"] as string) || req.body?.initData || req.query?.initData;
+    if (initData && TG_BOT_TOKEN) {
+      if (verifyInitData(initData, TG_BOT_TOKEN, 24 * 60 * 60)) {
+        const params = new URLSearchParams(initData as string);
+        const userStr = params.get("user");
+        if (userStr) {
+          const tgUser = JSON.parse(userStr);
+          if (tgUser?.id) {
+            const dbUsers = await db.select().from(users).where(eq(users.telegramId, tgUser.id)).limit(1);
+            if (dbUsers.length > 0) {
+              (req as any).user = dbUsers[0];
+              return next();
+            } else {
+              // Mock user for unregistered telegram logic if needed
+              (req as any).user = { telegramId: tgUser.id, name: tgUser.first_name, role: 'user' };
+              return next();
+            }
+          }
+        }
+      }
+    }
+
+    // 2. JWT / Session Token
+    const authHeader = req.headers?.authorization;
+    const cookieHeader = req.headers?.cookie;
+    const cookieSession = cookieHeader?.split(";").find((c: string) => c.trim().startsWith("agroai_session=") || c.trim().startsWith("agroz_session="))?.split("=")[1]?.trim();
+    const sessionId = authHeader?.replace("Bearer ", "")?.trim() || req.headers?.["x-session-id"] || req.cookies?.agroai_session || req.cookies?.agroz_session || cookieSession;
+
+    if (sessionId) {
+      const s = await db.select().from(sessions).where(eq(sessions.id, sessionId as string)).limit(1);
+      if (s.length > 0) {
+        const u = await db.select().from(users).where(eq(users.id, s[0].userId)).limit(1);
+        if (u.length > 0) {
+          (req as any).user = u[0];
+          return next();
+        }
+      }
+    }
+
+    return res.status(401).json({ error: "Avtorizatsiya talab qilinadi" });
+  } catch (err) {
+    return res.status(401).json({ error: "Avtorizatsiya xatosi" });
+  }
+};
+
+export const requireTelegramAuth = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const initData = (req.headers["x-telegram-init-data"] as string) || req.body?.initData || req.query?.initData;
+    let tgUserObj = null;
+    if (initData) {
+      const isValidMain = TG_BOT_TOKEN && verifyInitData(initData, TG_BOT_TOKEN, 24 * 60 * 60);
+      const isValidAuth = TG_AUTH_BOT_TOKEN && verifyInitData(initData, TG_AUTH_BOT_TOKEN, 24 * 60 * 60);
+      if (isValidMain || isValidAuth) {
+        const params = new URLSearchParams(initData as string);
+        const userStr = params.get("user");
+        if (userStr) {
+          tgUserObj = JSON.parse(userStr);
+          (req as any).telegramUser = tgUserObj;
+        }
+      }
+    }
+
+    const authHeader = String(req.headers["authorization"] || req.headers["x-partner-token"] || "").trim();
+    const tokenStr = authHeader.replace(/^Bearer\s+/i, "").trim();
+    if (tokenStr) {
+      const sessionRows = await db.select().from(sessions).where(eq(sessions.id, tokenStr)).limit(1);
+      if (sessionRows[0]) {
+        const userRows = await db.select().from(users).where(eq(users.id, sessionRows[0].userId)).limit(1);
+        if (userRows[0]) {
+           (req as any).webUser = userRows[0];
+        }
+      }
+    }
+    
+    if (!(req as any).telegramUser && !(req as any).webUser) {
+        return res.status(401).json({ error: "Avtorizatsiya xatosi (Telegram/Web Token)" });
+    }
+    return next();
+  } catch (e) {
+    return res.status(401).json({ error: "Tekshiruv xatosi" });
+  }
+};
+
+export const requireRole = (allowedRoles: ("specialist" | "pharmacy" | "admin")[]) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (allowedRoles.includes("admin")) {
+        const token = req.headers.authorization?.split(" ")[1] || req.cookies?.admin_session;
+        if (token) {
+          const rows = await db.select().from(adminSessions).where(eq(adminSessions.token, token)).limit(1);
+          if (rows.length > 0 && rows[0].expiresAt > new Date()) {
+            (req as any).admin = rows[0];
+            return next();
+          }
+        }
+      }
+
+      const tgId = (req as any).telegramUser?.id || (req as any).webUser?.telegramId;
+      if (tgId) {
+        if (allowedRoles.includes("specialist") || allowedRoles.includes("pharmacy")) {
+          // specialists table handles both in bot.ts logic currently, let's just check specialists for now
+          const spec = await db.select().from(specialists).where(eq(specialists.telegramId, tgId)).limit(1);
+          if (spec.length > 0 && spec[0].isActive) {
+            (req as any).specialist = spec[0];
+            return next();
+          }
+        }
+      }
+      return res.status(403).json({ error: "Ruxsat etilmagan rol" });
+    } catch (e) {
+      return res.status(500).json({ error: "Rol tekshiruvi xatosi" });
+    }
+  };
+};
+
+export const requireAdmin = requireRole(["admin"]);

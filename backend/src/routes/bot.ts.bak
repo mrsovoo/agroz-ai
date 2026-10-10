@@ -1,4 +1,3 @@
-import { requireTelegramAuth, requireRole } from "../middleware/auth.js";
 import { Router } from "express";
 import { handleAuthBotUpdate } from "../lib/auth-bot-flow.js";
 import { recordDataConsent } from "../lib/consent.js";
@@ -1844,7 +1843,7 @@ router.post("/partner/init", async (req, res) => {
 });
 
 // GET /api/bot/partner/orders
-router.get("/partner/orders", requireTelegramAuth("business"), requireRole(['specialist', 'pharmacy']), async (req: any, res: any) => {
+router.get("/partner/orders", async (req, res) => {
   try {
     const spec = await getPartnerFromReq(req);
     if (!spec || spec.role !== "pharmacy") {
@@ -1896,7 +1895,7 @@ router.get("/partner/orders", requireTelegramAuth("business"), requireRole(['spe
 });
 
 // GET /api/bot/partner/medicines (dorixona dorilari)
-router.get("/partner/medicines", requireTelegramAuth("business"), requireRole(['specialist', 'pharmacy']), async (req: any, res: any) => {
+router.get("/partner/medicines", async (req, res) => {
   try {
     const spec = await getPartnerFromReq(req);
     if (!spec || spec.role !== "pharmacy") {
@@ -1917,7 +1916,7 @@ router.get("/partner/medicines", requireTelegramAuth("business"), requireRole(['
 });
 
 // POST /api/bot/partner/medicines (yangi dori qo'shish)
-router.post("/partner/medicines", requireTelegramAuth("business"), requireRole(['specialist', 'pharmacy']), async (req: any, res: any) => {
+router.post("/partner/medicines", async (req, res) => {
   try {
     const spec = await getPartnerFromReq(req);
     if (!spec || spec.role !== "pharmacy") {
@@ -1991,7 +1990,7 @@ router.patch("/partner/medicines/:id", async (req, res) => {
 });
 
 // DELETE /api/bot/partner/medicines/:id (dorini o'chirish)
-router.delete("/partner/medicines/:id", requireTelegramAuth("business"), requireRole(['specialist', 'pharmacy']), async (req: any, res: any) => {
+router.delete("/partner/medicines/:id", async (req, res) => {
   try {
     const spec = await getPartnerFromReq(req);
     if (!spec) return res.status(403).json({ ok: false, error: "Hamkor topilmadi" });
@@ -2006,7 +2005,7 @@ router.delete("/partner/medicines/:id", requireTelegramAuth("business"), require
 });
 
 // POST /api/bot/partner/orders/:id/action
-router.post("/partner/orders/:id/action", requireTelegramAuth("business"), requireRole(['specialist', 'pharmacy']), async (req: any, res: any) => {
+router.post("/partner/orders/:id/action", async (req, res) => {
   try {
     const spec = await getPartnerFromReq(req);
     if (!spec || spec.role !== "pharmacy") {
@@ -2048,7 +2047,7 @@ router.post("/partner/orders/:id/action", requireTelegramAuth("business"), requi
 });
 
 // GET /api/bot/partner/calls
-router.get("/partner/calls", requireTelegramAuth("business"), requireRole(['specialist', 'pharmacy']), async (req: any, res: any) => {
+router.get("/partner/calls", async (req, res) => {
   try {
     const spec = await getPartnerFromReq(req);
     if (!spec) return res.status(403).json({ ok: false, error: "Mutaxassis topilmadi" });
@@ -2104,7 +2103,7 @@ router.get("/partner/calls", requireTelegramAuth("business"), requireRole(['spec
 });
 
 // POST /api/bot/partner/calls/:id/action
-router.post("/partner/calls/:id/action", requireTelegramAuth("business"), requireRole(['specialist', 'pharmacy']), async (req: any, res: any) => {
+router.post("/partner/calls/:id/action", async (req, res) => {
   try {
     const spec = await getPartnerFromReq(req);
     if (!spec) return res.status(403).json({ ok: false, error: "Mutaxassis topilmadi" });
@@ -2152,7 +2151,7 @@ router.post("/partner/calls/:id/action", requireTelegramAuth("business"), requir
 });
 
 // POST /api/bot/partner/busy
-router.post("/partner/busy", requireTelegramAuth("business"), requireRole(['specialist', 'pharmacy']), async (req: any, res: any) => {
+router.post("/partner/busy", async (req, res) => {
   try {
     const spec = await getPartnerFromReq(req);
     if (!spec) return res.status(403).json({ ok: false, error: "Hamkor topilmadi" });

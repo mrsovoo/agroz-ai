@@ -1,41 +1,16 @@
+import { pushRegisterLimiter } from "./auth-rate-limits.js";
+import { requireAuth } from "../middleware/auth.js";
 import { Router } from "express";
 import { db } from "../db/index.js";
-import { pushTokens, sessions, users } from "../db/schema.js";
+import { pushTokens } from "../db/schema.js";
 import { and, eq } from "drizzle-orm";
 
 const router = Router();
 
-async function getUserFromReq(req: any) {
-  const authHeader = req.headers.authorization;
-  const cookieHeader = req.headers.cookie || "";
-  const cookieSession = cookieHeader
-    .split(";")
-    .find((c: string) => c.trim().startsWith("agroai_session=") || c.trim().startsWith("agroz_session="))
-    ?.split("=")[1];
-
-  const sessionId =
-    req.cookies?.["agroai_session"] ||
-    req.cookies?.["agroz_session"] ||
-    authHeader?.replace("Bearer ", "") ||
-    req.headers["x-session-id"] ||
-    cookieSession;
-
-  if (sessionId && typeof sessionId === "string") {
-    const [row] = await db
-      .select({ user: users })
-      .from(sessions)
-      .innerJoin(users, eq(users.id, sessions.userId))
-      .where(eq(sessions.id, sessionId))
-      .limit(1);
-    if (row?.user) return row.user;
-  }
-  return null;
-}
-
 // POST /api/push/register — Tokenni ro'yxatdan o'tkazish / yangilash (upsert)
-router.post("/register", async (req, res) => {
+router.post("/register", requireAuth, pushRegisterLimiter, async (req: any, res: any) => {
   try {
-    const user = await getUserFromReq(req);
+    const user = req.user;
     if (!user) {
       return res.status(401).json({ error: "Avval tizimga kiring" });
     }
@@ -80,12 +55,14 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// DELETE /api/push/unregister — Tokenni o'chirish (chiqishda)
-router.post("/unregister", async (req, res) => {
+// POST /api/push/unregister — Tokenni o'chirish (chiqishda)
+router.post("/unregister", requireAuth, async (req: any, res: any) => {
   try {
+    const user = req.user;
     const { token } = req.body || {};
-    if (token && typeof token === "string") {
-      await db.delete(pushTokens).where(eq(pushTokens.token, token.trim())).catch(() => {});
+    if (token && typeof token === "string" && user?.id) {
+      // Faqat o'ziga tegishli tokenni o'chirishi mumkin
+      await db.delete(pushTokens).where(and(eq(pushTokens.token, token.trim()), eq(pushTokens.userId, user.id))).catch(() => {});
     }
     res.json({ ok: true });
   } catch (err: any) {
@@ -93,11 +70,12 @@ router.post("/unregister", async (req, res) => {
   }
 });
 
-router.delete("/unregister", async (req, res) => {
+router.delete("/unregister", requireAuth, async (req: any, res: any) => {
   try {
+    const user = req.user;
     const { token } = req.body || {};
-    if (token && typeof token === "string") {
-      await db.delete(pushTokens).where(eq(pushTokens.token, token.trim())).catch(() => {});
+    if (token && typeof token === "string" && user?.id) {
+      await db.delete(pushTokens).where(and(eq(pushTokens.token, token.trim()), eq(pushTokens.userId, user.id))).catch(() => {});
     }
     res.json({ ok: true });
   } catch (err: any) {

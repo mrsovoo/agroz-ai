@@ -25,3 +25,24 @@ export const verifyCodeLimiter = rateLimit({
   message: { error: "Ko'p urinishlar. 10 daqiqa kuting." },
   keyGenerator: (req: Request) => req.ip || "unknown",
 });
+
+export const adminLoginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 mins
+  max: 5, // Qattiqroq limit
+  message: { error: "Ko'p urinishlar. 15 daqiqa kuting." },
+  keyGenerator: (req: Request) => req.ip || "unknown",
+});
+
+export const diagnoseLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hr
+  max: 20, // AI cost protection
+  message: { error: "AI so'rovlar limiti tugadi. 1 soat kuting." },
+  keyGenerator: (req: Request) => req.ip || "unknown",
+});
+
+export const pushRegisterLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hr
+  max: 10,
+  message: { error: "Ko'p urinishlar. 1 soat kuting." },
+  keyGenerator: (req: Request) => req.ip || "unknown",
+});

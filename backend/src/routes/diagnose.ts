@@ -1,43 +1,56 @@
+import { optionalAuth } from "../middleware/auth.js";
 import { Router } from "express";
 import { randomBytes } from "node:crypto";
 import { db } from "../db/index.js";
 import { diagnoses } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 import { aiDiagnose } from "../lib/ai.js";
-import { getUserFromReq } from "../lib/user-auth.js";
 import { cleanText } from "../lib/validate.js";
 import rateLimit from "express-rate-limit";
 
 const router = Router();
 
-// IP bo'yicha soatiga 20 ta
-const diagnoseIpLimiter = rateLimit({
+// Rate limiter logic based on user status
+// Anonim uchun qattiqroq IP bo'yicha limiter (5/soat)
+const diagnoseAnonLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 20,
-  message: { ok: false, error: "Juda ko'p so'rov yubordingiz. Iltimos, keyinroq urinib ko'ring." },
-  keyGenerator: (req: any) => req.ip || req.connection.remoteAddress || "unknown",
+  max: 5,
+  message: { ok: false, error: "Tizimga kirmaganlar uchun soatlik limitga yetdingiz (5 ta). Iltimos, tizimga kiring." },
+  keyGenerator: (req: any) => req.ip || req.connection?.remoteAddress || "unknown",
 });
 
-// Foydalanuvchiga kuniga 10 ta
-const diagnoseUserLimiter = rateLimit({
+// Kirganlar uchun limiter (20/soat)
+const diagnoseAuthLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  message: { ok: false, error: "Juda ko'p so'rov yubordingiz (soatiga 20 ta). Iltimos, keyinroq urinib ko'ring." },
+  keyGenerator: (req: any) => req.user?.id ? String(req.user.id) : "unknown",
+});
+
+// Kunlik 10 ta cheklovchi kirganlar uchun
+const diagnoseUserDailyLimiter = rateLimit({
   windowMs: 24 * 60 * 60 * 1000,
   max: 10,
   message: { ok: false, error: "Kunlik tashxis limitiga (10 ta) yetdingiz." },
-  keyGenerator: (req: any) => req.userIdForRateLimit || "unauth",
+  keyGenerator: (req: any) => req.user?.id ? String(req.user.id) : "unknown",
 });
 
-router.post("/", diagnoseIpLimiter, async (req: any, res: any, next) => {
-  try {
-    const user = await getUserFromReq(req);
-    if (!user) {
-      return res.status(401).json({ ok: false, error: "Tizimga kirish talab etiladi." });
-    }
-    req.userIdForRateLimit = String(user.id);
-    next();
-  } catch (err) {
-    next(err);
+// Dinamik tarzda limiterni tanlaydigan middleware
+const dynamicDiagnoseLimiter = (req: any, res: any, next: any) => {
+  if (req.user?.id) {
+    // Auth user limiters
+    diagnoseAuthLimiter(req, res, (err: any) => {
+      if (err) return next(err);
+      diagnoseUserDailyLimiter(req, res, next);
+    });
+  } else {
+    // Anon user limiter
+    diagnoseAnonLimiter(req, res, next);
   }
-}, diagnoseUserLimiter, async (req: any, res: any) => {
+};
+
+
+router.post("/", optionalAuth, dynamicDiagnoseLimiter, async (req: any, res: any) => {
   try {
     const body = req.body || {};
     const category = body.category === "animal" ? "animal" : "crop";
@@ -55,16 +68,15 @@ router.post("/", diagnoseIpLimiter, async (req: any, res: any, next) => {
       if (!/data:image\/(jpeg|png|webp);base64,/.test(imageDataUrl)) {
         return res.status(400).json({ ok: false, error: "Faqat jpeg, png yoki webp rasm ruxsat etilgan." });
       }
-      // calculate approximate size ~ 4/3 of original size. max 5MB = 5242880 bytes. base64 string length <= 5242880 * 1.37
       if (imageDataUrl.length > 5 * 1024 * 1024 * 1.4) {
         return res.status(400).json({ ok: false, error: "Rasm hajmi 5MB dan oshmasligi kerak." });
       }
     }
 
-    const user = await getUserFromReq(req);
-
+    const user = req.user || null;
     const result = await aiDiagnose({ category, text, imageDataUrl });
 
+    // Uzun tasodifiy token, kamida 128 bit (16 bytes = 32 chars in hex)
     const viewHash = randomBytes(16).toString("hex");
 
     const [inserted] = await db.insert(diagnoses).values({
@@ -83,6 +95,8 @@ router.post("/", diagnoseIpLimiter, async (req: any, res: any, next) => {
 
     return res.json({
       ok: true,
+      id: inserted.id, // For frontend navigation
+      viewToken: viewHash, // One-time view token for anonymous users
       diagnosis: {
         id: inserted.id,
         category,
@@ -104,16 +118,41 @@ router.post("/", diagnoseIpLimiter, async (req: any, res: any, next) => {
   }
 });
 
-router.get("/:id", async (req, res) => {
-  // Omitted get route changes for brevity as it is basically the same.
+router.get("/:id", optionalAuth, async (req: any, res: any) => {
   try {
     const id = Number(req.params.id);
     if (!Number.isSafeInteger(id) || id <= 0) {
       return res.status(400).json({ ok: false, error: "ID xato" });
     }
+    
+    // ViewToken can be passed in query, headers, or body. Usually query for GET.
+    const viewToken = req.query.viewToken as string || req.headers["x-view-token"] as string;
+
     const rows = await db.select().from(diagnoses).where(eq(diagnoses.id, id)).limit(1);
     const item = rows[0];
+    
+    // 404 emas 403 o'rniga ishlatiladi to hide existence
     if (!item) return res.status(404).json({ ok: false, error: "Topilmadi" });
+    
+    // IDOR tekshiruvi:
+    let isOwner = false;
+    if (item.userId) {
+      if (req.user?.id && item.userId === req.user.id) {
+        isOwner = true;
+      }
+    } else {
+      // Agar userId bo'lmasa, demak anonim qo'shgan. 
+      // Faqat viewToken orqali ko'rish mumkin.
+    }
+    
+    // Yoki to'g'ri viewToken bo'lsa
+    if (viewToken && item.viewHash === viewToken) {
+      isOwner = true;
+    }
+    
+    if (!isOwner) {
+      return res.status(404).json({ ok: false, error: "Topilmadi" }); // Ataylab 404
+    }
     
     return res.json({
       ok: true,

@@ -33,7 +33,7 @@ function getDemoConfig(): { phone: string; otp: string } | null {
 
 function devOtpEnabled(): boolean {
   if (process.env.NODE_ENV === "production") return false;
-  return process.env.OTP_DEV_MODE === "true";
+  return process.env.NODE_ENV !== "production" && process.env.OTP_DEV_MODE === "true";
 }
 
 async function telegramIdFromInitData(initData: unknown): Promise<number | null> {
