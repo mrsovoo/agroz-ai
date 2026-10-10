@@ -22,6 +22,7 @@ import geoRouter from "./routes/geo.js";
 import notificationsRouter from "./routes/notifications.js";
 import supportRouter from "./routes/support.js";
 import pushRouter from "./routes/push.js";
+import webRouter from "./routes/web.js";
 
 import { ensureSeed } from "./lib/seed.js";
 import { ensureSchema } from "./db/migrate.js";
@@ -146,6 +147,7 @@ app.use("/api/geo", geoRouter);
 app.use("/api/notifications", notificationsRouter);
 app.use("/api/support", supportRouter);
 app.use("/api/push", pushRouter);
+app.use("/api/web", webRouter);
 
 // 404 Handler
 app.use((_req, res) => {

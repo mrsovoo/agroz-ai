@@ -1,7 +1,7 @@
 "use client";
 
 import { useEnvironment } from "@/lib/env";
-import DesktopComingSoon from "./DesktopComingSoon";
+import DesktopComingSoon from "./coming-soon/DesktopComingSoon";
 import PhoneTelegramPrompt from "./PhoneTelegramPrompt";
 import { ReactNode, useEffect, useState } from "react";
 

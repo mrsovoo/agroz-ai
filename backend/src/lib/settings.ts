@@ -34,6 +34,7 @@ export const SETTING_KEYS = {
   deliveryPricePerKm: "delivery_price_per_km",
   deliveryBasePrice: "delivery_base_price",
   deliveryMaxDistanceKm: "delivery_max_distance_km",
+  webComingSoon: "web_coming_soon",
 } as const;
 
 export type SettingKey = (typeof SETTING_KEYS)[keyof typeof SETTING_KEYS];
@@ -224,6 +225,7 @@ const LABELS: Record<SettingKey, string> = {
   [SETTING_KEYS.deliveryPricePerKm]: "1 km uchun yetkazib berish narxi (so'm)",
   [SETTING_KEYS.deliveryBasePrice]: "Bazaviy boshlang'ich yetkazib berish narxi (so'm)",
   [SETTING_KEYS.deliveryMaxDistanceKm]: "Maksimal yetkazib berish masofasi (km)",
+  [SETTING_KEYS.webComingSoon]: "Veb sayt Coming Soon sozlamalari",
 };
 
 function mask(value: string): string {
