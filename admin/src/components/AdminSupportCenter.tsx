@@ -108,8 +108,8 @@ export default function AdminSupportCenter() {
           : "✅ Javob bazaga saqlandi (foydalanuvchi profilida ko'rinadi).",
       });
       await loadTickets();
-    } catch {
-      setNotice({ kind: "err", text: "Tarmoq xatoligi" });
+    } catch (error: any) {
+      setNotice({ kind: "err", text: error.message || "Tarmoq xatoligi" });
     } finally {
       setSending(false);
     }

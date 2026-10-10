@@ -76,8 +76,8 @@ export default function AdminWeatherAlertsBroadcast() {
 
       const data = await res.json();
       setResult(data);
-    } catch {
-      setResult({ ok: false, note: "Tarmoq xatosi tufayli yuborilmadi" });
+    } catch (error: any) {
+      setResult({ ok: false, note: error.message || "Tarmoq xatosi tufayli yuborilmadi" });
     } finally {
       setSending(false);
     }

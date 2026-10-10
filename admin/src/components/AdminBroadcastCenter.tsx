@@ -222,10 +222,10 @@ export default function AdminBroadcastCenter() {
           error: data.error || "Sinov xabarini yuborishda xatolik yuz berdi",
         });
       }
-    } catch {
+    } catch (error: any) {
       setResult({
         ok: false,
-        error: "Tarmoq xatosi tufayli sinov xabari yuborilmadi",
+        error: error.message || "Tarmoq xatosi tufayli sinov xabari yuborilmadi",
       });
     } finally {
       setSendingTest(false);
@@ -296,10 +296,10 @@ export default function AdminBroadcastCenter() {
           error: data.error || "Xabar yuborishda xatolik yuz berdi",
         });
       }
-    } catch {
+    } catch (error: any) {
       setResult({
         ok: false,
-        error: "Tarmoq ulanishida xatolik tufayli xabar yuborilmadi",
+        error: error.message || "Tarmoq ulanishida xatolik tufayli xabar yuborilmadi",
       });
     } finally {
       setSending(false);
