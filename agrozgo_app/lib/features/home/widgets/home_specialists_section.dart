@@ -62,7 +62,7 @@ class HomeSpecialistsSection extends ConsumerWidget {
                         if (onViewAllTap != null) {
                           onViewAllTap!();
                         } else {
-                          context.push('/specialists');
+                          context.go('/specialists');
                         }
                       },
                       borderRadius: BorderRadius.circular(tokens.radiusPill),
@@ -105,7 +105,7 @@ class HomeSpecialistsSection extends ConsumerWidget {
 
               return Column(
                 children: specialists.take(5).map((specialist) {
-                  return _SpecialistCard(
+                  return SpecialistCard(
                     specialist: specialist,
                     tokens: tokens,
                   );
@@ -145,11 +145,12 @@ class HomeSpecialistsSection extends ConsumerWidget {
   }
 }
 
-class _SpecialistCard extends StatelessWidget {
+class SpecialistCard extends StatelessWidget {
   final SpecialistModel specialist;
   final HomeThemeTokens tokens;
 
-  const _SpecialistCard({
+  const SpecialistCard({
+    super.key,
     required this.specialist,
     required this.tokens,
   });
@@ -191,9 +192,9 @@ class _SpecialistCard extends StatelessWidget {
             ),
             alignment: Alignment.center,
             child: const Icon(
-              Icons.medical_services_outlined,
+              Icons.people_outline_rounded,
               color: Color(0xFF35CA56),
-              size: 32,
+              size: 30,
             ),
           ),
           const SizedBox(width: 12),
@@ -274,7 +275,7 @@ class _SpecialistCard extends StatelessWidget {
                   child: InkWell(
                     onTap: () {
                       HapticFeedback.lightImpact();
-                      context.push('/specialists');
+                      context.go('/specialists');
                     },
                     borderRadius: BorderRadius.circular(tokens.radiusPill),
                     child: Container(

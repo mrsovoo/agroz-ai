@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,13 +8,70 @@ import '../../../core/constants/app_strings.dart';
 import '../../../core/theme/home_theme_tokens.dart';
 import '../../cart/providers/cart_provider.dart';
 
+/// Figma V10 floating bottom navigation.
+///
+/// [activeIndex]: 0 = Asosiy, 1 = Dorilar, 2 = Mutaxasislar.
 class HomeFloatingNav extends ConsumerWidget {
-  const HomeFloatingNav({super.key});
+  final int activeIndex;
+
+  const HomeFloatingNav({super.key, this.activeIndex = 0});
+
+  static const _routes = ['/', '/medicines', '/specialists'];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tokens = Theme.of(context).extension<HomeThemeTokens>() ?? HomeThemeTokens.light;
     final cartState = ref.watch(cartProvider);
+
+    Widget item(int index, String label, Widget Function(Color color) icon) {
+      final active = index == activeIndex;
+      final color = active ? Colors.white : tokens.floatingNavInactiveItemText;
+      return Expanded(
+        child: Semantics(
+          label: label,
+          button: true,
+          selected: active,
+          child: Material(
+            color: active ? tokens.floatingNavActiveItemBg : Colors.transparent,
+            borderRadius: BorderRadius.circular(30),
+            child: InkWell(
+              onTap: active
+                  ? null
+                  : () {
+                      HapticFeedback.lightImpact();
+                      context.go(_routes[index]);
+                    },
+              borderRadius: BorderRadius.circular(30),
+              child: SizedBox(
+                height: 55,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    icon(color),
+                    const SizedBox(height: 3),
+                    Text(
+                      label,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 10,
+                        fontFamily: 'Arial',
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.16,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.fade,
+                      softWrap: false,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
 
     return Container(
       width: double.infinity,
@@ -29,13 +88,13 @@ class HomeFloatingNav extends ConsumerWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          padding: const EdgeInsets.only(left: 20, right: 20, top: 8, bottom: 8),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // Left Pill Container
-              Expanded(
+              SizedBox(
+                width: 236,
                 child: Container(
                   height: 65,
                   padding: const EdgeInsets.all(5),
@@ -52,129 +111,26 @@ class HomeFloatingNav extends ConsumerWidget {
                   ),
                   child: Row(
                     children: [
-                      // Active: Asosiy
-                      Expanded(
-                        child: Container(
-                          height: 55,
-                          decoration: BoxDecoration(
-                            color: tokens.floatingNavActiveItemBg,
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.home_rounded,
-                                color: Colors.white,
-                                size: 18,
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                AppStrings.navHome,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontFamily: 'Arial',
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: -0.16,
-                                ),
-                                maxLines: 1,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      // Inactive: Dorilar
-                      Expanded(
-                        child: InkWell(
-                          onTap: () {
-                            HapticFeedback.lightImpact();
-                            context.push('/medicines');
-                          },
-                          borderRadius: BorderRadius.circular(30),
-                          child: SizedBox(
-                            height: 55,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.medication_outlined,
-                                  color: tokens.floatingNavInactiveItemText,
-                                  size: 18,
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  AppStrings.navMedicines,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: tokens.floatingNavInactiveItemText,
-                                    fontSize: 10,
-                                    fontFamily: 'Arial',
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: -0.16,
-                                  ),
-                                  maxLines: 1,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      // Inactive: Mutaxasislar
-                      Expanded(
-                        child: InkWell(
-                          onTap: () {
-                            HapticFeedback.lightImpact();
-                            context.push('/specialists');
-                          },
-                          borderRadius: BorderRadius.circular(30),
-                          child: SizedBox(
-                            height: 55,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.people_outline_rounded,
-                                  color: tokens.floatingNavInactiveItemText,
-                                  size: 18,
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  AppStrings.specialistsSectionTitle,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: tokens.floatingNavInactiveItemText,
-                                    fontSize: 10,
-                                    fontFamily: 'Arial',
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: -0.16,
-                                  ),
-                                  maxLines: 1,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
+                      item(0, AppStrings.navHome, (c) => Icon(Icons.home_outlined, color: c, size: 20)),
+                      item(1, AppStrings.navMedicines, (c) => _PillIcon(color: c, size: 20)),
+                      item(
+                        2,
+                        AppStrings.specialistsSectionTitle,
+                        (c) => Icon(Icons.people_outline_rounded, color: c, size: 20),
                       ),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const Spacer(),
 
               // Right Circular Cart Button
               Semantics(
                 label: AppStrings.navCart,
                 button: true,
                 child: Container(
-                  width: 65,
-                  height: 65,
+                  width: 70,
+                  height: 70,
                   decoration: BoxDecoration(
                     color: tokens.floatingCartBtnBg,
                     shape: BoxShape.circle,
@@ -198,20 +154,20 @@ class HomeFloatingNav extends ConsumerWidget {
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          Column(
+                          const Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.shopping_cart_outlined,
                                 color: Colors.white,
-                                size: 18,
+                                size: 24,
                               ),
-                              const SizedBox(height: 2),
+                              SizedBox(height: 3),
                               Text(
                                 AppStrings.navCart,
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 10,
                                   fontFamily: 'Arial',
@@ -256,4 +212,49 @@ class HomeFloatingNav extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Outlined diagonal capsule icon (Figma "Dorilar" tab icon).
+class _PillIcon extends StatelessWidget {
+  final Color color;
+  final double size;
+
+  const _PillIcon({required this.color, required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: CustomPaint(painter: _PillPainter(color)),
+    );
+  }
+}
+
+class _PillPainter extends CustomPainter {
+  final Color color;
+
+  _PillPainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6
+      ..strokeCap = StrokeCap.round;
+
+    final w = size.width * 0.42;
+    final h = size.height * 0.95;
+    canvas.save();
+    canvas.translate(size.width / 2, size.height / 2);
+    canvas.rotate(math.pi / 4);
+    final rect = Rect.fromCenter(center: Offset.zero, width: w, height: h);
+    canvas.drawRRect(RRect.fromRectAndRadius(rect, Radius.circular(w / 2)), paint);
+    canvas.drawLine(Offset(-w / 2, 0), Offset(w / 2, 0), paint);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _PillPainter oldDelegate) => oldDelegate.color != color;
 }

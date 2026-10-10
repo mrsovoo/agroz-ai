@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/common/screens/coming_soon_screen.dart';
 import '../../features/home/screens/home_screen.dart';
+import '../../features/medicines/screens/medicines_screen.dart';
+import '../../features/specialists/screens/specialists_screen.dart';
 import '../../features/test/test_screen.dart';
 import '../constants/app_strings.dart';
 
@@ -12,7 +14,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/',
         name: 'home',
-        builder: (context, state) => const HomeScreen(),
+        pageBuilder: (context, state) => const NoTransitionPage(child: HomeScreen()),
       ),
       GoRoute(
         path: '/test',
@@ -22,12 +24,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/specialists',
         name: 'specialists',
-        builder: (context, state) => const ComingSoonScreen(title: AppStrings.specialistsTitle),
+        pageBuilder: (context, state) => const NoTransitionPage(child: SpecialistsScreen()),
       ),
       GoRoute(
         path: '/medicines',
         name: 'medicines',
-        builder: (context, state) => const ComingSoonScreen(title: AppStrings.medicinesTitle),
+        pageBuilder: (context, state) => const NoTransitionPage(child: MedicinesScreen()),
       ),
       GoRoute(
         path: '/cart',

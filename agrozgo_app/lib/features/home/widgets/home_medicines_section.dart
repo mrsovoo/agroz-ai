@@ -76,7 +76,7 @@ class HomeMedicinesSection extends ConsumerWidget {
                         if (onViewAllTap != null) {
                           onViewAllTap!();
                         } else {
-                          context.push('/medicines');
+                          context.go('/medicines');
                         }
                       },
                       borderRadius: BorderRadius.circular(tokens.radiusPill),
@@ -130,7 +130,7 @@ class HomeMedicinesSection extends ConsumerWidget {
                   separatorBuilder: (_, __) => const SizedBox(width: 8),
                   itemBuilder: (context, index) {
                     final item = medicines[index];
-                    return _MedicineCard(
+                    return MedicineCard(
                       medicine: item,
                       tokens: tokens,
                     );
@@ -178,13 +178,16 @@ class HomeMedicinesSection extends ConsumerWidget {
   }
 }
 
-class _MedicineCard extends ConsumerWidget {
+class MedicineCard extends ConsumerWidget {
   final MedicineModel medicine;
   final HomeThemeTokens tokens;
+  final double? width;
 
-  const _MedicineCard({
+  const MedicineCard({
+    super.key,
     required this.medicine,
     required this.tokens,
+    this.width = 190,
   });
 
   String _formatPrice(int? price) {
@@ -202,12 +205,38 @@ class _MedicineCard extends ConsumerWidget {
     return '${buffer.toString().split('').reversed.join()} ${AppStrings.currency}';
   }
 
+  Widget _placeholder(double size) => Center(
+        child: Icon(
+          Icons.medication_rounded,
+          color: Colors.grey.shade400,
+          size: size,
+        ),
+      );
+
+  Widget _buildImage() {
+    final url = medicine.imageUrl;
+    if (url == null || url.isEmpty) return _placeholder(48);
+    if (url.startsWith('assets/')) {
+      return Image.asset(
+        url,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _placeholder(40),
+      );
+    }
+    return CachedNetworkImage(
+      imageUrl: url,
+      fit: BoxFit.cover,
+      placeholder: (_, __) => _placeholder(40),
+      errorWidget: (_, __, ___) => _placeholder(40),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final formattedPrice = _formatPrice(medicine.price);
 
     return Container(
-      width: 190,
+      width: width,
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: tokens.productCardBg,
@@ -216,7 +245,7 @@ class _MedicineCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image / Placeholder container (height: 182, radius: 20)
+          // Image container (height: 182, radius: 20, 0.3 border)
           Container(
             width: double.infinity,
             height: 182,
@@ -229,32 +258,7 @@ class _MedicineCard extends ConsumerWidget {
               ),
             ),
             clipBehavior: Clip.antiAlias,
-            child: medicine.imageUrl != null && medicine.imageUrl!.isNotEmpty
-                ? CachedNetworkImage(
-                    imageUrl: medicine.imageUrl!,
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) => Center(
-                      child: Icon(
-                        Icons.medication_rounded,
-                        color: Colors.grey.shade400,
-                        size: 40,
-                      ),
-                    ),
-                    errorWidget: (_, __, ___) => Center(
-                      child: Icon(
-                        Icons.medication_rounded,
-                        color: Colors.grey.shade400,
-                        size: 40,
-                      ),
-                    ),
-                  )
-                : Center(
-                    child: Icon(
-                      Icons.medication_rounded,
-                      color: Colors.grey.shade400,
-                      size: 48,
-                    ),
-                  ),
+            child: _buildImage(),
           ),
           const SizedBox(height: 6),
 
