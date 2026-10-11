@@ -9,16 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 void main() {
   group('App smoke & widget tests', () {
-    testWidgets('AgrozApp renders MissingConfigScreen when API_URL is empty', (WidgetTester tester) async {
+    testWidgets('AgrozApp renders HomeScreen directly', (WidgetTester tester) async {
       await tester.pumpWidget(const ProviderScope(child: AgrozApp()));
-      await tester.pump();
-
-      expect(find.text('API_URL Sozlanmagan'), findsOneWidget);
-      expect(find.textContaining('--dart-define=API_URL='), findsOneWidget);
-    });
-
-    testWidgets('AgrozApp renders HomeScreen when config check is bypassed', (WidgetTester tester) async {
-      await tester.pumpWidget(const ProviderScope(child: AgrozApp(bypassConfigCheck: true)));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
