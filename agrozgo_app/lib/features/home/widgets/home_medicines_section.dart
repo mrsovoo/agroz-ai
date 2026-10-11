@@ -234,6 +234,9 @@ class MedicineCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final formattedPrice = _formatPrice(medicine.price);
+    final cartState = ref.watch(cartProvider);
+    final cartItemIndex = cartState.items.indexWhere((it) => it.medicineId == medicine.id);
+    final inCartQuantity = cartItemIndex != -1 ? cartState.items[cartItemIndex].quantity : 0;
 
     return Container(
       width: width,
@@ -245,10 +248,10 @@ class MedicineCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image container (height: 182, radius: 20, 0.3 border)
+          // Image container (height: 172, radius: 20, 0.3 border)
           Container(
             width: double.infinity,
-            height: 182,
+            height: 172,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(tokens.radiusProductImage),
@@ -267,8 +270,8 @@ class MedicineCard extends ConsumerWidget {
             medicine.name,
             style: TextStyle(
               fontSize: 15,
-              fontWeight: FontWeight.w500,
-              fontFamily: 'PingFang SC',
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Arial',
               color: tokens.productTitle,
             ),
             maxLines: 1,
@@ -277,18 +280,26 @@ class MedicineCard extends ConsumerWidget {
 
           // Usage / Subtitle
           SizedBox(
-            height: 24,
+            height: 20,
             child: Text(
               medicine.usage ?? 'Tabiiy minerallarga boy ozuqa',
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 10.5,
                 fontWeight: FontWeight.w400,
-                fontFamily: 'PingFang SC',
+                fontFamily: 'Arial',
                 color: tokens.productSubtitle,
                 height: 1.2,
               ),
-              maxLines: 2,
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 4),
+            child: Divider(
+              height: 1,
+              thickness: 0.5,
+              color: Color(0xFFE5E5EA),
             ),
           ),
           const Spacer(),
@@ -297,9 +308,9 @@ class MedicineCard extends ConsumerWidget {
           Text(
             formattedPrice,
             style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              fontFamily: 'PingFang SC',
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              fontFamily: 'Arial',
               color: tokens.productPrice,
             ),
             maxLines: 1,
@@ -307,51 +318,135 @@ class MedicineCard extends ConsumerWidget {
           ),
           const SizedBox(height: 6),
 
-          // + Savatga Button
-          Semantics(
-            label: '${medicine.name} - ${AppStrings.addToCart}',
-            button: true,
-            child: Material(
-              color: tokens.addToCartBg,
-              borderRadius: BorderRadius.circular(tokens.radiusAddToCartBtn),
-              child: InkWell(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  ref.read(cartProvider.notifier).addItem(
-                        medicineId: medicine.id,
-                        pharmacyId: medicine.pharmacyId ?? 1,
-                        name: medicine.name,
-                        price: medicine.price ?? 0,
-                        stockUnit: medicine.stockUnit,
-                      );
-                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('${medicine.name} savatga qo‘shildi'),
-                      duration: const Duration(seconds: 2),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
-                borderRadius: BorderRadius.circular(tokens.radiusAddToCartBtn),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  alignment: Alignment.center,
-                  child: Text(
-                    AppStrings.addToCart,
-                    style: TextStyle(
-                      color: tokens.addToCartText,
-                      fontSize: 12.2,
-                      fontWeight: FontWeight.w500,
-                      fontFamily: 'PingFang SC',
-                      height: 1.43,
+          // Action Button: + Savatga or [- Quantity +] Stepper
+          inCartQuantity == 0
+              ? Semantics(
+                  label: '${medicine.name} - ${AppStrings.addToCart}',
+                  button: true,
+                  child: Material(
+                    color: tokens.addToCartBg,
+                    borderRadius: BorderRadius.circular(tokens.radiusAddToCartBtn),
+                    child: InkWell(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        ref.read(cartProvider.notifier).addItem(
+                              medicineId: medicine.id,
+                              pharmacyId: medicine.pharmacyId ?? 1,
+                              name: medicine.name,
+                              price: medicine.price ?? 0,
+                              stockUnit: medicine.stockUnit,
+                              imageUrl: medicine.imageUrl,
+                            );
+                      },
+                      borderRadius: BorderRadius.circular(tokens.radiusAddToCartBtn),
+                      child: Container(
+                        width: double.infinity,
+                        height: 44,
+                        alignment: Alignment.center,
+                        child: Text(
+                          AppStrings.addToCart,
+                          style: TextStyle(
+                            color: tokens.addToCartText,
+                            fontSize: 12.2,
+                            fontWeight: FontWeight.w500,
+                            fontFamily: 'PingFang SC',
+                            height: 1.43,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
+                )
+              : Container(
+                  width: double.infinity,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(tokens.radiusAddToCartBtn),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x0F000000),
+                        blurRadius: 6,
+                        offset: Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Minus button
+                      Semantics(
+                        label: '${medicine.name} kamaytirish',
+                        button: true,
+                        child: InkWell(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            if (inCartQuantity > 1) {
+                              ref.read(cartProvider.notifier).updateQuantity(medicine.id, inCartQuantity - 1);
+                            } else {
+                              ref.read(cartProvider.notifier).removeItem(medicine.id);
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(22),
+                          child: Container(
+                            width: 38,
+                            height: 38,
+                            margin: const EdgeInsets.only(left: 3),
+                            decoration: BoxDecoration(
+                              color: tokens.addToCartBg,
+                              shape: BoxShape.circle,
+                            ),
+                            alignment: Alignment.center,
+                            child: const Icon(
+                              Icons.remove,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // Quantity number
+                      Text(
+                        '$inCartQuantity',
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          fontFamily: 'Arial',
+                        ),
+                      ),
+
+                      // Plus button
+                      Semantics(
+                        label: '${medicine.name} ko‘paytirish',
+                        button: true,
+                        child: InkWell(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            ref.read(cartProvider.notifier).updateQuantity(medicine.id, inCartQuantity + 1);
+                          },
+                          borderRadius: BorderRadius.circular(22),
+                          child: Container(
+                            width: 38,
+                            height: 38,
+                            margin: const EdgeInsets.only(right: 3),
+                            decoration: BoxDecoration(
+                              color: tokens.addToCartBg,
+                              shape: BoxShape.circle,
+                            ),
+                            alignment: Alignment.center,
+                            child: const Icon(
+                              Icons.add,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ),
-          ),
         ],
       ),
     );

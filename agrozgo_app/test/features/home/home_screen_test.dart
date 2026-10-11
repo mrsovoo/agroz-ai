@@ -283,11 +283,40 @@ void main() {
       await tester.ensureVisible(addBtn);
       await tester.pumpAndSettle();
       await tester.tap(addBtn);
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      // Verify cart state updated
+      // Verify cart state updated to 1
       expect(container.read(cartProvider).totalCount, 1);
       expect(container.read(cartProvider).totalPrice, 35000);
+
+      // Verify card now displays stepper with minus, plus, and count '1'
+      expect(find.byIcon(Icons.remove), findsWidgets);
+      expect(find.byIcon(Icons.add), findsWidgets);
+      expect(find.text('1'), findsWidgets);
+
+      // Tap + to increment quantity to 2
+      final plusBtn = find.byIcon(Icons.add).first;
+      await tester.tap(plusBtn);
+      await tester.pumpAndSettle();
+
+      expect(container.read(cartProvider).totalCount, 2);
+      expect(container.read(cartProvider).totalPrice, 70000);
+      expect(find.text('2'), findsWidgets);
+
+      // Tap - to decrement back to 1
+      final minusBtn = find.byIcon(Icons.remove).first;
+      await tester.tap(minusBtn);
+      await tester.pumpAndSettle();
+
+      expect(container.read(cartProvider).totalCount, 1);
+      expect(find.text('1'), findsWidgets);
+
+      // Tap - again to remove from cart and revert to + Savatga
+      await tester.tap(minusBtn);
+      await tester.pumpAndSettle();
+
+      expect(container.read(cartProvider).totalCount, 0);
+      expect(find.text(AppStrings.addToCart), findsWidgets);
     });
   });
 

@@ -181,23 +181,33 @@ class HomeFloatingNav extends ConsumerWidget {
                           ),
                           if (cartState.totalCount > 0)
                             Positioned(
-                              top: 6,
+                              top: 4,
                               right: 6,
                               child: Container(
-                                constraints: const BoxConstraints(minWidth: 16),
-                                height: 16,
-                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                constraints: const BoxConstraints(minWidth: 20),
+                                height: 20,
+                                padding: const EdgeInsets.symmetric(horizontal: 5),
                                 decoration: BoxDecoration(
-                                  color: tokens.badgeBg,
-                                  borderRadius: BorderRadius.circular(8),
+                                  color: const Color(0xFFFA2B36),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: Colors.white, width: 1.5),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Color(0x33000000),
+                                      blurRadius: 4,
+                                      offset: Offset(0, 1),
+                                    ),
+                                  ],
                                 ),
                                 alignment: Alignment.center,
                                 child: Text(
-                                  '${cartState.totalCount}',
+                                  cartState.totalCount > 99 ? '99+' : '${cartState.totalCount}',
                                   style: const TextStyle(
                                     color: Colors.white,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11,
+                                    fontFamily: 'Arial',
+                                    fontWeight: FontWeight.w800,
+                                    height: 1.0,
                                   ),
                                 ),
                               ),
