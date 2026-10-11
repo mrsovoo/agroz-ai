@@ -520,8 +520,10 @@ export default function SuperAdminPage() {
       // FAKAT backend tasdiqlagan holda authenticated=true
       if (data?.authenticated === true) {
         setMe({ enabled: true, authenticated: true, username: data?.username || "admin" });
+      } else if (data?.enabled === false) {
+        setMe({ enabled: false, authenticated: false });
       } else {
-        setMe(data || { enabled: true, authenticated: false });
+        setMe({ enabled: true, authenticated: false });
       }
     } catch {
       // Xatoda login sahifasini ko'rsatamiz, auto-login QILMAYMIZ

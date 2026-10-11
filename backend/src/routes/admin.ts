@@ -78,7 +78,7 @@ export async function requireAdmin(req: any, res: any, next: any) {
 // -------------------------------------------------------------
 
 // GET /api/admin/me
-router.get("/me", requireAdmin, async (req, res) => {
+router.get("/me", async (req, res) => {
   try {
     const enabled = await adminEnabled();
     const sid = getAdminSid(req);
