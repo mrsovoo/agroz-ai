@@ -49,3 +49,4 @@ class MissingConfigScreen extends StatelessWidget {
     );
   }
 }
+

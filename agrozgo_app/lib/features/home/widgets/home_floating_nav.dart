@@ -148,7 +148,9 @@ class HomeFloatingNav extends ConsumerWidget {
                     child: InkWell(
                       onTap: () {
                         HapticFeedback.lightImpact();
-                        context.push('/cart');
+                        if (activeIndex != 3) {
+                          context.go('/cart');
+                        }
                       },
                       customBorder: const CircleBorder(),
                       child: Stack(

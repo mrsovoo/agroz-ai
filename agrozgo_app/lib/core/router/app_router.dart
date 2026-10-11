@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../features/cart/screens/cart_screen.dart';
 import '../../features/common/screens/coming_soon_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/medicines/screens/medicines_screen.dart';
@@ -34,7 +35,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/cart',
         name: 'cart',
-        builder: (context, state) => const ComingSoonScreen(title: AppStrings.navCart),
+        pageBuilder: (context, state) => const NoTransitionPage(child: CartScreen()),
       ),
       GoRoute(
         path: '/notifications',
