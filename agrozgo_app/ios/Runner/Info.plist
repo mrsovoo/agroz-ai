@@ -39,5 +39,12 @@
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 	</array>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_dartobservatory._tcp</string>
+		<string>_dartvmService._tcp</string>
+	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Flutter vositalari bilan ilovani sinash va yangilash uchun mahalliy tarmoqqa ulanish zarur.</string>
 </dict>
 </plist>
