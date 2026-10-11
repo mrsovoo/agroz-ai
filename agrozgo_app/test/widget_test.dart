@@ -9,8 +9,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 void main() {
   group('App smoke & widget tests', () {
-    testWidgets('AgrozApp smoke test - renders HomeScreen', (WidgetTester tester) async {
+    testWidgets('AgrozApp renders MissingConfigScreen when API_URL is empty', (WidgetTester tester) async {
       await tester.pumpWidget(const ProviderScope(child: AgrozApp()));
+      await tester.pump();
+
+      expect(find.text('API_URL Sozlanmagan'), findsOneWidget);
+      expect(find.textContaining('--dart-define=API_URL='), findsOneWidget);
+    });
+
+    testWidgets('AgrozApp renders HomeScreen when config check is bypassed', (WidgetTester tester) async {
+      await tester.pumpWidget(const ProviderScope(child: AgrozApp(bypassConfigCheck: true)));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -23,11 +31,12 @@ void main() {
   });
 
   group('Unit Tests: Config & Models', () {
-    test('AppConfig defaults to user flavor', () {
+    test('AppConfig defaults to user flavor and empty apiUrl', () {
       expect(AppConfig.flavor, AppFlavor.user);
       expect(AppConfig.flavor.appTitle, 'AgrozGO');
       expect(AppConfig.flavor.applicationId, 'uz.agrozgo.app');
-      expect(AppConfig.apiUrl, isNotEmpty);
+      expect(AppConfig.apiUrl, isEmpty);
+      expect(AppConfig.hasValidApiUrl, isFalse);
     });
 
     test('AuthModels json serialization', () {

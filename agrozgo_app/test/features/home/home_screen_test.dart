@@ -303,7 +303,7 @@ void main() {
             homeMedicinesProvider.overrideWith((ref) => sampleMedicines),
             homeSpecialistsProvider.overrideWith((ref) => sampleSpecialists),
           ],
-          child: const AgrozApp(),
+          child: const AgrozApp(bypassConfigCheck: true),
         ),
       );
       await tester.pumpAndSettle();
