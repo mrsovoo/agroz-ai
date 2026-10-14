@@ -15,6 +15,7 @@ import {
   FileText,
   User,
   ArrowUpRight,
+  Phone,
 } from "lucide-react";
 import AgrozLogo from "@/components/AgrozLogo";
 import { useI18n } from "@/lib/i18n";
@@ -27,8 +28,9 @@ export default function WebFooter() {
     {
       title: t.footer.col_services,
       links: [
-        { href: "/dorilar", label: t.nav.products, icon: ShoppingCart },
-        { href: "/mutaxassislar", label: t.specialists.tag, icon: Users },
+        { href: "/agrozgo", label: "AgrozGO (Web Ilova)", icon: ShoppingCart },
+        { href: "/agrozgo#bozor", label: "Agro Bozor", icon: ShoppingCart },
+        { href: "/agrozgo#mutaxassislar", label: t.specialists.tag, icon: Users },
         { href: "/yangiliklar", label: t.nav.blog, icon: Sprout },
       ],
     },
@@ -36,7 +38,7 @@ export default function WebFooter() {
       title: t.footer.col_business,
       links: [
         { href: "/hamkorlik", label: t.nav.connect_store, icon: Store },
-        { href: "/hamkorlik?mode=login", label: t.nav.cabinet, icon: ShieldCheck },
+        { href: "/hamkorlik?mode=login", label: "Biznes kabinet", icon: ShieldCheck },
         { href: "/#about", label: t.nav.debt_book, icon: Layers },
         { href: "/#tariffs", label: t.tariffs.tag, icon: CreditCard },
       ],
@@ -45,6 +47,7 @@ export default function WebFooter() {
       title: t.footer.col_platform,
       links: [
         { href: "/#about", label: t.story1.title, icon: Layers },
+        { href: "tel:+998908383772", label: "+998 90 838 37 72", icon: Phone, external: true },
         { href: "https://t.me/agrozai_bot", label: "Telegram Bot", icon: Send, external: true },
         { href: "/#aloqa", label: t.faq.title, icon: HelpCircle },
       ],
@@ -54,7 +57,7 @@ export default function WebFooter() {
       links: [
         { href: "/maxfiylik", label: t.footer.privacy, icon: ShieldCheck },
         { href: "/shartlar", label: t.footer.terms, icon: FileText },
-        { href: "/profil", label: t.footer.profile, icon: User },
+        { href: "/kirish", label: "Kirish / Ro‘yxatdan o‘tish", icon: User },
       ],
     },
   ];
@@ -65,8 +68,7 @@ export default function WebFooter() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8 lg:gap-12">
           {/* Chap brend bloki */}
           <div className="col-span-2 space-y-4">
-            <Link href="/" prefetch={true} className="inline-flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
+            <Link href="/" prefetch={true} className="inline-flex items-center">
               <AgrozLogo className="h-7 w-auto" />
             </Link>
             <p className="text-xs text-[#86868B] leading-relaxed max-w-sm">

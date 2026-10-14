@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
+import Link from "next/link";
 import {
   Search,
   Loader2,
@@ -165,9 +166,9 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12">
         {/* 1. Breadcrumb & Sarlavha */}
         <div className="flex items-center gap-2 text-xs font-semibold text-zinc-500 mb-3">
-          <a href="/" className="hover:text-black transition">
+          <Link href="/" className="hover:text-black transition">
             AgrozGO
-          </a>
+          </Link>
           <span>/</span>
           <span className="text-zinc-900">Mutaxassislar</span>
         </div>

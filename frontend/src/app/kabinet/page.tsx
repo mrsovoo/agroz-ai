@@ -558,6 +558,12 @@ export default function PartnerKabinetPage() {
     return () => clearInterval(interval);
   }, [partner, initData, webToken]);
 
+  useEffect(() => {
+    if (!loading && !partner) {
+      router.replace("/hamkorlik?mode=login");
+    }
+  }, [loading, partner, router]);
+
   async function handleStartPlan(plan: "beta" | "standard", storeName?: string, phone?: string) {
     setLoginLoading(true);
     setLoginError(null);
@@ -1103,13 +1109,6 @@ export default function PartnerKabinetPage() {
       </div>
     );
   }
-
-  // 2. Agar foydalanuvchi tizimga kirmagan bo'lsa (Hamkorlik va Kirish sahifasiga yo'naltirish)
-  useEffect(() => {
-    if (!loading && !partner) {
-      router.replace("/hamkorlik?mode=login");
-    }
-  }, [loading, partner, router]);
 
   if (!partner) {
     return (
@@ -2287,14 +2286,22 @@ export default function PartnerKabinetPage() {
                   <h4 className="text-xs font-semibold text-[#1D1D1F]">Texnik qo&apos;llab-quvvatlash</h4>
                   <p className="text-[11px] text-[#86868B]">Savollar va yordam bo&apos;yicha</p>
                 </div>
-                <a
-                  href="https://t.me/agroz_support"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-xl bg-[#1b1464] px-3.5 py-2 text-xs font-bold text-white shadow-xs transition hover:opacity-90"
-                >
-                  @agroz_support
-                </a>
+                <div className="flex items-center gap-2">
+                  <a
+                    href="tel:+998908383772"
+                    className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-bold text-zinc-800 shadow-2xs transition hover:bg-zinc-100"
+                  >
+                    +998 90 838 37 72
+                  </a>
+                  <a
+                    href="https://t.me/agroz_support"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-xl bg-[#1b1464] px-3.5 py-2 text-xs font-bold text-white shadow-xs transition hover:opacity-90"
+                  >
+                    @agroz_support
+                  </a>
+                </div>
               </div>
             </div>
           )}
