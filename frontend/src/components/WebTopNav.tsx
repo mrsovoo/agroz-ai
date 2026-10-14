@@ -24,6 +24,7 @@ import {
   ShieldCheck,
   ChevronDown,
   User,
+  Phone,
 } from "lucide-react";
 import AgrozLogo from "@/components/AgrozLogo";
 import { loadCart, closeCart, toggleCart, CART_EVENT } from "@/lib/cart-store";
@@ -73,9 +74,9 @@ export default function WebTopNav() {
 
   const navLinks = [
     { href: "/#about", label: t.nav.about, isAnchor: true },
-    { href: "/agrozgo", label: "AgrozGO" },
-    { href: "/hamkorlik", label: t.nav.partners },
-    { href: "/yangiliklar", label: t.nav.blog },
+    { href: "/#app", label: "Mobil Ilova", isAnchor: true },
+    { href: "/#business", label: "Agroz Business", isAnchor: true },
+    { href: "/#tariffs", label: "Tariflar", isAnchor: true },
     { href: "/#aloqa", label: t.nav.contact, isAnchor: true },
   ];
 
@@ -129,7 +130,7 @@ export default function WebTopNav() {
           })}
         </nav>
 
-        {/* 3. O'ng tomon Amallar (Til Tanlash, Qidiruv, Savat, Black pill CTA) */}
+        {/* 3. O'ng tomon Amallar (Til Tanlash, Kabinet, Black pill CTA) */}
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Apple-style Til tanlash Menyusi (Dropdown) */}
           <div className="relative" ref={langMenuRef}>
@@ -176,43 +177,15 @@ export default function WebTopNav() {
             )}
           </div>
 
-          {/* Qidiruv ikonka tugmasi */}
+          {/* Kirish / Kabinet Tugmasi */}
           <Link
-            href="/agrozgo"
-            onClick={() => closeCart()}
-            className="w-9 h-9 rounded-full bg-[#F4F3ED] hover:bg-zinc-200 flex items-center justify-center text-zinc-700 transition"
-            title={t.nav.search}
-            aria-label={t.nav.search}
-          >
-            <Search size={15} />
-          </Link>
-
-          {/* Savat Tugmasi */}
-          <button
-            type="button"
-            onClick={() => toggleCart()}
-            className="relative flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1.5 text-xs font-semibold text-zinc-800 transition active:scale-95 shadow-2xs"
-            title={t.nav.cart}
-            aria-label={t.nav.cart}
-          >
-            <ShoppingCart size={15} className="text-emerald-700" />
-            <span className="hidden sm:inline">{t.nav.cart}</span>
-            {cartCount > 0 && (
-              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-black text-white ml-0.5">
-                {cartCount}
-              </span>
-            )}
-          </button>
-
-          {/* Kirish / Kabinet Tugmasi (Mijoz & Fermer uchun) */}
-          <Link
-            href="/kirish"
+            href="/hamkorlik?mode=login"
             prefetch={true}
             onClick={() => closeCart()}
             className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-zinc-200 bg-white hover:bg-zinc-50 text-xs font-bold text-zinc-800 transition active:scale-95 shadow-2xs"
           >
             <User size={13} className="text-zinc-600" />
-            <span>{t.nav.cabinet}</span>
+            <span>Kabinet</span>
           </Link>
 
           {/* Do'konni ulash CTA (Biznes hamkorlik uchun) */}
@@ -245,60 +218,55 @@ export default function WebTopNav() {
           id="mobile-nav-menu"
           className="lg:hidden max-w-6xl mx-auto mt-2 rounded-3xl border border-black/8 bg-white/98 backdrop-blur-xl px-5 py-5 space-y-4 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-150 max-h-[85vh] overflow-y-auto pointer-events-auto"
         >
-          {/* Asosiy Ilova */}
+          {/* Asosiy Bo'limlar */}
           <div className="space-y-1.5">
             <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-3">
-              AgrozGO Ilova
+              Platforma
             </div>
             <Link
-              href="/agrozgo"
-              onClick={() => {
-                setMobileMenuOpen(false);
-                closeCart();
-              }}
-              className="flex items-center justify-between p-3 rounded-2xl bg-emerald-50 text-emerald-950 font-bold text-xs"
-            >
-              <span className="flex items-center gap-2.5">
-                <span className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center">
-                  <ShoppingCart size={15} />
-                </span>
-                <span>AgrozGO Web App (Bozor, Ob-havo, Ekspertlar)</span>
-              </span>
-              <span className="text-[9px] bg-emerald-600 text-white px-2 py-0.5 rounded-full uppercase font-black">
-                Live
-              </span>
-            </Link>
-
-            <Link
-              href="/agrozgo#bozor"
+              href="/#app"
               onClick={() => {
                 setMobileMenuOpen(false);
                 closeCart();
               }}
               className="flex items-center gap-2.5 p-3 rounded-2xl text-zinc-800 hover:bg-zinc-50 font-bold text-xs"
             >
-              <span className="w-7 h-7 rounded-lg bg-zinc-100 text-zinc-800 flex items-center justify-center">
+              <span className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                <Smartphone size={15} />
+              </span>
+              <span>Mobil Ilova (iOS & Android)</span>
+            </Link>
+
+            <Link
+              href="/#business"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                closeCart();
+              }}
+              className="flex items-center gap-2.5 p-3 rounded-2xl text-zinc-800 hover:bg-zinc-50 font-bold text-xs"
+            >
+              <span className="w-7 h-7 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
                 <Store size={15} />
               </span>
-              <span>{t.nav.market_title}</span>
+              <span>Agroz Business ERP (Dorixonalar uchun)</span>
             </Link>
 
             <Link
-              href="/agrozgo#mutaxassislar"
+              href="/#tariffs"
               onClick={() => {
                 setMobileMenuOpen(false);
                 closeCart();
               }}
               className="flex items-center gap-2.5 p-3 rounded-2xl text-zinc-800 hover:bg-zinc-50 font-bold text-xs"
             >
-              <span className="w-7 h-7 rounded-lg bg-zinc-100 text-zinc-800 flex items-center justify-center">
-                <Users size={15} />
+              <span className="w-7 h-7 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center">
+                <Layers size={15} />
               </span>
-              <span>{t.nav.specialists_title}</span>
+              <span>Biznes Tariflar</span>
             </Link>
 
             <Link
-              href="/yangiliklar"
+              href="/#about"
               onClick={() => {
                 setMobileMenuOpen(false);
                 closeCart();
@@ -306,87 +274,48 @@ export default function WebTopNav() {
               className="flex items-center gap-2.5 p-3 rounded-2xl text-zinc-800 hover:bg-zinc-50 font-semibold text-xs"
             >
               <span className="w-7 h-7 rounded-lg bg-zinc-100 text-zinc-800 flex items-center justify-center">
-                <Sprout size={15} />
+                <Sparkles size={15} />
               </span>
-              <span>{t.nav.tips_title}</span>
+              <span>Biz haqimizda</span>
             </Link>
-          </div>
 
-          {/* Platforma & Biznes */}
-          <div className="border-t border-zinc-100 pt-3 space-y-1 text-xs font-semibold text-zinc-700">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-3">
-              {t.nav.about_platform}
-            </div>
-            <Link
-              href="/#about"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-zinc-50"
-            >
-              <Store size={15} className="text-zinc-500" />
-              <span>{t.nav.debt_book}</span>
-            </Link>
-            <Link
-              href="/#about"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-zinc-50"
-            >
-              <BarChart3 size={15} className="text-zinc-500" />
-              <span>{t.nav.analytics}</span>
-            </Link>
-            <Link
-              href="/#tariffs"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-zinc-50"
-            >
-              <CreditCard size={15} className="text-zinc-500" />
-              <span>{t.nav.tariffs}</span>
-            </Link>
             <Link
               href="/#aloqa"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-zinc-50"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                closeCart();
+              }}
+              className="flex items-center gap-2.5 p-3 rounded-2xl text-zinc-800 hover:bg-zinc-50 font-semibold text-xs"
             >
-              <HelpCircle size={15} className="text-zinc-500" />
-              <span>{t.nav.faq}</span>
+              <span className="w-7 h-7 rounded-lg bg-zinc-100 text-zinc-800 flex items-center justify-center">
+                <Phone size={15} />
+              </span>
+              <span>{t.nav.contact}</span>
             </Link>
           </div>
 
-          {/* Amallar: Ro'yxatdan o'tish, Do'konni ulash va Kirish alohida */}
-          <div className="border-t border-zinc-100 pt-3 space-y-2">
+          {/* Tugmalar */}
+          <div className="border-t border-zinc-100 pt-3 flex flex-col gap-2">
             <Link
               href="/hamkorlik"
               onClick={() => {
                 setMobileMenuOpen(false);
                 closeCart();
               }}
-              className="w-full py-3 px-4 rounded-full bg-[#191B1F] hover:bg-black text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm"
+              className="w-full text-center text-xs font-bold bg-[#191B1F] text-white py-3 rounded-full shadow-sm"
             >
-              <span>{t.nav.connect_store}</span>
-              <ArrowRight size={14} />
+              {t.nav.connect_store}
             </Link>
-
-            <div className="grid grid-cols-2 gap-2 pt-1">
-              <Link
-                href="/kirish"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  closeCart();
-                }}
-                className="py-2.5 px-3 rounded-full bg-emerald-600 text-white text-center font-bold text-xs hover:bg-emerald-700 shadow-xs"
-              >
-                Kirish / Ro‘yxatdan o‘tish
-              </Link>
-              <Link
-                href="/hamkorlik?mode=login"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  closeCart();
-                }}
-                className="py-2.5 px-3 rounded-full border border-zinc-200 text-zinc-800 text-center font-bold text-xs hover:bg-zinc-50"
-              >
-                Biznes kabinet
-              </Link>
-            </div>
+            <Link
+              href="/hamkorlik?mode=login"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                closeCart();
+              }}
+              className="w-full text-center text-xs font-bold border border-zinc-200 bg-white text-zinc-800 py-3 rounded-full"
+            >
+              Biznes kabinetga kirish
+            </Link>
           </div>
         </div>
       )}

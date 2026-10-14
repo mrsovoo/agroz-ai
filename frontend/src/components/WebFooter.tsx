@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import {
-  ShoppingCart,
   Users,
   Sprout,
   Store,
@@ -16,6 +15,8 @@ import {
   User,
   ArrowUpRight,
   Phone,
+  Sparkles,
+  CloudSun,
 } from "lucide-react";
 import AgrozLogo from "@/components/AgrozLogo";
 import { useI18n } from "@/lib/i18n";
@@ -26,12 +27,12 @@ export default function WebFooter() {
 
   const columns = [
     {
-      title: t.footer.col_services,
+      title: "Ilova & Xizmatlar",
       links: [
-        { href: "/agrozgo", label: "AgrozGO (Web Ilova)", icon: ShoppingCart },
-        { href: "/agrozgo#bozor", label: "Agro Bozor", icon: ShoppingCart },
-        { href: "/agrozgo#mutaxassislar", label: t.specialists.tag, icon: Users },
-        { href: "/yangiliklar", label: t.nav.blog, icon: Sprout },
+        { href: "/#app", label: "AgrozGO Mobil Ilovasi", icon: Smartphone },
+        { href: "/#business", label: "Agroz Business ERP", icon: Store },
+        { href: "/tashxis", label: "AI Agro-Diagnostika", icon: Sparkles },
+        { href: "/ob-havo", label: "Agro Ob-havo", icon: CloudSun },
       ],
     },
     {
