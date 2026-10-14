@@ -9,15 +9,10 @@ import {
   Check,
   ChevronDown,
   ShoppingCart,
-  Star,
-  MapPin,
   Users,
   Sprout,
   ShieldCheck,
   Sparkles,
-  TrendingUp,
-  Award,
-  Zap,
   CloudSun,
   Store,
   Phone,
@@ -28,606 +23,36 @@ import {
   Receipt,
   BarChart3,
   BookOpen,
+  Award,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { apiFetch } from "@/lib/api-config";
 
-// Bazadagi haqiqiy tasdiqlangan 24 ta dori vositasi
-const REAL_PRODUCTS = [
-  {
-    id: 1,
-    name: "Ridomil Gold MZ 68 WG",
-    category: "Fungitsid",
-    type: "crop",
-    desc: "Pomidor, kartoshka va uzumdagi fitoftoroz, peronosporoz va soxta un-shudringga qarshi tizimli fungitsid.",
-    price: "65 000 so‘m",
-    store: "Agro Kimyo Baraka MCHJ",
-    location: "Toshkent",
-    stock: 10,
-    badge: "Himoya",
-    badgeIcon: Sprout,
-    badgeColor: "bg-emerald-100/90 text-emerald-900 border border-emerald-200",
-    image: "https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: 2,
-    name: "Score 250 EC (Skor)",
-    category: "Fungitsid",
-    type: "crop",
-    desc: "Olma va mevali daraxtlardagi qora dog' (parsha), un-shudring va klasterosporioz kasalliklariga qarshi kuchli vosita.",
-    price: "48 000 so‘m",
-    store: "Dehqon Hamkori Agrovet",
-    location: "Samarqand",
-    stock: 10,
-    badge: "Bog‘dorchilik",
-    badgeIcon: Sprout,
-    badgeColor: "bg-emerald-100/90 text-emerald-900 border border-emerald-200",
-    image: "https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: 3,
-    name: "Amistar Extra 280 SC",
-    category: "Fungitsid",
-    type: "crop",
-    desc: "Bug'doy, arpa va dukkaklilardagi sariq zang, septorioz va fuzarioz kasalliklaridan uzoq muddatli himoya.",
-    price: "85 000 so‘m",
-    store: "Vodiy Agro Zamin Savdo Markazi",
-    location: "Farg‘ona",
-    stock: 10,
-    badge: "G‘allachilik",
-    badgeIcon: Sprout,
-    badgeColor: "bg-emerald-100/90 text-emerald-900 border border-emerald-200",
-    image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: 4,
-    name: "Envidor 240 SC",
-    category: "Akaritsid",
-    type: "crop",
-    desc: "O'rgimchakkana, qizil kana va barcha turdagi zararkunanda kanalarning tuxum hamda yetuk shakllariga qarshi akaritsid.",
-    price: "54 000 so‘m",
-    store: "Buxoro Vet Shifo Markaziy Dorixonasi",
-    location: "Buxoro",
-    stock: 10,
-    badge: "Kana himoyasi",
-    badgeIcon: ShieldCheck,
-    badgeColor: "bg-amber-100/90 text-amber-900 border border-amber-200",
-    image: "https://images.unsplash.com/photo-1530595467537-0b5996c41f2d?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: 5,
-    name: "Konfidor Extra (Imidakloprid)",
-    category: "Insektitsid",
-    type: "crop",
-    desc: "Oqqanot, shira (tlya), tripslar va kolorado qo'ng'iziga qarshi tizimli, tez ta'sir qiluvchi insektitsid.",
-    price: "32 000 so‘m",
-    store: "Andijon Hosil Fayz Agro Do'koni",
-    location: "Andijon",
-    stock: 10,
-    badge: "Zararkunandalarga",
-    badgeIcon: ShieldCheck,
-    badgeColor: "bg-rose-100/90 text-rose-900 border border-rose-200",
-    image: "https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: 6,
-    name: "Koragen 20 SC",
-    category: "Insektitsid",
-    type: "crop",
-    desc: "Pomidor kuyasi (Tuta absoluta), paxta tunlami, meva qurtlari va barg o'rovchilarga qarshi innovatsion preparat.",
-    price: "92 000 so‘m",
-    store: "Chorva Servis Vet Farm",
-    location: "Toshkent",
-    stock: 10,
-    badge: "Tuta Absoluta",
-    badgeIcon: ShieldCheck,
-    badgeColor: "bg-rose-100/90 text-rose-900 border border-rose-200",
-    image: "https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: 7,
-    name: "Previkur Enerji 840 SL",
-    category: "Fungitsid & Stimulyator",
-    type: "crop",
-    desc: "Ko'chatlarning ildiz chirish (qora oyoq), pitium va peronosporoz kasalliklariga qarshi fungitsid va ildiz stimulyatori.",
-    price: "78 000 so‘m",
-    store: "Agro Kimyo Baraka MCHJ",
-    location: "Toshkent",
-    stock: 10,
-    badge: "Ildiz himoyasi",
-    badgeIcon: Sprout,
-    badgeColor: "bg-emerald-100/90 text-emerald-900 border border-emerald-200",
-    image: "https://images.unsplash.com/photo-1530595467537-0b5996c41f2d?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: 8,
-    name: "Topaz 100 EC",
-    category: "Fungitsid",
-    type: "crop",
-    desc: "Uzum, qulupnay va poliz ekinlaridagi un-shudring (oidium) kasalligini erta bosqichda to'xtatuvchi preparat.",
-    price: "38 000 so‘m",
-    store: "Dehqon Hamkori Agrovet",
-    location: "Samarqand",
-    stock: 10,
-    badge: "Uzumchilik",
-    badgeIcon: Sprout,
-    badgeColor: "bg-emerald-100/90 text-emerald-900 border border-emerald-200",
-    image: "https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: 9,
-    name: "Kvadris 250 SC",
-    category: "Fungitsid",
-    type: "crop",
-    desc: "Sabzavot ekinlarida kulrang chirish, antraknoz va barg dog'lanishlariga qarshi keng spektrli fungitsid.",
-    price: "72 000 so‘m",
-    store: "Vodiy Agro Zamin Savdo Markazi",
-    location: "Farg‘ona",
-    stock: 10,
-    badge: "Sabzavotchilik",
-    badgeIcon: Sprout,
-    badgeColor: "bg-emerald-100/90 text-emerald-900 border border-emerald-200",
-    image: "https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: 10,
-    name: "Aktara 25 WG",
-    category: "Insektitsid",
-    type: "crop",
-    desc: "Bargdan purkalganda va tomchilatib sug'orishda tuproq zararkunandalari, shira va burgalarni yo'qotuvchi vosita.",
-    price: "28 000 so‘m",
-    store: "Buxoro Vet Shifo Markaziy Dorixonasi",
-    location: "Buxoro",
-    stock: 10,
-    badge: "Tomchilatish",
-    badgeIcon: ShieldCheck,
-    badgeColor: "bg-amber-100/90 text-amber-900 border border-amber-200",
-    image: "https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: 11,
-    name: "Bio-Fungitsid Trixodermin",
-    category: "Biologik himoya",
-    type: "crop",
-    desc: "Tuproqdagi zamburug'li patogenlarga qarshi ekologik toza biologik himoya va hosildorlik oshiruvchi vosita.",
-    price: "35 000 so‘m",
-    store: "Andijon Hosil Fayz Agro Do'koni",
-    location: "Andijon",
-    stock: 10,
-    badge: "Organik Eko",
-    badgeIcon: Sparkles,
-    badgeColor: "bg-teal-100/90 text-teal-900 border border-teal-200",
-    image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: 12,
-    name: "Gumat Kaliy + Mikroelementlar",
-    category: "Biostimulyator",
-    type: "crop",
-    desc: "O'simlik ildiz tizimini baquvvat qiluvchi, stresslarga chidamlilikni va hosil sifatini oshiruvchi biostimulyator.",
-    price: "22 000 so‘m",
-    store: "Chorva Servis Vet Farm",
-    location: "Toshkent",
-    stock: 10,
-    badge: "Yuqori hosil",
-    badgeIcon: TrendingUp,
-    badgeColor: "bg-blue-100/90 text-blue-900 border border-blue-200",
-    image: "https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: 13,
-    name: "Ivermektin 1% in'yeksiya",
-    category: "Antiparazitar",
-    type: "animal",
-    desc: "Qoramol, qo'y va echkilardagi oshqozon-ichak gijjalari, o'pka nematodalari, teri osti qurtlari va qichima kanalarga qarshi.",
-    price: "38 000 so‘m",
-    store: "Agro Kimyo Baraka MCHJ",
-    location: "Toshkent",
-    stock: 9,
-    badge: "Chorvachilik",
-    badgeIcon: ShieldCheck,
-    badgeColor: "bg-rose-100/90 text-rose-900 border border-rose-200",
-    image: "https://images.unsplash.com/photo-1516467508483-a7212febe31a?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: 14,
-    name: "Enrofloksatsin 10% eritma",
-    category: "Antibiotik",
-    type: "animal",
-    desc: "Buzoq, qo'zichoq va parrandalarning nafas olish hamda oshqozon-ichak infeksiyalariga qarshi keng spektrli antibiotik.",
-    price: "42 000 so‘m",
-    store: "Dehqon Hamkori Agrovet",
-    location: "Samarqand",
-    stock: 10,
-    badge: "Veterinariya",
-    badgeIcon: ShieldCheck,
-    badgeColor: "bg-rose-100/90 text-rose-900 border border-rose-200",
-    image: "https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: 15,
-    name: "Oksitetratsiklin LA 200",
-    category: "Antibakterial",
-    type: "animal",
-    desc: "Uzoq muddatli ta'sirga ega kuchli antibiotik. Pnevmoniya, tuyoq chirishi, pasterellyoz va mastitni davolash uchun.",
-    price: "56 000 so‘m",
-    store: "Vodiy Agro Zamin Savdo Markazi",
-    location: "Farg‘ona",
-    stock: 10,
-    badge: "Uzoq ta'sirli",
-    badgeIcon: ShieldCheck,
-    badgeColor: "bg-rose-100/90 text-rose-900 border border-rose-200",
-    image: "https://images.unsplash.com/photo-1516467508483-a7212febe31a?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: 16,
-    name: "Penstrep-400 suspenziyasi",
-    category: "Antibiotik",
-    type: "animal",
-    desc: "Bakterial infeksiyalar, jarrohlikdan keyingi yallig'lanishlar va aralash infeksiyalarga qarshi mushak ichiga.",
-    price: "49 000 so‘m",
-    store: "Buxoro Vet Shifo Markaziy Dorixonasi",
-    location: "Buxoro",
-    stock: 10,
-    badge: "Kompleks",
-    badgeIcon: ShieldCheck,
-    badgeColor: "bg-rose-100/90 text-rose-900 border border-rose-200",
-    image: "https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: 17,
-    name: "Baytril 5% (Bayer original)",
-    category: "Veterinariya",
-    type: "animal",
-    desc: "Yosh buzoq va parrandalarda salmonellyoz, pasterellyoz, kolibakterioz va mikoplazmozga qarshi samarali vosita.",
-    price: "88 000 so‘m",
-    store: "Andijon Hosil Fayz Agro Do'koni",
-    location: "Andijon",
-    stock: 10,
-    badge: "Bayer Original",
-    badgeIcon: Award,
-    badgeColor: "bg-blue-100/90 text-blue-900 border border-blue-200",
-    image: "https://images.unsplash.com/photo-1516467508483-a7212febe31a?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: 18,
-    name: "Butasal-100 (Katozal analogi)",
-    category: "Vitamin & Quvvat",
-    type: "animal",
-    desc: "Moddalar almashinuvini yaxshilovchi, zaiflashgan va tug'ruqdan keyingi hayvonlar quvvatini tiklovchi fosfor va B12 vitamini.",
-    price: "74 000 so‘m",
-    store: "Chorva Servis Vet Farm",
-    location: "Toshkent",
-    stock: 10,
-    badge: "Metabolik",
-    badgeIcon: TrendingUp,
-    badgeColor: "bg-amber-100/90 text-amber-900 border border-amber-200",
-    image: "https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: 19,
-    name: "Multivitamin + Aminokislota kompleksi",
-    category: "Vitaminlar",
-    type: "animal",
-    desc: "Chorva va parrandalar immunitetini ko'tarish, gipovitaminozning oldini olish va o'sishni tezlashtirish uchun.",
-    price: "45 000 so‘m",
-    store: "Agro Kimyo Baraka MCHJ",
-    location: "Toshkent",
-    stock: 10,
-    badge: "Immunitet",
-    badgeIcon: Sparkles,
-    badgeColor: "bg-emerald-100/90 text-emerald-900 border border-emerald-200",
-    image: "https://images.unsplash.com/photo-1516467508483-a7212febe31a?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: 20,
-    name: "Albendazol 10% suspenziya",
-    category: "Antigelment",
-    type: "animal",
-    desc: "Chorva mollari va qo'ylardagi jigar parazitlari (fassiolyoz), tasmasimon va yumaloq gijjalarni tozalash uchun og'izdan ichiriladi.",
-    price: "26 000 so‘m",
-    store: "Dehqon Hamkori Agrovet",
-    location: "Samarqand",
-    stock: 10,
-    badge: "Parazitga qarshi",
-    badgeIcon: ShieldCheck,
-    badgeColor: "bg-rose-100/90 text-rose-900 border border-rose-200",
-    image: "https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: 21,
-    name: "Mastitsid shprits-tubika",
-    category: "Yelin dori",
-    type: "animal",
-    desc: "Sigirlarning o'tkir va surunkali yelin yallig'lanishi (mastit)ni davolash uchun bevosita yelin ichiga yuboriladi.",
-    price: "19 000 so‘m",
-    store: "Vodiy Agro Zamin Savdo Markazi",
-    location: "Farg‘ona",
-    stock: 10,
-    badge: "Mastit davosi",
-    badgeIcon: ShieldCheck,
-    badgeColor: "bg-rose-100/90 text-rose-900 border border-rose-200",
-    image: "https://images.unsplash.com/photo-1516467508483-a7212febe31a?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: 22,
-    name: "Kalsiy Boroglyukonat 20%",
-    category: "Mineral eritma",
-    type: "animal",
-    desc: "Tug'ruqdan keyingi falajlik (parez), gipokalsiyemiya, raxit, suyak zaifligi va intoksikatsiyaga qarshi vena/mushakka.",
-    price: "21 000 so‘m",
-    store: "Buxoro Vet Shifo Markaziy Dorixonasi",
-    location: "Buxoro",
-    stock: 10,
-    badge: "Mineral",
-    badgeIcon: Sparkles,
-    badgeColor: "bg-blue-100/90 text-blue-900 border border-blue-200",
-    image: "https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: 23,
-    name: "Genta-100 (Gentamitsin)",
-    category: "Antibiotik",
-    type: "animal",
-    desc: "Oshqozon-ichak trakti, buyrak va siydik yo'llari bakterial infeksiyalari hamda o'tkir diareyaga qarshi in'yeksiya.",
-    price: "34 000 so‘m",
-    store: "Andijon Hosil Fayz Agro Do'koni",
-    location: "Andijon",
-    stock: 10,
-    badge: "Diareyaga qarshi",
-    badgeIcon: ShieldCheck,
-    badgeColor: "bg-rose-100/90 text-rose-900 border border-rose-200",
-    image: "https://images.unsplash.com/photo-1516467508483-a7212febe31a?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: 24,
-    name: "Trikaltsiyfosfat mineral ozuqa",
-    category: "Ozuqa qo‘shimchasi",
-    type: "animal",
-    desc: "Skelet suyaklarini mustahkamlovchi, sut va go'sht mahsuldorligini oshiruvchi tabiiy kaltsiy-fosfor ozuqa qo'shimchasi.",
-    price: "18 000 so‘m",
-    store: "Chorva Servis Vet Farm",
-    location: "Toshkent",
-    stock: 10,
-    badge: "Suyak & Quvvat",
-    badgeIcon: TrendingUp,
-    badgeColor: "bg-amber-100/90 text-amber-900 border border-amber-200",
-    image: "https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&w=600&q=80",
-  },
-];
-
-// Bazadagi haqiqiy tasdiqlangan 6 nafar mutaxassis
-const REAL_SPECIALISTS = [
-  {
-    id: 7,
-    name: "Dr. Alisher Qodirov",
-    role: "Bosh agronom, O‘simliklar himoyasi bo‘yicha ekspert",
-    specialty: "Pomidor, bodring, paxta va g‘alla ekinlari zararkunandalari hamda zamburug‘li kasalliklarini aniqlash va davolash.",
-    education: "Toshkent Davlat Agrar Universiteti (TDAU), Magistr",
-    exp: "15 yillik tajriba",
-    rating: "5.0",
-    reviews: "14",
-    phone: "+998901002030",
-    region: "Toshkent sh., Chilonzor",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=250&q=80",
-  },
-  {
-    id: 8,
-    name: "Rustam Mahmudov",
-    role: "Veterinariya fanlari nomzodi, Katta chorva shifokori",
-    specialty: "Qoramol va mayda tuyoqli mollar yuqumli kasalliklari, o‘tkir mastit, tuyoq kasalliklari va emlash rejasini tuzish.",
-    education: "Samarqand Davlat Veterinariya Meditsinasi Universiteti",
-    exp: "18 yillik tajriba",
-    rating: "5.0",
-    reviews: "18",
-    phone: "+998912003040",
-    region: "Samarqand sh.",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=250&q=80",
-  },
-  {
-    id: 9,
-    name: "Gulnoza Usmonova",
-    role: "Fitopatolog, Bog‘dorchilik va tokchilik mutaxassisi",
-    specialty: "Mevali bog‘lar (olma, shaftoli, o‘rik, gilos) va tokzorlar kasalliklarini erta aniqlash, biologik kurash.",
-    education: "Toshkent Davlat Agrar Universiteti, Aspirantura",
-    exp: "11 yillik tajriba",
-    rating: "4.9",
-    reviews: "12",
-    phone: "+998933004050",
-    region: "Farg‘ona sh.",
-    avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=250&q=80",
-  },
-  {
-    id: 10,
-    name: "Jahongir To‘xtayev",
-    role: "Tuproqshunos-agrokimyogar",
-    specialty: "Tuproq sho‘rlanishini kamaytirish, ekin maydonlari ozuqa balansini hisoblash, mineral va organik o‘g‘itlar me'yori.",
-    education: "O‘zbekiston Milliy Universiteti, Tuproqshunoslik",
-    exp: "8 yillik tajriba",
-    rating: "4.9",
-    reviews: "9",
-    phone: "+998944005060",
-    region: "Buxoro sh.",
-    avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=250&q=80",
-  },
-  {
-    id: 11,
-    name: "Dilshodbek Ergashev",
-    role: "Parrandachilik va quyonchilik veterinari",
-    specialty: "Broyler tovuqlar va tuxum yo‘nalishidagi parrandalar profilaktikasi, vaksina yuborish sxemalari va inkubatsiya.",
-    education: "Andijon Qishloq Xo‘jaligi va Agrotexnologiyalar Instituti",
-    exp: "9 yillik tajriba",
-    rating: "4.8",
-    reviews: "8",
-    phone: "+998955006070",
-    region: "Andijon sh.",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80",
-  },
-  {
-    id: 12,
-    name: "Nodira Karimova",
-    role: "Issiqxona agronom-konsultanti (Gidroponika)",
-    specialty: "Zamonaviy issiqxonalarda pomidor, bodring yetishtirish, iqlim kompyuterini boshqarish va tomchilatib oziqlantirish.",
-    education: "Ege University (Turkiya), Agronomiya fakulteti",
-    exp: "7 yillik tajriba",
-    rating: "4.9",
-    reviews: "11",
-    phone: "+998977008090",
-    region: "Toshkent vil., Qibray",
-    avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=250&q=80",
-  },
-];
-
-// Bazadagi haqiqiy tasdiqlangan 6 ta hamkor agro-dorixona
-const REAL_PHARMACIES = [
-  {
-    id: 1,
-    name: "Baraka Agro Ta'minot",
-    org: "Agro Kimyo Baraka MCHJ",
-    region: "Toshkent viloyati, Zangiota",
-    address: "Bo'zsuv MFY, 12-uy",
-    phone: "+998 90 111 22 33",
-    experience: "10 yillik tajriba",
-    type: "O‘simliklar himoyasi & Urug‘lar",
-  },
-  {
-    id: 2,
-    name: "Dehqon Hamkori Do'koni",
-    org: "Dehqon Hamkori Agrovet",
-    region: "Samarqand sh.",
-    address: "Mirzo Ulug'bek ko'chasi, 45-uy",
-    phone: "+998 91 222 33 44",
-    experience: "14 yillik tajriba",
-    type: "Universal (Ekin & Chorva)",
-  },
-  {
-    id: 3,
-    name: "Vodiy Agro Zamin",
-    org: "Vodiy Agro Zamin Savdo Markazi",
-    region: "Farg‘ona sh.",
-    address: "Al-Farg'oniy shoh ko'chasi, 89-uy",
-    phone: "+998 93 333 44 55",
-    experience: "8 yillik tajriba",
-    type: "Fungitsid, O‘g‘it & Biostimulyator",
-  },
-  {
-    id: 4,
-    name: "Buxoro Vet Shifo",
-    org: "Buxoro Vet Shifo Markaziy Dorixonasi",
-    region: "Buxoro sh.",
-    address: "Bahouddin Naqshband ko'chasi, 102-uy",
-    phone: "+998 94 444 55 66",
-    experience: "12 yillik tajriba",
-    type: "Veterinariya & Vaksinalar",
-  },
-  {
-    id: 5,
-    name: "Andijon Hosil Fayz",
-    org: "Andijon Hosil Fayz Agro Do'koni",
-    region: "Andijon sh.",
-    address: "Bobur shoh ko'chasi, 34-uy",
-    phone: "+998 95 555 66 77",
-    experience: "9 yillik tajriba",
-    type: "Insektitsid & Bio-preparatlar",
-  },
-  {
-    id: 6,
-    name: "Chorva Salomatligi VetDorixona",
-    org: "Chorva Servis Vet Farm",
-    region: "Toshkent sh., Sergeli",
-    address: "Yangi Sergeli ko'chasi, 18-uy",
-    phone: "+998 97 777 88 99",
-    experience: "16 yillik tajriba",
-    type: "Chorva preparatlari & Premikslar",
-  },
-];
-
 export default function MainWebLanding() {
   const { lang, t } = useI18n();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [activeCategory, setActiveCategory] = useState<string>("all");
-  const [showAllProducts, setShowAllProducts] = useState<boolean>(false);
 
-  // Haqiqiy shaffof statistika (baza ko'rsatkichlari)
+  // Bazadagi haqiqiy shaffof statistika
   const [stats, setStats] = useState({
-    users: 4,
-    pharmacies: 6,
-    specialists: 6,
-    medicines: 24,
-    regions: 5,
+    users: 0,
+    pharmacies: 0,
+    specialists: 0,
+    medicines: 0,
+    regions: 0,
   });
 
-  const [products, setProducts] = useState(REAL_PRODUCTS);
-  const [specialistsList, setSpecialistsList] = useState(REAL_SPECIALISTS);
-
   useEffect(() => {
-    // 1. Shaffof statistika yuklash
     apiFetch("/api/web/stats")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (d?.ok) {
           setStats({
-            users: Number(d.users ?? 4),
-            pharmacies: Number(d.pharmacies ?? 6),
-            specialists: Number(d.specialists ?? 6),
-            medicines: Number(d.medicines ?? 24),
-            regions: Number(d.regions ?? 5),
+            users: Number(d.users ?? 0),
+            pharmacies: Number(d.pharmacies ?? 0),
+            specialists: Number(d.specialists ?? 0),
+            medicines: Number(d.medicines ?? 0),
+            regions: Number(d.regions ?? 0),
           });
-        }
-      })
-      .catch(() => {});
-
-    // 2. Jonli dorilar ro'yxatini yuklash
-    apiFetch("/api/medicines?limit=24")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        const items = Array.isArray(data?.items) ? data.items : [];
-        if (items.length > 0) {
-          const mapped = items.map((m: any, idx: number) => {
-            const isCrop = m.type === "crop";
-            return {
-              id: m.id ?? idx + 1,
-              name: m.name,
-              category: isCrop ? "Agro preparat" : "Veterinariya",
-              type: isCrop ? "crop" : "animal",
-              desc: m.usage || "Sertifikatlangan yuqori samarali vosita",
-              price: m.price ? `${Number(m.price).toLocaleString()} so‘m` : "Kelishilgan",
-              store: m.pharmacyName || "Agro Dorixona",
-              location: m.pharmacyAddress ? m.pharmacyAddress.split(",")[0] : "O‘zbekiston",
-              stock: m.stock ?? 10,
-              badge: isCrop ? "Ekin himoyasi" : "Chorva salomatligi",
-              badgeIcon: isCrop ? Sprout : ShieldCheck,
-              badgeColor: isCrop
-                ? "bg-emerald-100/90 text-emerald-900 border border-emerald-200"
-                : "bg-rose-100/90 text-rose-900 border border-rose-200",
-              image: REAL_PRODUCTS[idx % REAL_PRODUCTS.length]?.image || "https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=600&q=80",
-            };
-          });
-          setProducts(mapped);
-        }
-      })
-      .catch(() => {});
-
-    // 3. Jonli mutaxassislar ro'yxatini yuklash
-    apiFetch("/api/specialists?role=specialist")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        const items = Array.isArray(data?.items) ? data.items : [];
-        if (items.length > 0) {
-          const mapped = items.map((s: any, idx: number) => ({
-            id: s.id ?? idx + 1,
-            name: s.name,
-            role: s.specialty || "Agro mutaxassis",
-            specialty: s.bio || s.education || "Malakali agro/veterinar konsultant",
-            education: s.education || "Oliy ma'lumotli agronom",
-            exp: s.experienceYears ? `${s.experienceYears} yillik tajriba` : "Ko‘p yillik tajriba",
-            rating: s.ratingAvg ? Number(s.ratingAvg).toFixed(1) : "5.0",
-            reviews: s.ratingCount ? String(s.ratingCount) : "10+",
-            phone: s.phone || "+998901002030",
-            region: s.address ? s.address.split(",")[0] : "O‘zbekiston",
-            avatar: REAL_SPECIALISTS[idx % REAL_SPECIALISTS.length]?.avatar || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=250&q=80",
-          }));
-          setSpecialistsList(mapped);
         }
       })
       .catch(() => {});
@@ -636,14 +61,6 @@ export default function MainWebLanding() {
   const toggleFaq = (index: number) => {
     setOpenFaq(openFaq === index ? null : index);
   };
-
-  const filteredProducts =
-    activeCategory === "all"
-      ? products
-      : products.filter((p) => p.type === activeCategory);
-
-  const visibleProducts = showAllProducts ? filteredProducts : filteredProducts.slice(0, 8);
-
 
   const faqs = [
     {
@@ -683,16 +100,16 @@ export default function MainWebLanding() {
         ? "Чӣ тавр агроном ё ветеринарро бевосита ба саҳро даъват кардан мумкин аст?"
         : "Agronom yoki veterinar mutaxassisini dalaga qanday chaqirish mumkin?",
       a: lang === "ru"
-        ? "В разделе «Мутахассислар» выберите профиль подходящего эксперта и нажмите «Вызвать специалиста». Специалист согласует время и приедет прямо на ваш участок или ферму."
+        ? "В веб-приложении AgrozGO выберите профиль специалиста в вашем регионе и нажмите «Вызвать специалиста». Специалист свяжется с вами и приедет прямо на участок."
         : lang === "en"
-        ? "Go to the 'Specialists' section, select a qualified expert profile, and click 'Call specialist'. The expert will confirm the time and visit your farm directly."
+        ? "Inside the AgrozGO web app, select a verified expert in your area and click 'Call specialist'. The expert will confirm the appointment and visit your farm."
         : lang === "kk"
-        ? "«Мамандар» бөлімінде қажетті маманды таңдап, «Маман шақыру» түймесін басыңыз. Маман сізбен хабарласып, егістікке немесе фермаға келеді."
+        ? "AgrozGO қосымшасында өңіріңіздегі маман профилін таңдап, «Маман шақыру» түймесін басыңыз. Маман сізбен хабарласып, егістікке барады."
         : lang === "ky"
-        ? "«Адистер» бөлүмүнөн ылайыктуу адисти тандап, «Адис чакыруу» баскычын басыңыз. Адис сиз менен байланышып, чарбаңызга барат."
+        ? "AgrozGO тиркемесинен аймагыңыздагы адисти тандап, «Адис чакыруу» баскычын басыңыз. Адис сиз менен байланышып, талаага барат."
         : lang === "tg"
-        ? "Дар бахши «Мутахассисон» коршиноси мувофиқро интихоб карда, тугмаи «Даъвати мутахассис»-ро пахш намоед. Мутахассис бо шумо тамос гирифта, ба саҳро меояд."
-        : "«Mutaxassislar» bo‘limida o‘zingizga ma’qul mutaxassisni tanlang va «Mutaxassis chaqirish» tugmasini bosing. Mutaxassis siz bilan bog‘lanadi va belgilangan vaqtda dalangiz yoki fermangizga yetib boradi.",
+        ? "Дар барномаи AgrozGO мутахассисро аз минтақаи худ интихоб намуда, «Даъвати мутахассис»-ро пахш кунед. Мутахассис бо шумо тамос мегирад."
+        : "AgrozGO veb ilovasida o‘z hududingizdagi mutaxassis profilini oching va «Mutaxassis chaqirish» tugmasini bosing. Mutaxassis siz bilan bog‘lanadi va belgilangan vaqtda dalangizga yetib boradi.",
     },
     {
       q: lang === "ru"
@@ -707,16 +124,16 @@ export default function MainWebLanding() {
         ? "Оё истифодаи Agroz Business дар ҳақиқат ройгон аст?"
         : "Agroz Business tizimidan foydalanish haqiqatan ham bepulmi?",
       a: lang === "ru"
-        ? "Да, сейчас платформа находится в периоде БЕТА-тестирования. Первые 50 партнерских агроаптек получают долговую книгу, кассу, склад и онлайн-заказы бесплатно (0 сум)."
+        ? "Да, сейчас платформа находится в периоде БЕТА-тестирования. Партнерские агроаптеки получают долговую книгу, кассу, склад и онлайн-заказы бесплатно (0 сум)."
         : lang === "en"
-        ? "Yes, the platform is currently in BETA. The first 50 partner agro-pharmacies receive the debt ledger, POS, warehouse control, and online orders completely free ($0)."
+        ? "Yes, the platform is currently in BETA. Partner agro-pharmacies receive the debt ledger, POS, warehouse control, and online orders completely free ($0)."
         : lang === "kk"
-        ? "Иә, қазір платформа БЕТА сынақ кезеңінде. Алғашқы 50 серіктес дүкен қарыз дәптері, касса, қойма және онлайн тапсырыстарды мүлдем тегін пайдаланады."
+        ? "Иә, қазір платформа БЕТА сынақ кезеңінде. Серіктес дүкендер қарыз дәптері, касса, қойма және онлайн тапсырыстарды тегін пайдаланады."
         : lang === "ky"
-        ? "Ооба, азыр платформа БЕТА сыноо мезгилинде. Алгачкы 50 өнөктөш дүкөн карыз китебин, касса жана кампаны акысыз пайдалана алышат."
+        ? "Ооба, азыр платформа БЕТА сыноо мезгилинде. Өнөктөш дүкөндөр карыз китебин, касса жана кампаны акысыз пайдалана алышат."
         : lang === "tg"
-        ? "Бале, ҳоло платформа дар давраи озмоишии БЕТА қарор дорад. 50 мағозаи аввалини агро дафтари қарз, хазина ва анборро комилан ройгон дастрас мекунанд."
-        : "Ha, hozirda platforma BETA sinov davrida. Dastlabki 50 ta hamkor dorixona va agro-do‘kon uchun Qarz daftari, kassa, ombor va onlayn buyurtmalar mutlaqo bepul (0 so‘m) taqdim etiladi.",
+        ? "Бале, ҳоло платформа дар давраи озмоишии БЕТА қарор дорад. Мағозаҳои шарик дафтари қарз, хазина ва анборро комилан ройгон дастрас мекунанд."
+        : "Ha, hozirda platforma BETA davrida. Hamkor dorixona va agro-do‘konlar uchun Qarz daftari, kassa, ombor va onlayn buyurtmalar mutlaqo bepul (0 so‘m) taqdim etiladi.",
     },
     {
       q: lang === "ru"
@@ -731,16 +148,16 @@ export default function MainWebLanding() {
         ? "Оё маълумоти мағоза, хазина, анбор ва дафтари қарз бехатар нигоҳ дошта мешавад?"
         : "Agroz Business kassa, ombor va nasiya ma'lumotlari xavfsiz saqlanadimi?",
       a: lang === "ru"
-        ? "На 100% безопасно. Ваши данные кассы, остатков склада и расчетов хранятся на зашифрованных облачных серверах. Они не потеряются как бумажная тетрадь. Ни один другой магазин не имеет доступа к вашей бухгалтерии и клиентуре."
+        ? "На 100% безопасно. Ваши данные кассы, остатков склада и расчетов хранятся на зашифрованных облачных серверах. Ни один посторонний не имеет доступа к вашей бухгалтерии."
         : lang === "en"
-        ? "100% secure. Your POS sales, inventory records, and customer accounts are encrypted and safely backed up on cloud servers. No other store can ever access your business data."
+        ? "100% secure. Your POS sales, inventory records, and customer accounts are encrypted and safely backed up on cloud servers. No unauthorized parties can access your data."
         : lang === "kk"
-        ? "100% қауіпсіз. Кассалық саудаңыз, қойма қалдықтарыңыз бен есептеріңіз шифрланған бұлтты серверлерде сақталады. Қағаз дәптердей жоғалмайды, басқа ешбір дүкен деректеріңізді көре алмайды."
+        ? "100% қауіпсіз. Кассалық саудаңыз, қойма қалдықтарыңыз бен есептеріңіз шифрланған бұлтты серверлерде сақталады."
         : lang === "ky"
-        ? "100% коопсуз. Касса, кампа жана эсептериңиз булут серверлеринде шифрланып сакталат. Эч бир башка дүкөн сиздин эсептериңизди көрө албайт."
+        ? "100% коопсуз. Касса, кампа жана эсептериңиз булут серверлеринде шифрланып сакталат."
         : lang === "tg"
-        ? "100% бехатар. Маълумоти хазина, анбор ва дафтари қарз дар серверҳои абрии рамзгузоришуда нигоҳ дошта шуда, ба ҳеҷ кас дастрас нест."
-        : "100% xavfsiz. Kunlik kassa savdolaringiz, ombor qoldiqlari, oylik hisobotlar va mijozlar hisobi shifrlangan bulutli serverda saqlanadi. Qog‘oz daftar kabi yo‘qolmaydi, yirtilmaydi yoki suv tegib o‘chib ketmaydi. Boshqa hech bir do‘kon sizning ma'lumotlaringizni ko‘ra olmaydi.",
+        ? "100% бехатар. Маълумоти хазина, анбор ва дафтари қарз дар серверҳои абрии рамзгузоришуда нигоҳ дошта мешавад."
+        : "100% xavfsiz. Kunlik kassa savdolaringiz, ombor qoldiqlari, oylik hisobotlar va mijozlar hisobi shifrlangan bulutli serverda saqlanadi. Qog‘oz daftar kabi yo‘qolmaydi yoki o‘chib ketmaydi. Boshqa hech kim ma'lumotlaringizni ko‘ra olmaydi.",
     },
     {
       q: lang === "ru"
@@ -771,11 +188,11 @@ export default function MainWebLanding() {
   return (
     <div className="min-h-screen bg-[#FAF9F5] text-[#191B1F] antialiased selection:bg-amber-200 selection:text-amber-950 font-sans">
       {/* =========================================================================
-          1. HERO SECTION (Apple aesthetics + Agroton template)
+          1. HERO SECTION (Clean, Apple aesthetic corporate hero)
           ========================================================================= */}
       <section className="relative overflow-hidden pt-8 sm:pt-14 pb-16 sm:pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-12 gap-8 items-center relative z-10">
-          {/* Chap ustun: Asosiy Sarlavha, Paragraf, Qora Pill CTA, 3 ta Metrika kartasi */}
+          {/* Chap ustun: Asosiy Sarlavha, Paragraf, CTA Tugmalar, Haqiqiy ko'rsatkichlar */}
           <div className="lg:col-span-7 space-y-6">
             <h1 className="text-3xl sm:text-5xl lg:text-[58px] xl:text-[62px] font-extrabold text-[#191B1F] leading-[1.12] tracking-tight">
               {t.hero.title_p1} <br />
@@ -787,7 +204,7 @@ export default function MainWebLanding() {
               {t.hero.desc}
             </p>
 
-            {/* Harakat Tugmalari: 1-to-1 template uslubidagi CTA tugmalar */}
+            {/* Harakat Tugmalari */}
             <div className="pt-2 flex flex-wrap items-center gap-3 sm:gap-4">
               <Link
                 href="/agrozgo"
@@ -806,39 +223,47 @@ export default function MainWebLanding() {
               </Link>
             </div>
 
-            {/* Pastki Chap: 4 ta Haqiqiy Shaffof Metrika kartochkasi */}
+            {/* Pastki Chap: 4 ta Tizim Sifati / Haqiqiy Metrika kartochkasi */}
             <div className="pt-6 sm:pt-10 grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
               <div className="bg-[#F4F1EA] rounded-2xl p-3 sm:p-4 border border-black/5 text-left">
-                <div className="text-xl sm:text-2xl font-extrabold text-[#191B1F] tracking-tight">{stats.pharmacies} ta</div>
+                <div className="text-xl sm:text-2xl font-extrabold text-[#191B1F] tracking-tight">
+                  {stats.pharmacies > 0 ? `${stats.pharmacies} ta` : "100%"}
+                </div>
                 <div className="text-[11px] font-semibold text-zinc-600 mt-0.5 leading-tight">
-                  Agro-dorixonalar<br/><span className="text-[10px] text-zinc-400 font-normal">5 ta viloyatda</span>
+                  Agro-dorixonalar<br /><span className="text-[10px] text-zinc-400 font-normal">Sertifikatlangan do‘konlar</span>
                 </div>
               </div>
 
               <div className="bg-[#F4F1EA] rounded-2xl p-3 sm:p-4 border border-black/5 text-left">
-                <div className="text-xl sm:text-2xl font-extrabold text-[#191B1F] tracking-tight">{stats.specialists} nafar</div>
+                <div className="text-xl sm:text-2xl font-extrabold text-[#191B1F] tracking-tight">
+                  {stats.specialists > 0 ? `${stats.specialists} nafar` : "24/7"}
+                </div>
                 <div className="text-[11px] font-semibold text-zinc-600 mt-0.5 leading-tight">
-                  Agronom & Veterinar<br/><span className="text-[10px] text-zinc-400 font-normal">Malakali mutaxassis</span>
+                  Agronom & Veterinar<br /><span className="text-[10px] text-zinc-400 font-normal">Dalaga chaqiruv</span>
                 </div>
               </div>
 
               <div className="bg-[#F4F1EA] rounded-2xl p-3 sm:p-4 border border-black/5 text-left">
-                <div className="text-xl sm:text-2xl font-extrabold text-[#191B1F] tracking-tight">{stats.medicines} ta</div>
+                <div className="text-xl sm:text-2xl font-extrabold text-[#191B1F] tracking-tight">
+                  5 soniya
+                </div>
                 <div className="text-[11px] font-semibold text-zinc-600 mt-0.5 leading-tight">
-                  Sertifikatlangan dori<br/><span className="text-[10px] text-zinc-400 font-normal">Ekin & chorva preparati</span>
+                  AI Diagnostika<br /><span className="text-[10px] text-zinc-400 font-normal">Tezkor o‘simlik tahlili</span>
                 </div>
               </div>
 
               <div className="bg-[#F4F1EA] rounded-2xl p-3 sm:p-4 border border-black/5 text-left">
-                <div className="text-xl sm:text-2xl font-extrabold text-[#191B1F] tracking-tight">{stats.users} ta</div>
+                <div className="text-xl sm:text-2xl font-extrabold text-[#191B1F] tracking-tight">
+                  BETA 0 so‘m
+                </div>
                 <div className="text-[11px] font-semibold text-zinc-600 mt-0.5 leading-tight">
-                  Foydalanuvchi<br/><span className="text-[10px] text-zinc-400 font-normal">Tizimda faol ro‘yxatda</span>
+                  Agroz Business<br /><span className="text-[10px] text-zinc-400 font-normal">Kassa, ombor, qarzlar</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* O'ng ustun: Bug'doyzor foni va pastki o'ngdagi suzuvchi qora karta */}
+          {/* O'ng ustun: Bug'doyzor foni va suzuvchi qora karta */}
           <div className="lg:col-span-5 relative flex justify-end">
             <div className="relative w-full aspect-4/5 sm:aspect-square max-h-[520px] rounded-[36px] overflow-hidden shadow-xl border border-black/5">
               <img
@@ -848,10 +273,8 @@ export default function MainWebLanding() {
                 className="w-full h-full object-cover"
               />
 
-              {/* Gradient qorong'ulik */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
-              {/* Pastki o'ng suzuvchi qora karta */}
               <div className="absolute bottom-5 right-5 left-5 sm:left-auto sm:w-72 bg-[#1E2024]/95 backdrop-blur-md text-white p-4 rounded-3xl border border-white/10 shadow-2xl">
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <p className="text-xs font-semibold leading-snug text-zinc-200">
@@ -866,7 +289,6 @@ export default function MainWebLanding() {
                   </Link>
                 </div>
 
-                {/* Ichki kichik foto */}
                 <div className="w-full h-24 rounded-2xl overflow-hidden border border-white/10">
                   <img
                     src="https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=400&q=80"
@@ -882,7 +304,7 @@ export default function MainWebLanding() {
       </section>
 
       {/* =========================================================================
-          IMKONIYATLAR: Agroz Platformasi berayotgan to'liq imkoniyatlar (Left-aligned cards)
+          2. IMKONIYATLAR: Agroz Platformasi berayotgan to'liq imkoniyatlar (Left-aligned cards)
           ========================================================================= */}
       <section className="py-8 sm:py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-black/5">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 sm:mb-12">
@@ -895,7 +317,7 @@ export default function MainWebLanding() {
               Biz berayotgan to‘liq imkoniyatlar
             </h2>
             <p className="text-xs sm:text-sm text-zinc-600 max-w-2xl leading-relaxed">
-              AgrozGO — qishloq xo‘jaligi mahsulotlarini sotib olish, mutaxassis chaqirish, AI diagnostika va do‘kon boshqaruvini yagona raqamli tizimda taqdim etadi.
+              AgrozGO — qishloq xo‘jaligi mahsulotlarini sotib olish, mutaxassis chaqirish, AI diagnostika va dorixona boshqaruvini yagona raqamli tizimda taqdim etadi.
             </p>
           </div>
 
@@ -920,13 +342,13 @@ export default function MainWebLanding() {
                 Agro Bozor & Onlayn Savat
               </h3>
               <p className="text-xs text-zinc-600 leading-relaxed">
-                Platformadagi {stats.pharmacies} ta sertifikatlangan agro-dorixona, {stats.medicines} ta sifatli dori va o‘g‘itlar, bio-preparatlar hamda urug‘larni to‘g‘ridan-to‘g‘ri ko‘ring va buyurtma bering.
+                Sertifikatlangan dori vositalari, o‘g‘itlar, bio-preparatlar hamda urug‘larni to‘g‘ridan-to‘g‘ri yaqin dorixonalardan qidiring, narxlarni solishtiring va xarid qiling.
               </p>
             </div>
             <div className="pt-5 mt-4 border-t border-zinc-100 flex items-center justify-between">
               <span className="text-[11px] font-bold text-emerald-700">100% Sertifikatlangan</span>
-              <Link href="/agrozgo#bozor" className="text-xs font-bold text-zinc-900 hover:text-emerald-700 flex items-center gap-1">
-                <span>Ko‘rish</span>
+              <Link href="/agrozgo" className="text-xs font-bold text-zinc-900 hover:text-emerald-700 flex items-center gap-1">
+                <span>Bozorga o‘tish</span>
                 <ArrowRight size={13} />
               </Link>
             </div>
@@ -947,7 +369,7 @@ export default function MainWebLanding() {
             </div>
             <div className="pt-5 mt-4 border-t border-zinc-100 flex items-center justify-between">
               <span className="text-[11px] font-bold text-blue-700">Dalaga tezkor yetib borish</span>
-              <Link href="/agrozgo#mutaxassislar" className="text-xs font-bold text-zinc-900 hover:text-blue-700 flex items-center gap-1">
+              <Link href="/agrozgo" className="text-xs font-bold text-zinc-900 hover:text-blue-700 flex items-center gap-1">
                 <span>Ekspertlar</span>
                 <ArrowRight size={13} />
               </Link>
@@ -964,7 +386,7 @@ export default function MainWebLanding() {
                 AI Agro-Diagnostika (5 soniya)
               </h3>
               <p className="text-xs text-zinc-600 leading-relaxed">
-                Kasal barg, meva yoki hayvon belgisini suratga olib yuklang — sun’iy intellekt darhol kasallik nomi va O‘zbekiston bozoridagi dorisini chiqarib beradi.
+                Kasal barg, meva yoki hayvon belgisini suratga olib yuklang — sun’iy intellekt darhol kasallik nomi va davolash usulini aniqlaydi.
               </p>
             </div>
             <div className="pt-5 mt-4 border-t border-zinc-100 flex items-center justify-between">
@@ -991,7 +413,7 @@ export default function MainWebLanding() {
             </div>
             <div className="pt-5 mt-4 border-t border-zinc-100 flex items-center justify-between">
               <span className="text-[11px] font-bold text-amber-700">Haqiqiy vaqt rejimi</span>
-              <Link href="/agrozgo#ob-havo" className="text-xs font-bold text-zinc-900 hover:text-amber-700 flex items-center gap-1">
+              <Link href="/ob-havo" className="text-xs font-bold text-zinc-900 hover:text-amber-700 flex items-center gap-1">
                 <span>Ob-havo</span>
                 <ArrowRight size={13} />
               </Link>
@@ -1072,7 +494,7 @@ export default function MainWebLanding() {
       </section>
 
       {/* =========================================================================
-          2. SECTION 2: AGROZGO O‘ZI NIMA VA U KIMLAR UCHUN?
+          3. SECTION 3: AGROZGO O‘ZI NIMA VA U KIMLAR UCHUN?
           ========================================================================= */}
       <section id="about" className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto scroll-mt-24 border-t border-black/5">
         <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-14 space-y-3">
@@ -1088,7 +510,7 @@ export default function MainWebLanding() {
           </p>
         </div>
 
-        {/* 3 ta Kategoriya Kartochkasi (Apple clean cards, uniform, left-aligned) */}
+        {/* 3 ta Kategoriya Kartochkasi */}
         <div className="grid md:grid-cols-3 gap-6">
           {/* 1. Dehqon va Fermerlar */}
           <div className="bg-white rounded-3xl p-6 sm:p-7 border border-black/5 shadow-xs hover:shadow-lg hover:border-emerald-300 transition-all flex flex-col justify-between text-left group">
@@ -1217,12 +639,12 @@ export default function MainWebLanding() {
       </section>
 
       {/* =========================================================================
-          3. SECTION 3: DARK BENTO BOX
+          4. SECTION 4: DARK BENTO BOX (Agroz Business Imkoniyatlari)
           ========================================================================= */}
       <section className="py-8 sm:py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="bg-[#1E2024] text-white rounded-[36px] sm:rounded-[48px] p-6 sm:p-10 lg:p-12 shadow-2xl border border-white/10">
           <div className="grid lg:grid-cols-12 gap-8 items-stretch">
-            {/* Chap tomon: Sales by locations & 3 Stat Pills */}
+            {/* Chap tomon: Hududlar bo'yicha integratsiya */}
             <div className="lg:col-span-5 flex flex-col justify-between space-y-6">
               <div>
                 <h3 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
@@ -1231,12 +653,12 @@ export default function MainWebLanding() {
                 <p className="text-xs text-zinc-400 mt-1">{t.bento.subtitle}</p>
               </div>
 
-              {/* Viloyatlar bo'yicha haqiqiy taqsimot */}
+              {/* Viloyatlar bo'yicha ulanish integratsiyasi */}
               <div className="space-y-4 py-2">
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs text-zinc-300 font-semibold">
                     <span>{t.bento.reg_tashkent}</span>
-                    <span className="text-amber-400 font-bold">2 ta dorixona • 2 mutaxassis</span>
+                    <span className="text-amber-400 font-bold">Faol hudud</span>
                   </div>
                   <div className="w-full h-1.5 rounded-full bg-zinc-800 overflow-hidden">
                     <div className="h-full bg-amber-400 rounded-full w-[100%]" />
@@ -1246,7 +668,7 @@ export default function MainWebLanding() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs text-zinc-300 font-semibold">
                     <span>{t.bento.reg_fergana}</span>
-                    <span className="text-amber-400 font-bold">2 ta dorixona • 2 mutaxassis</span>
+                    <span className="text-amber-400 font-bold">Faol hudud</span>
                   </div>
                   <div className="w-full h-1.5 rounded-full bg-zinc-800 overflow-hidden">
                     <div className="h-full bg-amber-400 rounded-full w-[100%]" />
@@ -1256,42 +678,42 @@ export default function MainWebLanding() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs text-zinc-300 font-semibold">
                     <span>{t.bento.reg_samarkand}</span>
-                    <span className="text-amber-400 font-bold">1 ta dorixona • 1 mutaxassis</span>
+                    <span className="text-amber-400 font-bold">Faol hudud</span>
                   </div>
                   <div className="w-full h-1.5 rounded-full bg-zinc-800 overflow-hidden">
-                    <div className="h-full bg-amber-400 rounded-full w-[65%]" />
+                    <div className="h-full bg-amber-400 rounded-full w-[85%]" />
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs text-zinc-300 font-semibold">
                     <span>{t.bento.reg_bukhara}</span>
-                    <span className="text-amber-400 font-bold">1 ta dorixona • 1 mutaxassis</span>
+                    <span className="text-amber-400 font-bold">Faol hudud</span>
                   </div>
                   <div className="w-full h-1.5 rounded-full bg-zinc-800 overflow-hidden">
-                    <div className="h-full bg-amber-400 rounded-full w-[65%]" />
+                    <div className="h-full bg-amber-400 rounded-full w-[85%]" />
                   </div>
                 </div>
               </div>
 
-              {/* 3 ta pastki oq/krem pill statslar: Aniq va Shaffof ko'rsatkichlar */}
+              {/* 3 ta pastki sifat ko'rsatkichi */}
               <div className="grid grid-cols-3 gap-2.5 pt-4">
                 <div className="bg-[#F8F6F0] text-[#191B1F] p-3 rounded-2xl text-left">
-                  <div className="text-xs sm:text-sm font-black">{stats.medicines} ta</div>
-                  <div className="text-[9px] text-zinc-600 font-medium mt-0.5">{t.bento.stat_export}</div>
+                  <div className="text-xs sm:text-sm font-black">100%</div>
+                  <div className="text-[9px] text-zinc-600 font-medium mt-0.5">Sertifikatlangan dori</div>
                 </div>
                 <div className="bg-[#F8F6F0] text-[#191B1F] p-3 rounded-2xl text-left">
-                  <div className="text-xs sm:text-sm font-black">{stats.pharmacies} ta</div>
-                  <div className="text-[9px] text-zinc-600 font-medium mt-0.5">{t.bento.stat_yield}</div>
+                  <div className="text-xs sm:text-sm font-black">Bulutli</div>
+                  <div className="text-[9px] text-zinc-600 font-medium mt-0.5">Xavfsiz ERP tizim</div>
                 </div>
                 <div className="bg-[#F8F6F0] text-[#191B1F] p-3 rounded-2xl text-left">
-                  <div className="text-xs sm:text-sm font-black">{stats.specialists} nafar</div>
-                  <div className="text-[9px] text-zinc-600 font-medium mt-0.5">Tasdiqlangan mutaxassis</div>
+                  <div className="text-xs sm:text-sm font-black">24/7</div>
+                  <div className="text-[9px] text-zinc-600 font-medium mt-0.5">AI agro-tashxis</div>
                 </div>
               </div>
             </div>
 
-            {/* O'ng tomon: Oq grafik kartasi va Sariq "Join Our team" kartasi */}
+            {/* O'ng tomon: Oq grafik kartasi va Sariq hamkorlik kartasi */}
             <div className="lg:col-span-7 flex flex-col justify-between space-y-6">
               {/* Oq karta: Agroz Business Real-time Boshqaruv Paneli */}
               <div className="bg-white text-[#191B1F] rounded-3xl p-6 sm:p-7 shadow-xl">
@@ -1323,98 +745,53 @@ export default function MainWebLanding() {
 
                 {/* 4 ta asosiy Modul Ko'rsatkichlari */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pb-5 border-b border-zinc-100">
-                  {/* 1. Kassa */}
                   <div className="border-l-2 border-emerald-500 pl-3">
                     <div className="text-[10px] text-zinc-500 font-semibold leading-tight">
-                      {lang === "ru" ? "Касса сегодня" : lang === "en" ? "Today's POS" : "Bugungi Kassa"}
+                      {lang === "ru" ? "Касса" : lang === "en" ? "POS Register" : "Kunlik Kassa"}
                     </div>
-                    <div className="text-base sm:text-lg font-black text-[#191B1F] mt-1">
-                      2 430 000
+                    <div className="text-sm sm:text-base font-black text-[#191B1F] mt-1">
+                      Har bir savdo
                     </div>
-                    <div className="text-[9px] text-zinc-400">so‘m (Naqd + Karta)</div>
+                    <div className="text-[9px] text-zinc-400">Naqd + Karta nazorati</div>
                   </div>
 
-                  {/* 2. Ombor */}
                   <div className="border-l-2 border-blue-500 pl-3">
                     <div className="text-[10px] text-zinc-500 font-semibold leading-tight">
-                      {lang === "ru" ? "Товары на складе" : lang === "en" ? "Active Stock" : "Ombordagi tovarlar"}
+                      {lang === "ru" ? "Склад" : lang === "en" ? "Inventory" : "Ombor qoldiqlari"}
                     </div>
-                    <div className="text-base sm:text-lg font-black text-[#191B1F] mt-1">
-                      428 ta
+                    <div className="text-sm sm:text-base font-black text-[#191B1F] mt-1">
+                      Aniq hisob
                     </div>
-                    <div className="text-[9px] text-zinc-400">4 ta kam qolgan</div>
+                    <div className="text-[9px] text-zinc-400">Kam qolgan dori signali</div>
                   </div>
 
-                  {/* 3. Oylik Tahlil */}
                   <div className="border-l-2 border-amber-500 pl-3">
                     <div className="text-[10px] text-zinc-500 font-semibold leading-tight">
-                      {lang === "ru" ? "Оборот за месяц" : lang === "en" ? "Monthly Turnover" : "Oylik aylanma"}
+                      {lang === "ru" ? "Отчеты" : lang === "en" ? "Reports" : "Oylik tahlil"}
                     </div>
-                    <div className="text-base sm:text-lg font-black text-[#191B1F] mt-1">
-                      34.2 mln
+                    <div className="text-sm sm:text-base font-black text-[#191B1F] mt-1">
+                      Sof foyda
                     </div>
-                    <div className="text-[9px] text-emerald-600 font-bold">+22.8% foyda</div>
+                    <div className="text-[9px] text-emerald-600 font-bold">Daromad tahlili</div>
                   </div>
 
-                  {/* 4. Nasiya */}
                   <div className="border-l-2 border-purple-500 pl-3">
                     <div className="text-[10px] text-zinc-500 font-semibold leading-tight">
-                      {lang === "ru" ? "Долговая книга" : lang === "en" ? "Debt Ledger" : "Mijozlar Nasiyasi"}
+                      {lang === "ru" ? "Долги" : lang === "en" ? "Debt Ledger" : "Mijozlar Nasiyasi"}
                     </div>
-                    <div className="text-base sm:text-lg font-black text-[#191B1F] mt-1">
-                      12 ta
+                    <div className="text-sm sm:text-base font-black text-[#191B1F] mt-1">
+                      Shifrlangan
                     </div>
-                    <div className="text-[9px] text-purple-600 font-bold">100% shifrlangan</div>
+                    <div className="text-[9px] text-purple-600 font-bold">100% xavfsiz bulut</div>
                   </div>
                 </div>
 
-                {/* Jonli Operatsiyalar namunasi */}
-                <div className="pt-4 space-y-2">
-                  <div className="text-[11px] font-bold text-zinc-700 flex items-center justify-between">
-                    <span>{lang === "ru" ? "Последние операции кассы и склада" : lang === "en" ? "Recent POS & Inventory Activity" : "Oxirgi kassa va ombor operatsiyalari"}</span>
-                    <span className="text-[10px] font-normal text-zinc-400">{lang === "ru" ? "Синхронизировано" : lang === "en" ? "Synced" : "Bulutda sinxron"}</span>
-                  </div>
-
-                  <div className="grid sm:grid-cols-3 gap-2">
-                    <div className="bg-[#FAF8F3] border border-black/5 rounded-2xl p-2.5 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
-                          <Receipt size={13} />
-                        </div>
-                        <div className="text-left">
-                          <div className="text-xs font-bold text-zinc-800">Ridomil Gold</div>
-                          <div className="text-[9px] text-zinc-500">Kassa sotuvi • Naqd</div>
-                        </div>
-                      </div>
-                      <span className="text-xs font-extrabold text-emerald-700">+120 000</span>
-                    </div>
-
-                    <div className="bg-[#FAF8F3] border border-black/5 rounded-2xl p-2.5 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
-                          <Package size={13} />
-                        </div>
-                        <div className="text-left">
-                          <div className="text-xs font-bold text-zinc-800">Bento Max 5kg</div>
-                          <div className="text-[9px] text-zinc-500">Ombor kirimi • 20 dona</div>
-                        </div>
-                      </div>
-                      <span className="text-xs font-extrabold text-amber-800">Qoldiq: 45</span>
-                    </div>
-
-                    <div className="bg-[#FAF8F3] border border-black/5 rounded-2xl p-2.5 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-purple-100 text-purple-800 flex items-center justify-center shrink-0">
-                          <BookOpen size={13} />
-                        </div>
-                        <div className="text-left">
-                          <div className="text-xs font-bold text-zinc-800">Gumifos 1L</div>
-                          <div className="text-[9px] text-zinc-500">Nasiya to‘lovi yopildi</div>
-                        </div>
-                      </div>
-                      <span className="text-xs font-extrabold text-purple-700">Qoldiq: 0</span>
-                    </div>
-                  </div>
+                <div className="pt-4 flex items-center justify-between text-xs text-zinc-500">
+                  <span>Qog‘oz daftardan xalos bo‘ling — barcha hisob-kitoblar telefoningizda</span>
+                  <Link href="/hamkorlik" className="font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-1">
+                    <span>Batafsil</span>
+                    <ArrowRight size={13} />
+                  </Link>
                 </div>
               </div>
 
@@ -1441,7 +818,7 @@ export default function MainWebLanding() {
                   </div>
                 </div>
 
-                {/* Overlapping team avatars */}
+                {/* Overlapping avatars */}
                 <div className="flex items-center -space-x-3 shrink-0">
                   {[
                     "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80",
@@ -1465,7 +842,7 @@ export default function MainWebLanding() {
       </section>
 
       {/* =========================================================================
-          4. SECTION 4: FULL-BLEED PHOTOGRAPHIC BANNER
+          5. SECTION 5: FULL-BLEED PHOTOGRAPHIC BANNER
           ========================================================================= */}
       <section className="py-8 sm:py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="relative rounded-[36px] sm:rounded-[48px] overflow-hidden shadow-2xl min-h-[460px] sm:min-h-[540px] flex flex-col justify-between p-6 sm:p-12 lg:p-14">
@@ -1487,7 +864,6 @@ export default function MainWebLanding() {
 
           {/* Pastki Qism: 3 ta doira nishon va 3 ta medal */}
           <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-6 pt-12">
-            {/* Chap: Apple vector agro-badges */}
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-[#E5B54F]/80 backdrop-blur-md flex items-center justify-center text-white border border-white/20">
                 <Sprout size={20} />
@@ -1500,7 +876,6 @@ export default function MainWebLanding() {
               </div>
             </div>
 
-            {/* O'ng: 3 ta medal kartasi */}
             <div className="flex items-center gap-3">
               <div className="bg-[#FAF6EC] text-[#191B1F] rounded-2xl px-5 py-3 text-left min-w-[90px] shadow-lg">
                 <div className="text-lg sm:text-xl font-black text-amber-700">{t.banner.badge1_title}</div>
@@ -1522,11 +897,10 @@ export default function MainWebLanding() {
       </section>
 
       {/* =========================================================================
-          5. SECTION 5: SECONDARY STORY & VISION
+          6. SECTION 6: SECONDARY STORY & VISION
           ========================================================================= */}
       <section className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="grid md:grid-cols-12 gap-8 items-center">
-          {/* Chap kichik foto */}
           <div className="md:col-span-3 hidden md:flex justify-start">
             <div className="w-44 h-32 rounded-2xl overflow-hidden shadow-md border border-black/5">
               <img
@@ -1538,7 +912,6 @@ export default function MainWebLanding() {
             </div>
           </div>
 
-          {/* O'rta: Sarlavha, Paragraf, Qora Pill Tugma */}
           <div className="md:col-span-6 text-center space-y-4">
             <div className="inline-flex items-center gap-2 text-xs font-bold text-zinc-800">
               <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
@@ -1570,7 +943,6 @@ export default function MainWebLanding() {
             </div>
           </div>
 
-          {/* O'ng kichik foto */}
           <div className="md:col-span-3 hidden md:flex justify-end">
             <div className="w-44 h-32 rounded-2xl overflow-hidden shadow-md border border-black/5">
               <img
@@ -1585,11 +957,10 @@ export default function MainWebLanding() {
       </section>
 
       {/* =========================================================================
-          6. SECTION 6: VALUES BLOCK
+          7. SECTION 7: VALUES BLOCK
           ========================================================================= */}
       <section className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-black/5">
         <div className="grid lg:grid-cols-12 gap-8 items-start">
-          {/* Chap ustun: Sarlavha va Pagination doiralari */}
           <div className="lg:col-span-4 space-y-6">
             <h3 className="text-2xl sm:text-3xl font-extrabold text-[#191B1F] tracking-tight leading-snug whitespace-pre-line">
               {t.values.title}
@@ -1613,9 +984,7 @@ export default function MainWebLanding() {
             </div>
           </div>
 
-          {/* O'ng ustun: 3 ta qadriyatlar kartochkasi */}
           <div className="lg:col-span-8 grid sm:grid-cols-3 gap-5">
-            {/* Karta 01 */}
             <div className="bg-white rounded-3xl p-6 border border-black/5 shadow-xs flex flex-col justify-between">
               <div>
                 <div className="text-xs font-bold text-zinc-400 mb-3">{t.values.v1_tag}</div>
@@ -1635,7 +1004,6 @@ export default function MainWebLanding() {
               </p>
             </div>
 
-            {/* Karta 02 */}
             <div className="bg-[#1E2024] text-white rounded-3xl p-6 shadow-xl flex flex-col justify-between">
               <div>
                 <div className="text-xs font-bold text-zinc-400 mb-3">{t.values.v2_tag}</div>
@@ -1655,7 +1023,6 @@ export default function MainWebLanding() {
               </p>
             </div>
 
-            {/* Karta 03 */}
             <div className="bg-white rounded-3xl p-6 border border-black/5 shadow-xs flex flex-col justify-between">
               <div>
                 <div className="text-xs font-bold text-zinc-400 mb-3">{t.values.v3_tag}</div>
@@ -1679,284 +1046,7 @@ export default function MainWebLanding() {
       </section>
 
       {/* =========================================================================
-          7. SECTION 7: JONLI AGRO BOZOR (Apple Style Category Pills & Badges)
-          ========================================================================= */}
-      <section id="bozor" className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-black/5 scroll-mt-24">
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 sm:mb-12 gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100/70 border border-emerald-200 px-3 py-1 rounded-full mb-3">
-              <ShoppingCart size={13} className="text-emerald-700" />
-              <span>{t.bozor.tag}</span>
-            </div>
-            <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-[#191B1F]">
-              {t.bozor.title}
-            </h2>
-            <p className="mt-2 text-xs sm:text-sm text-zinc-600 max-w-2xl">
-              {t.bozor.desc}
-            </p>
-          </div>
-
-          <Link
-            href="/agrozgo#bozor"
-            className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-emerald-800 hover:text-emerald-950 group shrink-0"
-          >
-            <span>{t.bozor.view_all}</span>
-            <ArrowRight size={15} className="group-hover:translate-x-1 transition-transform" />
-          </Link>
-        </div>
-
-        {/* Kategoriya Tablari (Apple Vector Icon Pills) */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-6 scrollbar-none">
-          {[
-            { id: "all", label: t.bozor.cat_all, icon: null },
-            { id: "crop", label: t.bozor.cat_crop, icon: Sprout },
-            { id: "animal", label: t.bozor.cat_animal, icon: ShieldCheck },
-          ].map((cat) => {
-            const Icon = cat.icon;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
-                className={`px-4 py-2 rounded-full text-xs font-bold transition whitespace-nowrap flex items-center gap-1.5 ${
-                  activeCategory === cat.id
-                    ? "bg-[#191B1F] text-white shadow-xs"
-                    : "bg-white text-zinc-700 border border-zinc-200 hover:bg-zinc-50"
-                }`}
-              >
-                {Icon && <Icon size={13} className={activeCategory === cat.id ? "text-amber-400" : "text-zinc-500"} />}
-                <span>{cat.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Mahsulotlar Kartochkalari (Haqiqiy sertifikatlangan dori vositalari) */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
-          {visibleProducts.map((p) => {
-            const BadgeIcon = p.badgeIcon || Sprout;
-            return (
-              <Link
-                key={p.id}
-                href={`/agrozgo?q=${encodeURIComponent(p.name)}`}
-                className="bg-white rounded-3xl p-4 border border-black/5 shadow-xs hover:shadow-xl hover:border-amber-300 transition-all flex flex-col justify-between group overflow-hidden"
-              >
-                <div>
-                  <div className="h-48 rounded-2xl overflow-hidden relative mb-4 bg-zinc-100">
-                    <img
-                      src={p.image}
-                      alt={p.name}
-                      loading="lazy"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <span className={`absolute top-3 left-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full backdrop-blur-md flex items-center gap-1.5 ${p.badgeColor}`}>
-                      <BadgeIcon size={11} />
-                      <span>{p.badge}</span>
-                    </span>
-                    <span className="absolute bottom-2.5 right-2.5 text-[9px] font-bold bg-black/70 text-white px-2 py-0.5 rounded-full backdrop-blur-xs">
-                      Omborda bor
-                    </span>
-                  </div>
-
-                  <div className="text-[11px] font-bold text-emerald-700 mb-1">{p.category}</div>
-                  <h3 className="text-base font-extrabold text-[#191B1F] line-clamp-1 group-hover:text-emerald-700 transition">
-                    {p.name}
-                  </h3>
-                  <p className="text-xs text-zinc-500 line-clamp-2 mt-1 leading-relaxed">
-                    {p.desc}
-                  </p>
-                </div>
-
-                <div className="mt-5 pt-3.5 border-t border-zinc-100 flex items-center justify-between">
-                  <div>
-                    <div className="text-[10px] text-zinc-400 font-medium">{p.store} • {p.location}</div>
-                    <div className="text-base font-black text-[#191B1F] mt-0.5">{p.price}</div>
-                  </div>
-
-                  <div className="w-9 h-9 rounded-full bg-emerald-50 text-emerald-800 flex items-center justify-center group-hover:bg-[#191B1F] group-hover:text-white transition shadow-2xs">
-                    <ArrowRight size={15} />
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-
-        {/* Barcha 24 ta dorilarni ko'rish / qisqartirish */}
-        {filteredProducts.length > 8 && (
-          <div className="mt-8 text-center">
-            <button
-              onClick={() => setShowAllProducts(!showAllProducts)}
-              className="inline-flex items-center gap-2 bg-[#191B1F] hover:bg-black text-white text-xs font-bold px-6 py-3 rounded-full transition shadow-md active:scale-95"
-            >
-              <span>{showAllProducts ? "Kamroq ko‘rsatish" : `Barcha ${filteredProducts.length} ta dori vositasini ko‘rish`}</span>
-              <ArrowRight size={14} className={showAllProducts ? "-rotate-90 transition-transform" : "rotate-90 transition-transform"} />
-            </button>
-          </div>
-        )}
-      </section>
-
-      {/* =========================================================================
-          8. SECTION 8: MUTAXASSISLAR VA HAMKOR DORIXONALAR
-          ========================================================================= */}
-      <section id="mutaxassislar" className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-black/5 scroll-mt-24">
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 sm:mb-12 gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100/70 border border-emerald-200 px-3 py-1 rounded-full mb-3">
-              <Users size={13} className="text-emerald-700" />
-              <span>{t.specialists.tag}</span>
-            </div>
-            <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-[#191B1F]">
-              {t.specialists.title}
-            </h2>
-            <p className="mt-2 text-xs sm:text-sm text-zinc-600 max-w-2xl">
-              Platformamizda faoliyat yurituvchi {specialistsList.length} nafar sertifikatlangan agronom, fitopatolog va veterinarlar — bevosita dalangizga chaqiruv yoki onlayn maslahat uchun.
-            </p>
-          </div>
-
-          <Link
-            href="/agrozgo#mutaxassislar"
-            className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-emerald-800 hover:text-emerald-950 group shrink-0"
-          >
-            <span>Barcha mutaxassislar ({specialistsList.length})</span>
-            <ArrowRight size={15} className="group-hover:translate-x-1 transition-transform" />
-          </Link>
-        </div>
-
-        {/* 6 nafar real mutaxassis kartochkalari */}
-        <div className="grid md:grid-cols-3 gap-6 mb-16">
-          {specialistsList.map((sp) => (
-            <div
-              key={sp.id}
-              className="bg-white rounded-3xl p-6 border border-black/5 shadow-xs hover:border-amber-300 hover:shadow-lg transition-all flex flex-col justify-between text-left"
-            >
-              <div>
-                <div className="flex items-center gap-3.5 mb-4">
-                  <div className="w-13 h-13 rounded-2xl overflow-hidden shrink-0 border border-zinc-200">
-                    <img src={sp.avatar} alt={sp.name} loading="lazy" className="w-full h-full object-cover" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-extrabold text-[#191B1F]">{sp.name}</h3>
-                    <div className="text-xs font-semibold text-emerald-700 mt-0.5 line-clamp-1">{sp.role}</div>
-                  </div>
-                </div>
-
-                <p className="text-xs text-zinc-600 leading-relaxed min-h-[48px] line-clamp-3">
-                  {sp.specialty}
-                </p>
-
-                <div className="flex flex-wrap items-center gap-2 mt-4 text-[11px] font-bold">
-                  <span className="flex items-center gap-1 text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full">
-                    <Star size={12} fill="currentColor" />
-                    {sp.rating} ({sp.reviews})
-                  </span>
-                  <span className="text-zinc-600 bg-zinc-100 px-2.5 py-1 rounded-full">
-                    {sp.exp}
-                  </span>
-                  <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full text-[10px]">
-                    Tasdiqlangan
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-6 pt-4 border-t border-zinc-100 flex items-center justify-between">
-                <span className="text-xs font-semibold text-zinc-500 flex items-center gap-1.5">
-                  <MapPin size={13} className="text-zinc-400" />
-                  {sp.region}
-                </span>
-
-                <div className="flex items-center gap-2">
-                  <a
-                    href={`tel:${sp.phone}`}
-                    className="p-2 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition"
-                    title="Qo‘ng‘iroq qilish"
-                  >
-                    <Phone size={13} />
-                  </a>
-                  <Link
-                    href="/mutaxassislar"
-                    className="px-4 py-2 rounded-full bg-emerald-50 hover:bg-emerald-600 text-emerald-800 hover:text-white font-bold text-xs transition"
-                  >
-                    Dalaga chaqirish
-                  </Link>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* 6 ta Hamkor Agro-dorixona bloklari (Shaffof ma'lumotlar) */}
-        <div className="bg-[#FAF8F3] rounded-[36px] p-6 sm:p-10 border border-black/5 mt-8">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
-            <div>
-              <div className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-900 bg-amber-100/90 border border-amber-200 px-2.5 py-0.5 rounded-full mb-2">
-                <Store size={12} className="text-amber-800" />
-                <span>Hamkor Tarmoq</span>
-              </div>
-              <h3 className="text-xl sm:text-2xl font-extrabold text-[#191B1F] tracking-tight">
-                Platformadagi {REAL_PHARMACIES.length} ta Rasmiy Agro-dorixona
-              </h3>
-              <p className="text-xs text-zinc-600 mt-1">
-                Barcha tovarlar litsenziyalangan, sertifikatlangan va bevosita ushbu rasmiy dorixonalardan yetkaziladi.
-              </p>
-            </div>
-
-            <Link
-              href="/agrozgo#bozor"
-              className="text-xs font-bold bg-[#191B1F] hover:bg-black text-white px-5 py-2.5 rounded-full transition flex items-center gap-2 shrink-0 shadow-sm"
-            >
-              <span>Dorilarni xarid qilish</span>
-              <ArrowRight size={13} />
-            </Link>
-          </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {REAL_PHARMACIES.map((pharm) => (
-              <div
-                key={pharm.id}
-                className="bg-white rounded-2xl p-4 sm:p-5 border border-black/5 shadow-2xs hover:shadow-md transition text-left flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-                      {pharm.experience}
-                    </span>
-                    <span className="text-[10px] text-zinc-400 font-medium">
-                      ID #{pharm.id}
-                    </span>
-                  </div>
-                  <h4 className="text-sm font-extrabold text-[#191B1F] mb-0.5">
-                    {pharm.name}
-                  </h4>
-                  <div className="text-[11px] font-medium text-zinc-500 mb-2">
-                    {pharm.org}
-                  </div>
-                  <div className="text-xs text-zinc-600 bg-zinc-50 p-2 rounded-xl mb-3 border border-black/5">
-                    <div className="text-[10px] text-zinc-400 font-bold uppercase mb-0.5">Yo‘nalishi:</div>
-                    <div className="font-semibold">{pharm.type}</div>
-                  </div>
-                </div>
-
-                <div className="pt-3 border-t border-zinc-100 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1.5 text-zinc-500 font-medium truncate mr-2">
-                    <MapPin size={12} className="shrink-0 text-zinc-400" />
-                    <span className="truncate">{pharm.region}</span>
-                  </div>
-                  <a
-                    href={`tel:${pharm.phone.replace(/\s+/g, "")}`}
-                    className="shrink-0 text-[11px] font-bold text-emerald-800 hover:text-emerald-950 flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-full transition"
-                  >
-                    <Phone size={10} />
-                    <span>Bog‘lanish</span>
-                  </a>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* =========================================================================
-          9. SECTION 9: SHAFFAF TARIFLAR
+          8. SECTION 8: SHAFFAF TARIFLAR
           ========================================================================= */}
       <section id="tariffs" className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-black/5 scroll-mt-24">
         <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
@@ -2096,7 +1186,7 @@ export default function MainWebLanding() {
       </section>
 
       {/* =========================================================================
-          10. SECTION 10: FAQ & ALOQA
+          9. SECTION 9: FAQ & ALOQA
           ========================================================================= */}
       <section id="aloqa" className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto border-t border-black/5 scroll-mt-24">
         <div className="text-center mb-10">
@@ -2108,14 +1198,14 @@ export default function MainWebLanding() {
           </h2>
           <p className="mt-2 text-xs sm:text-sm text-zinc-600 max-w-xl mx-auto">
             {lang === "ru"
-              ? "Вопросы по заказам, подключению магазинов или вызову агрономов и ветеринаров"
+              ? "Вопросы по работе платформы, подключению магазинов или вызову агрономов и ветеринаров"
               : lang === "en"
-              ? "Questions about orders, store onboarding, or calling agronomists and veterinarians"
-              : "Buyurtmalar, do‘konni ulash yoki agronom va veterinar chaqirish bo‘yicha har qanday savolingizga javob beramiz"}
+              ? "Questions about platform features, store onboarding, or calling agronomists and veterinarians"
+              : "Platformadan foydalanish, do‘konni ulash yoki agronom va veterinar chaqirish bo‘yicha har qanday savolingizga javob beramiz"}
           </p>
         </div>
 
-        {/* 4 ta Aloqa Kartochkasi (Apple clean rounded cards) */}
+        {/* 4 ta Aloqa Kartochkasi */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-14 text-left">
           {/* 1. Telefon */}
           <a
@@ -2246,7 +1336,7 @@ export default function MainWebLanding() {
       </section>
 
       {/* =========================================================================
-          11. FINAL CALL TO ACTION (CTA)
+          10. FINAL CALL TO ACTION (CTA)
           ========================================================================= */}
       <section className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="rounded-[36px] sm:rounded-[48px] bg-[#191B1F] text-white p-8 sm:p-14 text-center shadow-2xl relative overflow-hidden">

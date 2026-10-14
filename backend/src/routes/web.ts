@@ -21,10 +21,10 @@ router.get("/stats", async (_req, res) => {
       db.select({ count: sql<number>`count(*)::int` }).from(specialistMedicines),
     ]);
 
-    const usersCount = Number(u[0]?.count ?? 4);
-    const pharmaciesCount = Number(p[0]?.count ?? 6);
-    const specialistsCount = Number(s[0]?.count ?? 6);
-    const medicinesCount = Number(m[0]?.count ?? 24);
+    const usersCount = Number(u[0]?.count ?? 0);
+    const pharmaciesCount = Number(p[0]?.count ?? 0);
+    const specialistsCount = Number(s[0]?.count ?? 0);
+    const medicinesCount = Number(m[0]?.count ?? 0);
 
     res.setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
     res.json({
@@ -33,18 +33,17 @@ router.get("/stats", async (_req, res) => {
       pharmacies: pharmaciesCount,
       specialists: specialistsCount,
       medicines: medicinesCount,
-      regions: 5, // Toshkent, Samarqand, Farg'ona, Buxoro, Andijon
+      regions: pharmaciesCount > 0 ? 5 : 0,
     });
   } catch (err) {
     console.error("[web stats error]:", err);
-    // Zaxira: bazadagi aniq tasdiqlangan raqamlar
     res.json({
       ok: true,
-      users: 4,
-      pharmacies: 6,
-      specialists: 6,
-      medicines: 24,
-      regions: 5,
+      users: 0,
+      pharmacies: 0,
+      specialists: 0,
+      medicines: 0,
+      regions: 0,
     });
   }
 });
