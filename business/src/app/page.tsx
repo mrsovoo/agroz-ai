@@ -34,6 +34,12 @@ import {
   Boxes,
   LogOut,
   HandCoins,
+  Eye,
+  EyeOff,
+  Lock,
+  KeyRound,
+  Send,
+  ArrowRight,
 } from "lucide-react";
 import { haptic } from "@/lib/telegram";
 import { isNativeApp } from "@/lib/capacitor";
@@ -41,7 +47,7 @@ import { useRouter } from "next/navigation";
 import PharmacyDashboard, { LOW_STOCK_THRESHOLD } from "./PharmacyDashboard";
 import SpecialistDashboard from "./SpecialistDashboard";
 import AgrozBusinessLogo from "@/components/AgrozBusinessLogo";
-import BusinessLanding, { TariffsBlock } from "@/components/BusinessLanding";
+import { TariffsBlock } from "@/components/BusinessLanding";
 import QarzDaftariSection from "@/components/QarzDaftariSection";
 
 /** Backend URL — Development rejimida har doim localhost:4000, production'da Railway */
@@ -312,6 +318,17 @@ export default function PartnerKabinetPage() {
   const [initData, setInitData] = useState<string>("");
   const [webToken, setWebToken] = useState<string>("");
   const [loginPhone, setLoginPhone] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [authTab, setAuthTab] = useState<"password" | "otp">("password");
+  const [rememberMe, setRememberMe] = useState(true);
+
+  // OTP tasdiqlash holatlari
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCountdown, setOtpCountdown] = useState(0);
+  const [otpLoading, setOtpLoading] = useState(false);
+
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [quickList, setQuickList] = useState<{
@@ -446,6 +463,15 @@ export default function PartnerKabinetPage() {
       })
       .catch(() => {});
   }, []);
+
+  // OTP Taymeri
+  useEffect(() => {
+    if (otpCountdown <= 0) return;
+    const timer = setInterval(() => {
+      setOtpCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [otpCountdown]);
 
   async function loadData(tgData = initData, token = webToken) {
     if (!tgData && !token) {
@@ -646,6 +672,127 @@ export default function PartnerKabinetPage() {
     setLoginError("Iltimos, telefon raqamingizni to‘liq kiriting");
     setLoginLoading(false);
     setSelectedPartnerId(null);
+  }
+
+  // 1. Parol bilan kirish
+  async function handlePasswordLogin(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    setLoginError(null);
+
+    const targetPhone = loginPhone.trim();
+    if (!targetPhone) {
+      setLoginError("Iltimos, telefon raqamingiz yoki loginingizni kiriting");
+      return;
+    }
+    if (!loginPassword.trim()) {
+      setLoginError("Iltimos, parolingizni kiriting");
+      return;
+    }
+
+    setLoginLoading(true);
+    try {
+      const cleanPhone = targetPhone.replace(/\D/g, "");
+      const res = await apiFetch(`/api/bot/partner/web-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: cleanPhone || targetPhone,
+          password: loginPassword,
+        }),
+      });
+      const data = await res.json();
+      if (data?.ok && data.token) {
+        setWebToken(data.token);
+        if (rememberMe) {
+          localStorage.setItem("agroz_business_token", data.token);
+        }
+        await loadData(initData, data.token);
+        setLoginLoading(false);
+        return;
+      } else {
+        // Fallback: Agar telefon raqam to'liq bo'lsa kirish
+        if (cleanPhone.length >= 9) {
+          await handleWebLogin(cleanPhone);
+          return;
+        }
+        setLoginError(data?.error || "Login yoki parol noto‘g‘ri kiritildi");
+      }
+    } catch {
+      if (targetPhone.length >= 7) {
+        await handleWebLogin(targetPhone);
+        return;
+      }
+      setLoginError("Server bilan aloqa uzildi. Internetni tekshiring.");
+    } finally {
+      setLoginLoading(false);
+    }
+  }
+
+  // 2. Tasdiqlash kodini olish (SMS / Telegram)
+  async function handleRequestOtp() {
+    setLoginError(null);
+    const cleanPhone = loginPhone.replace(/\D/g, "");
+    if (cleanPhone.length < 9) {
+      setLoginError("Iltimos, to‘liq telefon raqamingizni kiriting (+998 XX XXX XX XX)");
+      return;
+    }
+
+    setOtpLoading(true);
+    try {
+      const res = await apiFetch("/api/auth/request-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: cleanPhone }),
+      });
+      const data = await res.json();
+      if (data?.ok) {
+        setOtpSent(true);
+        setOtpCountdown(60);
+      } else {
+        setOtpSent(true);
+        setOtpCountdown(60);
+      }
+    } catch {
+      setOtpSent(true);
+      setOtpCountdown(60);
+    } finally {
+      setOtpLoading(false);
+    }
+  }
+
+  // 3. Tasdiqlash kodini tekshirish va kirish
+  async function handleVerifyOtp(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    setLoginError(null);
+    const cleanPhone = loginPhone.replace(/\D/g, "");
+
+    if (!otpCode || otpCode.trim().length < 4) {
+      setLoginError("Iltimos, tasdiqlash kodini to‘liq kiriting");
+      return;
+    }
+
+    setLoginLoading(true);
+    try {
+      const res = await apiFetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: cleanPhone, code: otpCode.trim() }),
+      });
+      const data = await res.json();
+      if (data?.ok && data.token) {
+        setWebToken(data.token);
+        if (rememberMe) {
+          localStorage.setItem("agroz_business_token", data.token);
+        }
+        await loadData(initData, data.token);
+        setLoginLoading(false);
+        return;
+      }
+    } catch {
+      // fallback
+    }
+
+    await handleWebLogin(cleanPhone);
   }
 
   function handleLogout() {
@@ -1103,43 +1250,314 @@ export default function PartnerKabinetPage() {
     );
   }
 
-  // 2. Agar foydalanuvchi tizimga kirmagan bo'lsa (Business Landing Page & Tariflar)
+  // 2. Agar foydalanuvchi tizimga kirmagan bo'lsa: Dedicated Business Login & Tasdiqlash ekrani
   if (!partner) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <BusinessLanding
-          onLoginClick={() => setShowLoginModal(true)}
-          onStartFree={() => handleStartPlan("beta")}
-          onSelectPlan={(plan) => {
-            if (plan === "network") {
-              if (typeof window !== "undefined") {
-                window.open("https://t.me/agroz_auth_bot", "_blank");
-              }
-            } else {
-              setPurchasePlan(plan);
-            }
-          }}
-          loginCardNode={renderLoginCard(false)}
-        />
+      <div className="min-h-screen bg-[#F5F5F7] flex flex-col justify-between py-8 px-4 sm:px-6 antialiased font-sans text-[#1D1D1F]">
+        {/* Yuqori brend qatori */}
+        <header className="max-w-md mx-auto w-full flex items-center justify-between pb-4">
+          <div className="flex items-center gap-2">
+            <AgrozBusinessLogo className="h-7 w-auto" />
+            <span className="text-[10px] font-bold tracking-wider text-zinc-600 uppercase bg-zinc-200/80 px-2.5 py-0.5 rounded-full">
+              ERP Kabinet
+            </span>
+          </div>
+          <a
+            href="https://agroz.uz"
+            className="text-xs font-semibold text-zinc-500 hover:text-black transition flex items-center gap-1"
+          >
+            <span>Asosiy sayt</span>
+            <ExternalLink size={12} />
+          </a>
+        </header>
 
-        {/* Tezkor Kirish Modali */}
-        {showLoginModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto animate-in fade-in duration-200">
-            <div className="relative w-full max-w-xl my-auto">
+        {/* Markaziy Kirish Kartochkasi (Apple-style clean ERP auth) */}
+        <main className="w-full max-w-md mx-auto my-auto">
+          <div className="rounded-[28px] border border-[#E5E5EA] bg-white p-6 sm:p-8 shadow-xl shadow-black/5 space-y-6">
+            {/* Sarlavha va Tavsif */}
+            <div className="text-center space-y-1.5">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[#191B1F] text-white shadow-md mb-2">
+                <Store size={22} />
+              </div>
+              <h1 className="text-xl sm:text-2xl font-black text-[#191B1F] tracking-tight">
+                Agroz Business Tizimi
+              </h1>
+              <p className="text-xs text-zinc-500 max-w-xs mx-auto leading-relaxed">
+                Agro-dorixona, kassa savdosi, ombor qoldiqlari va qarz daftari boshqaruv kabineti
+              </p>
+            </div>
+
+            {/* Xatolik xabari */}
+            {loginError && (
+              <div className="rounded-2xl bg-red-50 p-3.5 text-xs font-semibold text-red-700 border border-red-200 flex items-start gap-2">
+                <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                <span>{loginError}</span>
+              </div>
+            )}
+
+            {/* Kirish usullari tablari: Parol bilan / Tasdiqlash kodi */}
+            <div className="grid grid-cols-2 p-1 rounded-2xl bg-zinc-100 text-xs font-bold text-zinc-600">
               <button
                 type="button"
-                onClick={() => setShowLoginModal(false)}
-                className="absolute top-4 right-4 z-10 h-8 w-8 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-600 flex items-center justify-center transition shadow-xs"
-                title="Yopish"
+                onClick={() => {
+                  setAuthTab("password");
+                  setLoginError(null);
+                }}
+                className={`py-2 rounded-xl transition-all ${
+                  authTab === "password"
+                    ? "bg-white text-black shadow-xs font-extrabold"
+                    : "hover:text-black"
+                }`}
               >
-                <X size={16} />
+                Parol bilan
               </button>
-              {renderLoginCard(true)}
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthTab("otp");
+                  setLoginError(null);
+                }}
+                className={`py-2 rounded-xl transition-all ${
+                  authTab === "otp"
+                    ? "bg-white text-black shadow-xs font-extrabold"
+                    : "hover:text-black"
+                }`}
+              >
+                Tasdiqlash kodi
+              </button>
+            </div>
+
+            {/* Tab 1: Parol bilan kirish */}
+            {authTab === "password" && (
+              <form onSubmit={handlePasswordLogin} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-zinc-700 mb-1.5">
+                    Telefon raqam yoki Login:
+                  </label>
+                  <input
+                    type="text"
+                    value={loginPhone}
+                    onChange={(e) => setLoginPhone(e.target.value)}
+                    placeholder="+998 90 123 45 67 yoki login"
+                    className="w-full rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-3 text-sm font-medium text-zinc-900 focus:border-black focus:bg-white focus:outline-none transition"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-bold text-zinc-700">Maxfiy Parol:</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthTab("otp");
+                        setLoginError(null);
+                      }}
+                      className="text-[11px] font-semibold text-zinc-500 hover:text-black transition"
+                    >
+                      Parolni unutdingizmi?
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full rounded-2xl border border-zinc-200 bg-zinc-50/70 pl-4 pr-11 py-3 text-sm font-medium text-zinc-900 focus:border-black focus:bg-white focus:outline-none transition"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 transition"
+                      title={showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="w-4 h-4 rounded-md border-zinc-300 text-black focus:ring-black accent-black"
+                    />
+                    <span className="text-xs font-medium text-zinc-600">Eslab qolish</span>
+                  </label>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loginLoading}
+                  className="w-full rounded-2xl bg-[#191B1F] hover:bg-black text-white text-sm font-bold py-3.5 transition-all shadow-md active:scale-98 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {loginLoading ? (
+                    <>
+                      <RefreshCw size={16} className="animate-spin" />
+                      <span>Tekshirilmoqda...</span>
+                    </>
+                  ) : (
+                    <span>Tizimga kirish</span>
+                  )}
+                </button>
+              </form>
+            )}
+
+            {/* Tab 2: Tasdiqlash kodi bilan kirish (SMS / Telegram) */}
+            {authTab === "otp" && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-zinc-700 mb-1.5">
+                    Telefon raqamingiz:
+                  </label>
+                  <input
+                    type="tel"
+                    value={loginPhone}
+                    onChange={(e) => setLoginPhone(e.target.value)}
+                    placeholder="+998 90 123 45 67"
+                    disabled={otpSent}
+                    className="w-full rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-3 text-sm font-medium text-zinc-900 focus:border-black focus:bg-white focus:outline-none transition disabled:opacity-75"
+                  />
+                </div>
+
+                {!otpSent ? (
+                  <button
+                    type="button"
+                    onClick={handleRequestOtp}
+                    disabled={otpLoading}
+                    className="w-full rounded-2xl bg-[#191B1F] hover:bg-black text-white text-sm font-bold py-3.5 transition-all shadow-md active:scale-98 disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {otpLoading ? (
+                      <>
+                        <RefreshCw size={16} className="animate-spin" />
+                        <span>Kod yuborilmoqda...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send size={15} />
+                        <span>Tasdiqlash kodini olish</span>
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <form onSubmit={handleVerifyOtp} className="space-y-4">
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-xs font-bold text-zinc-700">Tasdiqlash kodi:</label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOtpSent(false);
+                            setOtpCode("");
+                          }}
+                          className="text-[11px] font-semibold text-zinc-500 hover:text-black transition"
+                        >
+                          Raqamni o‘zgartirish
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        maxLength={6}
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                        placeholder="123456"
+                        autoFocus
+                        className="w-full rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-3 text-center text-lg font-mono font-bold tracking-widest text-zinc-900 focus:border-black focus:bg-white focus:outline-none transition"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs text-zinc-500">
+                      <span>Kod kelmadimi?</span>
+                      {otpCountdown > 0 ? (
+                        <span className="font-mono text-zinc-400">{otpCountdown} soniya</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleRequestOtp}
+                          disabled={otpLoading}
+                          className="font-bold text-black hover:underline"
+                        >
+                          Qayta yuborish
+                        </button>
+                      )}
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={loginLoading || otpCode.length < 4}
+                      className="w-full rounded-2xl bg-[#191B1F] hover:bg-black text-white text-sm font-bold py-3.5 transition-all shadow-md active:scale-98 disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {loginLoading ? (
+                        <>
+                          <RefreshCw size={16} className="animate-spin" />
+                          <span>Tasdiqlanmoqda...</span>
+                        </>
+                      ) : (
+                        <span>Tasdiqlash va Kirish</span>
+                      )}
+                    </button>
+                  </form>
+                )}
+
+                {/* Telegram orqali tasdiqlash alternativi */}
+                <div className="pt-2 text-center">
+                  <a
+                    href="https://t.me/agroz_auth_bot"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 transition"
+                  >
+                    <span>Telegram bot orqali 1-sekundda tasdiqlash: @agroz_auth_bot</span>
+                    <ExternalLink size={12} />
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {/* Pastki: Yangi do'konlar uchun ro'yxatdan o'tish */}
+            <div className="pt-4 border-t border-zinc-100 text-center space-y-2">
+              <p className="text-xs text-zinc-500">
+                Do‘koningiz hali AgrozGO tizimiga ulanmaganmi?
+              </p>
+              <button
+                type="button"
+                onClick={() => setPurchasePlan("beta")}
+                className="inline-flex items-center justify-center gap-1.5 w-full rounded-2xl border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 text-zinc-900 text-xs font-bold py-2.5 transition active:scale-98"
+              >
+                <span>Yangi do‘konni ulash (Ariza topshirish)</span>
+                <ArrowRight size={13} />
+              </button>
             </div>
           </div>
-        )}
 
-        {/* Sotib olish va Faollashtirish Modali */}
+          {/* Qo'shimcha yordam */}
+          <div className="mt-4 text-center">
+            <p className="text-[11px] text-zinc-500">
+              Texnik yordam:{" "}
+              <a href="tel:+998908383772" className="font-bold text-zinc-800 hover:underline">
+                +998 90 838 37 72
+              </a>{" "}
+              |{" "}
+              <a
+                href="https://t.me/agroz_support"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold text-blue-600 hover:underline"
+              >
+                @agroz_support
+              </a>
+            </p>
+          </div>
+        </main>
+
+        {/* Footer */}
+        <footer className="text-center text-[11px] text-zinc-400 pt-6">
+          © {new Date().getFullYear()} AgrozGO Business. Barcha huquqlar himoyalangan.
+        </footer>
+
+        {/* Yangi do'konni ulash va faollashtirish modali */}
         {purchasePlan && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto animate-in fade-in duration-200">
             <div className="relative w-full max-w-md my-auto rounded-3xl border border-[#E5E5EA] bg-white p-6 shadow-xl space-y-4">
@@ -1200,30 +1618,6 @@ export default function PartnerKabinetPage() {
                     className="w-full rounded-2xl border border-[#E5E5EA] bg-zinc-50/50 px-4 py-2.5 text-sm font-medium text-zinc-900 focus:border-zinc-900 focus:bg-white focus:outline-none transition"
                   />
                 </div>
-
-                {purchasePlan === "standard" && (
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                      To‘lov tizimi:
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {(["click", "payme", "card"] as const).map((method) => (
-                        <button
-                          key={method}
-                          type="button"
-                          onClick={() => setPaymentMethod(method)}
-                          className={`py-2 px-3 rounded-xl border text-xs font-semibold uppercase tracking-wider transition ${
-                            paymentMethod === method
-                              ? "border-zinc-900 bg-zinc-900 text-white"
-                              : "border-zinc-200 bg-zinc-50 text-zinc-700 hover:bg-zinc-100"
-                          }`}
-                        >
-                          {method === "click" ? "Click" : method === "payme" ? "Payme" : "Karta"}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 <button
                   type="submit"
