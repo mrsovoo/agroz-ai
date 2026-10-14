@@ -1,4 +1,5 @@
-import HomeClientView, { type HomeMedicine, type HomeSpecialist } from "@/components/HomeClientView";
+import HomeViewDispatcher from "@/components/HomeViewDispatcher";
+import type { HomeMedicine, HomeSpecialist } from "@/components/HomeClientView";
 import { apiUrl } from "@/lib/api-config";
 
 // Doimiy jonli va tasodifiy yangilanish uchun
@@ -130,7 +131,7 @@ export default async function HomePage() {
   }
 
   return (
-    <HomeClientView
+    <HomeViewDispatcher
       initialMedicines={initialMedicines}
       initialSpecialists={initialSpecialists}
     />

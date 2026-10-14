@@ -3,13 +3,13 @@
 /**
  * Agro Bozor — platformadagi barcha ro'yxatdan o'tgan agro-do&apos;konlar agro-mahsulotlari.
  *
- * • Bo'limlar: Hammasi / 🌱 Ekin uchun / 🐄 Hayvonlar uchun (agro-mahsulot `type` maydoni)
+ * • Bo'limlar: Hammasi / Ekin uchun / Hayvonlar uchun (agro-mahsulot `type` maydoni)
  * • Qidiruv: agro-mahsulot nomi, qo'llanishi va agro-do&apos;kon nomi bo'yicha
  * • Radius: 5/10/25/50 km — foydalanuvchi joylashuvidan
  * • Kartochka: rasm tepada, ostida agro-mahsulot nomi, narxi va agro-do&apos;kon nomi
  * • Savat: bir vaqtda bitta agro-do&apos;kon agro-mahsulotlari; buyurtma Telegram orqali
  *   agro-do&apos;kon egasiga yetib boradi, holatini mijoz telefon raqami bilan kuzatadi
- * • ❤️ Yoqtirilganlar: brauzerda (localStorage) saqlanadi, alohida ro'yxatda
+ * • Yoqtirilganlar: brauzerda (localStorage) saqlanadi, alohida ro'yxatda
  * • Reyting: yetkazilgan buyurtmani 1–5 yulduz bilan baholash — qancha yaxshi
  *   baholansa, agro-do&apos;kon reytingi shuncha oshadi
  */
@@ -30,6 +30,7 @@ import {
   Pill,
   Plus,
   Search,
+  ShieldCheck,
   ShoppingCart,
   Sparkles,
   Sprout,
@@ -37,6 +38,8 @@ import {
   Store,
   Syringe,
   Trash2,
+  Truck,
+  Lightbulb,
   User,
   X,
 } from "lucide-react";
@@ -105,9 +108,9 @@ function TypeIcon({ type, size = 30 }: { type: string; size?: number }) {
 }
 
 function typeBadge(type: string): { label: string; bg: string; color: string } {
-  if (type === "crop") return { label: "🌱 Ekin", bg: "var(--brand-green-soft)", color: "var(--brand-green)" };
-  if (type === "animal") return { label: "🐄 Hayvon", bg: "var(--brand-yellow-soft)", color: "var(--brand-ink)" };
-  return { label: "📦 Umumiy", bg: "#ccfbf1", color: "#0d9488" };
+  if (type === "crop") return { label: "Ekin", bg: "var(--brand-green-soft)", color: "var(--brand-green)" };
+  if (type === "animal") return { label: "Hayvon", bg: "var(--brand-yellow-soft)", color: "var(--brand-ink)" };
+  return { label: "Umumiy", bg: "#ccfbf1", color: "#0d9488" };
 }
 
 
@@ -443,73 +446,99 @@ export default function MarketClient() {
   }
 
 
-  const sectionTabs: { v: typeof section; l: string }[] = [
-    { v: "all", l: "Hammasi" },
-    { v: "crop", l: "🌱 Ekin uchun" },
-    { v: "animal", l: "🐄 Hayvonlar uchun" },
+  const sectionTabs: { v: typeof section; l: string; icon: typeof Sprout | typeof ShieldCheck | null }[] = [
+    { v: "all", l: "Barcha mahsulotlar", icon: null },
+    { v: "crop", l: "Ekin himoyasi & O‘g‘itlar", icon: Sprout },
+    { v: "animal", l: "Chorva & Veterinariya", icon: ShieldCheck },
   ];
 
   /** Kartochka tanasi — bozor grid'i va yoqtirilganlar ro'yxatida umumiy. */
 
   return (
-    <div className="min-h-screen bg-white px-4 pt-3 pb-24 text-neutral-900 web:bg-transparent web:px-0 web:pt-0 web:pb-12">
-      {/* 1. Header: Dorilar + Heart (Sevimlilar) tugmasi */}
-      <div className="flex items-center justify-between pt-1 pb-2">
-        <h1 className="text-[28px] font-black tracking-tight text-neutral-900 web:text-[34px]">Dorilar</h1>
-        <button
-          onClick={() => setFavsOpen(true)}
-          className="relative flex h-11 w-11 items-center justify-center rounded-full bg-white border border-neutral-200/90 shadow-2xs transition active:scale-95 hover:bg-neutral-50"
-          aria-label="Sevimlilar"
-        >
-          <Heart size={21} strokeWidth={2} className="text-[#ef4444]" />
-          {favCount > 0 && (
-            <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#ef4444] px-1 text-[10px] font-black text-white border-2 border-white shadow-xs">
-              {favCount}
-            </span>
-          )}
-        </button>
-      </div>
+    <div className="min-h-screen bg-[#FAF9F5] text-[#191B1F] pb-24 font-sans">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12">
+        {/* Breadcrumb & Sarlavha */}
+        <div className="flex items-center gap-2 text-xs font-semibold text-zinc-500 mb-3">
+          <Link href="/" className="hover:text-black transition">
+            AgrozGO
+          </Link>
+          <span>/</span>
+          <span className="text-zinc-900">Mahsulotlar</span>
+        </div>
 
-      {/* 2. Qidiruv — rasmda 'qidiruv' placeholder bilan */}
-      <div className="mt-2 flex items-center gap-3 rounded-[20px] bg-white px-4 py-3.5 border border-neutral-200/90 shadow-2xs focus-within:border-[#039e1e] transition">
-        <Search size={20} className="shrink-0 text-neutral-400" />
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="qidiruv"
-          maxLength={80}
-          className="w-full bg-transparent text-[15.5px] font-medium text-neutral-900 outline-none placeholder:text-neutral-400"
-        />
-        {query && (
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100/70 border border-emerald-200 px-3.5 py-1 rounded-full mb-3">
+              <ShoppingCart size={13} className="text-emerald-700" />
+              <span>Jonli Agro Bozor</span>
+            </div>
+            <h1 className="text-3xl sm:text-5xl font-extrabold text-[#191B1F] tracking-tight">
+              Dorilar va agro-preparatlar katalogi
+            </h1>
+            <p className="mt-2 text-xs sm:text-sm text-zinc-600 max-w-2xl leading-relaxed">
+              O‘zbekiston bo‘ylab ro‘yxatdan o‘tgan agro-dorixona va omborlar mahsulotlari. Sifatli preparatlar, narxlarni solishtirish va to‘g‘ridan-to‘g‘ri buyurtma.
+            </p>
+          </div>
+
           <button
-            onClick={() => setQuery("")}
-            aria-label="Tozalash"
-            className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-100 text-neutral-500 hover:bg-neutral-200"
+            onClick={() => setFavsOpen(true)}
+            className="relative self-start md:self-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white hover:bg-zinc-50 text-xs font-bold text-zinc-800 border border-black/8 shadow-xs transition active:scale-95"
+            aria-label="Sevimlilar"
           >
-            <X size={15} />
+            <Heart size={16} strokeWidth={2} className="text-rose-500 fill-rose-500" />
+            <span>Saqlanganlar</span>
+            {favCount > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-black text-white ml-1">
+                {favCount}
+              </span>
+            )}
           </button>
-        )}
-      </div>
+        </div>
 
-      {/* 3. Toifalar: Hammasi | 🌱 Ekin uchun | 🐄 Hayvonlar uchun */}
-      <div className="mt-3.5 flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-        {sectionTabs.map((t) => {
-          const active = section === t.v;
-          return (
-            <button
-              key={t.v}
-              onClick={() => setSection(t.v)}
-              className={`shrink-0 rounded-xl px-4 py-2 text-[13px] font-bold transition-all active:scale-95 ${
-                active
-                  ? "bg-[#039e1e] text-white shadow-2xs"
-                  : "bg-[#f4f5f7] text-neutral-700 hover:bg-neutral-200/80"
-              }`}
-            >
-              {t.l}
-            </button>
-          );
-        })}
-      </div>
+        {/* 2. Apple-style Katta Qidiruv va Filtr Bar */}
+        <div className="bg-white rounded-3xl p-3 sm:p-4 border border-black/8 shadow-xs mb-6">
+          <div className="flex items-center gap-3 px-3 py-2">
+            <Search size={18} className="shrink-0 text-zinc-400" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Dori nomi, faol modda, kasallik yoki do‘kon nomi bo‘yicha qidiruv..."
+              maxLength={80}
+              className="w-full bg-transparent text-xs sm:text-sm font-medium text-zinc-900 outline-none placeholder:text-zinc-400"
+            />
+            {query && (
+              <button
+                onClick={() => setQuery("")}
+                aria-label="Tozalash"
+                className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+
+          {/* Kategoriya Tablari (Apple vector icons) */}
+          <div className="flex items-center gap-2 pt-3 border-t border-zinc-100 overflow-x-auto no-scrollbar">
+            {sectionTabs.map((t) => {
+              const active = section === t.v;
+              const Icon = t.icon;
+              return (
+                <button
+                  key={t.v}
+                  onClick={() => setSection(t.v)}
+                  className={`shrink-0 rounded-full px-4 py-2 text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 ${
+                    active
+                      ? "bg-[#191B1F] text-white shadow-xs"
+                      : "bg-[#FAF9F5] text-zinc-700 hover:bg-zinc-200/80 border border-black/5"
+                  }`}
+                >
+                  {Icon && <Icon size={13} className={active ? "text-amber-400" : "text-zinc-500"} />}
+                  <span>{t.l}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
       {/* Kartochkalar grid'i */}
       {loading ? (
@@ -569,34 +598,39 @@ export default function MarketClient() {
           ))}
         </div>
       )}
+      </div>
 
-
-      {/* Yoqtirilganlar bottom sheet */}
+      {/* Yoqtirilganlar modal / drawer */}
       {favsOpen && (
         <div
-          className="fixed inset-0 z-[60] flex items-end justify-center"
-          style={{ background: "rgba(0,0,0,0.35)" }}
+          className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
           onClick={() => setFavsOpen(false)}
         >
           <div
-            className="max-h-[85dvh] w-full max-w-[520px] overflow-y-auto rounded-t-[28px] bg-white px-5 pb-[max(16px,env(safe-area-inset-bottom))] pt-2"
+            className="max-h-[85vh] w-full max-w-xl overflow-y-auto rounded-3xl bg-white px-5 sm:px-6 pb-6 pt-5 shadow-2xl border border-black/10"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sheet-handle" />
-            <div className="mt-2 flex items-center justify-between">
-              <p className="text-[18px] font-black text-[var(--brand-ink)]">
-                ❤️ Yoqtirilganlar {favCards.length > 0 && `(${favCards.length})`}
-              </p>
-              <button onClick={() => setFavsOpen(false)} aria-label="Yopish" className="p-1 text-[var(--brand-muted)]">
-                <X size={20} />
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
+              <div className="flex items-center gap-2">
+                <Heart size={20} className="text-rose-500 fill-rose-500" />
+                <h3 className="text-lg font-black text-zinc-900">
+                  Saqlanganlar {favCards.length > 0 && `(${favCards.length})`}
+                </h3>
+              </div>
+              <button
+                onClick={() => setFavsOpen(false)}
+                aria-label="Yopish"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+              >
+                <X size={18} />
               </button>
             </div>
             {favCards.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 py-8 text-center">
-                <Heart size={30} className="text-[var(--brand-muted)]" />
-                <p className="text-[15px] font-bold text-[var(--brand-ink)]">Ro&apos;yxat bo&apos;sh</p>
-                <p className="text-[13px] leading-relaxed text-[var(--brand-muted)]">
-                  Dorilar kartochkasidagi ❤️ belgisini bosib, keyinroq uchun saqlab qo&apos;ying.
+              <div className="flex flex-col items-center gap-2 py-12 text-center">
+                <Heart size={36} className="text-zinc-300" />
+                <p className="text-base font-bold text-zinc-800">Ro&apos;yxat bo&apos;sh</p>
+                <p className="text-xs sm:text-sm leading-relaxed text-zinc-500 max-w-xs">
+                  Mahsulotlar kartochkasidagi yurakcha belgisini bosib, keyinroq uchun saqlab qo&apos;ying.
                 </p>
               </div>
             ) : (
@@ -698,14 +732,24 @@ export default function MarketClient() {
                   <div className="flex items-center justify-between border-b border-[var(--brand-sep)] pb-2.5">
                     <span className="text-[12px] font-bold text-[var(--brand-muted)]">Qabul qilish usuli</span>
                     <span
-                      className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-bold shadow-xs"
+                      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-bold shadow-xs"
                       style={
                         orderDone.deliveryType === "delivery"
                           ? { background: "#dbeafe", color: "#1e40af" }
                           : { background: "var(--brand-green-soft)", color: "var(--brand-green)" }
                       }
                     >
-                      {orderDone.deliveryType === "delivery" ? "🛵 Yetkazib berish" : "🏪 O'zim olib ketaman"}
+                      {orderDone.deliveryType === "delivery" ? (
+                        <>
+                          <Truck size={13} />
+                          <span>Yetkazib berish</span>
+                        </>
+                      ) : (
+                        <>
+                          <Store size={13} />
+                          <span>O&apos;zim olib ketaman</span>
+                        </>
+                      )}
                     </span>
                   </div>
 
@@ -890,14 +934,17 @@ export default function MarketClient() {
                         </span>
                       </div>
                     ) : (
-                      <div className="rounded-2xl bg-amber-50/80 p-3 border border-amber-200 text-[12px] text-amber-900">
-                        <p className="font-bold">⚠️ Buyurtma berish uchun tizimga kiring</p>
-                        <Link
-                          href="/kirish"
-                          className="mt-1.5 inline-block text-[11.5px] font-bold text-[var(--brand-green)] underline"
-                        >
-                          Tizimga kirish / Ro&apos;yxatdan o&apos;tish
-                        </Link>
+                      <div className="rounded-2xl bg-amber-50/80 p-3 border border-amber-200 text-[12px] text-amber-900 flex items-start gap-2">
+                        <AlertCircle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-bold">Buyurtma berish uchun tizimga kiring</p>
+                          <Link
+                            href="/kirish"
+                            className="mt-1 inline-block text-[11.5px] font-bold text-[var(--brand-green)] underline"
+                          >
+                            Tizimga kirish / Ro&apos;yxatdan o&apos;tish
+                          </Link>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -918,7 +965,9 @@ export default function MarketClient() {
                         }`}
                       >
                         <div className="flex w-full items-center justify-between">
-                          <span className="text-xl">🏪</span>
+                          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800">
+                            <Store size={18} />
+                          </span>
                           <span
                             className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
                               cartDelivery === "pickup"
@@ -949,7 +998,9 @@ export default function MarketClient() {
                         }`}
                       >
                         <div className="flex w-full items-center justify-between">
-                          <span className="text-xl">🛵</span>
+                          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-100 text-blue-800">
+                            <Truck size={18} />
+                          </span>
                           <span
                             className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
                               cartDelivery === "delivery"
@@ -994,9 +1045,10 @@ export default function MarketClient() {
                           </a>
                         </div>
                       )}
-                      <p className="text-[11px] leading-relaxed text-[var(--brand-muted)]">
-                        💡 Buyurtma berganingizdan so&apos;ng, agro-do&apos;kon xodimi dorilarni tayyorlab qo&apos;yadi va siz istalgan vaqtda borib olib ketishingiz mumkin.
-                      </p>
+                      <div className="flex items-start gap-1.5 text-[11px] leading-relaxed text-[var(--brand-muted)]">
+                        <Lightbulb size={13} className="shrink-0 mt-0.5 text-amber-500" />
+                        <span>Buyurtma berganingizdan so&apos;ng, agro-do&apos;kon xodimi dorilarni tayyorlab qo&apos;yadi va siz istalgan vaqtda borib olib ketishingiz mumkin.</span>
+                      </div>
                     </div>
                   ) : (
                     <div className="space-y-2 rounded-2xl border border-[var(--brand-sep)] bg-[var(--brand-bg)] p-3.5">

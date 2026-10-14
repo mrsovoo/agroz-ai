@@ -51,7 +51,10 @@ class _MedicinesScreenState extends ConsumerState<MedicinesScreen> {
           children: [
             Column(
               children: [
-                const HomeHeader(),
+                const HomeHeader(
+                  showFullHeader: false,
+                  showSavedInsteadOfNotification: true,
+                ),
                 CatalogSearchBar(
                   controller: _controller,
                   onQueryChanged: (v) => setState(() => _query = v),
@@ -82,7 +85,7 @@ class _MedicinesScreenState extends ConsumerState<MedicinesScreen> {
                               crossAxisCount: 2,
                               crossAxisSpacing: 8,
                               mainAxisSpacing: 10,
-                              mainAxisExtent: 335,
+                              mainAxisExtent: 310,
                             ),
                             itemCount: items.length,
                             itemBuilder: (context, i) => MedicineCard(

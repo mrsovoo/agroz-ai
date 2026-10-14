@@ -299,6 +299,83 @@ export async function handleFarmerUpdate(update: any) {
       }
     }
 
+    // 1.5) Biznes ro'yxatdan o'tish orqali kelgan bo'lsa (start biz_reg_<token> yoki reg_<token>)
+    if (payload && (payload.startsWith("biz_") || payload.startsWith("reg_"))) {
+      const row = (await db.select().from(otpCodes).where(eq(otpCodes.token, payload)).limit(1))[0];
+      if (row && row.expiresAt.getTime() > Date.now()) {
+        const spec = (await db.select().from(specialists).where(eq(specialists.phone, row.phone)).limit(1))[0];
+        if (spec) {
+          await db
+            .update(specialists)
+            .set({
+              telegramId: fromId,
+              isActive: true,
+              isApproved: true,
+            })
+            .where(eq(specialists.id, spec.id));
+
+          let user = (await db.select().from(users).where(eq(users.phone, row.phone)).limit(1))[0];
+          if (user) {
+            await db.update(users).set({ telegramId: fromId, botStartedAt: new Date(), botBlocked: false }).where(eq(users.id, user.id));
+          } else {
+            const [created] = await db.insert(users).values({
+              phone: row.phone,
+              name: spec.name,
+              telegramId: fromId,
+              botStartedAt: new Date(),
+              botBlocked: false,
+            }).returning();
+            user = created;
+          }
+
+          await db.update(otpCodes).set({
+            used: true,
+            telegramId: fromId,
+            deliveredAt: new Date(),
+          }).where(eq(otpCodes.id, row.id));
+
+          const sessionToken = `biz_${randomBytes(24).toString("hex")}`;
+          if (user) {
+            await db.insert(sessions).values({ id: sessionToken, userId: user.id });
+          }
+
+          const base = partnerMiniappUrl();
+          const appUrl = `${base}?token=${sessionToken}&phone=${encodeURIComponent(spec.phone)}`;
+
+          const welcomeText =
+            `🎉 <b>Assalomu alaykum, ${escapeHtml(spec.name)}!</b>\n\n` +
+            `🏢 <b>«${escapeHtml(spec.organization || "Do'koningiz")}»</b> Agroz Business tizimida muvaffaqiyatli ro'yxatdan o'tdi va profilingiz faollashtirildi!\n\n` +
+            `Sizning shaxsiy biznes kabinetingiz tayyor:\n` +
+            `🌐 <b>Web manzil:</b> <code>${escapeHtml(base)}</code>\n` +
+            `📱 <b>Login (Telefon):</b> <code>${escapeHtml(spec.phone)}</code>\n\n` +
+            `Do'koningizni boshqarish (Kassa, Qarz daftari, Mahsulotlar qoldig'i) uchun pastdagi tugmani bosing:`;
+
+          await callTelegram(token, "sendMessage", {
+            chat_id: chatId,
+            text: welcomeText,
+            parse_mode: "HTML",
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  {
+                    text: "🏢 Do'kon kabinetini ochish",
+                    web_app: { url: appUrl },
+                  },
+                ],
+                [
+                  {
+                    text: "🌐 Brauzerda ochish",
+                    url: appUrl,
+                  },
+                ],
+              ],
+            },
+          });
+          return;
+        }
+      }
+    }
+
     // 2) fromId bo'yicha foydalanuvchi bazada bor-yo'qligini tekshiramiz
     const user = (await db.select().from(users).where(eq(users.telegramId, fromId)).limit(1))[0];
     if (user && user.phone) {
@@ -1725,6 +1802,146 @@ router.post("/partner/web-login", async (req, res) => {
   } catch (err: any) {
     console.error("[partner:web-login error]:", err);
     res.status(500).json({ ok: false, error: "Tizimga kirishda server xatosi yuz berdi" });
+  }
+});
+
+// POST /api/bot/partner/register-intent (Web formadan biznesni ro'yxatdan o'tkazish arizasi)
+router.post("/partner/register-intent", async (req, res) => {
+  try {
+    const { name, phone, organization, specialty, address, role } = req.body || {};
+    const cleanPhone = normalizePhone(phone || "");
+    if (!cleanPhone || cleanPhone.length < 9) {
+      return res.status(400).json({ ok: false, error: "Telefon raqami noto'g'ri (namuna: +998 90 123 45 67)" });
+    }
+    const cleanOrg = cleanText(organization || "", 200);
+    if (!cleanOrg || cleanOrg.length < 2) {
+      return res.status(400).json({ ok: false, error: "Do'kon yoki dorixona nomini kiriting" });
+    }
+    const cleanName = cleanText(name || "", 120) || cleanOrg;
+    const cleanAddr = cleanText(address || "", 500) || "O'zbekiston";
+    const cleanSpec = cleanText(specialty || "Agro-dorixona", 160);
+    const targetRole = role === "specialist" ? "specialist" : "pharmacy";
+
+    // 1. specialists jadvalida mavjudligini tekshiramiz
+    let spec = (await db.select().from(specialists).where(eq(specialists.phone, cleanPhone)).limit(1))[0];
+    if (spec) {
+      await db
+        .update(specialists)
+        .set({
+          name: cleanName,
+          organization: cleanOrg,
+          address: cleanAddr,
+          specialty: cleanSpec,
+          isActive: true,
+          isApproved: true,
+        })
+        .where(eq(specialists.id, spec.id));
+      spec = (await db.select().from(specialists).where(eq(specialists.id, spec.id)).limit(1))[0];
+    } else {
+      const tempTgId = -(Math.floor(Date.now() / 1000) + Math.floor(Math.random() * 100000));
+      const [createdSpec] = await db
+        .insert(specialists)
+        .values({
+          telegramId: tempTgId,
+          name: cleanName,
+          phone: cleanPhone,
+          role: targetRole,
+          specialty: cleanSpec,
+          organization: cleanOrg,
+          address: cleanAddr,
+          lat: 41.3111,
+          lng: 69.2797,
+          experienceYears: 1,
+          isActive: true,
+          isApproved: true,
+        })
+        .returning();
+      spec = createdSpec;
+    }
+
+    // 2. users jadvalida user borligini tekshiramiz/yaratamiz
+    let user = (await db.select().from(users).where(eq(users.phone, cleanPhone)).limit(1))[0];
+    if (!user) {
+      const [createdUser] = await db
+        .insert(users)
+        .values({
+          phone: cleanPhone,
+          name: cleanName,
+        })
+        .returning();
+      user = createdUser;
+    }
+
+    // 3. Bir martalik ro'yxatdan o'tish tokeni (Telegram /start uchun)
+    const regToken = `biz_reg_${randomBytes(12).toString("hex")}`;
+    await db.insert(otpCodes).values({
+      phone: cleanPhone,
+      code: "BIZ",
+      token: regToken,
+      used: false,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 soat
+    });
+
+    // 4. Web session token (To'g'ridan-to'g'ri kirish uchun)
+    const sessionToken = `biz_${randomBytes(24).toString("hex")}`;
+    await db.insert(sessions).values({ id: sessionToken, userId: user.id });
+
+    // 5. Bot username va start havolasi
+    const botUser = (await partnerBotUsername()) || "agroz_auth_bot";
+    const cleanBotUser = botUser.replace(/^@/, "");
+    const startUrl = `https://t.me/${cleanBotUser}?start=${regToken}`;
+    const webCabinetUrl = `/business?token=${sessionToken}&phone=${encodeURIComponent(cleanPhone)}`;
+
+    return res.json({
+      ok: true,
+      token: regToken,
+      sessionToken,
+      botUsername: cleanBotUser,
+      startUrl,
+      webCabinetUrl,
+      phone: cleanPhone,
+      organization: cleanOrg,
+      name: cleanName,
+      partnerId: spec.id,
+    });
+  } catch (err: any) {
+    console.error("[partner:register-intent error]:", err);
+    res.status(500).json({ ok: false, error: "Ro'yxatdan o'tishda xatolik yuz berdi" });
+  }
+});
+
+// GET /api/bot/partner/check-registration (Telegramdan tasdiqlanganini polling orqali tekshirish)
+router.get("/partner/check-registration", async (req, res) => {
+  try {
+    const token = String(req.query.token || "").trim();
+    if (!token) {
+      return res.status(400).json({ ok: false, error: "Token ko'rsatilmadi" });
+    }
+
+    const row = (await db.select().from(otpCodes).where(eq(otpCodes.token, token)).limit(1))[0];
+    if (!row) {
+      return res.status(404).json({ ok: false, error: "Ariza topilmadi" });
+    }
+
+    if (row.used) {
+      const spec = (await db.select().from(specialists).where(eq(specialists.phone, row.phone)).limit(1))[0];
+      return res.json({
+        ok: true,
+        verified: true,
+        phone: row.phone,
+        partnerId: spec?.id,
+        name: spec?.name,
+        organization: spec?.organization,
+      });
+    }
+
+    return res.json({
+      ok: true,
+      verified: false,
+    });
+  } catch (err: any) {
+    console.error("[partner:check-registration error]:", err);
+    res.status(500).json({ ok: false, error: "Tekshirishda xatolik yuz berdi" });
   }
 });
 

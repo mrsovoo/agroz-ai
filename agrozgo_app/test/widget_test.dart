@@ -14,8 +14,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('AGROZ'), findsOneWidget);
-      expect(find.text('GO'), findsOneWidget);
+      expect(find.bySemanticsLabel('AGROZGO'), findsOneWidget);
       expect(find.text('Farg‘ona shahar'), findsOneWidget);
       expect(find.text('Dorilar'), findsWidgets);
       expect(find.text('Mutaxasislar'), findsWidgets);

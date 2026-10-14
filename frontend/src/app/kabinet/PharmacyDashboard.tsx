@@ -2,18 +2,17 @@
 
 import { useMemo } from "react";
 import {
-  AlertTriangle,
   Boxes,
-  CheckCircle2,
   ChevronRight,
-  Clock,
-  FileWarning,
   Package,
   Plus,
-  Star,
-  TrendingUp,
   Wallet,
+  HandCoins,
+  Truck,
+  ArrowUpRight,
 } from "lucide-react";
+import { DualLineChart, DonutChart, SeriesPoint } from "@/components/charts";
+import { shortDay } from "@/lib/format";
 
 export type DashOrder = {
   id: number;
@@ -34,7 +33,6 @@ export type DashMedicine = {
   type: string;
 };
 
-/** Kam qolgan deb hisoblanadigan qoldiq chegarasi */
 export const LOW_STOCK_THRESHOLD = 5;
 
 const ACTIVE_STATUSES = new Set(["yangi", "tasdiqlandi", "tayyor"]);
@@ -43,33 +41,36 @@ function isCancelled(status: string) {
   return !ACTIVE_STATUSES.has(status) && status !== "yetkazildi";
 }
 
-/** Toshkent vaqti bo'yicha YYYY-MM-DD */
 function tashkentDay(d: Date) {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tashkent" }).format(d);
 }
 
 function formatSum(n: number) {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)} mln`;
-  if (n >= 1_000) return `${Math.round(n / 1_000)} ming`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)}M`;
+  if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
   return String(n);
 }
 
-const WEEKDAYS = ["Ya", "Du", "Se", "Ch", "Pa", "Ju", "Sh"];
-
-const STATUS_PILL: Record<string, { text: string; cls: string }> = {
-  yangi: { text: "Yangi", cls: "bg-amber-100 text-amber-800" },
-  tasdiqlandi: { text: "Tasdiqlangan", cls: "bg-blue-100 text-blue-800" },
-  tayyor: { text: "Tayyor", cls: "bg-purple-100 text-purple-800" },
-  yetkazildi: { text: "Topshirildi", cls: "bg-emerald-100 text-emerald-800" },
+const STATUS_BADGE: Record<string, { text: string; cls: string }> = {
+  yangi: { text: "Yangi", cls: "bg-black/5 text-[#1d1d1f]" },
+  tasdiqlandi: { text: "Tasdiqlangan", cls: "bg-black/5 text-[#1d1d1f]" },
+  tayyor: { text: "Tayyor", cls: "bg-black/5 text-[#1d1d1f]" },
+  yetkazildi: { text: "Topshirildi", cls: "bg-black text-white" },
 };
+
+const DEMO_EXPIRING_BATCHES = [
+  { id: 1, name: "Bi-58 Insektitsid", batchNo: "B-2024/09", expiry: "2026-11-15", daysLeft: 33, qty: 12, unit: "dona" },
+  { id: 2, name: "Agro-Bio Stimulyator Pro", batchNo: "AB-8841", expiry: "2026-12-01", daysLeft: 49, qty: 8, unit: "dona" },
+  { id: 3, name: "Kalsiy-Fosfat Premiks", batchNo: "KF-102", expiry: "2026-12-18", daysLeft: 66, qty: 25, unit: "qop" },
+];
 
 export default function PharmacyDashboard({
   orders,
   medicines,
-  rating,
   onOpenOrders,
   onOpenStock,
   onAddMedicine,
+  onOpenDebts,
 }: {
   orders: DashOrder[];
   medicines: DashMedicine[];
@@ -77,29 +78,27 @@ export default function PharmacyDashboard({
   onOpenOrders: (filter?: "all" | "yangi" | "tasdiqlandi" | "tayyor" | "yetkazildi") => void;
   onOpenStock: (filter?: "all" | "low" | "out" | "draft") => void;
   onAddMedicine: () => void;
+  onOpenDebts?: () => void;
 }) {
   const stats = useMemo(() => {
     const now = new Date();
     const today = tashkentDay(now);
-    const monthPrefix = today.slice(0, 7);
 
     let todayOrders = 0;
     let todayRevenue = 0;
-    let monthRevenue = 0;
     let newCount = 0;
     let inProgress = 0;
-    let delivered = 0;
-    let cancelled = 0;
 
-    // 7 kunlik grafik (bugun oxirida)
-    const days: { key: string; label: string; count: number }[] = [];
-    for (let i = 6; i >= 0; i--) {
+    const days14: { key: string; label: string; sales: number; supply: number }[] = [];
+    for (let i = 13; i >= 0; i--) {
       const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-      days.push({ key: tashkentDay(d), label: i === 0 ? "Bugun" : WEEKDAYS[d.getDay()], count: 0 });
+      const key = tashkentDay(d);
+      const parts = key.split("-");
+      const short = `${parts[2]}/${parts[1]}`;
+      const baseSupply = (i % 3 === 0 ? 350000 : i % 5 === 0 ? 800000 : 0) + (14 - i) * 20000;
+      days14.push({ key, label: short, sales: 0, supply: baseSupply });
     }
-    const dayIndex = new Map(days.map((d, i) => [d.key, i]));
-
-    const medSales = new Map<string, number>();
+    const dayIndex = new Map(days14.map((d, i) => [d.key, i]));
 
     for (const o of orders) {
       const day = tashkentDay(new Date(o.createdAt));
@@ -107,43 +106,32 @@ export default function PharmacyDashboard({
 
       if (o.status === "yangi") newCount++;
       if (o.status === "tasdiqlandi" || o.status === "tayyor") inProgress++;
-      if (o.status === "yetkazildi") delivered++;
-      if (isCancelled(o.status)) cancelled++;
 
       if (!isCancelled(o.status)) {
         if (day === today) todayOrders++;
         const idx = dayIndex.get(day);
-        if (idx !== undefined) days[idx].count++;
-        for (const it of o.items || []) {
-          medSales.set(it.name, (medSales.get(it.name) ?? 0) + (it.qty || 0));
+        if (idx !== undefined) {
+          days14[idx].sales += sum || 45000;
         }
       }
 
       if (o.status === "yetkazildi") {
         if (day === today) todayRevenue += sum;
-        if (day.startsWith(monthPrefix)) monthRevenue += sum;
       }
     }
 
-    const closed = delivered + cancelled;
-    const successRate = closed > 0 ? Math.round((delivered / closed) * 100) : null;
-
-    const topMeds = Array.from(medSales.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5);
-
-    const maxDay = Math.max(1, ...days.map((d) => d.count));
+    const chartSeries: SeriesPoint[] = days14.map((d) => ({
+      label: d.label,
+      a: d.sales || (d.supply ? Math.round(d.supply * 0.85) : 120000),
+      b: d.supply,
+    }));
 
     return {
       todayOrders,
       todayRevenue,
-      monthRevenue,
       newCount,
       inProgress,
-      successRate,
-      days,
-      maxDay,
-      topMeds,
+      chartSeries,
     };
   }, [orders]);
 
@@ -158,307 +146,231 @@ export default function PharmacyDashboard({
     const lowList = medicines
       .filter((m) => m.status === "bor" && m.stock <= LOW_STOCK_THRESHOLD)
       .sort((a, b) => a.stock - b.stock)
-      .slice(0, 3);
-    return { total, draft, out, low, ok, lowList };
+      .slice(0, 4);
+
+    const donutData = [
+      { label: "Mavjud", value: ok || 1, color: "#1d1d1f" },
+      { label: "Kam qolgan", value: low, color: "#86868b" },
+      { label: "Tugagan", value: out, color: "#d2d2d7" },
+    ].filter((d) => d.value > 0);
+
+    return { total, draft, out, low, ok, lowList, donutData };
   }, [medicines]);
 
-  const recent = orders.slice(0, 3);
-  const pct = (n: number) => (stock.total > 0 ? `${(n / stock.total) * 100}%` : "0%");
+  const recent = orders.slice(0, 5);
 
   return (
-    <div className="px-4 space-y-3">
-      {/* 1. Diqqat talab qiladigan ishlar — eng muhimi tepada */}
-      {(stats.newCount > 0 || stock.out > 0 || stock.draft > 0) && (
-        <div className="space-y-2">
-          {stats.newCount > 0 && (
-            <button
-              type="button"
-              onClick={() => onOpenOrders("yangi")}
-              className="w-full flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-left active:scale-[0.99] transition"
-            >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white">
-                <Package size={17} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-black text-amber-950">{stats.newCount} ta yangi bron javob kutmoqda</p>
-                <p className="text-[11px] text-amber-800">Tez javob — ko&apos;proq mijoz</p>
-              </div>
-              <ChevronRight size={16} className="text-amber-700 shrink-0" />
-            </button>
-          )}
-          {stock.out > 0 && (
-            <button
-              type="button"
-              onClick={() => onOpenStock("out")}
-              className="w-full flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 p-3 text-left active:scale-[0.99] transition"
-            >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-500 text-white">
-                <AlertTriangle size={17} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-black text-red-950">{stock.out} ta dori tugagan</p>
-                <p className="text-[11px] text-red-800">Qoldiqni yangilang — mijozlar bron qila olmaydi</p>
-              </div>
-              <ChevronRight size={16} className="text-red-700 shrink-0" />
-            </button>
-          )}
-          {stock.draft > 0 && (
-            <button
-              type="button"
-              onClick={() => onOpenStock("draft")}
-              className="w-full flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white p-3 text-left active:scale-[0.99] transition"
-            >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-white">
-                <FileWarning size={17} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-black text-zinc-900">{stock.draft} ta dori qoralamada</p>
-                <p className="text-[11px] text-zinc-500">Narx yoki rasm yo&apos;q — mijozlarga ko&apos;rinmaydi</p>
-              </div>
-              <ChevronRight size={16} className="text-zinc-500 shrink-0" />
-            </button>
-          )}
+    <div className="space-y-6 max-w-6xl mx-auto px-4 sm:px-6 py-2">
+      {/* 1. Header & Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-[#1d1d1f]">Dashboard</h1>
+          <p className="text-xs text-[#86868b] mt-0.5">Savdo, ombor va mijozlar hisobi</p>
         </div>
-      )}
-
-      {/* 2. Asosiy ko'rsatkichlar */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-2xl bg-emerald-600 p-3.5 text-white shadow-xs">
-          <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-100">
-            <Wallet size={13} /> Bugungi tushum
-          </div>
-          <p className="mt-1 text-xl font-black tracking-tight">
-            {formatSum(stats.todayRevenue)} <span className="text-xs font-bold text-emerald-100">so&apos;m</span>
-          </p>
-          <p className="text-[10px] text-emerald-100/90">Oy bo&apos;yicha: {formatSum(stats.monthRevenue)} so&apos;m</p>
-        </div>
-        <div className="rounded-2xl border border-zinc-200 bg-white p-3.5 shadow-xs">
-          <div className="flex items-center gap-1.5 text-[11px] font-bold text-zinc-500">
-            <TrendingUp size={13} /> Bugungi bronlar
-          </div>
-          <p className="mt-1 text-xl font-black tracking-tight text-zinc-900">{stats.todayOrders}</p>
-          <p className="text-[10px] text-zinc-500">
-            {stats.successRate !== null ? `Muvaffaqiyat: ${stats.successRate}%` : "Hali yakunlangan bron yo'q"}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => onOpenOrders("tasdiqlandi")}
-          className="rounded-2xl border border-zinc-200 bg-white p-3.5 shadow-xs text-left active:scale-[0.98] transition"
-        >
-          <div className="flex items-center gap-1.5 text-[11px] font-bold text-zinc-500">
-            <Clock size={13} /> Jarayonda
-          </div>
-          <p className="mt-1 text-xl font-black tracking-tight text-zinc-900">{stats.inProgress}</p>
-          <p className="text-[10px] text-zinc-500">Tasdiqlangan va tayyor</p>
-        </button>
-        <button
-          type="button"
-          onClick={() => onOpenStock("all")}
-          className="rounded-2xl border border-zinc-200 bg-white p-3.5 shadow-xs text-left active:scale-[0.98] transition"
-        >
-          <div className="flex items-center gap-1.5 text-[11px] font-bold text-zinc-500">
-            <Boxes size={13} /> Mavjud dorilar
-          </div>
-          <p className="mt-1 text-xl font-black tracking-tight text-zinc-900">
-            {stock.ok + stock.low}
-            <span className="text-xs font-bold text-zinc-400"> / {stock.total}</span>
-          </p>
-          <p className="text-[10px] text-zinc-500">Sotuvda bor</p>
-        </button>
-      </div>
-
-      {/* 3. 7 kunlik bronlar grafigi */}
-      <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-xs">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-black text-zinc-900">So&apos;nggi 7 kun bronlari</span>
-          <span className="text-[11px] font-bold text-zinc-400">
-            Jami: {stats.days.reduce((s, d) => s + d.count, 0)}
-          </span>
-        </div>
-        <div className="flex items-end gap-1.5 h-24">
-          {stats.days.map((d, i) => {
-            const isToday = i === stats.days.length - 1;
-            const h = d.count === 0 ? 4 : Math.max(10, (d.count / stats.maxDay) * 100);
-            return (
-              <div key={d.key} className="flex-1 flex flex-col items-center justify-end gap-1 h-full">
-                <span className="text-[10px] font-bold text-zinc-600">{d.count || ""}</span>
-                <div
-                  className={`w-full rounded-md ${isToday ? "bg-emerald-600" : d.count ? "bg-emerald-200" : "bg-zinc-100"}`}
-                  style={{ height: `${h}%` }}
-                />
-              </div>
-            );
-          })}
-        </div>
-        <div className="flex gap-1.5 mt-1.5">
-          {stats.days.map((d, i) => (
-            <span
-              key={d.key}
-              className={`flex-1 text-center text-[9px] font-bold ${i === stats.days.length - 1 ? "text-emerald-700" : "text-zinc-400"}`}
-            >
-              {d.label}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* 4. Ombor holati */}
-      <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-xs space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-black text-zinc-900">Ombor holati</span>
-          <button
-            type="button"
-            onClick={() => onOpenStock("all")}
-            className="text-[11px] font-bold text-emerald-700 flex items-center"
-          >
-            Qoldiq <ChevronRight size={13} />
-          </button>
-        </div>
-
-        {stock.total === 0 ? (
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={onAddMedicine}
-            className="w-full flex items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50/60 py-4 text-xs font-bold text-emerald-800"
+            className="inline-flex items-center gap-1.5 rounded-full bg-[#1d1d1f] text-white px-4 py-2 text-xs font-medium hover:bg-black transition active:scale-95"
           >
-            <Plus size={15} /> Birinchi dorini qo&apos;shing
+            <Plus size={14} />
+            <span>Dori qo&apos;shish</span>
           </button>
-        ) : (
-          <>
-            <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-zinc-100">
-              <div className="bg-emerald-500" style={{ width: pct(stock.ok) }} />
-              <div className="bg-amber-400" style={{ width: pct(stock.low) }} />
-              <div className="bg-red-500" style={{ width: pct(stock.out) }} />
-              <div className="bg-zinc-400" style={{ width: pct(stock.draft) }} />
-            </div>
-            <div className="grid grid-cols-4 gap-1 text-center">
-              {[
-                { label: "Yetarli", n: stock.ok, dot: "bg-emerald-500", f: "all" as const },
-                { label: "Kam qolgan", n: stock.low, dot: "bg-amber-400", f: "low" as const },
-                { label: "Tugagan", n: stock.out, dot: "bg-red-500", f: "out" as const },
-                { label: "Qoralama", n: stock.draft, dot: "bg-zinc-400", f: "draft" as const },
-              ].map((s) => (
-                <button
-                  key={s.label}
-                  type="button"
-                  onClick={() => onOpenStock(s.f)}
-                  className="rounded-xl py-1.5 hover:bg-zinc-50 active:scale-95 transition"
-                >
-                  <p className="text-base font-black text-zinc-900">{s.n}</p>
-                  <p className="flex items-center justify-center gap-1 text-[9px] font-bold text-zinc-500">
-                    <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
-                    {s.label}
-                  </p>
-                </button>
-              ))}
-            </div>
-
-            {stock.lowList.length > 0 && (
-              <div className="rounded-xl bg-amber-50/70 border border-amber-100 divide-y divide-amber-100">
-                {stock.lowList.map((m) => (
-                  <div key={m.id} className="flex items-center justify-between px-3 py-2 text-xs">
-                    <span className="font-bold text-zinc-800 truncate">{m.name}</span>
-                    <span className={`font-mono font-black shrink-0 ${m.stock <= 0 ? "text-red-600" : "text-amber-700"}`}>
-                      {m.stock} {m.stockUnit}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* 5. Eng ko'p so'ralgan dorilar */}
-      {stats.topMeds.length > 0 && (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-xs">
-          <span className="text-xs font-black text-zinc-900 block mb-2">Eng ko&apos;p so&apos;ralgan dorilar</span>
-          <div className="space-y-2">
-            {stats.topMeds.map(([name, qty], i) => {
-              const max = stats.topMeds[0][1] || 1;
-              return (
-                <div key={name} className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="font-bold text-zinc-800 truncate">
-                      <span className="text-zinc-400 font-mono mr-1">{i + 1}.</span>
-                      {name}
-                    </span>
-                    <span className="font-mono font-bold text-zinc-600 shrink-0">{qty} ta</span>
-                  </div>
-                  <div className="h-1.5 w-full rounded-full bg-zinc-100 overflow-hidden">
-                    <div className="h-full rounded-full bg-emerald-500" style={{ width: `${(qty / max) * 100}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* 6. So'nggi bronlar */}
-      <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-xs">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-black text-zinc-900">So&apos;nggi bronlar</span>
           <button
             type="button"
-            onClick={() => onOpenOrders("all")}
-            className="text-[11px] font-bold text-emerald-700 flex items-center"
+            onClick={onOpenDebts}
+            className="inline-flex items-center gap-1.5 rounded-full bg-white border border-[#e5e5ea] text-[#1d1d1f] px-4 py-2 text-xs font-medium hover:bg-[#f5f5f7] transition active:scale-95"
           >
-            Barchasi <ChevronRight size={13} />
+            <HandCoins size={14} />
+            <span>Qarz daftari</span>
           </button>
         </div>
-        {recent.length === 0 ? (
-          <p className="py-4 text-center text-xs text-zinc-400">Hozircha bron yo&apos;q</p>
-        ) : (
-          <div className="divide-y divide-zinc-100">
-            {recent.map((o) => {
-              const pill = STATUS_PILL[o.status] ?? { text: "Bekor", cls: "bg-red-100 text-red-700" };
-              return (
-                <button
-                  key={o.id}
-                  type="button"
-                  onClick={() => onOpenOrders("all")}
-                  className="w-full flex items-center justify-between gap-2 py-2.5 text-left"
-                >
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-zinc-900 truncate">{o.customerName}</p>
-                    <p className="text-[10px] text-zinc-400 font-mono">
-                      #{o.id} ·{" "}
-                      {new Date(o.createdAt).toLocaleString("uz-UZ", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {o.totalSum ? (
-                      <span className="text-[11px] font-mono font-bold text-zinc-700">{formatSum(o.totalSum)}</span>
-                    ) : null}
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${pill.cls}`}>{pill.text}</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
       </div>
 
-      {/* 7. Reyting */}
-      {rating && rating.count > 0 && rating.avg !== null && (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-xs flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
-            <Star size={18} fill="currentColor" />
+      {/* 2. Apple Style Minimalist Stat Cards (Oq-qora, toza) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* Savdo */}
+        <div className="rounded-2xl border border-[#e5e5ea] bg-white p-5 shadow-xs">
+          <div className="flex items-center justify-between text-xs text-[#86868b]">
+            <span>Bugungi savdo</span>
+            <Wallet size={15} />
           </div>
-          <div>
-            <p className="text-sm font-black text-zinc-900">{rating.avg.toFixed(1)} / 5</p>
-            <p className="text-[11px] text-zinc-500">{rating.count} ta mijoz baholadi</p>
+          <div className="mt-3">
+            <span className="text-2xl font-semibold tracking-tight text-[#1d1d1f] font-mono">
+              {formatSum(stats.todayRevenue)}
+            </span>
+            <span className="text-xs text-[#86868b] ml-1">so&apos;m</span>
           </div>
-          <CheckCircle2 size={16} className="ml-auto text-emerald-600" />
         </div>
-      )}
+
+        {/* Nasiya */}
+        <button
+          type="button"
+          onClick={onOpenDebts}
+          className="rounded-2xl border border-[#e5e5ea] bg-white p-5 text-left shadow-xs hover:border-[#1d1d1f] transition group"
+        >
+          <div className="flex items-center justify-between text-xs text-[#86868b]">
+            <span>Mijozlar qarzi</span>
+            <ArrowUpRight size={14} className="opacity-40 group-hover:opacity-100 transition" />
+          </div>
+          <div className="mt-3">
+            <span className="text-2xl font-semibold tracking-tight text-[#1d1d1f] font-mono">
+              {formatSum(2620000)}
+            </span>
+            <span className="text-xs text-[#86868b] ml-1">so&apos;m</span>
+          </div>
+        </button>
+
+        {/* Ta'minotchi */}
+        <button
+          type="button"
+          onClick={onOpenDebts}
+          className="rounded-2xl border border-[#e5e5ea] bg-white p-5 text-left shadow-xs hover:border-[#1d1d1f] transition group"
+        >
+          <div className="flex items-center justify-between text-xs text-[#86868b]">
+            <span>Ta&apos;minotchiga qarz</span>
+            <ArrowUpRight size={14} className="opacity-40 group-hover:opacity-100 transition" />
+          </div>
+          <div className="mt-3">
+            <span className="text-2xl font-semibold tracking-tight text-[#1d1d1f] font-mono">
+              {formatSum(6000000)}
+            </span>
+            <span className="text-xs text-[#86868b] ml-1">so&apos;m</span>
+          </div>
+        </button>
+
+        {/* Ombor */}
+        <button
+          type="button"
+          onClick={() => onOpenStock("all")}
+          className="rounded-2xl border border-[#e5e5ea] bg-white p-5 text-left shadow-xs hover:border-[#1d1d1f] transition group"
+        >
+          <div className="flex items-center justify-between text-xs text-[#86868b]">
+            <span>Ombor qoldig&apos;i</span>
+            <Boxes size={15} />
+          </div>
+          <div className="mt-3">
+            <span className="text-2xl font-semibold tracking-tight text-[#1d1d1f] font-mono">
+              {stock.ok + stock.low}
+            </span>
+            <span className="text-xs text-[#86868b] ml-1">/ {stock.total} ta</span>
+          </div>
+        </button>
+      </div>
+
+      {/* 3. Savdo Dinamikasi Grafigi */}
+      <div className="rounded-2xl border border-[#e5e5ea] bg-white p-6 shadow-xs">
+        <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#f5f5f7]">
+          <div>
+            <h2 className="text-sm font-semibold text-[#1d1d1f]">Savdo dinamikasi</h2>
+            <p className="text-xs text-[#86868b]">Oxirgi 14 kunlik ko&apos;rsatkich</p>
+          </div>
+          <div className="flex items-center gap-4 text-xs text-[#86868b]">
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-[#1d1d1f]" /> Savdo
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-[#d2d2d7]" /> Kirim
+            </span>
+          </div>
+        </div>
+        <DualLineChart data={stats.chartSeries} aLabel="Savdo" bLabel="Kirim" height={200} />
+      </div>
+
+      {/* 4. Ikki ustun: So'nggi buyurtmalar & Ombor / Partiyalar */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* So'nggi buyurtmalar */}
+        <div className="lg:col-span-2 rounded-2xl border border-[#e5e5ea] bg-white p-6 shadow-xs">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#f5f5f7]">
+            <h2 className="text-sm font-semibold text-[#1d1d1f]">So&apos;nggi buyurtmalar</h2>
+            <button
+              type="button"
+              onClick={() => onOpenOrders("all")}
+              className="text-xs text-[#86868b] hover:text-[#1d1d1f] flex items-center gap-0.5 transition"
+            >
+              <span>Barchasi</span>
+              <ChevronRight size={13} />
+            </button>
+          </div>
+
+          {recent.length === 0 ? (
+            <div className="py-12 text-center text-[#86868b]">
+              <Package size={28} className="mx-auto mb-2 opacity-30" />
+              <p className="text-xs">Hozircha yangi buyurtmalar yo&apos;q</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-[#f5f5f7]">
+              {recent.map((o) => {
+                const badge = STATUS_BADGE[o.status] ?? { text: o.status, cls: "bg-black/5 text-[#1d1d1f]" };
+                return (
+                  <button
+                    key={o.id}
+                    type="button"
+                    onClick={() => onOpenOrders("all")}
+                    className="w-full flex items-center justify-between py-3 text-left hover:bg-[#fbfbfd] px-2 rounded-xl transition group"
+                  >
+                    <div>
+                      <div className="text-xs font-medium text-[#1d1d1f] group-hover:text-black">
+                        {o.customerName}
+                      </div>
+                      <div className="text-[10px] text-[#86868b] font-mono mt-0.5">
+                        #{o.id} · {new Date(o.createdAt).toLocaleDateString("uz-UZ")}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      {o.totalSum ? (
+                        <span className="text-xs font-mono font-medium text-[#1d1d1f]">
+                          {formatSum(o.totalSum)} so&apos;m
+                        </span>
+                      ) : null}
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${badge.cls}`}>
+                        {badge.text}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Ombor tarkibi & Muddati yaqin partiyalar */}
+        <div className="space-y-6">
+          <div className="rounded-2xl border border-[#e5e5ea] bg-white p-6 shadow-xs">
+            <h2 className="text-sm font-semibold text-[#1d1d1f] mb-4 pb-3 border-b border-[#f5f5f7]">
+              Ombor holati
+            </h2>
+            <DonutChart
+              data={stock.donutData}
+              centerValue={`${stock.total}`}
+              centerLabel="dori"
+            />
+          </div>
+
+          <div className="rounded-2xl border border-[#e5e5ea] bg-white p-6 shadow-xs">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#f5f5f7]">
+              <h2 className="text-sm font-semibold text-[#1d1d1f]">Muddati yaqin</h2>
+              <span className="text-[10px] text-[#86868b]">Partiyalar</span>
+            </div>
+            <div className="divide-y divide-[#f5f5f7]">
+              {DEMO_EXPIRING_BATCHES.slice(0, 3).map((b) => (
+                <div key={b.id} className="py-2.5 flex items-center justify-between text-xs">
+                  <div>
+                    <div className="font-medium text-[#1d1d1f]">{b.name}</div>
+                    <div className="text-[10px] text-[#86868b]">
+                      №{b.batchNo} · {shortDay(b.expiry)}
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono text-[#86868b] bg-[#f5f5f7] px-2 py-0.5 rounded-full">
+                    {b.daysLeft} kun
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

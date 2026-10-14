@@ -15,6 +15,9 @@ import {
   Navigation,
   User,
   ShieldCheck,
+  Sprout,
+  Stethoscope,
+  ArrowRight,
 } from "lucide-react";
 import { createSpecialistCall, completeSpecialistCall } from "@/lib/specialist-calls";
 import { apiUrl, apiFetch } from "@/lib/api-config";
@@ -251,7 +254,7 @@ export default function SpecialistCallModal({
         setUserLat(lat);
         setUserLng(lng);
         if (!address.trim()) {
-          setAddress(`📍 Joylashuv aniqlandi (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
+          setAddress(`Joylashuv aniqlandi (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
         }
       },
       (err) => {
@@ -375,8 +378,8 @@ export default function SpecialistCallModal({
     specialist.specialty || (isVeterinar ? "Veterinar" : "Agronom");
 
   return (
-    <div className="fixed inset-0 z-[200] flex justify-center bg-neutral-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="w-full max-w-[520px] h-[100dvh] flex flex-col justify-between bg-neutral-50 overflow-hidden shadow-2xl">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="w-full max-w-xl max-h-[92vh] flex flex-col justify-between bg-[#FAF9F5] rounded-3xl overflow-hidden shadow-2xl border border-black/10">
         {/* 1. Header (Sticky Top) */}
         <div className="shrink-0 bg-white/95 backdrop-blur-md px-5 py-3.5 border-b border-neutral-200/80 flex items-center justify-between z-10">
           <button
@@ -396,8 +399,12 @@ export default function SpecialistCallModal({
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {/* Mutaxassis qisqa kartochkasi */}
           <div className="rounded-2xl bg-white p-3.5 border border-neutral-200/80 shadow-xs flex items-center gap-3.5">
-            <div className="h-12 w-12 shrink-0 rounded-2xl bg-[#ffad2a] flex items-center justify-center text-white shadow-2xs font-bold text-lg">
-              {isVeterinar ? "🐾" : "🌱"}
+            <div className={`h-12 w-12 shrink-0 rounded-2xl flex items-center justify-center text-white shadow-2xs ${
+              isVeterinar
+                ? "bg-gradient-to-br from-[#0284c7] to-[#075985]"
+                : "bg-gradient-to-br from-[#039e1e] to-[#016812]"
+            }`}>
+              {isVeterinar ? <Stethoscope size={22} className="text-white" /> : <Sprout size={22} className="text-white" />}
             </div>
             <div className="min-w-0 flex-1">
               <h3 className="font-bold text-neutral-900 text-[16px] truncate leading-tight">
@@ -775,7 +782,7 @@ export default function SpecialistCallModal({
               ) : (
                 <>
                   <span>Chaqiruvni tasdiqlash</span>
-                  <span className="text-lg">➔</span>
+                  <ArrowRight size={18} />
                 </>
               )}
             </button>

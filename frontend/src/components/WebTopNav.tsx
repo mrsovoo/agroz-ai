@@ -1,27 +1,42 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, ShoppingCart, Sprout } from "lucide-react";
-import { loadCart, closeCart, toggleCart, CART_EVENT } from "@/lib/cart-store";
 import {
-  fetchRealAppNotifications,
-  countUnreadNotifications,
-  subscribeToNotificationChanges,
-} from "@/lib/notifications-store";
-
-const links = [
-  { href: "/", label: "Asosiy" },
-  { href: "/dorilar", label: "Dorilar" },
-  { href: "/mutaxassislar", label: "Mutaxassislar" },
-  { href: "/yangiliklar", label: "Maslahatlar" },
-];
+  ShoppingCart,
+  Menu,
+  X,
+  Store,
+  Users,
+  ArrowRight,
+  Sprout,
+  HelpCircle,
+  Smartphone,
+  CreditCard,
+  Building2,
+  Search,
+  Check,
+  Globe,
+  Sparkles,
+  BarChart3,
+  Layers,
+  ShieldCheck,
+  ChevronDown,
+} from "lucide-react";
+import AgrozLogo from "@/components/AgrozLogo";
+import { loadCart, closeCart, toggleCart, CART_EVENT } from "@/lib/cart-store";
+import { useI18n, LANGUAGES, type Language } from "@/lib/i18n";
 
 export default function WebTopNav() {
   const pathname = usePathname();
+  const { lang, setLang, t } = useI18n();
+
   const [cartCount, setCartCount] = useState(0);
-  const [unreadNotifs, setUnreadNotifs] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [langMenuOpen, setLangMenuOpen] = useState(false);
+
+  const langMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const syncCart = () => {
@@ -32,117 +47,327 @@ export default function WebTopNav() {
     window.addEventListener(CART_EVENT, syncCart);
     window.addEventListener("storage", syncCart);
 
-    const syncNotifs = async () => {
-      try {
-        const items = await fetchRealAppNotifications("Toshkent");
-        setUnreadNotifs(countUnreadNotifications(items));
-      } catch {
-        setUnreadNotifs(0);
-      }
-    };
-    syncNotifs();
-    const unsubNotifs = subscribeToNotificationChanges(() => {
-      syncNotifs();
-    });
-
     return () => {
       window.removeEventListener(CART_EVENT, syncCart);
       window.removeEventListener("storage", syncCart);
-      unsubNotifs();
     };
   }, []);
 
-  const isActive = (href: string) => {
-    if (href === "/") return pathname === "/";
-    if (href === "/dorilar") {
-      return pathname.startsWith("/dorilar") || pathname.startsWith("/dori") || pathname.startsWith("/agro-mahsulotlar");
+  // Click outside to close language menu
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (langMenuRef.current && !langMenuRef.current.contains(e.target as Node)) {
+        setLangMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Sahifa o'zgarganda menyularni yopish
+  useEffect(() => {
+    setMobileMenuOpen(false);
+    setLangMenuOpen(false);
+  }, [pathname]);
+
+  const navLinks = [
+    { href: "/#about", label: t.nav.about, isAnchor: true },
+    { href: "/dorilar", label: t.nav.products, hasDropdown: true },
+    { href: "/hamkorlik", label: t.nav.partners },
+    { href: "/yangiliklar", label: t.nav.blog },
+    { href: "/#aloqa", label: t.nav.contact, isAnchor: true },
+  ];
+
+  const isActive = (link: (typeof navLinks)[0]) => {
+    if (link.isAnchor && link.href === "/#about") {
+      return pathname === "/" || pathname === "";
     }
-    return pathname.startsWith(href.split("?")[0]);
+    if (link.href === "/") return pathname === "/";
+    if (link.href.startsWith("/#")) return false;
+    return pathname.startsWith(link.href);
   };
 
+  const currentLang = LANGUAGES.find((l) => l.code === lang) || LANGUAGES[0];
+
   return (
-    <header className="web-top-nav">
-      <div className="web-top-nav-inner">
+    <div className="web-top-nav sticky top-0 z-50 w-full pt-4 sm:pt-6 px-4 sm:px-6 lg:px-8 pointer-events-none">
+      <header className="max-w-7xl mx-auto rounded-full bg-white/90 backdrop-blur-xl border border-black/8 shadow-md shadow-black/5 px-4 sm:px-6 py-2.5 flex items-center justify-between gap-4 pointer-events-auto transition-all">
+        {/* 1. Logotip - Golden dot + Brand */}
         <Link
           href="/"
           prefetch={true}
-          onClick={() => closeCart()}
-          className="flex items-center gap-2.5 py-1"
-          aria-label="AgrozGO bosh sahifa"
+          onClick={() => {
+            closeCart();
+            setMobileMenuOpen(false);
+          }}
+          className="flex items-center gap-2.5 shrink-0 group py-1"
+          aria-label="AgrozGO Bosh sahifa"
         >
-          <img src="/logo.svg" alt="AgrozGO" className="h-9 sm:h-10 w-auto object-contain" />
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
+          <AgrozLogo className="h-6 sm:h-7 w-auto transition-transform group-hover:scale-102" />
         </Link>
 
-        {/* Faqat matnli toza navigatsiya havolalari — tezkor prefetch bilan */}
-        <nav className="web-links" aria-label="Asosiy navigatsiya">
-          {links.map(({ href, label }) => {
-            const active = isActive(href);
+        {/* 2. Asosiy Navigatsiya Tabs (Desktop) */}
+        <nav className="hidden lg:flex items-center gap-1 bg-[#F4F3ED] rounded-full p-1 text-[13px] font-medium text-zinc-700">
+          {navLinks.map((link) => {
+            const active = isActive(link);
             return (
               <Link
-                key={href}
-                href={href}
-                prefetch={true}
+                key={link.label}
+                href={link.href}
+                prefetch={!link.href.startsWith("/#")}
                 onClick={() => closeCart()}
-                className={`relative px-3.5 py-2 rounded-xl text-[14px] font-bold transition-all duration-150 ${
+                className={`px-4 py-1.5 rounded-full transition-all duration-150 flex items-center gap-1 ${
                   active
-                    ? "bg-[var(--brand-green-soft)] text-[var(--brand-green)]"
-                    : "text-neutral-700 hover:text-neutral-950 hover:bg-black/5"
+                    ? "bg-[#191B1F] text-white font-bold shadow-xs"
+                    : "hover:text-black hover:bg-white/60"
                 }`}
-                aria-current={active ? "page" : undefined}
               >
-                {label}
+                <span>{link.label}</span>
+                {link.hasDropdown && (
+                  <ChevronDown size={12} className="opacity-70 ml-0.5" />
+                )}
               </Link>
             );
           })}
         </nav>
 
-        <div className="web-actions flex items-center gap-2.5">
-          {/* Bildirishnomalar */}
-          <Link
-            href="/bildirishnomalar"
-            prefetch={true}
-            onClick={() => closeCart()}
-            className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-black/10 text-neutral-700 hover:text-black hover:border-black/20 hover:bg-black/5 transition-all active:scale-95 shadow-2xs"
-            title="Bildirishnomalar"
-          >
-            <Bell size={18} className={unreadNotifs > 0 ? "text-[var(--brand-green)]" : "text-neutral-700"} />
-            {unreadNotifs > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-black text-white shadow-xs">
-                {unreadNotifs > 9 ? "9+" : unreadNotifs}
-              </span>
+        {/* 3. O'ng tomon Amallar (Til Tanlash, Qidiruv, Savat, Black pill CTA) */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Apple-style Til tanlash Menyusi (Dropdown) */}
+          <div className="relative" ref={langMenuRef}>
+            <button
+              type="button"
+              onClick={() => setLangMenuOpen(!langMenuOpen)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F4F3ED] hover:bg-zinc-200 text-xs font-semibold text-zinc-800 transition active:scale-95 border border-black/5"
+              aria-label="Tilni tanlash"
+              aria-expanded={langMenuOpen}
+            >
+              <span className="text-sm">{currentLang.flag}</span>
+              <span className="hidden sm:inline font-medium text-[11px] uppercase tracking-wider">{currentLang.code}</span>
+              <ChevronDown size={11} className={`text-zinc-500 transition-transform ${langMenuOpen ? "rotate-180" : ""}`} />
+            </button>
+
+            {/* Ochiluvchi Til Paneli */}
+            {langMenuOpen && (
+              <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-white/95 backdrop-blur-xl border border-black/10 shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                  {lang === "uz" ? "Tilni tanlang" : "Select language"}
+                </div>
+                {LANGUAGES.map((item) => (
+                  <button
+                    key={item.code}
+                    type="button"
+                    onClick={() => {
+                      setLang(item.code);
+                      setLangMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition ${
+                      lang === item.code
+                        ? "bg-[#191B1F] text-white font-bold"
+                        : "text-zinc-700 hover:bg-zinc-100 font-medium"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <span className="text-base">{item.flag}</span>
+                      <span>{item.nativeName}</span>
+                    </span>
+                    {lang === item.code && <Check size={14} className="text-amber-400" />}
+                  </button>
+                ))}
+              </div>
             )}
+          </div>
+
+          {/* Qidiruv ikonka tugmasi */}
+          <Link
+            href="/dorilar"
+            onClick={() => closeCart()}
+            className="w-9 h-9 rounded-full bg-[#F4F3ED] hover:bg-zinc-200 flex items-center justify-center text-zinc-700 transition"
+            title={t.nav.search}
+            aria-label={t.nav.search}
+          >
+            <Search size={15} />
           </Link>
 
-          {/* Savat — ochadi / yopadi */}
+          {/* Savat Tugmasi */}
           <button
             type="button"
             onClick={() => toggleCart()}
-            className="relative flex items-center gap-2 rounded-xl bg-white border border-black/10 px-3.5 py-2 text-[14px] font-bold text-neutral-800 hover:border-[var(--brand-green)]/50 hover:text-[var(--brand-green)] hover:bg-[var(--brand-green-soft)]/50 transition-all active:scale-95 shadow-2xs"
+            className="relative flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1.5 text-xs font-semibold text-zinc-800 transition active:scale-95 shadow-2xs"
+            title={t.nav.cart}
+            aria-label={t.nav.cart}
           >
-            <ShoppingCart size={18} />
-            <span>Savat</span>
+            <ShoppingCart size={15} className="text-emerald-700" />
+            <span className="hidden sm:inline">{t.nav.cart}</span>
             {cartCount > 0 && (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--brand-green)] px-1.5 text-[11px] font-black text-white shadow-2xs">
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-black text-white ml-0.5">
                 {cartCount}
               </span>
             )}
           </button>
 
-          {/* Profil */}
+          {/* Black Pill CTA Button ("Contact us" / "Bog‘lanish") */}
           <Link
-            href="/profil"
+            href="/hamkorlik"
             prefetch={true}
             onClick={() => closeCart()}
-            className={`web-profile-link px-4 py-2 rounded-xl text-[14px] font-bold transition-all ${
-              pathname.startsWith("/profil")
-                ? "bg-[var(--brand-green)] text-white shadow-xs"
-                : "bg-neutral-900 text-white hover:bg-neutral-800"
-            }`}
+            className="text-xs font-bold bg-[#191B1F] hover:bg-black text-white px-5 sm:px-6 py-2 rounded-full transition shadow-sm active:scale-95 flex items-center gap-1.5 shrink-0"
           >
-            Profil
+            <span>{t.nav.contact_us}</span>
           </Link>
+
+          {/* Mobil Menyu Gamburger Tugmasi */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="lg:hidden p-2 rounded-full text-zinc-700 hover:text-black hover:bg-zinc-100 transition active:scale-95"
+            aria-label="Menyu"
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-nav-menu"
+          >
+            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {/* 4. Mobil Ochiluvchi Menyu Paneli (Apple Style Icons) */}
+      {mobileMenuOpen && (
+        <div
+          id="mobile-nav-menu"
+          className="lg:hidden max-w-6xl mx-auto mt-2 rounded-3xl border border-black/8 bg-white/98 backdrop-blur-xl px-5 py-5 space-y-4 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-150 max-h-[85vh] overflow-y-auto pointer-events-auto"
+        >
+          {/* Xizmatlar */}
+          <div className="space-y-1.5">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-3">
+              {t.nav.services}
+            </div>
+            <Link
+              href="/dorilar"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                closeCart();
+              }}
+              className="flex items-center justify-between p-3 rounded-2xl bg-emerald-50 text-emerald-950 font-bold text-xs"
+            >
+              <span className="flex items-center gap-2.5">
+                <span className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center">
+                  <ShoppingCart size={15} />
+                </span>
+                <span>{t.nav.market_title}</span>
+              </span>
+              <span className="text-[9px] bg-emerald-600 text-white px-2 py-0.5 rounded-full uppercase font-black">
+                Live
+              </span>
+            </Link>
+
+            <Link
+              href="/mutaxassislar"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                closeCart();
+              }}
+              className="flex items-center gap-2.5 p-3 rounded-2xl text-zinc-800 hover:bg-zinc-50 font-bold text-xs"
+            >
+              <span className="w-7 h-7 rounded-lg bg-zinc-100 text-zinc-800 flex items-center justify-center">
+                <Users size={15} />
+              </span>
+              <span>{t.nav.specialists_title}</span>
+            </Link>
+
+            <Link
+              href="/yangiliklar"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                closeCart();
+              }}
+              className="flex items-center gap-2.5 p-3 rounded-2xl text-zinc-800 hover:bg-zinc-50 font-semibold text-xs"
+            >
+              <span className="w-7 h-7 rounded-lg bg-zinc-100 text-zinc-800 flex items-center justify-center">
+                <Sprout size={15} />
+              </span>
+              <span>{t.nav.tips_title}</span>
+            </Link>
+          </div>
+
+          {/* Platforma & Biznes */}
+          <div className="border-t border-zinc-100 pt-3 space-y-1 text-xs font-semibold text-zinc-700">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-3">
+              {t.nav.about_platform}
+            </div>
+            <a
+              href="/#about"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-zinc-50"
+            >
+              <Store size={15} className="text-zinc-500" />
+              <span>{t.nav.debt_book}</span>
+            </a>
+            <a
+              href="/#about"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-zinc-50"
+            >
+              <BarChart3 size={15} className="text-zinc-500" />
+              <span>{t.nav.analytics}</span>
+            </a>
+            <a
+              href="/#tariffs"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-zinc-50"
+            >
+              <CreditCard size={15} className="text-zinc-500" />
+              <span>{t.nav.tariffs}</span>
+            </a>
+            <a
+              href="/#aloqa"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-zinc-50"
+            >
+              <HelpCircle size={15} className="text-zinc-500" />
+              <span>{t.nav.faq}</span>
+            </a>
+          </div>
+
+          {/* Amallar */}
+          <div className="border-t border-zinc-100 pt-3 space-y-2">
+            <Link
+              href="/hamkorlik"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                closeCart();
+              }}
+              className="w-full py-3 px-4 rounded-full bg-[#191B1F] hover:bg-black text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm"
+            >
+              <span>{t.nav.connect_store}</span>
+              <ArrowRight size={14} />
+            </Link>
+
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <Link
+                href="/hamkorlik?mode=login"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  closeCart();
+                }}
+                className="py-2.5 px-3 rounded-full border border-zinc-200 text-zinc-800 text-center font-bold text-xs hover:bg-zinc-50"
+              >
+                {t.nav.cabinet}
+              </Link>
+              <Link
+                href="/kirish"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  closeCart();
+                }}
+                className="py-2.5 px-3 rounded-full border border-zinc-200 text-zinc-800 text-center font-bold text-xs hover:bg-zinc-50"
+              >
+                {t.nav.login_client}
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

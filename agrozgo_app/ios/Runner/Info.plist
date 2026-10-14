@@ -69,5 +69,9 @@
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>AgrozGO sizning hududingizga mos ob-havo ma'lumotlari va eng yaqin mutaxassislarni ko'rsatish uchun joylashuvingizdan foydalanadi.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>AgrozGO sizning hududingizga mos ob-havo ma'lumotlari va eng yaqin mutaxassislarni ko'rsatish uchun joylashuvingizdan foydalanadi.</string>
 </dict>
 </plist>

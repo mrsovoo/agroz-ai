@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Sprout,
   Phone,
@@ -476,16 +477,16 @@ export default function LoginPage() {
                       </div>
                       <div className="rounded-xl bg-white/95 p-3 border border-emerald-100 text-xs space-y-1.5 font-medium text-slate-700">
                         <div className="flex justify-between">
-                          <span className="text-slate-500">👤 Ism:</span>
+                          <span className="text-slate-500">Ism:</span>
                           <span className="font-bold text-slate-900">{botUser.name || name}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-slate-500">📞 Asosiy telefon:</span>
+                          <span className="text-slate-500">Asosiy telefon:</span>
                           <span className="font-bold text-slate-900">{botUser.phone || `+998 ${phoneInput}`}</span>
                         </div>
                         {botUser.secondPhone && (
                           <div className="flex justify-between">
-                            <span className="text-slate-500">📞 Qo&apos;shimcha:</span>
+                            <span className="text-slate-500">Qo&apos;shimcha:</span>
                             <span className="font-bold text-slate-900">{botUser.secondPhone}</span>
                           </div>
                         )}
@@ -586,7 +587,7 @@ export default function LoginPage() {
                       style={{ background: "#028e11" }}
                     >
                       {busy ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
-                      <span>{busy ? "Kirilmoqda..." : "✅ Tasdiqlash va Kirish"}</span>
+                      <span>{busy ? "Kirilmoqda..." : "Tasdiqlash va Kirish"}</span>
                     </button>
                     {botUser && (
                       <button
@@ -730,7 +731,7 @@ export default function LoginPage() {
           {authMethod === "quick" && (
             <div className="space-y-3.5">
               <p className="rounded-xl bg-emerald-50 p-3 text-[12.5px] leading-relaxed text-emerald-900 font-medium border border-emerald-100">
-                🌱 Ismingiz va hududingizni kiriting. Kod kutmasdan darhol profilingiz ochiladi.
+                Ismingiz va hududingizni kiriting. Kod kutmasdan darhol profilingiz ochiladi.
               </p>
 
               <div>
@@ -809,7 +810,7 @@ export default function LoginPage() {
                 <div className="space-y-3">
                   {mode === "bot" ? (
                     <p className="rounded-2xl bg-[var(--brand-yellow-soft)] p-3 text-[13px] font-medium leading-relaxed text-[var(--brand-ink)]">
-                      ✅ Kod Telegram botimizga yuborildi.
+                      Kod Telegram botimizga yuborildi.
                     </p>
                   ) : mode === "telegram" ? (
                     <p className="rounded-2xl bg-[var(--brand-yellow-soft)] p-3 text-[13px] font-medium leading-relaxed text-[var(--brand-ink)]">
@@ -856,6 +857,13 @@ export default function LoginPage() {
               {error}
             </p>
           )}
+
+          <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span>Agro-do‘kon egasimisiz?</span>
+            <Link href="/kabinet" className="font-bold text-emerald-700 hover:text-emerald-800">
+              Biznes kabinetiga kirish →
+            </Link>
+          </div>
         </div>
       </div>
 

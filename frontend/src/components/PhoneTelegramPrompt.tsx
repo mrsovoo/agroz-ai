@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Building2 } from "lucide-react";
 
 export default function PhoneTelegramPrompt({ type = "frontend" }: { type?: "frontend" | "business" }) {
   const isBiz = type === "business";
@@ -28,9 +29,18 @@ export default function PhoneTelegramPrompt({ type = "frontend" }: { type?: "fro
         Telegramda ochish
       </a>
       
-      <p className="mt-6 text-sm text-gray-400">
-        iOS va Android ilovalar chiqarishga tayyorlanmoqda
-      </p>
+      <div className="mt-6 flex flex-col items-center gap-2.5">
+        <a
+          href="/kabinet"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-900 bg-zinc-100 hover:bg-zinc-200 px-4 py-2 rounded-xl transition"
+        >
+          <Building2 size={13} className="text-zinc-600" />
+          <span>Dorixona yoki Mutaxassis kabinetiga o&apos;tish</span>
+        </a>
+        <p className="text-xs text-gray-400">
+          iOS va Android ilovalar chiqarishga tayyorlanmoqda
+        </p>
+      </div>
     </div>
   );
 }

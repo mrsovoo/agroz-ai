@@ -1,10 +1,13 @@
 export function getApiBaseUrl(): string {
   if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, "");
   if (process.env.BACKEND_URL) return process.env.BACKEND_URL.replace(/\/+$/, "");
-  if (typeof window === "undefined") {
-    return process.env.NODE_ENV === "production" ? "https://agroz-ai-backend-production.up.railway.app" : "http://localhost:4000";
+  if (typeof window !== "undefined") {
+    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+      return "http://localhost:4000";
+    }
+    return process.env.NODE_ENV === "production" ? "https://agroz-ai-backend-production.up.railway.app" : "";
   }
-  return "";
+  return process.env.NODE_ENV === "production" ? "https://agroz-ai-backend-production.up.railway.app" : "http://localhost:4000";
 }
 
 export function apiUrl(path: string): string {

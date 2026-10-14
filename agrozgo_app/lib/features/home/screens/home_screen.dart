@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/services/location_service.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../../core/theme/home_theme_tokens.dart';
 import '../providers/home_providers.dart';
 import '../widgets/home_floating_nav.dart';
@@ -8,10 +10,38 @@ import '../widgets/home_medicines_section.dart';
 import '../widgets/home_specialists_section.dart';
 import '../widgets/home_weather_card.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
-  Future<void> _handleRefresh(WidgetRef ref) async {
+  @override
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndRequestLocation();
+    });
+  }
+
+  Future<void> _checkAndRequestLocation() async {
+    try {
+      // Agar joylashuv allaqachon ruxsat berilgan bo'lsa yoki birinchi marta kirilganda
+      // Location ruxsatini so'raymiz va avtomatik joylashuvni aniqlaymiz:
+      final loc = await LocationService.requestAndGetCurrentLocation();
+      if (loc != null && mounted) {
+        await ref.read(authProvider.notifier).updateProfile(
+              region: loc.region,
+              district: loc.district,
+              isLocationGranted: true,
+            );
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _handleRefresh() async {
     ref.invalidate(homeWeatherProvider);
     ref.invalidate(homeMedicinesProvider);
     ref.invalidate(homeSpecialistsProvider);
@@ -23,7 +53,7 @@ class HomeScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final tokens = Theme.of(context).extension<HomeThemeTokens>() ?? HomeThemeTokens.light;
 
     return PopScope(
@@ -36,7 +66,7 @@ class HomeScreen extends ConsumerWidget {
             children: [
               // Scrollable Content
               RefreshIndicator(
-                onRefresh: () => _handleRefresh(ref),
+                onRefresh: _handleRefresh,
                 color: const Color(0xFF35CA56),
                 child: ListView(
                   physics: const BouncingScrollPhysics(

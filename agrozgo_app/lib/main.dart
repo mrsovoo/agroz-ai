@@ -6,7 +6,14 @@ import 'core/theme/app_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const ProviderScope(child: AgrozApp()));
+  runApp(
+    ProviderScope(
+      overrides: [
+        appInitialLocationProvider.overrideWith((ref) => '/splash'),
+      ],
+      child: const AgrozApp(),
+    ),
+  );
 }
 
 class AgrozApp extends ConsumerWidget {

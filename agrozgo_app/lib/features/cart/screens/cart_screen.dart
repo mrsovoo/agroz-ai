@@ -3,20 +3,19 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/home_theme_tokens.dart';
-import '../../home/widgets/home_floating_nav.dart';
 import '../models/cart_item.dart';
 import '../providers/cart_provider.dart';
+import '../widgets/cart_checkout_modal.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
   final bool autoSeedDemo;
-  const CartScreen({super.key, this.autoSeedDemo = true});
+  const CartScreen({super.key, this.autoSeedDemo = false});
 
   @override
   ConsumerState<CartScreen> createState() => _CartScreenState();
 }
 
 class _CartScreenState extends ConsumerState<CartScreen> {
-  static const _greenColor = Color(0xFF00A82D);
   static const _redColor = Color(0xFFFA2B36);
   static const _greyTextColor = Color(0xFF8E8E93);
   static const _cardBg = Colors.white;
@@ -82,9 +81,67 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               ),
               padding: const EdgeInsets.only(bottom: 120),
               children: [
-                // Top Action Bar (Tanlanganlarni o'chirish / Hammasini tanlash)
+                // Top Header: Back Button with "Asosiy" + "Savat" Title
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  padding: const EdgeInsets.fromLTRB(12, 10, 16, 8),
+                  child: Row(
+                    children: [
+                      // Back to Asosiy button
+                      InkWell(
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          if (context.canPop()) {
+                            context.pop();
+                          } else {
+                            context.go('/');
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.arrow_back_ios_new_rounded,
+                                size: 18,
+                                color: Colors.black,
+                              ),
+                              SizedBox(width: 6),
+                              Text(
+                                'Asosiy',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'PingFang SC',
+                                  color: Colors.black,
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      // Savat Title
+                      const Text(
+                        'Savat',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          fontFamily: 'PingFang SC',
+                          color: Colors.black,
+                          letterSpacing: -0.4,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                    ],
+                  ),
+                ),
+
+                // Action Bar (Tanlanganlarni o'chirish / Hammasini tanlash)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                   child: Row(
                     children: [
                       Expanded(
@@ -105,7 +162,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                               style: TextStyle(
                                 color: _greyTextColor,
                                 fontSize: 13.5,
-                                fontFamily: 'Arial',
+                                fontFamily: 'PingFang SC',
                                 fontWeight: FontWeight.w400,
                               ),
                             ),
@@ -129,7 +186,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                 style: TextStyle(
                                   color: Colors.black,
                                   fontSize: 13.5,
-                                  fontFamily: 'Arial',
+                                  fontFamily: 'PingFang SC',
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -175,7 +232,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w600,
-                            fontFamily: 'Arial',
+                            fontFamily: 'PingFang SC',
                             color: Colors.black,
                           ),
                         ),
@@ -186,14 +243,14 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           style: TextStyle(
                             fontSize: 13,
                             color: _greyTextColor,
-                            fontFamily: 'Arial',
+                            fontFamily: 'PingFang SC',
                           ),
                         ),
                         const SizedBox(height: 20),
                         ElevatedButton(
                           onPressed: () => context.go('/medicines'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: _greenColor,
+                            backgroundColor: const Color(0xFF35CA56),
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
@@ -202,7 +259,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           ),
                           child: const Text(
                             'Dorilar bo‘limiga o‘tish',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'PingFang SC',
+                            ),
                           ),
                         ),
                       ],
@@ -246,7 +306,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
-                            fontFamily: 'Arial',
+                            fontFamily: 'PingFang SC',
                             color: Colors.black,
                           ),
                         ),
@@ -258,7 +318,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                 '${cartState.selectedCount} mahsulot',
                                 style: const TextStyle(
                                   fontSize: 14,
-                                  fontFamily: 'Arial',
+                                  fontFamily: 'PingFang SC',
                                   color: _greyTextColor,
                                 ),
                               ),
@@ -268,7 +328,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                               _formatPrice(cartState.selectedSubtotal),
                               style: const TextStyle(
                                 fontSize: 14,
-                                fontFamily: 'Arial',
+                                fontFamily: 'PingFang SC',
                                 fontWeight: FontWeight.w500,
                                 color: Colors.black,
                               ),
@@ -283,7 +343,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                 'Chegirmalar',
                                 style: TextStyle(
                                   fontSize: 14,
-                                  fontFamily: 'Arial',
+                                  fontFamily: 'PingFang SC',
                                   color: _greyTextColor,
                                 ),
                               ),
@@ -293,7 +353,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                               '- ${_formatPrice(cartState.selectedDiscount)}',
                               style: const TextStyle(
                                 fontSize: 14,
-                                fontFamily: 'Arial',
+                                fontFamily: 'PingFang SC',
                                 fontWeight: FontWeight.w500,
                                 color: _redColor,
                               ),
@@ -316,7 +376,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w700,
-                                  fontFamily: 'Arial',
+                                  fontFamily: 'PingFang SC',
                                   color: Colors.black,
                                 ),
                               ),
@@ -327,7 +387,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w700,
-                                fontFamily: 'Arial',
+                                fontFamily: 'PingFang SC',
                                 color: Colors.black,
                               ),
                             ),
@@ -360,7 +420,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
-                            fontFamily: 'Arial',
+                            fontFamily: 'PingFang SC',
                             color: Colors.black,
                           ),
                         ),
@@ -377,66 +437,165 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           style: TextStyle(
                             fontSize: 13,
                             height: 1.45,
-                            fontFamily: 'Arial',
+                            fontFamily: 'PingFang SC',
                             color: Color(0xFF666666),
                           ),
                         ),
                       ],
                     ),
                   ),
+                ],
+              ],
+            ),
 
-                  // Action Button: Rasmiylashtirish
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    child: Semantics(
-                      button: true,
-                      label: 'Rasmiylashtirish',
-                      child: Material(
-                        color: cartState.selectedCount > 0 ? _greenColor : const Color(0xFFBDBDBD),
-                        borderRadius: BorderRadius.circular(16),
-                        child: InkWell(
-                          onTap: cartState.selectedCount > 0
-                              ? () {
-                                  HapticFeedback.mediumImpact();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Buyurtma rasmiylashtirildi (${cartState.selectedCount} mahsulot)',
-                                      ),
-                                      behavior: SnackBarBehavior.floating,
-                                      duration: const Duration(seconds: 2),
-                                    ),
-                                  );
-                                }
-                              : null,
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            height: 54,
-                            alignment: Alignment.center,
-                            child: const Text(
-                              'Rasmiylashtirish',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16.5,
-                                fontFamily: 'Arial',
-                                fontWeight: FontWeight.w700,
+            // Bottom Bar matching screenshot: Green "Rasmiylashtirish" button on left, floating circular cart button on right
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 16,
+              child: SafeArea(
+                top: false,
+                child: Row(
+                  children: [
+                    // Green "Rasmiylashtirish" button
+                    Expanded(
+                      child: Semantics(
+                        button: true,
+                        label: 'Rasmiylashtirish',
+                        child: Material(
+                          color: cartState.selectedCount > 0
+                              ? const Color(0xFF00A82D)
+                              : const Color(0xFFBDBDBD),
+                          borderRadius: BorderRadius.circular(30),
+                          elevation: cartState.selectedCount > 0 ? 4 : 0,
+                          shadowColor: const Color(0x3300A82D),
+                          child: InkWell(
+                            onTap: cartState.selectedCount > 0
+                                ? () {
+                                    HapticFeedback.mediumImpact();
+                                    CartCheckoutModal.show(
+                                      context,
+                                      cartState.selectedItems,
+                                    );
+                                  }
+                                : null,
+                            borderRadius: BorderRadius.circular(30),
+                            child: Container(
+                              height: 60,
+                              alignment: Alignment.center,
+                              child: const Text(
+                                'Rasmiylashtirish',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 17,
+                                  fontFamily: 'PingFang SC',
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: -0.2,
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ],
-            ),
+                    const SizedBox(width: 14),
 
-            // Bottom Floating Navigation
-            const Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: HomeFloatingNav(activeIndex: 3),
+                    // Circular Dark Cart Button (matching mockup)
+                    Semantics(
+                      button: true,
+                      label: 'Savat',
+                      child: Container(
+                        width: 65,
+                        height: 65,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF333333),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color(0x33000000),
+                              blurRadius: 16,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          shape: const CircleBorder(),
+                          child: InkWell(
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                            },
+                            customBorder: const CircleBorder(),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                const Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.shopping_cart_outlined,
+                                      color: Colors.white,
+                                      size: 22,
+                                    ),
+                                    SizedBox(height: 2),
+                                    Text(
+                                      'Savat',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 9.5,
+                                        fontFamily: 'PingFang SC',
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: -0.1,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (cartState.totalCount > 0)
+                                  Positioned(
+                                    top: 3,
+                                    right: 3,
+                                    child: Container(
+                                      constraints: const BoxConstraints(
+                                        minWidth: 20,
+                                        minHeight: 20,
+                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFA2B36),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: Colors.white, width: 2),
+                                        boxShadow: const [
+                                          BoxShadow(
+                                            color: Color(0x33000000),
+                                            blurRadius: 4,
+                                            offset: Offset(0, 1),
+                                          ),
+                                        ],
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        cartState.totalCount > 99 ? '99+' : '${cartState.totalCount}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontFamily: 'PingFang SC',
+                                          fontWeight: FontWeight.w700,
+                                          height: 1.0,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -467,7 +626,7 @@ class _CartItemCard extends StatelessWidget {
     if (path != null && path.startsWith('assets/')) {
       return Image.asset(
         path,
-        fit: BoxFit.cover,
+        fit: BoxFit.fill,
         errorBuilder: (_, __, ___) => _fallbackImage(),
       );
     }
@@ -489,31 +648,31 @@ class _CartItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 10,
-            offset: Offset(0, 2),
+            color: Color(0x08000000),
+            blurRadius: 12,
+            offset: Offset(0, 3),
           ),
         ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Left Product Image Box (114x114 with rounded corners)
+          // Left Product Image Box (rounded corners with border)
           Container(
-            width: 114,
-            height: 114,
+            width: 104,
+            height: 104,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: const Color(0xFFEEEEEE),
-                width: 0.5,
+                color: const Color(0xFFF0F0F0),
+                width: 1,
               ),
             ),
             clipBehavior: Clip.antiAlias,
@@ -539,20 +698,23 @@ class _CartItemCard extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.w700,
-                              fontFamily: 'Arial',
+                              fontFamily: 'PingFang SC',
                               color: Colors.black,
+                              letterSpacing: -0.2,
                             ),
                           ),
-                          if (item.oldPrice != null)
+                          if (item.oldPrice != null) ...[
+                            const SizedBox(height: 1),
                             Text(
                               formatRaw(item.oldPrice),
                               style: const TextStyle(
                                 fontSize: 12.5,
-                                fontFamily: 'Arial',
+                                fontFamily: 'PingFang SC',
                                 color: Color(0xFF8E8E93),
                                 decoration: TextDecoration.lineThrough,
                               ),
                             ),
+                          ],
                         ],
                       ),
                     ),
@@ -571,36 +733,38 @@ class _CartItemCard extends StatelessWidget {
                 Text(
                   item.name,
                   style: const TextStyle(
-                    fontSize: 15.5,
-                    fontWeight: FontWeight.w600,
-                    fontFamily: 'Arial',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'PingFang SC',
                     color: Colors.black,
+                    letterSpacing: -0.2,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: 1),
 
                 // Pharmacy Name
                 Text(
                   item.pharmacyName,
                   style: const TextStyle(
                     fontSize: 12.5,
-                    fontFamily: 'Arial',
+                    fontFamily: 'PingFang SC',
                     color: Color(0xFF8E8E93),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
 
                 // Quantity selector and Heart button row
                 Row(
                   children: [
-                    // Quantity pill
+                    // Quantity pill with rounded stepper matching mockup
                     Container(
                       height: 32,
                       decoration: BoxDecoration(
-                        border: Border.all(color: const Color(0xFFE5E5EA), width: 1),
+                        border: Border.all(color: const Color(0xFFDCDCE0), width: 1),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Row(
@@ -613,14 +777,15 @@ class _CartItemCard extends StatelessWidget {
                               onQuantityChanged(item.quantity - 1);
                             },
                           ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                          Container(
+                            constraints: const BoxConstraints(minWidth: 32),
+                            alignment: Alignment.center,
                             child: Text(
                               '${item.quantity}',
                               style: const TextStyle(
-                                fontSize: 13.5,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                fontFamily: 'Arial',
+                                fontFamily: 'PingFang SC',
                                 color: Colors.black,
                               ),
                             ),
@@ -700,8 +865,8 @@ class _CustomCheckbox extends StatelessWidget {
     return GestureDetector(
       onTap: () => onChanged(!isChecked),
       child: Container(
-        width: 20,
-        height: 20,
+        width: 22,
+        height: 22,
         decoration: BoxDecoration(
           color: isChecked ? Colors.black : Colors.white,
           borderRadius: BorderRadius.circular(4),
@@ -715,7 +880,7 @@ class _CustomCheckbox extends StatelessWidget {
             ? const Icon(
                 Icons.check,
                 color: Colors.white,
-                size: 14,
+                size: 15,
               )
             : null,
       ),

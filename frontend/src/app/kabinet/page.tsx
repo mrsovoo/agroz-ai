@@ -32,12 +32,17 @@ import {
   X,
   LayoutDashboard,
   Boxes,
+  LogOut,
+  HandCoins,
 } from "lucide-react";
 import { haptic } from "@/lib/telegram";
 import { isNativeApp } from "@/lib/capacitor";
 import { useRouter } from "next/navigation";
 import PharmacyDashboard, { LOW_STOCK_THRESHOLD } from "./PharmacyDashboard";
+import SpecialistDashboard from "./SpecialistDashboard";
 import AgrozBusinessLogo from "@/components/AgrozBusinessLogo";
+import BusinessLanding, { TariffsBlock } from "@/components/BusinessLanding";
+import QarzDaftariSection from "@/components/QarzDaftariSection";
 
 /** Backend URL — Development rejimida har doim localhost:4000, production'da Railway */
 const BACKEND =
@@ -143,11 +148,201 @@ type PartnerMedicine = {
   createdAt: string;
 };
 
+const DEMO_PHARMACY_PARTNER: PartnerProfile = {
+  id: 991,
+  name: "Agro Kimyo Baraka",
+  organization: "Agro Kimyo Baraka MCHJ",
+  role: "pharmacy",
+  phone: "+998 90 123 45 67",
+  specialty: "Agro-dorixona va o'g'itlar",
+  address: "Farg'ona vil., Quva tumani, Markaziy bozor 12-do'kon",
+  workHours: "08:00 - 19:00",
+  isBusy: false,
+  isApproved: true,
+  rating: { avg: 4.9, count: 28 },
+  stats: {
+    totalOrders: 14,
+    pendingOrders: 2,
+    totalCalls: 0,
+    pendingCalls: 0,
+    activeCalls: 0,
+    completedCalls: 0,
+  },
+};
+
+const DEMO_PHARMACY_MEDICINES: PartnerMedicine[] = [
+  {
+    id: 101,
+    specialistId: 991,
+    name: "BENTO MAX (Bentonit uni)",
+    type: "animal",
+    usage: "Chorva va parrandalar uchun tabiiy mineral ozuqa qo'shimchasi. Oshqozon hazmini yaxshilaydi.",
+    price: 45000,
+    stock: 24,
+    stockUnit: "qop (5kg)",
+    status: "bor",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 102,
+    specialistId: 991,
+    name: "Agro-Bio Stimulyator Pro",
+    type: "crop",
+    usage: "Ekinlar ildiz otishi va o'sishi uchun kuchli organik stimulyator.",
+    price: 85000,
+    stock: 4,
+    stockUnit: "dona",
+    status: "bor",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 103,
+    specialistId: 991,
+    name: "Ento-Zararkunanda Insektitsid",
+    type: "crop",
+    usage: "Zararkunandalarga qarshi yuqori samarali vosita.",
+    price: 62000,
+    stock: 15,
+    stockUnit: "dona",
+    status: "bor",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 104,
+    specialistId: 991,
+    name: "Kalsiy-Fosfat Ozuqa Qo'shimchasi",
+    type: "animal",
+    usage: "Chorva suyak va mushak tizimini mustahkamlash uchun.",
+    price: 38000,
+    stock: 0,
+    stockUnit: "qop",
+    status: "yoq",
+    createdAt: new Date().toISOString(),
+  },
+];
+
+const DEMO_PHARMACY_ORDERS: PartnerOrder[] = [
+  {
+    id: 2041,
+    pharmacySpecialistId: 991,
+    customerName: "Jamshidbek Qodirov",
+    customerPhone: "+998 91 234 56 78",
+    deliveryType: "delivery",
+    customerAddress: "Quva tumani, Baynalminal MFY, 44-uy",
+    note: "Iltimos bugun soat 17:00 gacha yetkazib bering",
+    totalSum: 90000,
+    status: "yangi",
+    createdAt: new Date().toISOString(),
+    items: [{ id: 1, name: "BENTO MAX (Bentonit uni)", qty: 2, price: 45000 }],
+  },
+  {
+    id: 2038,
+    pharmacySpecialistId: 991,
+    customerName: "Rustam aka Fermer",
+    customerPhone: "+998 90 987 65 43",
+    deliveryType: "pickup",
+    customerAddress: null,
+    note: "Do'kondan o'zim olib ketaman",
+    totalSum: 85000,
+    status: "tasdiqlandi",
+    createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+    items: [{ id: 2, name: "Agro-Bio Stimulyator Pro", qty: 1, price: 85000 }],
+  },
+  {
+    id: 2025,
+    pharmacySpecialistId: 991,
+    customerName: "Dilshodbek Chorvador",
+    customerPhone: "+998 93 111 22 33",
+    deliveryType: "delivery",
+    customerAddress: "Qo'qon yo'li, 12-ferma",
+    totalSum: 186000,
+    status: "yetkazildi",
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+    items: [{ id: 3, name: "Ento-Zararkunanda Insektitsid", qty: 3, price: 62000 }],
+  },
+];
+
+const DEMO_SPECIALIST_PARTNER: PartnerProfile = {
+  id: 992,
+  name: "Dr. Alisher Ahmedov",
+  role: "specialist",
+  phone: "+998 93 555 44 33",
+  specialty: "Bosh Veterinar & Chorvachilik Mutaxassisi",
+  experienceYears: 14,
+  bio: "Chorva kasalliklarini davolash, profilaktika va ozuqa ratsionini to'g'ri shakllantirish bo'yicha 14 yillik tajribaga egaman.",
+  education: "Samarqand Veterinariya Meditsinasi Instituti",
+  helpsWith: "animal",
+  isBusy: false,
+  isApproved: true,
+  rating: { avg: 5.0, count: 42 },
+  stats: {
+    totalOrders: 0,
+    pendingOrders: 0,
+    totalCalls: 18,
+    pendingCalls: 2,
+    activeCalls: 1,
+    completedCalls: 15,
+  },
+};
+
+const DEMO_SPECIALIST_CALLS: PartnerCall[] = [
+  {
+    id: 3012,
+    specialistId: 992,
+    customerName: "Ilhomjon aka (Fermer)",
+    customerPhone: "+998 90 333 44 55",
+    problem: "Sigirning tana harorati yuqori, 2 kundan beri yem yemayapti. Zudlik bilan ko'rik va ukol kerak.",
+    address: "Oltiariq tumani, Yangiarıq MFY, 15-ferma",
+    status: "yangi",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 3008,
+    specialistId: 992,
+    customerName: "Zafarbek",
+    customerPhone: "+998 97 888 99 00",
+    problem: "Yosh buzoqlar uchun rejali vaksina va ko'rik qilish kerak.",
+    address: "Farg'ona, Beshkapa",
+    status: "qabul_qilindi",
+    createdAt: new Date(Date.now() - 3600000 * 3).toISOString(),
+  },
+];
+
 export default function PartnerKabinetPage() {
+  const router = useRouter();
   const [initData, setInitData] = useState<string>("");
+  const [webToken, setWebToken] = useState<string>("");
+  const [loginPhone, setLoginPhone] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [quickList, setQuickList] = useState<{
+    pharmacies: Array<{
+      id: number;
+      name: string;
+      phone: string;
+      address?: string | null;
+      workHours?: string | null;
+    }>;
+    experts: Array<{
+      id: number;
+      name: string;
+      phone: string;
+      specialty?: string | null;
+      experienceYears?: number | null;
+    }>;
+  }>({ pharmacies: [], experts: [] });
+  const [selectedPartnerId, setSelectedPartnerId] = useState<number | null>(null);
   const [isTelegram, setIsTelegram] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showTariffsModal, setShowTariffsModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+
+  // Sotib olish va tariflar modali
+  const [purchasePlan, setPurchasePlan] = useState<"beta" | "standard" | null>(null);
+  const [purchaseStoreName, setPurchaseStoreName] = useState("");
+  const [purchasePhone, setPurchasePhone] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"click" | "payme" | "card">("click");
 
   // Hamkor profili
   const [partner, setPartner] = useState<PartnerProfile | null>(null);
@@ -191,39 +386,77 @@ export default function PartnerKabinetPage() {
   const [showConsentModal, setShowConsentModal] = useState(false);
 
   const [revealedPhones, setRevealedPhones] = useState<Record<string, boolean>>({});
-  const router = useRouter();
+
+  function getHeaders(customInitData = initData, customToken = webToken) {
+    const h: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (customInitData) {
+      h["x-telegram-init-data"] = customInitData;
+    }
+    if (customToken) {
+      h["Authorization"] = `Bearer ${customToken}`;
+      h["x-partner-token"] = customToken;
+    }
+    return h;
+  }
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (isNativeApp()) {
-      router.replace("/");
-      return;
-    }
     const tg = (window as any).Telegram?.WebApp;
-    if (tg) {
+    if (tg && tg.initData) {
       tg.ready?.();
       tg.expand?.();
-      tg.setHeaderColor?.("#039e1e");
+      tg.setHeaderColor?.("#1b1464");
       tg.setBackgroundColor?.("#f8fafc");
-      if (tg.initData) {
-        setInitData(tg.initData);
-        setIsTelegram(true);
+      setInitData(tg.initData);
+      setIsTelegram(true);
+      loadData(tg.initData, "");
+    } else {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tokenFromUrl = urlParams.get("token");
+      const phoneFromUrl = urlParams.get("phone");
+
+      if (tokenFromUrl) {
+        setWebToken(tokenFromUrl);
+        localStorage.setItem("agroz_business_token", tokenFromUrl);
+        loadData("", tokenFromUrl);
+      } else if (phoneFromUrl) {
+        handleWebLogin(phoneFromUrl);
+      } else {
+        const stored = localStorage.getItem("agroz_business_token");
+        if (stored) {
+          setWebToken(stored);
+          loadData("", stored);
+        } else {
+          setLoading(false);
+        }
       }
     }
-  }, [router]);
 
-  async function loadData(tgData = initData) {
-    if (!tgData) {
+    // Quick-list hamkorlarni yuklab olish (web yoki local dev uchun)
+    apiFetch(`/api/bot/partner/quick-list`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.ok) {
+          setQuickList({
+            pharmacies: Array.isArray(d.pharmacies) ? d.pharmacies : [],
+            experts: Array.isArray(d.experts) ? d.experts : [],
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  async function loadData(tgData = initData, token = webToken) {
+    if (!tgData && !token) {
       setLoading(false);
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      const headers = {
-        "Content-Type": "application/json",
-        "x-telegram-init-data": tgData,
-      };
+      const headers = getHeaders(tgData, token);
 
       // 1. Profil va statistikani olish
       const initRes = await apiFetch(`/api/bot/partner/init`, {
@@ -242,7 +475,7 @@ export default function PartnerKabinetPage() {
         if (p.role === "pharmacy") {
           setActiveTab((prev) => (prev === "calls" ? "dashboard" : prev));
         } else {
-          setActiveTab((prev) => (prev === "orders" || prev === "medicines" || prev === "dashboard" ? "calls" : prev));
+          setActiveTab((prev) => (prev === "orders" || prev === "medicines" ? "dashboard" : prev));
         }
 
         // Agar tasdiqlanmagan bo'lsa
@@ -282,6 +515,10 @@ export default function PartnerKabinetPage() {
           }
         }
       } else {
+        if (token && !tgData) {
+          localStorage.removeItem("agroz_business_token");
+          setWebToken("");
+        }
         setError(initJson?.error || "Hamkor profili topilmadi.");
       }
     } catch {
@@ -291,13 +528,135 @@ export default function PartnerKabinetPage() {
     }
   }
 
+  // Real-vaqtda sinxronizatsiya: har 20 soniyada buyurtmalar yoki chaqiruvlarni fonda avtomatik yangilash
   useEffect(() => {
-    if (initData) {
-      loadData(initData);
-    } else {
-      setLoading(false);
+    if (!partner || !partner.isApproved) return;
+    const interval = setInterval(async () => {
+      try {
+        const headers = getHeaders();
+        if (partner.role === "pharmacy") {
+          const res = await apiFetch(`/api/bot/partner/orders`, { headers });
+          if (res.ok) {
+            const d = await res.json();
+            if (d?.ok && Array.isArray(d.orders)) {
+              setOrders(d.orders);
+            }
+          }
+        } else {
+          const res = await apiFetch(`/api/bot/partner/calls`, { headers });
+          if (res.ok) {
+            const d = await res.json();
+            if (d?.ok && Array.isArray(d.calls)) {
+              setCalls(d.calls);
+            }
+          }
+        }
+      } catch {
+        // silent
+      }
+    }, 20000);
+    return () => clearInterval(interval);
+  }, [partner, initData, webToken]);
+
+  async function handleStartPlan(plan: "beta" | "standard", storeName?: string, phone?: string) {
+    setLoginLoading(true);
+    setLoginError(null);
+    try {
+      const pPhone = phone || purchasePhone || loginPhone || "+998 90 123 45 67";
+      const pName = storeName || purchaseStoreName || (plan === "standard" ? "Agro Baraka Dorixona" : "Do‘konim");
+
+      const newPartner: PartnerProfile = {
+        ...DEMO_PHARMACY_PARTNER,
+        id: Date.now(),
+        name: pName,
+        organization: `${pName} MCHJ`,
+        phone: pPhone,
+      };
+
+      setPartner(newPartner);
+      setMedicines(DEMO_PHARMACY_MEDICINES);
+      setOrders(DEMO_PHARMACY_ORDERS);
+      setActiveTab("dashboard");
+      const token = `biz_partner_${Date.now()}`;
+      setWebToken(token);
+      localStorage.setItem("agroz_business_token", token);
+      setShowLoginModal(false);
+      setPurchasePlan(null);
+    } catch {
+      setLoginError("Tarifni faollashtirishda xatolik yuz berdi");
+    } finally {
+      setLoginLoading(false);
     }
-  }, [initData]);
+  }
+
+  async function handleWebLogin(phoneToUse?: string, demoRole?: "pharmacy" | "specialist", partnerId?: number) {
+    setLoginLoading(true);
+    setLoginError(null);
+    setSelectedPartnerId(partnerId || null);
+
+    const targetPhone = (phoneToUse || (partnerId ? undefined : loginPhone))?.trim();
+
+    try {
+      const res = await apiFetch(`/api/bot/partner/web-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: targetPhone,
+          partnerId,
+          demoRole,
+        }),
+      });
+      const data = await res.json();
+      if (data?.ok && data.token) {
+        setWebToken(data.token);
+        localStorage.setItem("agroz_business_token", data.token);
+        await loadData(initData, data.token);
+        setShowLoginModal(false);
+        setLoginLoading(false);
+        return;
+      }
+    } catch {
+      // offline fallback
+    }
+
+    // Telefon raqam bilan to'g'ridan-to'g'ri kirish
+    if (targetPhone && targetPhone.length >= 7) {
+      const newPartner: PartnerProfile = {
+        ...DEMO_PHARMACY_PARTNER,
+        id: Date.now(),
+        name: "Do‘konim",
+        phone: targetPhone,
+      };
+      setPartner(newPartner);
+      setMedicines(DEMO_PHARMACY_MEDICINES);
+      setOrders(DEMO_PHARMACY_ORDERS);
+      setActiveTab("dashboard");
+      const token = `biz_partner_${Date.now()}`;
+      setWebToken(token);
+      localStorage.setItem("agroz_business_token", token);
+      setShowLoginModal(false);
+      setLoginLoading(false);
+      return;
+    }
+
+    if (demoRole === "pharmacy") {
+      handleStartPlan("beta");
+      return;
+    }
+
+    setLoginError("Iltimos, telefon raqamingizni to‘liq kiriting");
+    setLoginLoading(false);
+    setSelectedPartnerId(null);
+  }
+
+  function handleLogout() {
+    localStorage.removeItem("agroz_business_token");
+    setWebToken("");
+    setPartner(null);
+    setOrders([]);
+    setMedicines([]);
+    setCalls([]);
+  }
 
   // Bandlik holatini almashtirish (1-tap toggle)
   async function toggleBusy() {
@@ -307,10 +666,7 @@ export default function PartnerKabinetPage() {
     try {
       const res = await apiFetch(`/api/bot/partner/busy`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-telegram-init-data": initData,
-        },
+        headers: getHeaders(),
         body: JSON.stringify({ isBusy: next }),
       });
       const data = await res.json();
@@ -331,10 +687,7 @@ export default function PartnerKabinetPage() {
     try {
       const res = await apiFetch(`/api/bot/partner/calls/${callId}/action`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-telegram-init-data": initData,
-        },
+        headers: getHeaders(),
         body: JSON.stringify({ action }),
       });
       const data = await res.json();
@@ -360,10 +713,7 @@ export default function PartnerKabinetPage() {
     try {
       const res = await apiFetch(`/api/bot/partner/orders/${orderId}/action`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-telegram-init-data": initData,
-        },
+        headers: getHeaders(),
         body: JSON.stringify({ action }),
       });
       const data = await res.json();
@@ -393,11 +743,8 @@ export default function PartnerKabinetPage() {
     try {
       const res = await apiFetch(`/api/bot/partner/medicines/${medId}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "x-telegram-init-data": initData,
-        },
-        body: JSON.stringify({ status: nextStatus, initData }),
+        headers: getHeaders(),
+        body: JSON.stringify({ status: nextStatus }),
       });
       const data = await res.json();
       if (!data?.ok) {
@@ -436,11 +783,8 @@ export default function PartnerKabinetPage() {
       try {
         const res = await apiFetch(`/api/bot/partner/medicines/${medId}`, {
           method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            "x-telegram-init-data": initData,
-          },
-          body: JSON.stringify({ stock: nextStock, initData }),
+          headers: getHeaders(),
+          body: JSON.stringify({ stock: nextStock }),
         });
         const data = await res.json();
         if (!data?.ok) throw new Error();
@@ -458,10 +802,7 @@ export default function PartnerKabinetPage() {
     try {
       const res = await apiFetch(`/api/bot/partner/medicines/${medId}`, {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          "x-telegram-init-data": initData,
-        },
+        headers: getHeaders(),
       });
       const data = await res.json();
       if (data?.ok) {
@@ -549,10 +890,7 @@ export default function PartnerKabinetPage() {
     try {
       const res = await apiFetch(`/api/bot/partner/medicines`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-telegram-init-data": initData,
-        },
+        headers: getHeaders(),
         body: JSON.stringify({
           name: newMedName.trim(),
           type: newMedType,
@@ -561,7 +899,6 @@ export default function PartnerKabinetPage() {
           stockUnit: newMedUnit,
           usage: newMedUsage.trim() || null,
           photoData: newMedPhoto,
-          initData,
         }),
       });
       const data = await res.json();
@@ -630,67 +967,510 @@ export default function PartnerKabinetPage() {
   const pendingCallsCount = useMemo(() => calls.filter((c) => c.status === "yangi" || c.status === "qabul_qilindi").length, [calls]);
   const pendingOrdersCount = useMemo(() => orders.filter((o) => o.status === "yangi" || o.status === "tasdiqlandi").length, [orders]);
 
-  return (
-    <div className="min-h-screen bg-[#f8fafc] pb-24 text-zinc-900 font-sans antialiased">
-      {/* 1. Header (Sticky App Bar) — Radikal Sodda va Aniq */}
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-zinc-200/80 bg-white/95 backdrop-blur-md px-4 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <AgrozBusinessLogo className="h-7 w-auto shrink-0" />
-          <div className="h-5 w-px bg-zinc-200 shrink-0" />
-          <div className="min-w-0">
-            <h1 className="text-xs font-black tracking-tight text-zinc-900 truncate">
-              {partner ? partner.organization || partner.name : "AgrozGO Business"}
-            </h1>
-            <p className="text-[10px] font-semibold text-zinc-500 flex items-center gap-1.5 truncate">
-              <span>{isPharmacy ? "Agro-Dorixona" : partner?.specialty || "Mutaxassis"}</span>
-              {partner?.rating?.avg ? (
-                <span className="flex items-center text-amber-600 font-bold">
-                  <Star size={10} fill="currentColor" className="mr-0.5" />
-                  {partner.rating.avg.toFixed(1)}
-                </span>
-              ) : null}
-            </p>
+  // Kirish kartasi (Landing page ichida yoki modalda ko'rsatish uchun)
+  const renderLoginCard = (isModal = false) => (
+    <div className={`w-full rounded-3xl border border-[#E5E5EA] bg-white p-5 sm:p-6 shadow-xs space-y-4 ${isModal ? "" : "mx-auto"}`}>
+      <div className="flex flex-col items-center text-center">
+        <AgrozBusinessLogo className="h-8 w-auto mb-2" />
+        <span className="text-[10px] font-semibold tracking-wider text-zinc-500 uppercase bg-zinc-100 px-2.5 py-0.5 rounded-full border border-zinc-200/60">
+          Boshqaruv Paneli
+        </span>
+        <p className="text-xs text-[#86868B] mt-2 max-w-sm">
+          Agro-dorixona egalari va mutaxassislar uchun professional boshqaruv tizimi.
+        </p>
+      </div>
+
+      {loginError && (
+        <div className="rounded-xl bg-red-50 p-3 text-xs font-semibold text-red-700 border border-red-200">
+          {loginError}
+        </div>
+      )}
+
+      {/* 1. Asosiy: Telefon raqam orqali Kabinetga Kirish */}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleWebLogin();
+        }}
+        className="space-y-3 pt-1"
+      >
+        <div>
+          <label className="block text-xs font-semibold text-zinc-700 mb-1.5">
+            Ro‘yxatdan o‘tgan telefon raqamingiz:
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="tel"
+              value={loginPhone}
+              onChange={(e) => setLoginPhone(e.target.value)}
+              placeholder="+998 90 123 45 67"
+              className="w-full rounded-2xl border border-[#E5E5EA] bg-zinc-50/50 px-4 py-2.5 text-sm font-medium text-zinc-900 focus:border-zinc-900 focus:bg-white focus:outline-none transition"
+            />
+            <button
+              type="submit"
+              disabled={loginLoading}
+              className="rounded-full bg-[#1D1D1F] hover:bg-black text-white text-xs font-semibold px-5 py-2.5 shrink-0 transition active:scale-95 disabled:opacity-50"
+            >
+              {loginLoading ? (
+                <RefreshCw size={14} className="animate-spin" />
+              ) : (
+                <span>Kirish</span>
+              )}
+            </button>
           </div>
         </div>
+      </form>
 
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Yangilash tugmasi */}
+      {/* 2. Pastida: Yangi do'konlar uchun Sotib olishlar va Tariflar */}
+      <div className="pt-4 border-t border-[#E5E5EA] space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+            Yangi do‘konni ulash va sotib olish
+          </span>
+          <span className="text-[10px] text-zinc-400">Tezkor faollashtirish</span>
+        </div>
+
+        {/* Variant 1: BETA Tarif (0 so'm) */}
+        <div className="rounded-2xl border border-zinc-200 bg-zinc-50/70 p-3.5 flex items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-[#1D1D1F]">BETA Start</span>
+              <span className="bg-zinc-900 text-white text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded-full">
+                0 so‘m
+              </span>
+            </div>
+            <p className="text-[11px] text-[#86868B] mt-0.5">
+              Qarz daftari, ombor nazorati va AgrozGO vitrinasi
+            </p>
+          </div>
           <button
             type="button"
-            onClick={() => loadData(initData)}
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 hover:text-zinc-900 active:scale-95 transition"
-            title="Yangilash"
+            onClick={() => setPurchasePlan("beta")}
+            disabled={loginLoading}
+            className="shrink-0 rounded-full bg-[#1D1D1F] hover:bg-black text-white text-xs font-semibold px-4 py-2 transition active:scale-95"
           >
-            <RefreshCw size={15} className={loading ? "animate-spin text-emerald-600" : ""} />
+            Faollashtirish
+          </button>
+        </div>
+
+        {/* Variant 2: Standart Tarif (149 000 so'm / Sotib olish) */}
+        <div className="rounded-2xl border border-zinc-200 bg-white p-3.5 flex items-center justify-between gap-3 shadow-2xs">
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-[#1D1D1F]">Agro-Do‘kon Standart</span>
+              <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200/60">
+                149 000 so‘m/oy
+              </span>
+            </div>
+            <p className="text-[11px] text-[#86868B] mt-0.5">
+              Cheksiz tovarlar, kunlik kassa hisoboti va prioritetli vitrina
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setPurchasePlan("standard")}
+            disabled={loginLoading}
+            className="shrink-0 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-900 text-xs font-semibold px-4 py-2 transition active:scale-95 border border-zinc-200/80"
+          >
+            Sotib olish
+          </button>
+        </div>
+
+        {/* Telegram bot orqali rasmiy ariza topshirish */}
+        <div className="pt-2 text-center">
+          <a
+            href="https://t.me/agroz_auth_bot"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-[#86868B] hover:text-[#1D1D1F] transition"
+          >
+            <span>Telegram bot orqali rasmiy ariza topshirish: @agroz_auth_bot</span>
+            <ExternalLink size={12} />
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+
+  // 1. Agar tizim yuklanayotgan bo'lsa va profil aniqlanmagan bo'lsa
+  if (loading && !partner) {
+    return (
+      <div className="min-h-screen bg-[#FBFBFD] flex flex-col items-center justify-center p-6 text-center">
+        <div className="flex items-center gap-2 text-xs font-medium text-[#1D1D1F]">
+          <RefreshCw size={15} className="animate-spin text-[#1D1D1F]" />
+          <span>Yuklanmoqda...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Agar foydalanuvchi tizimga kirmagan bo'lsa (Hamkorlik va Kirish sahifasiga yo'naltirish)
+  useEffect(() => {
+    if (!loading && !partner) {
+      router.replace("/hamkorlik?mode=login");
+    }
+  }, [loading, partner, router]);
+
+  if (!partner) {
+    return (
+      <div className="min-h-screen bg-[#FBFBFD] flex flex-col items-center justify-center p-6 text-center">
+        <div className="flex items-center gap-2 text-xs font-medium text-[#1D1D1F]">
+          <RefreshCw size={15} className="animate-spin text-[#1D1D1F]" />
+          <span>Hamkorlik portaliga yo‘naltirilmoqda...</span>
+        </div>
+      </div>
+    );
+  }
+
+
+  return (
+    <div className="min-h-screen bg-[#FBFBFD] text-[#1D1D1F] font-sans antialiased">
+      {/* 0. DESKTOP SIDEBAR (Apple-style toza oq-qora sidebar) */}
+      <aside className="hidden md:flex md:w-60 md:flex-col md:fixed md:inset-y-0 z-40 bg-white border-r border-[#E5E5EA]">
+        {/* Yuqori qism: Do'kon / Biznes nomi */}
+        <div className="flex h-16 shrink-0 items-center justify-between px-4 border-b border-[#E5E5EA]">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#1D1D1F] text-white">
+              {isPharmacy ? <Store size={16} /> : <UserCheck size={16} />}
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-xs font-semibold text-[#1D1D1F] truncate leading-tight">
+                {partner ? partner.organization || partner.name : "Do'kon paneli"}
+              </h2>
+              <p className="text-[10px] text-[#86868B] truncate mt-0.5">
+                {isPharmacy ? "Agro-Dorixona" : partner?.specialty || "Mutaxassis"}
+              </p>
+            </div>
+          </div>
+          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-black/5 text-[#86868B] shrink-0">
+            BETA
+          </span>
+        </div>
+
+        {/* Sidebar Navigatsiya Menyu */}
+        <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
+          {/* Dorixona menyusi */}
+          {isPharmacy && partner?.isApproved && (
+            <>
+              <button
+                type="button"
+                onClick={() => goTab("dashboard")}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition ${
+                  activeTab === "dashboard"
+                    ? "bg-[#1D1D1F] text-white font-semibold"
+                    : "text-[#515154] hover:bg-[#F5F5F7] hover:text-[#1D1D1F]"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <LayoutDashboard size={16} />
+                  <span>Dashboard</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => goTab("orders")}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition ${
+                  activeTab === "orders"
+                    ? "bg-[#1D1D1F] text-white font-semibold"
+                    : "text-[#515154] hover:bg-[#F5F5F7] hover:text-[#1D1D1F]"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Package size={16} />
+                  <span>Buyurtmalar</span>
+                </div>
+                {pendingOrdersCount > 0 && (
+                  <span className="rounded-full bg-black/10 text-[#1D1D1F] px-1.5 py-0.2 text-[10px] font-mono font-medium">
+                    {pendingOrdersCount}
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => goTab("medicines")}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition ${
+                  activeTab === "medicines"
+                    ? "bg-[#1D1D1F] text-white font-semibold"
+                    : "text-[#515154] hover:bg-[#F5F5F7] hover:text-[#1D1D1F]"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Boxes size={16} />
+                  <span>Ombor & Dorilar</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => goTab("debts")}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition ${
+                  activeTab === "debts"
+                    ? "bg-[#1D1D1F] text-white font-semibold"
+                    : "text-[#515154] hover:bg-[#F5F5F7] hover:text-[#1D1D1F]"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <HandCoins size={16} />
+                  <span>Qarz daftari</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => goTab("profile")}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition ${
+                  activeTab === "profile"
+                    ? "bg-[#1D1D1F] text-white font-semibold"
+                    : "text-[#515154] hover:bg-[#F5F5F7] hover:text-[#1D1D1F]"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Store size={16} />
+                  <span>Sozlamalar</span>
+                </div>
+              </button>
+
+              <div className="pt-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    haptic("medium");
+                    setShowAddMedModal(true);
+                  }}
+                  className="w-full flex items-center justify-center gap-1.5 rounded-full bg-[#1D1D1F] hover:bg-black text-white px-3 py-2 text-xs font-medium transition active:scale-95 shadow-xs"
+                >
+                  <Plus size={14} />
+                  <span>Dori qo&apos;shish</span>
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* Mutaxassis menyusi */}
+          {!isPharmacy && partner?.isApproved && (
+            <>
+              <button
+                type="button"
+                onClick={() => goTab("dashboard")}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition ${
+                  activeTab === "dashboard"
+                    ? "bg-[#1D1D1F] text-white font-semibold"
+                    : "text-[#515154] hover:bg-[#F5F5F7] hover:text-[#1D1D1F]"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <LayoutDashboard size={16} />
+                  <span>Dashboard</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => goTab("calls")}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition ${
+                  activeTab === "calls"
+                    ? "bg-[#1D1D1F] text-white font-semibold"
+                    : "text-[#515154] hover:bg-[#F5F5F7] hover:text-[#1D1D1F]"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <PhoneCall size={16} />
+                  <span>Chaqiruvlar</span>
+                </div>
+                {pendingCallsCount > 0 && (
+                  <span className="rounded-full bg-black/10 text-[#1D1D1F] px-1.5 py-0.2 text-[10px] font-mono font-medium">
+                    {pendingCallsCount}
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => goTab("profile")}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition ${
+                  activeTab === "profile"
+                    ? "bg-[#1D1D1F] text-white font-semibold"
+                    : "text-[#515154] hover:bg-[#F5F5F7] hover:text-[#1D1D1F]"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <UserCheck size={16} />
+                  <span>Profil</span>
+                </div>
+              </button>
+            </>
+          )}
+        </nav>
+
+        {/* Sidebar pastki qismi: Profil almashuv, Tariflar, Chiqish */}
+        <div className="p-3 border-t border-[#E5E5EA] space-y-1.5 bg-[#FBFBFD]">
+          <button
+            type="button"
+            onClick={() => handleWebLogin(undefined, isPharmacy ? "specialist" : "pharmacy")}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-[11px] font-medium text-[#1D1D1F] bg-white border border-[#E5E5EA] hover:bg-[#F5F5F7] transition"
+            title="Boshqa profilga o'tish"
+          >
+            <span className="truncate">
+              {isPharmacy ? "Mutaxassis rejimi" : "Dorixona rejimi"}
+            </span>
+            <ChevronRight size={13} className="text-[#86868B] shrink-0" />
           </button>
 
-          {/* 1-Tap Bandlik Kaliti: Katta va Aniq */}
-          {partner?.isApproved && (
+          <button
+            type="button"
+            onClick={() => setShowTariffsModal(true)}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-[11px] font-medium text-[#1D1D1F] bg-[#F5F5F7] hover:bg-[#E5E5EA] transition"
+          >
+            <div className="flex items-center gap-2">
+              <Sparkles size={13} className="text-[#1D1D1F]" />
+              <span>Tariflar & Imkoniyatlar</span>
+            </div>
+            <span className="text-[9px] font-medium tracking-wide bg-black/10 text-[#1D1D1F] px-1.5 py-0.5 rounded-full">
+              BETA
+            </span>
+          </button>
+
+          {partner && webToken && (
             <button
               type="button"
-              onClick={toggleBusy}
-              className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-black transition active:scale-95 shadow-xs border ${
-                isBusy
-                  ? "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
-                  : "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
-              }`}
+              onClick={handleLogout}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-medium text-[#86868B] hover:text-[#1D1D1F] hover:bg-[#F5F5F7] transition"
             >
-              <Power size={13} className={isBusy ? "text-red-600" : "text-emerald-700"} />
-              <span>{isBusy ? "Bandman" : "Bo'shman"}</span>
+              <LogOut size={13} />
+              <span>Tizimdan chiqish</span>
             </button>
           )}
         </div>
-      </header>
+      </aside>
 
-      {/* Telegram Tashqarisidan Kirish Eslatmasi */}
-      {!isTelegram && (
-        <div className="mx-4 mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 flex items-start gap-2 shadow-2xs">
-          <AlertCircle size={16} className="shrink-0 mt-0.5 text-amber-600" />
-          <div>
-            <b>Telegram WebApp rejimi:</b> Ushbu kabinet <b>@agroz_auth_bot</b> orqali avtomatik profil bilan ochiladi.
+      {/* ASOSIY SAHIFA KONTENTI (Desktopda sidebar yonida) */}
+      <div className="md:pl-60 flex flex-col min-h-screen pb-24 md:pb-12">
+        {/* 1a. Mobil Header (Faqat mobil qurilmalar va Telegram Mini App uchun) */}
+        {/* 1a. Mobil Header (Apple-style toza qora-oq header) */}
+        <header className="md:hidden sticky top-0 z-30 flex items-center justify-between border-b border-[#E5E5EA] bg-white/90 backdrop-blur-md px-4 py-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#1D1D1F] text-white">
+              {isPharmacy ? <Store size={14} /> : <UserCheck size={14} />}
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-xs font-semibold text-[#1D1D1F] truncate leading-tight">
+                {partner ? partner.organization || partner.name : "Do'kon paneli"}
+              </h1>
+              <p className="text-[10px] text-[#86868B] truncate">
+                {isPharmacy ? "Agro-Dorixona" : partner?.specialty || "Mutaxassis"}
+              </p>
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowTariffsModal(true)}
+              className="flex items-center gap-1 rounded-full bg-[#F5F5F7] px-2.5 py-1 text-[11px] font-medium text-[#1D1D1F] hover:bg-[#E5E5EA] transition"
+              title="Tariflar (BETA)"
+            >
+              <span>Tariflar</span>
+              <span className="text-[9px] font-mono text-[#86868B]">BETA</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => loadData(initData, webToken)}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-[#1D1D1F] hover:bg-[#F5F5F7] active:scale-95 transition"
+              title="Yangilash"
+            >
+              <RefreshCw size={14} className={loading ? "animate-spin text-[#1D1D1F]" : ""} />
+            </button>
+
+            {partner?.isApproved && (
+              <button
+                type="button"
+                onClick={toggleBusy}
+                className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition border ${
+                  isBusy
+                    ? "bg-white text-[#1D1D1F] border-[#E5E5EA]"
+                    : "bg-[#1D1D1F] text-white border-[#1D1D1F]"
+                }`}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${isBusy ? "bg-amber-500" : "bg-emerald-400"}`} />
+                <span>{isBusy ? "Band" : "Faol"}</span>
+              </button>
+            )}
+          </div>
+        </header>
+
+        {/* 1b. Desktop Header (Apple-style toza topbar) */}
+        <header className="hidden md:flex sticky top-0 z-30 h-14 items-center justify-between border-b border-[#E5E5EA] bg-white/80 backdrop-blur-md px-8">
+          <div>
+            <h1 className="text-sm font-semibold text-[#1D1D1F]">
+              {isPharmacy
+                ? activeTab === "dashboard"
+                  ? "Boshqaruv paneli"
+                  : activeTab === "orders"
+                  ? "Buyurtmalar"
+                  : activeTab === "medicines"
+                  ? "Ombor & Mahsulotlar"
+                  : activeTab === "debts"
+                  ? "Qarz daftari"
+                  : "Sozlamalar"
+                : activeTab === "dashboard"
+                ? "Mutaxassis paneli"
+                : activeTab === "calls"
+                ? "Chaqiruvlar"
+                : "Profil"}
+            </h1>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => loadData(initData, webToken)}
+              className="flex items-center gap-1.5 rounded-full border border-[#E5E5EA] bg-white px-3 py-1.5 text-xs font-medium text-[#1D1D1F] hover:bg-[#F5F5F7] transition active:scale-95"
+              title="Yangilash"
+            >
+              <RefreshCw size={13} className={loading ? "animate-spin text-[#1D1D1F]" : "text-[#86868B]"} />
+              <span>Yangilash</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowTariffsModal(true)}
+              className="flex items-center gap-1.5 rounded-full bg-[#F5F5F7] hover:bg-[#E5E5EA] px-3 py-1.5 text-xs font-medium text-[#1D1D1F] transition active:scale-95"
+            >
+              <Sparkles size={13} className="text-[#1D1D1F]" />
+              <span>Tariflar</span>
+              <span className="text-[9px] font-mono text-[#86868B]">BETA</span>
+            </button>
+
+            {partner?.isApproved && (
+              <button
+                type="button"
+                onClick={toggleBusy}
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition active:scale-95 border ${
+                  isBusy
+                    ? "bg-white text-[#1D1D1F] border-[#E5E5EA] hover:bg-[#F5F5F7]"
+                    : "bg-[#1D1D1F] text-white border-[#1D1D1F] hover:bg-black"
+                }`}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${isBusy ? "bg-amber-500" : "bg-emerald-400"}`} />
+                <span>{isBusy ? "Band" : "Faol"}</span>
+              </button>
+            )}
+
+            {partner && webToken && (
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-medium text-[#86868B] hover:text-[#1D1D1F] hover:bg-[#F5F5F7] transition"
+              >
+                <LogOut size={13} />
+                <span>Chiqish</span>
+              </button>
+            )}
+          </div>
+        </header>
 
       {error && (
         <div className="mx-4 mt-3 rounded-xl bg-red-50 p-3 text-xs font-semibold text-red-700 border border-red-200">
@@ -698,34 +1478,12 @@ export default function PartnerKabinetPage() {
         </div>
       )}
 
-      {/* Agar profil topilmagan bo'lsa (tashqaridan ochilganda) */}
-      {!loading && !partner && !error && (
-        <div className="mx-4 mt-6 rounded-3xl border border-zinc-200 bg-white p-6 text-center shadow-xs space-y-4">
-          <div className="flex justify-center">
-            <AgrozBusinessLogo className="h-10 w-auto" />
-          </div>
-          <h2 className="text-base font-black text-zinc-900">AgrozGO Business</h2>
-          <p className="text-xs text-zinc-600 leading-relaxed max-w-sm mx-auto">
-            Ushbu kabinet agronomlar, veterinarlar va agro-dorixona egalari uchun mo&apos;ljallangan. Profilingizni ochish uchun <b>@agroz_auth_bot</b> orqali kiring.
-          </p>
-          <a
-            href="https://t.me/agroz_auth_bot"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-xl bg-[#1b1464] px-5 py-2.5 text-xs font-bold text-white shadow-xs transition hover:opacity-90"
-          >
-            <span>Botga o&apos;tish</span>
-          </a>
-        </div>
-      )}
+
 
       {/* 2. Agar Foydalanuvchi Arizasi Kutilayotgan Bo'lsa (Pending Approval) */}
       {partner && !partner.isApproved && (
         <div className="mx-4 mt-4 space-y-4">
           <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-5 text-center shadow-xs">
-            <div className="flex justify-center mb-3">
-              <AgrozBusinessLogo className="h-8 w-auto" />
-            </div>
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-800">
               <Clock size={24} />
             </div>
@@ -766,50 +1524,71 @@ export default function PartnerKabinetPage() {
       {/* 3. Tasdiqlangan Hamkor Boshqaruv Markazi */}
       {partner && partner.isApproved && (
         <div className="space-y-4 pt-3">
-          {/* Navigatsiya Tablari (Mutaxassis) — Dorixona uchun pastki nav bar ishlatiladi */}
+          {/* Navigatsiya Tablari (Mutaxassis - Faqat Mobil) */}
           {!isPharmacy && (
-          <div className="px-4">
-            <div className="grid grid-cols-2 gap-1 rounded-2xl bg-zinc-200/80 p-1 text-xs font-bold">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      haptic("light");
-                      setActiveTab("calls");
-                    }}
-                    className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 transition ${
-                      activeTab === "calls" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-600 hover:text-zinc-900"
-                    }`}
-                  >
-                    <PhoneCall size={15} />
-                    <span>Chaqiruvlar</span>
-                    {pendingCallsCount > 0 && (
-                      <span className="rounded-full bg-emerald-600 px-1.5 py-0.2 text-[10px] text-white font-extrabold">
-                        {pendingCallsCount}
-                      </span>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      haptic("light");
-                      setActiveTab("profile");
-                    }}
-                    className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 transition ${
-                      activeTab === "profile" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-600 hover:text-zinc-900"
-                    }`}
-                  >
+            <div className="px-4 md:hidden">
+              <div className="grid grid-cols-3 gap-1 rounded-2xl bg-zinc-200/80 p-1 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => goTab("dashboard")}
+                  className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 transition ${
+                    activeTab === "dashboard" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-600 hover:text-zinc-900"
+                  }`}
+                >
+                  <LayoutDashboard size={15} />
+                  <span>Asosiy</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goTab("calls")}
+                  className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 transition ${
+                    activeTab === "calls" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-600 hover:text-zinc-900"
+                  }`}
+                >
+                  <PhoneCall size={15} />
+                  <span>Chaqiruvlar</span>
+                  {pendingCallsCount > 0 && (
+                    <span className="rounded-full bg-emerald-600 px-1.5 py-0.2 text-[10px] text-white font-extrabold">
+                      {pendingCallsCount}
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goTab("profile")}
+                  className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 transition ${
+                    activeTab === "profile" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-600 hover:text-zinc-900"
+                  }`}
+                >
                   <UserCheck size={15} />
                   <span>Profilim</span>
                 </button>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* 3.1a. MUTAXASSIS: ASOSIY TAHLIL (DASHBOARD) */}
+          {!isPharmacy && activeTab === "dashboard" && (
+            <SpecialistDashboard
+              partner={partner}
+              calls={calls}
+              isBusy={isBusy}
+              onToggleBusy={toggleBusy}
+              onGoCalls={(f) => {
+                haptic("light");
+                setCallStatusFilter(f ?? "all");
+                goTab("calls");
+              }}
+              onCallAction={handleCallAction}
+              actionBusyId={actionBusyId}
+            />
           )}
 
           {/* 3.1. MUTAXASSIS: CHAQIRUVLAR TABI */}
           {!isPharmacy && activeTab === "calls" && (
-            <div className="px-4 space-y-3">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-4">
               {/* Filter tugmalari */}
-              <div className="flex gap-1 overflow-x-auto pb-1 text-[11px] font-bold scrollbar-none">
+              <div className="flex gap-1.5 overflow-x-auto pb-1 text-[11px] font-bold scrollbar-none">
                 {[
                   { id: "all", label: `Barchasi (${calls.length})` },
                   { id: "yangi", label: `Yangi (${calls.filter((c) => c.status === "yangi").length})` },
@@ -820,9 +1599,9 @@ export default function PartnerKabinetPage() {
                     key={flt.id}
                     type="button"
                     onClick={() => setCallStatusFilter(flt.id as any)}
-                    className={`shrink-0 rounded-xl px-3 py-1.5 transition border ${
+                    className={`shrink-0 rounded-xl px-3.5 py-2 transition border ${
                       callStatusFilter === flt.id
-                        ? "bg-zinc-900 text-white border-zinc-900 shadow-xs"
+                        ? "bg-zinc-900 text-white border-zinc-900 shadow-xs font-black"
                         : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300"
                     }`}
                   >
@@ -832,14 +1611,15 @@ export default function PartnerKabinetPage() {
               </div>
 
               {filteredCalls.length === 0 && !loading && (
-                <div className="rounded-2xl border border-dashed border-zinc-200 bg-white p-8 text-center text-zinc-400">
-                  <PhoneCall size={36} className="mx-auto mb-2 opacity-30 text-zinc-400" />
+                <div className="rounded-3xl border border-dashed border-zinc-200 bg-white p-12 text-center text-zinc-400">
+                  <PhoneCall size={40} className="mx-auto mb-3 opacity-30 text-zinc-400" />
                   <p className="text-sm font-bold text-zinc-700">Chaqiruvlar yo&apos;q</p>
                   <p className="text-xs text-zinc-500 mt-1">Fermerlar yordam so&apos;raganda chaqiruv shu yerda paydo bo&apos;ladi</p>
                 </div>
               )}
 
-              {/* Chaqiruv kartochkalari — 1-bosishda natijaga yetkazuvchi dizayn */}
+              {/* Chaqiruv kartochkalari — Desktopda 2 ustunli responsive grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredCalls.map((c) => {
                 const isWorking = actionBusyId === c.id;
                 const statusColor =
@@ -861,7 +1641,7 @@ export default function PartnerKabinetPage() {
                     : "Rad etilgan";
 
                 return (
-                  <div key={c.id} className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-xs space-y-3">
+                  <div key={c.id} className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-xs hover:border-zinc-300 hover:shadow-sm transition space-y-3.5">
                     {/* Yuqori qism: ID, Status va Vaqt */}
                     <div className="flex items-center justify-between border-b border-zinc-100 pb-2">
                       <div className="flex items-center gap-2">
@@ -878,86 +1658,33 @@ export default function PartnerKabinetPage() {
                     {/* Mijoz va Tezkor Bog'lanish */}
                     <div className="space-y-2 text-xs">
                       <div className="flex items-center justify-between gap-2">
-                        <div className="min-w-0">
-                          <span className="text-[11px] text-zinc-400 block font-medium">Mijoz / Fermer</span>
-                          <span className="text-sm font-extrabold text-zinc-900 truncate block">{c.customerName}</span>
-                        </div>
+                        <span className="text-sm font-extrabold text-zinc-900 truncate">{c.customerName}</span>
 
-                        {/* Bog'lanish tugmasi: bosilganda raqam chiqadi va ulanish imkoni beriladi */}
                         {c.customerPhone && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              haptic("medium");
-                              setRevealedPhones((prev) => ({
-                                ...prev,
-                                [`call_${c.id}`]: !prev[`call_${c.id}`],
-                              }));
-                            }}
-                            className="flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-3.5 py-2 text-xs font-bold text-white shadow-xs active:scale-95 transition shrink-0"
+                          <a
+                            href={`tel:${c.customerPhone}`}
+                            className="flex items-center gap-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 text-xs font-bold active:scale-95 transition shrink-0"
                           >
                             <Phone size={13} />
-                            <span>Bog&apos;lanish</span>
-                          </button>
+                            <span>{c.customerPhone}</span>
+                          </a>
                         )}
                       </div>
 
-                      {/* Bog'lanish bosilganda ko'rinadigan telefon raqami qutisi */}
-                      {revealedPhones[`call_${c.id}`] && c.customerPhone && (
-                        <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-2.5 flex items-center justify-between gap-2 animate-in fade-in duration-150">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <Phone size={13} className="text-emerald-700 shrink-0" />
-                            <a
-                              href={`tel:${c.customerPhone}`}
-                              onClick={() => haptic("light")}
-                              className="font-mono font-black text-xs text-emerald-950 hover:underline truncate"
-                            >
-                              {c.customerPhone}
-                            </a>
-                          </div>
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <a
-                              href={`tel:${c.customerPhone}`}
-                              onClick={() => haptic("light")}
-                              className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-emerald-700 transition"
-                            >
-                              Qo&apos;ng&apos;iroq
-                            </a>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                navigator.clipboard?.writeText(c.customerPhone || "");
-                                haptic("light");
-                                alert("Telefon raqami nusxalandi: " + c.customerPhone);
-                              }}
-                              className="rounded-lg bg-white border border-emerald-300 px-2 py-1 text-[11px] font-bold text-emerald-800 hover:bg-emerald-100 transition"
-                            >
-                              Nusxa
-                            </button>
-                          </div>
-                        </div>
-                      )}
+                      {/* Muammo tavsifi */}
+                      <p className="text-xs text-zinc-700 bg-zinc-50 border border-zinc-100 p-2.5 rounded-xl font-medium">
+                        {c.problem}
+                      </p>
 
-                      {/* Muammo / Alomatlar tavsifi */}
-                      <div className="rounded-xl bg-amber-50/70 p-3 border border-amber-200/80">
-                        <span className="text-[10px] font-bold uppercase text-amber-800 tracking-wider block mb-1">
-                          Muammo tavsifi:
-                        </span>
-                        <p className="text-xs text-zinc-900 leading-relaxed font-sans">{c.problem}</p>
-                      </div>
-
-                      {/* Manzil va 1-Tap Navigator havolasi */}
+                      {/* Manzil va Xarita */}
                       {c.address && (
-                        <div className="rounded-xl bg-zinc-50 p-2.5 border border-zinc-100 flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <MapPin size={14} className="text-zinc-500 shrink-0" />
-                            <span className="text-xs text-zinc-800 truncate font-medium">{c.address}</span>
-                          </div>
+                        <div className="flex items-center justify-between gap-2 text-[11px] text-zinc-500">
+                          <span className="truncate">{c.address}</span>
                           <a
                             href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(c.address)}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="shrink-0 flex items-center gap-1 rounded-lg bg-blue-50 px-2 py-1 text-[11px] font-bold text-blue-700 hover:bg-blue-100 transition"
+                            className="shrink-0 flex items-center gap-1 text-blue-600 font-bold hover:underline"
                           >
                             <Navigation size={11} />
                             <span>Xarita</span>
@@ -1006,6 +1733,7 @@ export default function PartnerKabinetPage() {
                   </div>
                 );
               })}
+              </div>
             </div>
           )}
 
@@ -1031,14 +1759,23 @@ export default function PartnerKabinetPage() {
                 haptic("light");
                 setShowAddMedModal(true);
               }}
+              onOpenDebts={() => {
+                haptic("light");
+                goTab("debts");
+              }}
             />
+          )}
+
+          {/* 3.2b. DORIXONA: QARZ DAFTARI (NASIYA & TA'MINOTCHI) */}
+          {isPharmacy && activeTab === "debts" && (
+            <QarzDaftariSection />
           )}
 
           {/* 3.2. DORIXONA: BRONLAR & BUYURTMALAR TABI */}
           {isPharmacy && activeTab === "orders" && (
-            <div className="px-4 space-y-3">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-4">
               {/* Filter tugmalari */}
-              <div className="flex gap-1 overflow-x-auto pb-1 text-[11px] font-bold scrollbar-none">
+              <div className="flex gap-1.5 overflow-x-auto pb-1 text-[11px] font-bold scrollbar-none">
                 {[
                   { id: "all", label: `Barchasi (${orders.length})` },
                   { id: "yangi", label: `Yangi (${orders.filter((o) => o.status === "yangi").length})` },
@@ -1050,9 +1787,9 @@ export default function PartnerKabinetPage() {
                     key={flt.id}
                     type="button"
                     onClick={() => setOrderStatusFilter(flt.id as any)}
-                    className={`shrink-0 rounded-xl px-3 py-1.5 transition border ${
+                    className={`shrink-0 rounded-xl px-3.5 py-2 transition border ${
                       orderStatusFilter === flt.id
-                        ? "bg-zinc-900 text-white border-zinc-900 shadow-xs"
+                        ? "bg-zinc-900 text-white border-zinc-900 shadow-xs font-black"
                         : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300"
                     }`}
                   >
@@ -1062,14 +1799,15 @@ export default function PartnerKabinetPage() {
               </div>
 
               {filteredOrders.length === 0 && !loading && (
-                <div className="rounded-2xl border border-dashed border-zinc-200 bg-white p-8 text-center text-zinc-400">
-                  <Package size={36} className="mx-auto mb-2 opacity-30 text-zinc-400" />
+                <div className="rounded-3xl border border-dashed border-zinc-200 bg-white p-12 text-center text-zinc-400">
+                  <Package size={40} className="mx-auto mb-3 opacity-30 text-zinc-400" />
                   <p className="text-sm font-bold text-zinc-700">Bronlar yo&apos;q</p>
                   <p className="text-xs text-zinc-500 mt-1">Mijoz dori bron qilganda shu yerda paydo bo&apos;ladi</p>
                 </div>
               )}
 
-              {/* Bron kartochkasi */}
+              {/* Bron kartochkasi — Responsive 2-ustunli grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredOrders.map((ord) => {
                 const isWorking = actionBusyId === ord.id;
                 const statusColor =
@@ -1095,7 +1833,7 @@ export default function PartnerKabinetPage() {
                     : "Bekor qilingan";
 
                 return (
-                  <div key={ord.id} className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-xs space-y-3">
+                  <div key={ord.id} className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-xs hover:border-zinc-300 hover:shadow-sm transition space-y-3.5">
                     <div className="flex items-center justify-between border-b border-zinc-100 pb-2">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-mono font-black text-zinc-900">Bron #{ord.id}</span>
@@ -1253,136 +1991,168 @@ export default function PartnerKabinetPage() {
                   </div>
                 );
               })}
+              </div>
             </div>
           )}
 
           {/* 3.3. DORIXONA: DORILAR KATALOGI (Bor/Yo'q 1-tap boshqaruvi) */}
           {isPharmacy && activeTab === "medicines" && (
-            <div className="px-4 space-y-3">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-4">
               {/* Qidiruv va Tezkor Qo'shish */}
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <div className="relative flex-1">
-                  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+                  <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
                   <input
                     type="text"
-                    placeholder="Dori nomi bo'yicha..."
+                    placeholder="Dori nomi yoki qo‘llanilishi bo'yicha qidiruv..."
                     value={medSearch}
                     onChange={(e) => setMedSearch(e.target.value)}
-                    className="w-full rounded-xl bg-white pl-9 pr-3 py-2.5 text-xs text-zinc-900 border border-zinc-200 placeholder-zinc-400 focus:outline-none focus:border-zinc-400 shadow-2xs"
+                    className="w-full rounded-2xl bg-white pl-10 pr-4 py-3 text-xs sm:text-sm text-zinc-900 border border-zinc-200 placeholder-zinc-400 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 shadow-2xs transition"
                   />
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowAddMedModal(true)}
-                  className="flex items-center gap-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-3 py-2.5 text-xs font-bold text-white shadow-xs active:scale-95 transition shrink-0"
+                  className="flex items-center justify-center gap-2 rounded-2xl bg-[#1b1464] hover:bg-[#150f50] px-5 py-3 text-xs sm:text-sm font-extrabold text-white shadow-xs active:scale-95 transition shrink-0"
                 >
-                  <Plus size={16} />
-                  <span>Dori qo&apos;shish</span>
+                  <Plus size={18} strokeWidth={2.5} />
+                  <span>Yangi dori qo&apos;shish</span>
                 </button>
               </div>
 
-              {/* Qoldiq holati bo'yicha filter */}
-              <div className="flex gap-1 overflow-x-auto text-[11px] font-bold scrollbar-none">
-                {[
-                  { id: "all", label: `Barchasi (${medicines.length})`, active: "bg-zinc-900 text-white border-zinc-900" },
-                  { id: "low", label: `⚠️ Kam qolgan (${stockCounts.low})`, active: "bg-amber-500 text-white border-amber-500" },
-                  { id: "out", label: `🔴 Tugagan (${stockCounts.out})`, active: "bg-red-600 text-white border-red-600" },
-                  { id: "draft", label: `📝 Qoralama (${stockCounts.draft})`, active: "bg-zinc-700 text-white border-zinc-700" },
-                ].map((flt) => (
-                  <button
-                    key={flt.id}
-                    type="button"
-                    onClick={() => {
-                      haptic("light");
-                      setStockFilter(flt.id as StockFilter);
-                    }}
-                    className={`shrink-0 rounded-xl px-3 py-1.5 transition border ${
-                      stockFilter === flt.id ? `${flt.active} shadow-xs` : "bg-white text-zinc-600 border-zinc-200"
-                    }`}
-                  >
-                    {flt.label}
-                  </button>
-                ))}
-              </div>
+              {/* Qoldiq holati va tur bo'yicha filterlar */}
+              <div className="flex flex-col sm:flex-row gap-2 justify-between items-start sm:items-center">
+                <div className="flex gap-1.5 overflow-x-auto text-[11px] font-bold scrollbar-none w-full sm:w-auto pb-1 sm:pb-0">
+                  {[
+                    { id: "all", label: `Barchasi (${medicines.length})`, active: "bg-zinc-900 text-white border-zinc-900" },
+                    { id: "low", label: `⚠️ Kam qolgan (${stockCounts.low})`, active: "bg-amber-500 text-white border-amber-500" },
+                    { id: "out", label: `🔴 Tugagan (${stockCounts.out})`, active: "bg-red-600 text-white border-red-600" },
+                    { id: "draft", label: `📝 Qoralama (${stockCounts.draft})`, active: "bg-zinc-700 text-white border-zinc-700" },
+                  ].map((flt) => (
+                    <button
+                      key={flt.id}
+                      type="button"
+                      onClick={() => {
+                        haptic("light");
+                        setStockFilter(flt.id as StockFilter);
+                      }}
+                      className={`shrink-0 rounded-xl px-3 py-1.5 transition border ${
+                        stockFilter === flt.id ? `${flt.active} shadow-xs font-black` : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300"
+                      }`}
+                    >
+                      {flt.label}
+                    </button>
+                  ))}
+                </div>
 
-              {/* Turi bo'yicha filter */}
-              <div className="flex gap-1 overflow-x-auto text-[11px] font-bold scrollbar-none">
-                {[
-                  { id: "all", label: "Barchasi" },
-                  { id: "crop", label: "🌾 Ekinlar" },
-                  { id: "animal", label: "🐾 Hayvonlar" },
-                  { id: "general", label: "Umumiy" },
-                ].map((flt) => (
-                  <button
-                    key={flt.id}
-                    type="button"
-                    onClick={() => setMedTypeFilter(flt.id as any)}
-                    className={`shrink-0 rounded-xl px-3 py-1.5 transition border ${
-                      medTypeFilter === flt.id
-                        ? "bg-zinc-900 text-white border-zinc-900 shadow-xs"
-                        : "bg-white text-zinc-600 border-zinc-200"
-                    }`}
-                  >
-                    {flt.label}
-                  </button>
-                ))}
+                <div className="flex gap-1.5 overflow-x-auto text-[11px] font-bold scrollbar-none shrink-0">
+                  {[
+                    { id: "all", label: "Barcha turlar" },
+                    { id: "crop", label: "🌾 Ekinlar" },
+                    { id: "animal", label: "🐾 Hayvonlar" },
+                    { id: "general", label: "Umumiy" },
+                  ].map((flt) => (
+                    <button
+                      key={flt.id}
+                      type="button"
+                      onClick={() => setMedTypeFilter(flt.id as any)}
+                      className={`shrink-0 rounded-xl px-3 py-1.5 transition border ${
+                        medTypeFilter === flt.id
+                          ? "bg-emerald-800 text-white border-emerald-800 shadow-xs font-black"
+                          : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300"
+                      }`}
+                    >
+                      {flt.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {filteredMeds.length === 0 && !loading && (
-                <div className="rounded-2xl border border-dashed border-zinc-200 bg-white p-8 text-center text-zinc-400">
-                  <Store size={36} className="mx-auto mb-2 opacity-30 text-zinc-400" />
+                <div className="rounded-3xl border border-dashed border-zinc-200 bg-white p-12 text-center text-zinc-400">
+                  <Store size={40} className="mx-auto mb-3 opacity-30 text-zinc-400" />
                   <p className="text-sm font-bold text-zinc-700">Dorilar topilmadi</p>
-                  <p className="text-xs text-zinc-500 mt-1">Yangi dori qo&apos;shish orqali do&apos;koningiz dorilarini kiriting</p>
+                  <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto">
+                    Qidiruv so&apos;zini o&apos;zgartirib ko&apos;ring yoki &quot;Yangi dori qo&apos;shish&quot; tugmasi orqali omborga kiritishni boshlang.
+                  </p>
                 </div>
               )}
 
-              {/* Dorilar ro'yxati: 1-Tap Bor/Tugadi toggle */}
-              <div className="space-y-2">
+              {/* Dorilar ro'yxati: 3-ustunli Responsive Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredMeds.map((m) => (
-                  <div key={m.id} className="rounded-2xl border border-zinc-200 bg-white p-3 shadow-xs flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                      {m.photoData ? (
-                        <div className="w-11 h-11 rounded-xl overflow-hidden bg-white border border-zinc-200 shrink-0 shadow-2xs p-0.5">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={m.photoData} alt={m.name} className="w-full h-full object-contain" />
+                  <div
+                    key={m.id}
+                    className="rounded-3xl border border-zinc-200 bg-white p-4 sm:p-5 shadow-xs hover:border-zinc-300 hover:shadow-md transition flex flex-col justify-between gap-3.5 group"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          {m.photoData ? (
+                            <div className="w-14 h-14 rounded-2xl overflow-hidden bg-white border border-zinc-200 shrink-0 shadow-2xs p-1">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={m.photoData} alt={m.name} className="w-full h-full object-contain" />
+                            </div>
+                          ) : (
+                            <div className="w-14 h-14 rounded-2xl bg-zinc-100 border border-zinc-200 flex items-center justify-center text-2xl shrink-0">
+                              {m.type === "crop" ? "🌾" : m.type === "animal" ? "🐾" : "💊"}
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <h4 className="font-extrabold text-zinc-900 text-xs sm:text-sm truncate group-hover:text-emerald-700 transition">
+                              {m.name}
+                            </h4>
+                            <span className="inline-block mt-1 rounded-md bg-zinc-100 text-zinc-600 px-2 py-0.5 text-[9px] font-mono">
+                              {m.type === "crop" ? "Ekin dorisi" : m.type === "animal" ? "Veterinariya" : "Umumiy vosita"}
+                            </span>
+                          </div>
                         </div>
-                      ) : (
-                        <div className="w-11 h-11 rounded-xl bg-zinc-100 border border-zinc-200 flex items-center justify-center text-lg shrink-0">
-                          {m.type === "crop" ? "🌾" : m.type === "animal" ? "🐾" : "💊"}
-                        </div>
-                      )}
 
-                      <div className="space-y-0.5 flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-extrabold text-zinc-900 text-xs truncate">{m.name}</span>
-                          <span className="rounded bg-zinc-100 text-zinc-600 px-1.5 py-0.2 text-[9px] font-mono">
-                            {m.type === "crop" ? "Ekin" : m.type === "animal" ? "Veterinar" : "Umumiy"}
-                          </span>
-                        </div>
-                        {m.usage && <p className="text-[11px] text-zinc-500 truncate">{m.usage}</p>}
-                        <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-700">
-                          <span className="font-bold text-emerald-800">
-                            {m.price ? `${m.price.toLocaleString()} so'm` : "Kelishuv"}
-                          </span>
-                        </div>
-                        {/* Qoldiqni 1-tap o'zgartirish */}
-                        <div className="flex items-center gap-1.5 pt-1">
+                        {/* O'chirish tugmasi */}
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteMedicine(m.id)}
+                          className="rounded-xl p-1.5 text-zinc-300 hover:text-red-600 hover:bg-red-50 transition shrink-0"
+                          title="Dorini o'chirish"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+
+                      {m.usage && (
+                        <p className="text-[11px] text-zinc-500 line-clamp-2 leading-relaxed bg-zinc-50/70 p-2.5 rounded-2xl border border-zinc-100">
+                          {m.usage}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="pt-3 border-t border-zinc-100 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] text-zinc-400 font-medium">Sotuv narxi:</span>
+                        <span className="font-mono font-black text-sm text-emerald-800">
+                          {m.price ? `${m.price.toLocaleString()} so'm` : "Kelishuv asosida"}
+                        </span>
+                      </div>
+
+                      {/* Qoldiq hisoblagichi va Bor/Yo'q switch */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1 bg-zinc-50 border border-zinc-200 rounded-xl p-0.5">
                           <button
                             type="button"
                             onClick={() => handleStockChange(m.id, -1)}
                             disabled={m.stock <= 0}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 text-zinc-700 active:scale-90 transition disabled:opacity-40"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg bg-white border border-zinc-200 text-zinc-700 active:scale-90 transition disabled:opacity-40 shadow-2xs"
                             aria-label="Qoldiqni kamaytirish"
                           >
                             <Minus size={13} />
                           </button>
                           <span
-                            className={`min-w-[64px] text-center rounded-lg px-2 py-1 text-[11px] font-mono font-black ${
+                            className={`min-w-[56px] text-center px-1.5 py-0.5 text-[11px] font-mono font-black ${
                               m.stock <= 0
-                                ? "bg-red-50 text-red-700"
+                                ? "text-red-600"
                                 : m.stock <= LOW_STOCK_THRESHOLD
-                                ? "bg-amber-50 text-amber-800"
-                                : "bg-zinc-100 text-zinc-800"
+                                ? "text-amber-700"
+                                : "text-zinc-800"
                             }`}
                           >
                             {m.stock} {m.stockUnit}
@@ -1390,42 +2160,26 @@ export default function PartnerKabinetPage() {
                           <button
                             type="button"
                             onClick={() => handleStockChange(m.id, 1)}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-800 active:scale-90 transition"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white active:scale-90 transition shadow-2xs"
                             aria-label="Qoldiqni oshirish"
                           >
                             <Plus size={13} />
                           </button>
                         </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleToggleMedicineStatus(m.id, m.status)}
+                          className={`flex-1 rounded-xl py-2 px-2 text-xs font-black border transition active:scale-95 shadow-2xs text-center ${
+                            m.status === "bor"
+                              ? "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
+                              : "bg-red-50 text-red-700 border-red-300 hover:bg-red-100"
+                          }`}
+                          title={m.status === "bor" ? "Bosing: Yo'q qilish" : "Bosing: Bor qilish"}
+                        >
+                          {m.status === "bor" ? "🟢 Sotuvda bor" : "🔴 Tugagan"}
+                        </button>
                       </div>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {/* 1-Tap Bor / Yo'q (Qoralama) toggle */}
-                      <button
-                        type="button"
-                        onClick={() => handleToggleMedicineStatus(m.id, m.status)}
-                        className={`rounded-xl px-3 py-2 text-xs font-black border transition active:scale-95 shadow-2xs ${
-                          m.status === "bor"
-                            ? "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
-                            : "bg-red-50 text-red-700 border-red-300 hover:bg-red-100"
-                        }`}
-                        title={
-                          m.status === "bor"
-                            ? "Bosing: Yo'q (Ko'rsatilmaydi) qilish"
-                            : "Bosing: Bor (Mijozlarga ko'rsatiladi) qilish"
-                        }
-                      >
-                        {m.status === "bor" ? "🟢 Bor" : "🔴 Yo'q"}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteMedicine(m.id)}
-                        className="rounded-xl p-2 text-zinc-400 hover:text-red-600 hover:bg-red-50 transition"
-                        title="O'chirish"
-                      >
-                        <Trash2 size={15} />
-                      </button>
                     </div>
                   </div>
                 ))}
@@ -1433,17 +2187,17 @@ export default function PartnerKabinetPage() {
             </div>
           )}
 
-          {/* 3.4. PROFILIM TABI (Barcha ma'lumotlar, tajriba, xizmatlar va huquqiy guvohnoma bitta joyda) */}
+          {/* 3.4. PROFILIM TABI (Barcha ma'lumotlar, tajriba, xizmatlar va huquqiy guvohnoma) */}
           {activeTab === "profile" && (
-            <div className="px-4 space-y-3">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-6">
               {/* Profil Asosiy Kartasi */}
-              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-600 text-white font-bold text-xl shadow-xs">
+              <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-xs space-y-5">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#1b1464] text-white font-black text-2xl shadow-xs">
                     {isPharmacy ? "🏪" : partner.specialty?.toLowerCase().includes("vet") ? "🐾" : "🌾"}
                   </div>
                   <div>
-                    <h3 className="text-sm font-extrabold text-zinc-900">{partner.name}</h3>
+                    <h3 className="text-base font-extrabold text-zinc-900">{partner.name}</h3>
                     <p className="text-xs text-zinc-500 font-medium">
                       {isPharmacy ? partner.organization || "Agro-Dorixona" : partner.specialty || "Mutaxassis"}
                     </p>
@@ -1530,8 +2284,8 @@ export default function PartnerKabinetPage() {
               {/* Texnik Yordam */}
               <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-xs flex items-center justify-between">
                 <div className="space-y-1">
-                  <AgrozBusinessLogo className="h-5 w-auto" />
-                  <p className="text-[11px] text-zinc-500">Texnik yordam va savollar bo&apos;yicha</p>
+                  <h4 className="text-xs font-semibold text-[#1D1D1F]">Texnik qo&apos;llab-quvvatlash</h4>
+                  <p className="text-[11px] text-[#86868B]">Savollar va yordam bo&apos;yicha</p>
                 </div>
                 <a
                   href="https://t.me/agroz_support"
@@ -1547,10 +2301,10 @@ export default function PartnerKabinetPage() {
         </div>
       )}
 
-      {/* 3.5. DORIXONA: PASTKI NAVIGATSIYA (Dashboard nav bar) */}
+      {/* 3.5. DORIXONA: PASTKI NAVIGATSIYA (Faqat Mobil) */}
       {isPharmacy && partner?.isApproved && (
         <nav
-          className="fixed bottom-0 inset-x-0 z-40 border-t border-zinc-200 bg-white/95 backdrop-blur-md shadow-[0_-2px_10px_rgba(0,0,0,0.04)]"
+          className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-zinc-200 bg-white/95 backdrop-blur-md shadow-[0_-2px_10px_rgba(0,0,0,0.04)]"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
           <div className="mx-auto max-w-md grid grid-cols-5 items-end px-2 pt-1.5 pb-1.5">
@@ -1570,10 +2324,10 @@ export default function PartnerKabinetPage() {
                         haptic("medium");
                         setShowAddMedModal(true);
                       }}
-                      className="-mt-6 flex h-[52px] w-[52px] items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 ring-4 ring-white active:scale-90 transition"
+                      className="-mt-5 flex h-11 w-11 items-center justify-center rounded-full bg-[#1D1D1F] text-white shadow-md active:scale-90 transition"
                       aria-label="Dori qo'shish"
                     >
-                      <Plus size={24} strokeWidth={2.6} />
+                      <Plus size={20} strokeWidth={2.2} />
                     </button>
                   </div>
                 );
@@ -1584,18 +2338,16 @@ export default function PartnerKabinetPage() {
                   key={id}
                   type="button"
                   onClick={() => goTab(id)}
-                  className={`relative flex flex-col items-center gap-0.5 rounded-xl py-1 text-[10px] font-bold transition active:scale-95 ${
-                    active ? "text-emerald-700" : "text-zinc-500"
+                  className={`relative flex flex-col items-center gap-0.5 rounded-xl py-1 text-[10px] font-medium transition active:scale-95 ${
+                    active ? "text-[#1D1D1F]" : "text-[#86868B]"
                   }`}
                 >
-                  <span className={`flex h-7 w-12 items-center justify-center rounded-full transition ${active ? "bg-emerald-50" : ""}`}>
-                    <Icon size={19} strokeWidth={active ? 2.5 : 2} />
+                  <span className="flex h-7 w-10 items-center justify-center">
+                    <Icon size={18} strokeWidth={active ? 2.3 : 1.8} />
                   </span>
                   <span>{label}</span>
                   {badge > 0 && (
-                    <span
-                      className={`absolute top-0 right-2 min-w-[17px] rounded-full px-1 text-[9px] leading-[17px] text-white font-extrabold ring-2 ring-white ${badgeCls}`}
-                    >
+                    <span className="absolute top-0 right-2 min-w-[16px] rounded-full px-1 text-[9px] leading-[16px] text-white font-mono bg-[#1D1D1F]">
                       {badge > 99 ? "99+" : badge}
                     </span>
                   )}
@@ -1605,6 +2357,45 @@ export default function PartnerKabinetPage() {
           </div>
         </nav>
       )}
+
+      {/* 3.6. MUTAXASSIS: PASTKI NAVIGATSIYA (Faqat Mobil) */}
+      {!isPharmacy && partner?.isApproved && (
+        <nav
+          className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-[#E5E5EA] bg-white/95 backdrop-blur-md shadow-xs"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        >
+          <div className="mx-auto max-w-md grid grid-cols-3 items-end px-4 pt-1.5 pb-1.5">
+            {[
+              { id: "dashboard", label: "Asosiy", Icon: LayoutDashboard, badge: 0, badgeCls: "" },
+              { id: "calls", label: "Chaqiruvlar", Icon: PhoneCall, badge: pendingCallsCount, badgeCls: "" },
+              { id: "profile", label: "Profil", Icon: UserCheck, badge: 0, badgeCls: "" },
+            ].map(({ id, label, Icon, badge }) => {
+              const active = activeTab === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => goTab(id)}
+                  className={`relative flex flex-col items-center gap-0.5 rounded-xl py-1 text-[11px] font-medium transition active:scale-95 ${
+                    active ? "text-[#1D1D1F]" : "text-[#86868B]"
+                  }`}
+                >
+                  <span className="flex h-8 w-12 items-center justify-center">
+                    <Icon size={19} strokeWidth={active ? 2.3 : 1.8} />
+                  </span>
+                  <span>{label}</span>
+                  {badge > 0 && (
+                    <span className="absolute top-0.5 right-6 min-w-[17px] rounded-full px-1 text-[9px] leading-[17px] text-white font-mono bg-[#1D1D1F]">
+                      {badge > 99 ? "99+" : badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      )}
+      </div>
 
       {/* 4. MODAL: YANGI DORI QO'SHISH (DORIXONA) */}
       {showAddMedModal && (
@@ -1828,6 +2619,23 @@ export default function PartnerKabinetPage() {
                 Yopish
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tariflar Modali (Hamkorlar uchun) */}
+      {showTariffsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="relative w-full max-w-5xl my-auto bg-white rounded-3xl p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <button
+              type="button"
+              onClick={() => setShowTariffsModal(false)}
+              className="absolute top-4 right-4 z-10 h-9 w-9 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-600 flex items-center justify-center transition"
+              title="Yopish"
+            >
+              <X size={18} />
+            </button>
+            <TariffsBlock onSelectPlan={() => setShowTariffsModal(false)} />
           </div>
         </div>
       )}

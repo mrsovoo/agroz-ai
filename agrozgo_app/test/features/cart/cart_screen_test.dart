@@ -24,7 +24,7 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
 
-      await tester.pumpWidget(_wrap(const CartScreen()));
+      await tester.pumpWidget(_wrap(const CartScreen(autoSeedDemo: true)));
       await tester.pump();
 
       expect(tester.takeException(), isNull);
@@ -45,7 +45,7 @@ void main() {
     addTearDown(tester.view.reset);
 
     final router = GoRouter(routes: [
-      GoRoute(path: '/', builder: (_, __) => const CartScreen()),
+      GoRoute(path: '/', builder: (_, __) => const CartScreen(autoSeedDemo: true)),
     ]);
 
     await tester.pumpWidget(
@@ -69,7 +69,7 @@ void main() {
   });
 
   testWidgets('Cart quantity increase and decrease buttons update count', (tester) async {
-    await tester.pumpWidget(_wrap(const CartScreen()));
+    await tester.pumpWidget(_wrap(const CartScreen(autoSeedDemo: true)));
     await tester.pump();
 
     final plusBtn = find.byIcon(Icons.add).first;
@@ -80,7 +80,7 @@ void main() {
   });
 
   testWidgets('Cart toggle select all and delete selected works', (tester) async {
-    await tester.pumpWidget(_wrap(const CartScreen()));
+    await tester.pumpWidget(_wrap(const CartScreen(autoSeedDemo: true)));
     await tester.pump();
 
     final deleteBtn = find.text("Tanlanganlarni o'chirish");

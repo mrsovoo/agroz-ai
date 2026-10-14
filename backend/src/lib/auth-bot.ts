@@ -11,7 +11,7 @@ import { telegramAuthBotToken } from "@/lib/settings";
 const API_BASE = "https://api.telegram.org";
 
 export type InlineKeyboard = {
-  inline_keyboard: { text: string; callback_data?: string; url?: string }[][];
+  inline_keyboard: { text: string; callback_data?: string; url?: string; web_app?: { url: string } }[][];
 };
 
 export type ReplyKeyboard = {

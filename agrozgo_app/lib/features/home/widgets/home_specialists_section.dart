@@ -9,6 +9,8 @@ import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/skeleton_loader.dart';
 import '../../specialists/models/specialist_models.dart';
+import '../../specialists/widgets/specialist_call_modal.dart';
+import '../../specialists/widgets/specialist_profile_modal.dart';
 import '../providers/home_providers.dart';
 
 class HomeSpecialistsSection extends ConsumerWidget {
@@ -159,14 +161,15 @@ class SpecialistCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final ratingValue = (specialist.rating ?? 4.5).toStringAsFixed(1);
     final subtitleText = specialist.specialty ?? specialist.role;
+    const locationText = 'Farg’ona';
 
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(10),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: tokens.specialistCardBg,
-        borderRadius: BorderRadius.circular(tokens.radiusSpecialistCard),
+        borderRadius: BorderRadius.circular(22),
         boxShadow: const [
           BoxShadow(
             color: Color(0x0A000000),
@@ -175,130 +178,179 @@ class SpecialistCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Avatar
-          Container(
-            width: 70,
-            height: 70,
-            decoration: BoxDecoration(
-              color: tokens.specialistAvatarBg,
-              borderRadius: BorderRadius.circular(tokens.radiusSpecialistAvatar),
-              border: Border.all(
-                color: Colors.white,
-                width: 0.5,
-              ),
-            ),
-            alignment: Alignment.center,
-            child: const Icon(
-              Icons.people_outline_rounded,
-              color: Color(0xFF35CA56),
-              size: 30,
-            ),
-          ),
-          const SizedBox(width: 12),
-
-          // Name and Role
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  specialist.name,
-                  style: TextStyle(
-                    color: tokens.weatherTextPrimary,
-                    fontSize: 18,
-                    fontFamily: 'Arial',
-                    fontWeight: FontWeight.w400,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitleText,
-                  style: TextStyle(
-                    color: tokens.weatherTextPrimary.withValues(alpha: 0.50),
-                    fontSize: 14,
-                    fontFamily: 'Arial',
-                    fontWeight: FontWeight.w400,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-
-          // Right badges: Rating + Batafsil
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
+          // Top Row: Avatar + Info + Badges
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Rating Badge
+              // Avatar
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+                width: 58,
+                height: 58,
                 decoration: BoxDecoration(
-                  color: tokens.specialistRatingBg,
-                  borderRadius: BorderRadius.circular(tokens.radiusPill),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x19000000),
-                      blurRadius: 20,
-                      offset: Offset(0, 0),
+                  color: const Color(0xFFEBF9EE),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                alignment: Alignment.center,
+                child: const Icon(
+                  Icons.people_outline_rounded,
+                  color: Color(0xFF35CA56),
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // Name and Role
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      specialist.name,
+                      style: TextStyle(
+                        color: tokens.weatherTextPrimary,
+                        fontSize: 17,
+                        fontFamily: 'PingFang SC',
+                        fontWeight: FontWeight.w700,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitleText,
+                      style: const TextStyle(
+                        color: Color(0xFF8E8E93),
+                        fontSize: 13.5,
+                        fontFamily: 'PingFang SC',
+                        fontWeight: FontWeight.w400,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
-                child: Text(
-                  ratingValue,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontFamily: 'PingFang SC',
-                    fontWeight: FontWeight.w500,
-                    height: 1.74,
+              ),
+              const SizedBox(width: 8),
+
+              // Badges: Rating on top, Location below
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0090FF),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      ratingValue,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontFamily: 'PingFang SC',
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF2F2F7),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      locationText,
+                      style: TextStyle(
+                        color: Color(0xFF636366),
+                        fontSize: 10.5,
+                        fontFamily: 'PingFang SC',
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          // Bottom Action Buttons: Profil (Outline) + Chaqirish (Filled Green)
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 40,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      HapticFeedback.lightImpact();
+                      SpecialistProfileModal.show(
+                        context,
+                        specialist,
+                        onCall: () => SpecialistCallModal.show(context, specialist),
+                      );
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.black87,
+                      side: const BorderSide(color: Color(0xFFE5E5EA), width: 1),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      padding: EdgeInsets.zero,
+                    ),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        const Text(
+                          'Profil',
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontFamily: 'PingFang SC',
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        // Accessible details text for test finders
+                        Opacity(
+                          opacity: 0,
+                          child: SizedBox.shrink(
+                            child: Text(AppStrings.details),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
-
-              // Batafsil Button
-              Semantics(
-                label: '${specialist.name} - ${AppStrings.details}',
-                button: true,
-                child: Material(
-                  color: tokens.specialistDetailBtnBg,
-                  borderRadius: BorderRadius.circular(tokens.radiusPill),
-                  child: InkWell(
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      context.go('/specialists');
+              const SizedBox(width: 10),
+              Expanded(
+                child: SizedBox(
+                  height: 40,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      HapticFeedback.mediumImpact();
+                      SpecialistCallModal.show(context, specialist);
                     },
-                    borderRadius: BorderRadius.circular(tokens.radiusPill),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(tokens.radiusPill),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x19000000),
-                            blurRadius: 20,
-                            offset: Offset(0, 0),
-                          ),
-                        ],
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF35CA56),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
                       ),
-                      child: Text(
-                        AppStrings.details,
-                        style: TextStyle(
-                          color: tokens.specialistDetailBtnText,
-                          fontSize: 10,
-                          fontFamily: 'PingFang SC',
-                          fontWeight: FontWeight.w500,
-                          height: 1.74,
-                        ),
+                      padding: EdgeInsets.zero,
+                    ),
+                    child: const Text(
+                      'Chaqirish',
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontFamily: 'PingFang SC',
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),

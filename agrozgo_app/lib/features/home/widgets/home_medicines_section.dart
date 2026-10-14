@@ -121,7 +121,7 @@ class HomeMedicinesSection extends ConsumerWidget {
               }
 
               return SizedBox(
-                height: 335,
+                height: 310,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   physics: const BouncingScrollPhysics(),
@@ -139,20 +139,20 @@ class HomeMedicinesSection extends ConsumerWidget {
               );
             },
             loading: () => SizedBox(
-              height: 335,
+              height: 310,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 child: Row(
                   children: [
                     SkeletonLoader(
-                      width: 190,
-                      height: 335,
+                      width: 175,
+                      height: 310,
                       borderRadius: tokens.radiusProductCard,
                     ),
                     const SizedBox(width: 8),
                     SkeletonLoader(
-                      width: 190,
-                      height: 335,
+                      width: 175,
+                      height: 310,
                       borderRadius: tokens.radiusProductCard,
                     ),
                   ],
@@ -187,7 +187,7 @@ class MedicineCard extends ConsumerWidget {
     super.key,
     required this.medicine,
     required this.tokens,
-    this.width = 190,
+    this.width = 175,
   });
 
   String _formatPrice(int? price) {
@@ -215,19 +215,19 @@ class MedicineCard extends ConsumerWidget {
 
   Widget _buildImage() {
     final url = medicine.imageUrl;
-    if (url == null || url.isEmpty) return _placeholder(48);
+    if (url == null || url.isEmpty) return _placeholder(44);
     if (url.startsWith('assets/')) {
       return Image.asset(
         url,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _placeholder(40),
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => _placeholder(36),
       );
     }
     return CachedNetworkImage(
       imageUrl: url,
-      fit: BoxFit.cover,
-      placeholder: (_, __) => _placeholder(40),
-      errorWidget: (_, __, ___) => _placeholder(40),
+      fit: BoxFit.contain,
+      placeholder: (_, __) => _placeholder(36),
+      errorWidget: (_, __, ___) => _placeholder(36),
     );
   }
 
@@ -238,216 +238,224 @@ class MedicineCard extends ConsumerWidget {
     final cartItemIndex = cartState.items.indexWhere((it) => it.medicineId == medicine.id);
     final inCartQuantity = cartItemIndex != -1 ? cartState.items[cartItemIndex].quantity : 0;
 
-    return Container(
-      width: width,
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: tokens.productCardBg,
-        borderRadius: BorderRadius.circular(tokens.radiusProductCard),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Image container (height: 172, radius: 20, 0.3 border)
-          Container(
-            width: double.infinity,
-            height: 172,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(tokens.radiusProductImage),
-              border: Border.all(
-                color: tokens.productCardBorder,
-                width: 0.3,
+    return Material(
+      color: tokens.productCardBg,
+      borderRadius: BorderRadius.circular(22),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          context.push('/medicines/${medicine.id}', extra: medicine);
+        },
+        child: Container(
+          width: width,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x0A000000),
+                blurRadius: 10,
+                offset: Offset(0, 3),
               ),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: _buildImage(),
+            ],
           ),
-          const SizedBox(height: 6),
-
-          // Title
-          Text(
-            medicine.name,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              fontFamily: 'Arial',
-              color: tokens.productTitle,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-
-          // Usage / Subtitle
-          SizedBox(
-            height: 20,
-            child: Text(
-              medicine.usage ?? 'Tabiiy minerallarga boy ozuqa',
-              style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w400,
-                fontFamily: 'Arial',
-                color: tokens.productSubtitle,
-                height: 1.2,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 4),
-            child: Divider(
-              height: 1,
-              thickness: 0.5,
-              color: Color(0xFFE5E5EA),
-            ),
-          ),
-          const Spacer(),
-
-          // Price
-          Text(
-            formattedPrice,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              fontFamily: 'Arial',
-              color: tokens.productPrice,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 6),
-
-          // Action Button: + Savatga or [- Quantity +] Stepper
-          inCartQuantity == 0
-              ? Semantics(
-                  label: '${medicine.name} - ${AppStrings.addToCart}',
-                  button: true,
-                  child: Material(
-                    color: tokens.addToCartBg,
-                    borderRadius: BorderRadius.circular(tokens.radiusAddToCartBtn),
-                    child: InkWell(
-                      onTap: () {
-                        HapticFeedback.mediumImpact();
-                        ref.read(cartProvider.notifier).addItem(
-                              medicineId: medicine.id,
-                              pharmacyId: medicine.pharmacyId ?? 1,
-                              name: medicine.name,
-                              price: medicine.price ?? 0,
-                              stockUnit: medicine.stockUnit,
-                              imageUrl: medicine.imageUrl,
-                            );
-                      },
-                      borderRadius: BorderRadius.circular(tokens.radiusAddToCartBtn),
-                      child: Container(
-                        width: double.infinity,
-                        height: 44,
-                        alignment: Alignment.center,
-                        child: Text(
-                          AppStrings.addToCart,
-                          style: TextStyle(
-                            color: tokens.addToCartText,
-                            fontSize: 12.2,
-                            fontWeight: FontWeight.w500,
-                            fontFamily: 'PingFang SC',
-                            height: 1.43,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                )
-              : Container(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Image box with rounded dark border (matching screenshot 1:1)
+              Expanded(
+                child: Container(
                   width: double.infinity,
-                  height: 44,
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(tokens.radiusAddToCartBtn),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x0F000000),
-                        blurRadius: 6,
-                        offset: Offset(0, 1),
-                      ),
-                    ],
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: const Color(0xFF2C2C2E),
+                      width: 1.0,
+                    ),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Minus button
-                      Semantics(
-                        label: '${medicine.name} kamaytirish',
-                        button: true,
-                        child: InkWell(
-                          onTap: () {
-                            HapticFeedback.lightImpact();
-                            if (inCartQuantity > 1) {
-                              ref.read(cartProvider.notifier).updateQuantity(medicine.id, inCartQuantity - 1);
-                            } else {
-                              ref.read(cartProvider.notifier).removeItem(medicine.id);
-                            }
-                          },
-                          borderRadius: BorderRadius.circular(22),
-                          child: Container(
-                            width: 38,
-                            height: 38,
-                            margin: const EdgeInsets.only(left: 3),
-                            decoration: BoxDecoration(
-                              color: tokens.addToCartBg,
-                              shape: BoxShape.circle,
-                            ),
-                            alignment: Alignment.center,
-                            child: const Icon(
-                              Icons.remove,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      // Quantity number
-                      Text(
-                        '$inCartQuantity',
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                          fontFamily: 'Arial',
-                        ),
-                      ),
-
-                      // Plus button
-                      Semantics(
-                        label: '${medicine.name} ko‘paytirish',
-                        button: true,
-                        child: InkWell(
-                          onTap: () {
-                            HapticFeedback.lightImpact();
-                            ref.read(cartProvider.notifier).updateQuantity(medicine.id, inCartQuantity + 1);
-                          },
-                          borderRadius: BorderRadius.circular(22),
-                          child: Container(
-                            width: 38,
-                            height: 38,
-                            margin: const EdgeInsets.only(right: 3),
-                            decoration: BoxDecoration(
-                              color: tokens.addToCartBg,
-                              shape: BoxShape.circle,
-                            ),
-                            alignment: Alignment.center,
-                            child: const Icon(
-                              Icons.add,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  child: _buildImage(),
                 ),
-        ],
+              ),
+              const SizedBox(height: 6),
+
+              // Title
+              Text(
+                medicine.name,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  fontFamily: 'PingFang SC',
+                  color: tokens.productTitle,
+                  letterSpacing: -0.2,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+
+              // Usage / Subtitle
+              const SizedBox(height: 2),
+              Text(
+                medicine.usage ?? 'Tabiiy minerallarga boy ozuqa',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                  fontFamily: 'PingFang SC',
+                  color: tokens.productSubtitle,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 3),
+                child: Divider(
+                  height: 1,
+                  thickness: 0.8,
+                  color: Color(0xFFE5E5EA),
+                ),
+              ),
+              const SizedBox(height: 2),
+
+              // Price (smaller, elegant)
+              Text(
+                formattedPrice,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  fontFamily: 'PingFang SC',
+                  color: tokens.productPrice,
+                  letterSpacing: -0.2,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 6),
+
+              // Action Button: + Savatga (0 in cart) or Stepper (> 0 in cart)
+              inCartQuantity == 0
+                  ? Semantics(
+                      label: '${medicine.name} - ${AppStrings.addToCart}',
+                      button: true,
+                      child: Material(
+                        color: const Color(0xFF28CD41),
+                        borderRadius: BorderRadius.circular(20),
+                        child: InkWell(
+                          onTap: () {
+                            HapticFeedback.mediumImpact();
+                            ref.read(cartProvider.notifier).addItem(
+                                  medicineId: medicine.id,
+                                  pharmacyId: medicine.pharmacyId ?? 1,
+                                  name: medicine.name,
+                                  price: medicine.price ?? 0,
+                                  stockUnit: medicine.stockUnit,
+                                  imageUrl: medicine.imageUrl,
+                                );
+                          },
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            width: double.infinity,
+                            height: 36,
+                            alignment: Alignment.center,
+                            child: Text(
+                              AppStrings.addToCart,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w600,
+                                fontFamily: 'PingFang SC',
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                  : Container(
+                      width: double.infinity,
+                      height: 36,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF2F2F7),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Minus button
+                          Semantics(
+                            label: '${medicine.name} kamaytirish',
+                            button: true,
+                            child: InkWell(
+                              onTap: () {
+                                HapticFeedback.lightImpact();
+                                if (inCartQuantity > 1) {
+                                  ref.read(cartProvider.notifier).updateQuantity(medicine.id, inCartQuantity - 1);
+                                } else {
+                                  ref.read(cartProvider.notifier).removeItem(medicine.id);
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(15),
+                              child: Container(
+                                width: 28,
+                                height: 28,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF28CD41),
+                                  shape: BoxShape.circle,
+                                ),
+                                alignment: Alignment.center,
+                                child: const Icon(
+                                  Icons.remove,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          // Quantity number
+                          Text(
+                            '$inCartQuantity',
+                            style: const TextStyle(
+                              color: Colors.black,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              fontFamily: 'PingFang SC',
+                            ),
+                          ),
+
+                          // Plus button
+                          Semantics(
+                            label: '${medicine.name} ko‘paytirish',
+                            button: true,
+                            child: InkWell(
+                              onTap: () {
+                                HapticFeedback.lightImpact();
+                                ref.read(cartProvider.notifier).updateQuantity(medicine.id, inCartQuantity + 1);
+                              },
+                              borderRadius: BorderRadius.circular(15),
+                              child: Container(
+                                width: 28,
+                                height: 28,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF28CD41),
+                                  shape: BoxShape.circle,
+                                ),
+                                alignment: Alignment.center,
+                                child: const Icon(
+                                  Icons.add,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+            ],
+          ),
+        ),
       ),
     );
   }

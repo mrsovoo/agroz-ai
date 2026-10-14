@@ -8,12 +8,32 @@ interface DesktopComingSoonProps {
 export default function DesktopComingSoon({ type }: DesktopComingSoonProps) {
   return (
     <div className={styles.wrapper}>
-      {/* Header / Logo */}
-      <header className={styles.header}>
+      {/* Header / Logo & Business Link */}
+      <header className={styles.header} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", maxWidth: "1200px", padding: "0 32px", boxSizing: "border-box" }}>
         <div className={styles.logo}>
           <img src="/coming-soon/logo.svg" alt="AGROZGO" className={styles.logoImage} />
-          
         </div>
+        <a
+          href="/kabinet"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            backgroundColor: "#1D1D1F",
+            color: "#ffffff",
+            padding: "10px 20px",
+            borderRadius: "980px",
+            fontSize: "13px",
+            fontWeight: 600,
+            textDecoration: "none",
+            letterSpacing: "-0.2px",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.12)",
+            transition: "all 0.2s ease",
+          }}
+        >
+          <span>🏢 Biznes kabinet</span>
+          <span style={{ fontSize: "10px", background: "rgba(255,255,255,0.2)", padding: "2px 6px", borderRadius: "999px" }}>BETA</span>
+        </a>
       </header>
       
       {/* Huge Background Text */}

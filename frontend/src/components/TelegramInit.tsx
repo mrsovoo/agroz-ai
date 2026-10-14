@@ -25,9 +25,22 @@ export default function TelegramInit() {
       return;
     }
 
+    // 2. Agar tashqi brauzerda bo'lsak (mobil yoki desktop), darhol web rejimini qo'llaymiz
+    if (!isNativeApp() && !getTelegram()?.initData && !isTelegramUserAgent()) {
+      root.classList.add("is-web");
+      root.classList.remove("is-telegram");
+    }
+
     const stopWaiting = onTelegramReady((tg) => {
-      root.classList.add("is-telegram");
-      root.classList.remove("is-web");
+      // Faqat haqiqiy Telegram ichida initData mavjud bo'lsa Mini App rejimiga o'tadi
+      if (tg.initData) {
+        root.classList.add("is-telegram");
+        root.classList.remove("is-web");
+      } else {
+        root.classList.add("is-web");
+        root.classList.remove("is-telegram");
+        return;
+      }
 
       try {
         tg.ready();
@@ -63,18 +76,8 @@ export default function TelegramInit() {
       }
     });
 
-    // Telegram SDK yuklanmasa (yoki tashqi brauzerda Telegram havolasidan
-    // ochilgan bo'lsa) keng ekranda web ko'rinishga qaytaramiz.
-    const timer = window.setTimeout(() => {
-      if (isWideScreen() && !getTelegram() && !isTelegramUserAgent()) {
-        root.classList.add("is-web");
-        root.classList.remove("is-telegram");
-      }
-    }, 1500);
-
     return () => {
       stopWaiting();
-      window.clearTimeout(timer);
     };
   }, []);
 

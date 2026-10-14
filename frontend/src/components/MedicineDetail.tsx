@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type { Metadata } from "next";
-import { ArrowLeft, MapPin, Phone, Pill, ShieldCheck, Sprout, Store } from "lucide-react";
+import { ArrowLeft, MapPin, Phone, Pill, ShieldCheck, Sprout, Store, Clock, Star, Package } from "lucide-react";
 import FadeImage from "@/components/FadeImage";
 import ProductCardActions from "@/components/ProductCardActions";
 import ProductCard from "@/components/ProductCard";
@@ -161,211 +160,217 @@ export default async function MedicineDetail({ medicine }: { medicine: MedicineD
   const similar = await getSimilarMedicines(medicine, 8);
 
   return (
-    <main className="px-5 pb-6">
-      {/* Orqaga */}
-      <Link
-        href="/dorilar"
-        className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[13px] font-bold text-[var(--brand-ink)] shadow-sm active:scale-95"
-      >
-        <ArrowLeft size={15} /> Dorilarga qaytish
-      </Link>
-
-      {/* Mahsulot: chapda rasm, o'ngda ma'lumot (katta ekranda ustma-ust emas) */}
-      <div className="mt-3 grid gap-4 web:grid-cols-[420px_minmax(0,1fr)] web:gap-8">
-        {/* Katta rasm — 5:7 (250×350 proportsiyasining kattalashtirilgani), toza oq fon */}
-        <div className="overflow-hidden rounded-[24px] bg-white shadow-sm border border-neutral-200/70 p-2 sm:p-4 flex items-center justify-center">
-          {medicine.hasPhoto ? (
-            <FadeImage
-              src={medicine.photoVersion ? `/api/medicines/${medicine.id}/photo?v=${medicine.photoVersion}` : `/api/medicines/${medicine.id}/photo`}
-              alt={medicine.name}
-              className="aspect-[5/7] w-full bg-white"
-              fit="contain"
-              fallback={
-                <div
-                  className="flex h-full w-full items-center justify-center"
-                  style={{
-                    background:
-                      medicine.type === "animal"
-                        ? "linear-gradient(135deg,#fff7df,#ffedb3)"
-                        : "linear-gradient(135deg,#f0fae8,#dcf3cf)",
-                  }}
-                >
-                  <span
-                    className="flex h-16 w-16 items-center justify-center rounded-full bg-white/80"
-                    style={{ color: medicine.type === "animal" ? "var(--brand-ink)" : "var(--brand-green)" }}
-                  >
-                    <Pill size={30} />
-                  </span>
-                </div>
-              }
-            />
-          ) : (
-            <div
-              className="flex aspect-[5/7] w-full items-center justify-center"
-              style={{
-                background:
-                  medicine.type === "animal"
-                    ? "linear-gradient(135deg,#fff7df,#ffedb3)"
-                    : "linear-gradient(135deg,#f0fae8,#dcf3cf)",
-              }}
-            >
-              <span
-                className="flex h-16 w-16 items-center justify-center rounded-full bg-white/80"
-                style={{ color: medicine.type === "animal" ? "var(--brand-ink)" : "var(--brand-green)" }}
-              >
-                <Pill size={30} />
-              </span>
-            </div>
-          )}
+    <div className="min-h-screen bg-[#FAF9F5] text-[#191B1F] pb-24 font-sans">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10">
+        {/* Breadcrumb & Sarlavha */}
+        <div className="flex items-center gap-2 text-xs font-semibold text-zinc-500 mb-6">
+          <Link href="/" className="hover:text-black transition">
+            AgrozGO
+          </Link>
+          <span>/</span>
+          <Link href="/dorilar" className="hover:text-black transition">
+            Mahsulotlar
+          </Link>
+          <span>/</span>
+          <span className="text-zinc-900 truncate max-w-xs">{medicine.name}</span>
         </div>
 
-        {/* Ma'lumotlar */}
-        <div className="ios-card p-5 web:self-start">
-          <div className="flex items-start justify-between gap-3">
-            <h1 className="text-[20px] font-black leading-tight text-[var(--brand-ink)] web:text-[26px]">
-              {medicine.name}
-            </h1>
-            <span
-              className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold"
-              style={{
-                background:
-                  medicine.type === "animal"
-                    ? "var(--brand-yellow-soft)"
-                    : medicine.type === "crop"
-                      ? "var(--brand-green-soft)"
-                      : "#ccfbf1",
-                color:
-                  medicine.type === "animal"
-                    ? "var(--brand-ink)"
-                    : medicine.type === "crop"
-                      ? "var(--brand-green)"
-                      : "#0d9488",
-              }}
-            >
-              {medicine.type === "animal" ? "🐄 Hayvon" : medicine.type === "crop" ? "🌱 Ekin" : "📦 Umumiy"}
-            </span>
-          </div>
-
-          {/* Reyting va sharhlar havolasi */}
-          <div className="flex items-center">
-            <MedicineRatingSummary
-              medicineId={medicine.id}
-              initialAvg={medicine.ratingAvg}
-              initialCount={medicine.ratingCount}
-            />
-          </div>
-
-          {medicine.price != null && medicine.price > 0 ? (
-            <p className="mt-2 text-[24px] font-black text-[var(--brand-green)] web:text-[30px]">
-              {shortSum(medicine.price)} so&apos;m
-            </p>
-          ) : (
-            <p className="mt-2 text-[16px] font-bold text-[var(--brand-muted)]">Narxi ko&apos;rsatilmagan</p>
-          )}
-
-          {/* Tavsif */}
-          <div className="mt-3 rounded-2xl bg-[var(--brand-bg)] p-3.5">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-[var(--brand-muted)]">
-              Tavsif
-            </p>
-            <p className="mt-1 text-[14px] leading-relaxed text-[var(--brand-ink)]">
-              {medicine.usage ?? "Bu dori uchun tavsif kiritilmagan."}
-            </p>
-          </div>
-
-          {/* Agro-do&apos;kon */}
-          <div className="mt-3 rounded-2xl border border-[var(--brand-sep)] p-3.5">
-            <p className="flex items-center gap-1.5 text-[15px] font-bold text-[var(--brand-ink)]">
-              <Store size={15} /> {medicine.pharmacyName}
-            </p>
-            <p className="mt-1 flex items-start gap-1.5 text-[12.5px] text-[var(--brand-muted)]">
-              <MapPin size={13} className="mt-0.5 shrink-0" />
-              {medicine.pharmacyAddress}
-            </p>
-            <p className="mt-0.5 text-[12.5px] text-[var(--brand-muted)]">
-              🕘 {medicine.workHours ?? "09:00 - 18:00"}
-            </p>
-            {medicine.ratingCount > 0 && medicine.ratingAvg !== null && (
-              <p className="mt-1 text-[12.5px] font-bold text-[#b8860b]">
-                ★ {medicine.ratingAvg.toFixed(1)}{" "}
-                <span className="font-semibold text-[var(--brand-muted)]">
-                  ({medicine.ratingCount} baho)
-                </span>
-              </p>
+        {/* Mahsulot Asosiy Bloki: 2 ustunli Apple Bento Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-[480px_minmax(0,1fr)] gap-8 items-start">
+          {/* Chap ustun: Katta toza rasm kartasi */}
+          <div className="overflow-hidden rounded-3xl bg-white p-4 sm:p-6 border border-black/8 shadow-xs flex items-center justify-center">
+            {medicine.hasPhoto ? (
+              <FadeImage
+                src={medicine.photoVersion ? `/api/medicines/${medicine.id}/photo?v=${medicine.photoVersion}` : `/api/medicines/${medicine.id}/photo`}
+                alt={medicine.name}
+                className="aspect-square w-full object-contain bg-white"
+                fit="contain"
+                fallback={
+                  <div className="flex aspect-square w-full items-center justify-center rounded-2xl bg-zinc-50 text-zinc-400">
+                    <Pill size={48} />
+                  </div>
+                }
+              />
+            ) : (
+              <div className="flex aspect-square w-full items-center justify-center rounded-2xl bg-zinc-50 text-zinc-400">
+                <Pill size={48} />
+              </div>
             )}
-            <a
-              href={`tel:${medicine.pharmacyPhone.replace(/\s/g, "")}`}
-              className="mt-2.5 inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-[12.5px] font-bold text-white"
-              style={{ background: "var(--brand-green)" }}
-            >
-              <Phone size={13} /> Qo&apos;ng&apos;iroq qilish
-            </a>
           </div>
 
-          <p className="mt-2.5 flex items-center gap-1.5 text-[11.5px] leading-relaxed text-[var(--brand-muted)]">
-            <ShieldCheck size={13} className="shrink-0" />
-            Buyurtma agro-do&apos;kon egasiga Telegram orqali yetib boradi — holatini telefon raqamingiz
-            bilan kuzatasiz.
-          </p>
+          {/* O'ng ustun: Mahsulot ma'lumotlari */}
+          <div className="rounded-3xl bg-white p-6 sm:p-8 border border-black/8 shadow-xs space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#FAF9F5] border border-black/5 text-zinc-800">
+                {medicine.type === "animal" ? (
+                  <>
+                    <ShieldCheck size={13} className="text-amber-500" />
+                    <span>Chorva & Veterinariya</span>
+                  </>
+                ) : medicine.type === "crop" ? (
+                  <>
+                    <Sprout size={13} className="text-emerald-600" />
+                    <span>Ekin & O‘g‘it</span>
+                  </>
+                ) : (
+                  <>
+                    <Package size={13} className="text-teal-600" />
+                    <span>Umumiy agro-vosita</span>
+                  </>
+                )}
+              </span>
 
-          {/* Savatga / yoqtirish */}
-          <ProductCardActions
-            medicine={{
-              id: medicine.id,
-              name: medicine.name,
-              price: medicine.price,
-              type: medicine.type,
-              hasPhoto: medicine.hasPhoto,
-              photoVersion: medicine.photoVersion,
-              usage: medicine.usage,
-              status: "bor",
-            }}
-            pharmacy={{
-              id: medicine.pharmacyId,
-              name: medicine.pharmacyName,
-              phone: medicine.pharmacyPhone,
-              address: medicine.pharmacyAddress,
-            }}
-          />
-        </div>
-      </div>
+              {/* Reyting va sharhlar */}
+              <MedicineRatingSummary
+                medicineId={medicine.id}
+                initialAvg={medicine.ratingAvg}
+                initialCount={medicine.ratingCount}
+              />
+            </div>
 
-      {/* Fermer va dehqonlar fikrlari va reytingi */}
-      <MedicineReviewsSection medicineId={medicine.id} medicineName={medicine.name} />
+            <div>
+              <h1 className="text-2xl sm:text-4xl font-extrabold text-[#191B1F] tracking-tight leading-tight">
+                {medicine.name}
+              </h1>
 
-      {/* O'xshash mahsulotlar */}
-      {similar.length > 0 && (
-        <section className="mt-7 web:mt-10">
-          <p className="ios-section-title">O&apos;xshash mahsulotlar</p>
-          <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-            {similar.map((s) => (
-              <ProductCard
-                key={s.id}
-                variant="md"
+              {medicine.price != null && medicine.price > 0 ? (
+                <div className="mt-3 flex items-baseline gap-2">
+                  <span className="text-3xl sm:text-4xl font-black text-[#191B1F] tracking-tight">
+                    {shortSum(medicine.price)}
+                  </span>
+                  <span className="text-base font-bold text-zinc-500">so‘m</span>
+                  {medicine.stockUnit && (
+                    <span className="text-xs font-medium text-zinc-400">/ {medicine.stockUnit}</span>
+                  )}
+                </div>
+              ) : (
+                <p className="mt-2 text-sm font-bold text-zinc-500">Narxi kelishuv asosida</p>
+              )}
+            </div>
+
+            {/* Tavsif */}
+            <div className="rounded-2xl bg-[#FAF9F5] p-4 border border-black/5">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+                Mahsulot tavsifi & Qo‘llash bo‘yicha yo‘riqnoma
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-700 font-medium">
+                {medicine.usage ?? "Ushbu dori vositasi uchun batafsil qo‘llanma do‘kon xodimi tomonidan taqdim etiladi."}
+              </p>
+            </div>
+
+            {/* Sotuvchi Agro-do'kon kartochkasi */}
+            <div className="rounded-2xl bg-[#FAF9F5] p-4 border border-black/5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-zinc-800 shadow-2xs border border-black/5">
+                    <Store size={18} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-zinc-900">{medicine.pharmacyName}</h4>
+                    <p className="text-xs text-zinc-500 flex items-center gap-1 mt-0.5">
+                      <MapPin size={11} /> {medicine.pharmacyAddress}
+                    </p>
+                  </div>
+                </div>
+
+                <a
+                  href={`tel:${medicine.pharmacyPhone.replace(/\s/g, "")}`}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white text-xs font-bold text-zinc-800 border border-black/8 hover:bg-zinc-50 transition shadow-2xs"
+                >
+                  <Phone size={12} />
+                  <span>Qo‘ng‘iroq</span>
+                </a>
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-black/5 text-xs text-zinc-500">
+                <span className="flex items-center gap-1">
+                  <Clock size={12} /> Ish vaqti: {medicine.workHours ?? "09:00 - 18:00"}
+                </span>
+                {medicine.ratingCount > 0 && medicine.ratingAvg !== null && (
+                  <span className="flex items-center gap-1 font-bold text-amber-700">
+                    <Star size={11} className="fill-amber-400 text-amber-400" />
+                    <span>{medicine.ratingAvg.toFixed(1)}</span>
+                    <span className="text-zinc-400 font-normal">({medicine.ratingCount} baho)</span>
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs text-zinc-500">
+              <ShieldCheck size={14} className="text-emerald-600 shrink-0" />
+              <span>AgrozGO kafolati: mahsulot haqiqiyligi va to‘g‘ridan-to‘g‘ri ombordan yetkazilishi tekshirilgan.</span>
+            </div>
+
+            {/* Savatga qo'shish va sevimliga olish harakatlari */}
+            <div className="pt-2">
+              <ProductCardActions
                 medicine={{
-                  id: s.id,
-                  name: s.name,
-                  price: s.price,
-                  type: s.type,
-                  hasPhoto: s.hasPhoto,
-                  photoVersion: s.photoVersion,
-                  usage: s.usage,
-                  stockUnit: s.stockUnit,
+                  id: medicine.id,
+                  name: medicine.name,
+                  price: medicine.price,
+                  type: medicine.type,
+                  hasPhoto: medicine.hasPhoto,
+                  photoVersion: medicine.photoVersion,
+                  usage: medicine.usage,
                   status: "bor",
                 }}
                 pharmacy={{
-                  id: s.pharmacyId,
-                  name: s.pharmacyName,
-                  phone: s.pharmacyPhone,
-                  address: s.pharmacyAddress,
-                  ratingAvg: s.ratingAvg,
-                  ratingCount: s.ratingCount,
+                  id: medicine.pharmacyId,
+                  name: medicine.pharmacyName,
+                  phone: medicine.pharmacyPhone,
+                  address: medicine.pharmacyAddress,
                 }}
               />
-            ))}
+            </div>
           </div>
-        </section>
-      )}
-    </main>
+        </div>
+
+        {/* Fermer va dehqonlar sharhlari */}
+        <div className="mt-12">
+          <MedicineReviewsSection medicineId={medicine.id} medicineName={medicine.name} />
+        </div>
+
+        {/* O'xshash mahsulotlar */}
+        {similar.length > 0 && (
+          <section className="mt-12">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl sm:text-2xl font-extrabold text-[#191B1F] tracking-tight">
+                O‘xshash preparatlar
+              </h2>
+              <Link href="/dorilar" className="text-xs font-bold text-zinc-600 hover:text-black">
+                Barchasini ko‘rish →
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5">
+              {similar.map((s) => (
+                <ProductCard
+                  key={s.id}
+                  variant="md"
+                  medicine={{
+                    id: s.id,
+                    name: s.name,
+                    price: s.price,
+                    type: s.type,
+                    hasPhoto: s.hasPhoto,
+                    photoVersion: s.photoVersion,
+                    usage: s.usage,
+                    stockUnit: s.stockUnit,
+                    status: "bor",
+                  }}
+                  pharmacy={{
+                    id: s.pharmacyId,
+                    name: s.pharmacyName,
+                    phone: s.pharmacyPhone,
+                    address: s.pharmacyAddress,
+                    ratingAvg: s.ratingAvg,
+                    ratingCount: s.ratingCount,
+                  }}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
+    </div>
   );
 }

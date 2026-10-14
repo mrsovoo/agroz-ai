@@ -56,7 +56,7 @@ class HomeFloatingNav extends ConsumerWidget {
                       style: TextStyle(
                         color: color,
                         fontSize: 10,
-                        fontFamily: 'Arial',
+                        fontFamily: 'PingFang SC',
                         fontWeight: FontWeight.w700,
                         letterSpacing: -0.16,
                       ),
@@ -132,7 +132,9 @@ class HomeFloatingNav extends ConsumerWidget {
                   width: 70,
                   height: 70,
                   decoration: BoxDecoration(
-                    color: tokens.floatingCartBtnBg,
+                    color: cartState.totalCount > 0
+                        ? tokens.floatingCartBtnBg
+                        : Colors.white,
                     shape: BoxShape.circle,
                     boxShadow: const [
                       BoxShadow(
@@ -156,23 +158,27 @@ class HomeFloatingNav extends ConsumerWidget {
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          const Column(
+                          Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
                                 Icons.shopping_cart_outlined,
-                                color: Colors.white,
+                                color: cartState.totalCount > 0
+                                    ? Colors.white
+                                    : const Color(0xFF35CA56),
                                 size: 24,
                               ),
-                              SizedBox(height: 3),
+                              const SizedBox(height: 3),
                               Text(
                                 AppStrings.navCart,
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  color: Colors.white,
+                                  color: cartState.totalCount > 0
+                                      ? Colors.white
+                                      : const Color(0xFF35CA56),
                                   fontSize: 10,
-                                  fontFamily: 'Arial',
+                                  fontFamily: 'PingFang SC',
                                   fontWeight: FontWeight.w700,
                                   letterSpacing: -0.16,
                                 ),

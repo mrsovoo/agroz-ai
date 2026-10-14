@@ -15,13 +15,42 @@ export type AppNotification = {
 };
 
 export const NOTIFICATIONS_EVENT = "agroz:notifications_updated";
+const LOCAL_STORAGE_READ_IDS_KEY = "agroz_read_notification_ids";
 
 const cachedReadIds = new Set<string>();
+
+function loadLocalReadIds(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_READ_IDS_KEY);
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) {
+        arr.forEach((id: unknown) => {
+          if (typeof id === "string" && id.trim()) {
+            cachedReadIds.add(id.trim());
+          }
+        });
+      }
+    }
+  } catch {}
+}
+
+function saveLocalReadIds(): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(LOCAL_STORAGE_READ_IDS_KEY, JSON.stringify(Array.from(cachedReadIds)));
+  } catch {}
+}
+
+// Initial load
+loadLocalReadIds();
 
 /**
  * Backend API (/api/notifications/read-status) orqali foydalanuvchining o'qilgan bildirishnomalarini yuklash
  */
 export async function syncReadNotificationIds(): Promise<Set<string>> {
+  loadLocalReadIds();
   if (typeof window === "undefined") return new Set(cachedReadIds);
   try {
     const res = await fetch("/api/notifications/read-status", {
@@ -67,6 +96,7 @@ export function markNotificationsRead(ids: string[]): void {
   if (cleanIds.length === 0) return;
 
   cleanIds.forEach((id) => cachedReadIds.add(id));
+  saveLocalReadIds();
   window.dispatchEvent(new CustomEvent(NOTIFICATIONS_EVENT));
 
   const targetId = cleanIds.length === 1 ? encodeURIComponent(cleanIds[0]) : "batch";
@@ -111,15 +141,73 @@ export function subscribeToNotificationChanges(callback: () => void): () => void
 }
 
 /**
+ * Bildirishnoma vaqtini qat'iy va barqaror formatda (Bugun, Kecha, yoki Aniq sana) chiqarish
+ */
+export function formatNotificationDate(timestamp: number | string | Date): string {
+  const date = new Date(timestamp);
+  if (isNaN(date.getTime())) return "Bugun";
+
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+
+  const yesterday = new Date();
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday = date.toDateString() === yesterday.toDateString();
+
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const timeStr = `${hours}:${minutes}`;
+
+  if (isToday) {
+    return `Bugun, ${timeStr}`;
+  }
+  if (isYesterday) {
+    return `Kecha, ${timeStr}`;
+  }
+
+  const months = [
+    "yanvar", "fevral", "mart", "aprel", "may", "iyun",
+    "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr"
+  ];
+  const day = date.getDate();
+  const monthName = months[date.getMonth()];
+  return `${day}-${monthName}, ${timeStr}`;
+}
+
+/**
  * Real ob-havo, mavsum va tizim ma'lumotlari asosida bildirishnomalar to'plamini shakllantirish
  */
 export async function fetchRealAppNotifications(userRegion: string = "Toshkent"): Promise<AppNotification[]> {
   await syncReadNotificationIds();
+
+  // 1. Backend /api/notifications dan Super Admin broadcasts va bazadagi xabarlarni olish
+  try {
+    const apiRes = await fetch("/api/notifications", { cache: "no-store", credentials: "include" }).catch(() => null);
+    if (apiRes && apiRes.ok) {
+      const data = await apiRes.json();
+      if (data?.ok && Array.isArray(data.notifications) && data.notifications.length > 0) {
+        if (Array.isArray(data.readIds)) {
+          data.readIds.forEach((id: unknown) => {
+            if (typeof id === "string" && id.trim()) {
+              cachedReadIds.add(id.trim());
+            }
+          });
+        }
+        return data.notifications.map((n: any) => ({
+          ...n,
+          dateText: formatNotificationDate(n.timestamp || n.createdAt),
+        }));
+      }
+    }
+  } catch (err) {
+    console.error("fetchRealAppNotifications backend fetch error:", err);
+  }
+
   const items: AppNotification[] = [];
   const now = Date.now();
 
   try {
-    // 1. Real ob-havo ogohlantirishlarini tekshirish
+    // 2. Real ob-havo ogohlantirishlarini tekshirish
     const alertsRes = await fetch(`/api/weather/alerts?region=${encodeURIComponent(userRegion)}`).catch(() => null);
     if (alertsRes && alertsRes.ok) {
       const data = await alertsRes.json();

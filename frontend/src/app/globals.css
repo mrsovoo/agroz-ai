@@ -278,128 +278,40 @@ body.modal-open {
   margin: 8px auto 14px;
 }
 
-@media (min-width: 900px) {
-  html.is-web {
-    background:
-      linear-gradient(180deg, rgba(252, 189, 0, 0.12), transparent 340px),
-      #f7f8f3;
-  }
+/* ========================================================
+   WEB REJIMI (html.is-web) — Barcha ekran o'lchamlari uchun
+   Mini app launch (kulrang fon, 520px app-shell, pastki bottom bar)
+   WEBDA HECH QACHON KO'RINMAYDI!
+   ======================================================== */
+html.is-web,
+html.is-web body {
+  background: #FAF9F5 !important;
+  background-color: #FAF9F5 !important;
+}
 
-  html.is-web .web-top-nav {
-    display: block;
-    position: sticky;
-    top: 0;
-    z-index: 70;
-    border-bottom: 1px solid rgba(50, 50, 50, 0.08);
-    background: rgba(255, 255, 255, 0.9);
-    -webkit-backdrop-filter: blur(18px) saturate(160%);
-    backdrop-filter: blur(18px) saturate(160%);
-  }
+html.is-web .web-top-nav,
+html.is-web .web-footer {
+  display: block !important;
+}
 
-  html.is-web .web-top-nav-inner {
-    display: flex;
-    align-items: center;
-    gap: 32px;
-    width: min(1200px, calc(100% - 56px));
-    height: 80px;
-    margin: 0 auto;
-  }
+html.is-telegram .web-top-nav,
+html.is-telegram .web-footer {
+  display: none !important;
+}
 
-  html.is-web .web-links {
-    flex: 1;
-  }
+html.is-web .mobile-bottom-nav {
+  display: none !important;
+}
 
-  html.is-web .web-actions {
-    display: flex;
-    align-items: center;
-    margin-left: auto;
-  }
-
-  html.is-web .web-brand,
-  html.is-web .web-links,
-  html.is-web .web-profile-link {
-    display: flex;
-    align-items: center;
-  }
-
-  html.is-web .web-brand {
-    gap: 12px;
-    color: var(--brand-ink);
-  }
-
-  html.is-web .web-brand-mark {
-    display: flex;
-    width: 42px;
-    height: 42px;
-    align-items: center;
-    justify-content: center;
-    border-radius: 12px;
-    background: var(--brand-green);
-    color: #fff;
-    box-shadow: 0 10px 24px -14px rgba(2, 142, 17, 0.75);
-  }
-
-  html.is-web .web-brand strong,
-  html.is-web .web-brand small {
-    display: block;
-  }
-
-  html.is-web .web-brand strong {
-    font-size: 18px;
-    font-weight: 900;
-    line-height: 1.1;
-  }
-
-  html.is-web .web-brand small {
-    margin-top: 2px;
-    color: var(--brand-muted);
-    font-size: 12px;
-    font-weight: 700;
-  }
-
-  html.is-web .web-links {
-    gap: 8px;
-  }
-
-  html.is-web .web-links a,
-  html.is-web .web-profile-link {
-    gap: 7px;
-    border-radius: 12px;
-    padding: 10px 13px;
-    color: rgba(50, 50, 50, 0.78);
-    font-size: 14px;
-    font-weight: 800;
-    transition:
-      background 0.15s ease,
-      color 0.15s ease;
-  }
-
-  html.is-web .web-links a:hover,
-  html.is-web .web-profile-link:hover {
-    background: rgba(2, 142, 17, 0.08);
-    color: var(--brand-green);
-  }
-
-  html.is-web .web-profile-link {
-    border: 1px solid rgba(2, 142, 17, 0.16);
-    background: #fff;
-    color: var(--brand-green);
-  }
-
-  html.is-web .mobile-bottom-nav {
-    display: none;
-  }
-
-  html.is-web .app-shell {
-    max-width: none;
-    width: min(1200px, calc(100% - 56px));
-    min-height: calc(100dvh - 80px);
-    margin: 0 auto;
-    padding-top: 36px;
-    padding-bottom: 64px;
-    background: transparent;
-    box-shadow: none;
-  }
+html.is-web .app-shell {
+  max-width: none !important;
+  width: 100% !important;
+  min-height: calc(100dvh - 80px);
+  margin: 0 auto;
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
 
   html.is-web main {
     width: 100%;
@@ -445,124 +357,8 @@ body.modal-open {
     transform: translateY(-2px);
     box-shadow: 0 26px 60px -42px rgba(2, 142, 17, 0.6);
   }
-}
 
-@media (min-width: 900px) and (max-width: 1080px) {
-  html.is-web .web-links a {
-    padding-inline: 9px;
-    font-size: 13px;
-  }
-
-  html.is-web .web-top-nav-inner {
-    gap: 18px;
-  }
-}
-
-/* ===========================================================================
-   WEB: nav holatlari, brend matni va footer
-   =========================================================================== */
 @media (min-width: 900px) {
-  html.is-web .web-brand-text strong,
-  html.is-web .web-brand-text small {
-    display: block;
-  }
-
-  html.is-web .web-brand-text strong {
-    font-size: 19px;
-    font-weight: 900;
-    line-height: 1.1;
-  }
-
-  html.is-web .web-brand-text small {
-    margin-top: 2px;
-    color: var(--brand-muted);
-    font-size: 12px;
-    font-weight: 700;
-  }
-
-  /* Faol (aktiv) havola */
-  html.is-web .web-links a.is-active,
-  html.is-web .web-links a.is-active:hover {
-    background: var(--brand-green);
-    color: #fff;
-    box-shadow: 0 12px 26px -18px rgba(2, 142, 17, 0.95);
-  }
-
-  /* ---- Footer ---- */
-  html.is-web .web-footer {
-    display: block;
-    margin-top: 24px;
-    border-top: 1px solid rgba(50, 50, 50, 0.08);
-    background: rgba(255, 255, 255, 0.72);
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
-  }
-
-  html.is-web .web-footer-inner {
-    display: grid;
-    grid-template-columns: minmax(0, 1.6fr) repeat(2, minmax(0, 1fr));
-    gap: 40px;
-    width: min(1200px, calc(100% - 56px));
-    margin: 0 auto;
-    padding: 44px 0 32px;
-  }
-
-  html.is-web .web-footer-brand {
-    display: flex;
-    gap: 14px;
-    align-items: flex-start;
-  }
-
-  html.is-web .web-footer-brand strong {
-    font-size: 18px;
-    font-weight: 900;
-  }
-
-  html.is-web .web-footer-brand p {
-    margin-top: 6px;
-    max-width: 420px;
-    color: var(--brand-muted);
-    font-size: 14px;
-    line-height: 1.55;
-  }
-
-  html.is-web .web-footer-col h2 {
-    margin-bottom: 12px;
-    color: var(--brand-muted);
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  html.is-web .web-footer-col ul {
-    display: grid;
-    gap: 9px;
-    list-style: none;
-  }
-
-  html.is-web .web-footer-col a {
-    color: var(--brand-ink);
-    font-size: 14.5px;
-    font-weight: 600;
-  }
-
-  html.is-web .web-footer-col a:hover {
-    color: var(--brand-green);
-  }
-
-  html.is-web .web-footer-bottom {
-    display: flex;
-    justify-content: space-between;
-    gap: 16px;
-    width: min(1200px, calc(100% - 56px));
-    margin: 0 auto;
-    padding: 18px 0 28px;
-    border-top: 1px solid rgba(50, 50, 50, 0.07);
-    color: var(--brand-muted);
-    font-size: 12.5px;
-  }
-
   /* Kattaroq ekranda matn o'lchamlari */
   html.is-web .ios-sub {
     font-size: 16px;

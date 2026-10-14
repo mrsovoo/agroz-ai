@@ -88,6 +88,12 @@ class ApiClient {
   }
 
   Future<dynamic> _request(Future<Response> Function() call) async {
+    if (!AppConfig.hasValidApiUrl) {
+      throw const ApiException(
+        message: 'API_URL sozlanmagan. Iltimos, --dart-define=API_URL=<manzil> orqali ko‘rsating.',
+        type: ApiErrorType.unknown,
+      );
+    }
     try {
       final response = await call();
       return response.data;

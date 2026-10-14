@@ -28,31 +28,26 @@ class HomeWeatherCard extends ConsumerWidget {
           return Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // 1. Left Weather Card
+              // 1. Left Weather Card (Transparent background, centered icon + Kunduzi + Temp)
               Expanded(
-                flex: 5,
-                child: Container(
-                  constraints: const BoxConstraints(minHeight: 52),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: tokens.weatherCardBg,
-                    borderRadius: BorderRadius.circular(tokens.radiusWeatherCard),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x19000000),
-                        blurRadius: 20,
-                        offset: Offset(0, 0),
-                      ),
-                    ],
-                  ),
+                flex: 48,
+                child: SizedBox(
+                  height: 56,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Icon(
-                        isDay ? Icons.wb_sunny_rounded : Icons.nightlight_round,
-                        color: isDay ? Colors.amber.shade600 : Colors.indigo.shade400,
-                        size: 32,
+                      // 3D Weather Sun icon extracted 1:1
+                      Image.asset(
+                        'assets/images/weather_sun.png',
+                        width: 44,
+                        height: 44,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Icon(
+                          isDay ? Icons.wb_sunny_rounded : Icons.nightlight_round,
+                          color: isDay ? const Color(0xFFFFB800) : Colors.indigo.shade400,
+                          size: 34,
+                        ),
                       ),
                       const SizedBox(width: 8),
                       Flexible(
@@ -63,22 +58,25 @@ class HomeWeatherCard extends ConsumerWidget {
                           children: [
                             Text(
                               timeOfDayTitle,
-                              style: TextStyle(
-                                color: tokens.weatherTextPrimary,
-                                fontSize: 16,
-                                fontFamily: 'Arial',
-                                fontWeight: FontWeight.w400,
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontSize: 14.5,
+                                fontFamily: 'PingFang SC',
+                                fontWeight: FontWeight.w700,
+                                height: 1.15,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
+                            const SizedBox(height: 2),
                             Text(
                               tempString,
-                              style: TextStyle(
-                                color: tokens.weatherTextSecondary,
+                              style: const TextStyle(
+                                color: Color(0xB3000000), // black with 70% opacity
                                 fontSize: 13,
-                                fontFamily: 'Arial',
-                                fontWeight: FontWeight.w400,
+                                fontFamily: 'PingFang SC',
+                                fontWeight: FontWeight.w600,
+                                height: 1.15,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -92,57 +90,56 @@ class HomeWeatherCard extends ConsumerWidget {
               ),
               const SizedBox(width: 8),
 
-              // 2. Wind Pill
+              // 2. Wind Pill (Figma/SVG: rx=16 rounded rectangle, fill black 0.03 opacity)
               Expanded(
-                flex: 4,
+                flex: 26,
                 child: Container(
-                  constraints: const BoxConstraints(minHeight: 52),
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                  height: 56,
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                   decoration: BoxDecoration(
-                    color: tokens.weatherPillBg,
-                    borderRadius: BorderRadius.circular(tokens.radiusWeatherPill),
+                    color: Colors.black.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.air,
-                            size: 11,
-                            color: tokens.weatherTextPrimary.withValues(alpha: 0.85),
-                          ),
-                          const SizedBox(width: 4),
-                          Flexible(
-                            child: Text(
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.air_rounded,
+                              size: 13,
+                              color: Colors.black.withValues(alpha: 0.85),
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
                               AppStrings.wind,
                               style: TextStyle(
-                                color: tokens.weatherTextPrimary.withValues(alpha: 0.85),
+                                color: Colors.black.withValues(alpha: 0.85),
                                 fontSize: 11,
-                                fontFamily: 'Arial',
-                                fontWeight: FontWeight.w400,
-                                letterSpacing: -0.16,
+                                fontFamily: 'PingFang SC',
+                                fontWeight: FontWeight.w500,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        windString,
-                        style: TextStyle(
-                          color: tokens.weatherTextPrimary,
-                          fontSize: 14,
-                          fontFamily: 'Arial',
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.16,
+                          ],
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          windString,
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontSize: 13,
+                            fontFamily: 'PingFang SC',
+                            fontWeight: FontWeight.w700,
+                          ),
+                          maxLines: 1,
+                        ),
                       ),
                     ],
                   ),
@@ -150,57 +147,56 @@ class HomeWeatherCard extends ConsumerWidget {
               ),
               const SizedBox(width: 8),
 
-              // 3. Humidity Pill
+              // 3. Humidity Pill (Figma/SVG: rx=16 rounded rectangle, fill black 0.03 opacity)
               Expanded(
-                flex: 4,
+                flex: 26,
                 child: Container(
-                  constraints: const BoxConstraints(minHeight: 52),
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                  height: 56,
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                   decoration: BoxDecoration(
-                    color: tokens.weatherPillBg,
-                    borderRadius: BorderRadius.circular(tokens.radiusWeatherPill),
+                    color: Colors.black.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.water_drop_outlined,
-                            size: 11,
-                            color: tokens.weatherTextPrimary.withValues(alpha: 0.85),
-                          ),
-                          const SizedBox(width: 4),
-                          Flexible(
-                            child: Text(
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.water_drop_outlined,
+                              size: 13,
+                              color: Colors.black.withValues(alpha: 0.85),
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
                               AppStrings.humidity,
                               style: TextStyle(
-                                color: tokens.weatherTextPrimary.withValues(alpha: 0.85),
+                                color: Colors.black.withValues(alpha: 0.85),
                                 fontSize: 11,
-                                fontFamily: 'Arial',
-                                fontWeight: FontWeight.w400,
-                                letterSpacing: -0.16,
+                                fontFamily: 'PingFang SC',
+                                fontWeight: FontWeight.w500,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        humidityString,
-                        style: TextStyle(
-                          color: tokens.weatherTextPrimary,
-                          fontSize: 14,
-                          fontFamily: 'Arial',
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.16,
+                          ],
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          humidityString,
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontSize: 13,
+                            fontFamily: 'PingFang SC',
+                            fontWeight: FontWeight.w700,
+                          ),
+                          maxLines: 1,
+                        ),
                       ),
                     ],
                   ),

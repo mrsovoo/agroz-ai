@@ -1,6 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../medicines/models/medicine_models.dart';
+import '../../medicines/repositories/medicines_repository.dart';
+import '../../notifications/providers/notifications_provider.dart';
 import '../../specialists/models/specialist_models.dart';
+import '../../specialists/repositories/specialists_repository.dart';
 import '../../weather/models/weather_models.dart';
 
 /// Weather data strictly matching Figma V10 specification:
@@ -43,42 +47,65 @@ SpecialistModel _specialist(int id, String specialty) => SpecialistModel(
       rating: 4.5,
     );
 
-/// Medicines list strictly matching Figma V10 specification:
-/// Bento Max, Tabiiy minerallarga boy ozuqa, 35.000 so'm, + Savatga
+final List<MedicineModel> _fallbackMedicines = [
+  _bento(1, kBentoBlueAsset, 'animal'),
+  _bento(2, kBentoOrangeAsset, 'animal'),
+  _bento(3, kBentoBlueAsset, 'crop'),
+  _bento(4, kBentoOrangeAsset, 'crop'),
+  _bento(5, kBentoBlueAsset, 'animal'),
+  _bento(6, kBentoOrangeAsset, 'crop'),
+];
+
+final List<SpecialistModel> _fallbackSpecialists = [
+  _specialist(1, 'Veterinar'),
+  _specialist(2, 'Veterinar'),
+];
+
+/// Medicines list: fetches from backend API; falls back to demo list if empty or offline
 final homeMedicinesProvider = FutureProvider.autoDispose<List<MedicineModel>>((ref) async {
-  return [
-    _bento(1, kBentoBlueAsset, 'animal'),
-    _bento(2, kBentoOrangeAsset, 'animal'),
-  ];
+  try {
+    final repo = ref.watch(medicinesRepositoryProvider);
+    final user = ref.watch(authProvider).user;
+    final items = await repo.getMedicines(region: user?.region, limit: 12);
+    if (items.isNotEmpty) return items;
+  } catch (_) {
+    // Graceful fallback to demo list
+  }
+  return _fallbackMedicines;
 });
 
-/// Specialists list strictly matching Figma V10 specification:
-/// Sohibjon Sulaymonov, Veterinar, 4.5 rating, Batafsil
+/// Specialists list: fetches from backend API; falls back to demo list if empty or offline
 final homeSpecialistsProvider = FutureProvider.autoDispose<List<SpecialistModel>>((ref) async {
-  return [
-    _specialist(1, 'Veterinar'),
-    _specialist(2, 'Veterinar'),
-  ];
+  try {
+    final repo = ref.watch(specialistsRepositoryProvider);
+    final user = ref.watch(authProvider).user;
+    final items = await repo.getSpecialists(region: user?.region);
+    if (items.isNotEmpty) return items;
+  } catch (_) {
+    // Graceful fallback to demo list
+  }
+  return _fallbackSpecialists;
 });
 
 /// Dorilar katalogi (Figma: 2 ustunli grid, Barchasi / Chorva / Ekin).
 final catalogMedicinesProvider = Provider<List<MedicineModel>>((ref) {
-  return [
-    _bento(1, kBentoBlueAsset, 'animal'),
-    _bento(2, kBentoOrangeAsset, 'animal'),
-    _bento(3, kBentoBlueAsset, 'crop'),
-    _bento(4, kBentoOrangeAsset, 'crop'),
-    _bento(5, kBentoBlueAsset, 'animal'),
-    _bento(6, kBentoOrangeAsset, 'crop'),
-  ];
+  final asyncVal = ref.watch(homeMedicinesProvider);
+  return asyncVal.maybeWhen(
+    data: (items) => items.isNotEmpty ? items : _fallbackMedicines,
+    orElse: () => _fallbackMedicines,
+  );
 });
 
 /// Mutaxasislar katalogi (Figma: Barchasi / Agronom / Veterinar).
 final catalogSpecialistsProvider = Provider<List<SpecialistModel>>((ref) {
-  return List.generate(6, (i) => _specialist(i + 1, 'Veterinar'));
+  final asyncVal = ref.watch(homeSpecialistsProvider);
+  return asyncVal.maybeWhen(
+    data: (items) => items.isNotEmpty ? items : _fallbackSpecialists,
+    orElse: () => _fallbackSpecialists,
+  );
 });
 
 final unreadNotificationsCountProvider = Provider<int>((ref) {
-  // Figma design notification badge count
-  return 4;
+  final notifState = ref.watch(notificationsProvider);
+  return notifState.unreadCount;
 });

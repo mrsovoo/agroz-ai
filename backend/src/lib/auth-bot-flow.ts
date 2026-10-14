@@ -7,11 +7,12 @@
  */
 
 import { db } from "@/db";
-import { botStates, specialistCalls, users, otpCodes } from "@/db/schema";
+import { botStates, specialistCalls, users, otpCodes, specialists, sessions } from "@/db/schema";
 import { eq, and, desc, gt } from "drizzle-orm";
+import { randomBytes } from "node:crypto";
 import { cleanText, normalizePhone } from "@/lib/validate";
 import { sendToUser } from "@/lib/bot-sender";
-import { farmerBotUsername } from "@/lib/settings";
+import { farmerBotUsername, partnerMiniappUrl } from "@/lib/settings";
 import {
   addMedicine,
   countMedicines,
@@ -569,7 +570,97 @@ async function handleCommand(
   firstName: string | undefined,
   text: string,
 ): Promise<void> {
-  const command = text.split(/\s+/)[0].split("@")[0];
+  const parts = text.trim().split(/\s+/);
+  const command = parts[0].split("@")[0];
+  const payload = parts.slice(1).join(" ").trim();
+
+  // Web formadan kelgan bir martalik ro'yxatdan o'tish tokeni (/start biz_reg_... yoki reg_...)
+  if (command === "/start" && payload && (payload.startsWith("biz_") || payload.startsWith("reg_"))) {
+    const row = (await db.select().from(otpCodes).where(eq(otpCodes.token, payload)).limit(1))[0];
+    if (row && row.expiresAt.getTime() > Date.now()) {
+      const spec = (await db.select().from(specialists).where(eq(specialists.phone, row.phone)).limit(1))[0];
+      if (spec) {
+        // Profilni ushbu Telegram akkauntga bog'laymiz
+        await db
+          .update(specialists)
+          .set({
+            telegramId,
+            isActive: true,
+            isApproved: true,
+          })
+          .where(eq(specialists.id, spec.id));
+
+        // Users jadvalida ham telegramId ni yangilaymiz
+        let user = (await db.select().from(users).where(eq(users.phone, row.phone)).limit(1))[0];
+        if (user) {
+          await db
+            .update(users)
+            .set({ telegramId, botStartedAt: new Date(), botBlocked: false })
+            .where(eq(users.id, user.id));
+        } else {
+          const [created] = await db
+            .insert(users)
+            .values({
+              phone: row.phone,
+              name: spec.name,
+              telegramId,
+              botStartedAt: new Date(),
+              botBlocked: false,
+            })
+            .returning();
+          user = created;
+        }
+
+        // Tokenni tasdiqlangan deb belgilaymiz
+        await db
+          .update(otpCodes)
+          .set({
+            used: true,
+            telegramId,
+            deliveredAt: new Date(),
+          })
+          .where(eq(otpCodes.id, row.id));
+
+        // Shaxsiy sessiya tokeni yaratamiz
+        const sessionToken = `biz_${randomBytes(24).toString("hex")}`;
+        if (user) {
+          await db.insert(sessions).values({ id: sessionToken, userId: user.id });
+        }
+
+        const base = partnerMiniappUrl();
+        const appUrl = `${base}?token=${sessionToken}&phone=${encodeURIComponent(spec.phone)}`;
+
+        const welcomeText =
+          `🎉 <b>Assalomu alaykum, ${escapeHtml(spec.name)}!</b>\n\n` +
+          `🏢 <b>«${escapeHtml(spec.organization || "Do'koningiz")}»</b> Agroz Business tizimida muvaffaqiyatli ro'yxatdan o'tdi va profilingiz faollashtirildi!\n\n` +
+          `Sizning shaxsiy biznes kabinetingiz tayyor:\n` +
+          `🌐 <b>Web manzil:</b> <code>${escapeHtml(base)}</code>\n` +
+          `📱 <b>Login (Telefon):</b> <code>${escapeHtml(spec.phone)}</code>\n\n` +
+          `Do'koningizni boshqarish (Kassa, Qarz daftari, Mahsulotlar qoldig'i) uchun pastdagi tugmani bosing:`;
+
+        await sendAuthMessage(chatId, welcomeText, {
+          inline: {
+            inline_keyboard: [
+              [
+                {
+                  text: "🏢 Do'kon kabinetini ochish",
+                  web_app: { url: appUrl },
+                },
+              ],
+              [
+                {
+                  text: "🌐 Brauzerda ochish",
+                  url: appUrl,
+                },
+              ],
+            ],
+          },
+          replyKeyboard: approvedPharmacyMenuKeyboard(),
+        });
+        return;
+      }
+    }
+  }
 
   if (
     command === "/royxatdan_otish" ||

@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   Sparkles,
   User,
+  Users,
   ChevronLeft,
   Share2,
   Award,
@@ -160,75 +161,77 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
   }, [items, activeCategory, searchQuery]);
 
   return (
-    <div className="px-4 sm:px-5 pt-3 pb-32 max-w-xl web:max-w-none mx-auto web:px-0 web:pt-0 web:pb-12">
-      {/* 1. Sarlavha (Header) */}
-      <div className="pt-2 pb-1">
-        <h1 className="text-[24px] sm:text-[26px] font-black text-neutral-900 tracking-tight leading-tight web:text-[32px]">
-          Mutaxassislar
-        </h1>
-        <p className="text-[13px] sm:text-[13.5px] text-neutral-500 font-medium mt-0.5 web:text-[15px]">
-          Malakali agronom va veterinarlardan tezkor amaliy yordam
-        </p>
-      </div>
-
-      {/* 2. Qidiruv qutisi */}
-      <div className="mt-3.5 relative flex items-center gap-2">
-        <div className="relative flex-1">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Ism, soha yoki hudud bo'yicha qidirish..."
-            className="w-full rounded-2xl bg-white border border-neutral-200/90 py-3 sm:py-3.5 pl-4 pr-10 text-[14.5px] sm:text-[15px] text-neutral-900 placeholder:text-neutral-400 shadow-2xs focus:border-[#039e1e] focus:bg-white focus:outline-none transition"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 p-1"
-            >
-              <X size={16} />
-            </button>
-          )}
-        </div>
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#039e1e] text-white shadow-xs">
-          <Search size={18} />
-        </div>
-      </div>
-
-      {/* 3. Kategoriyalar (Moslashuvchan gorizontal skroll — hech qachon qisilmaydi va buzilmaydi) */}
-      <div className="mt-4">
-        <div className="flex items-center justify-between mb-2 px-0.5">
-          <span className="text-[13.5px] font-bold text-neutral-800 tracking-tight">
-            Yo&apos;nalishlar
-          </span>
-          <span className="text-[12px] font-semibold text-neutral-400">
-            {filteredSpecialists.length} ta mutaxassis
-          </span>
+    <div className="min-h-screen bg-[#FAF9F5] text-[#191B1F] pb-24 font-sans">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12">
+        {/* 1. Breadcrumb & Sarlavha */}
+        <div className="flex items-center gap-2 text-xs font-semibold text-zinc-500 mb-3">
+          <a href="/" className="hover:text-black transition">
+            AgrozGO
+          </a>
+          <span>/</span>
+          <span className="text-zinc-900">Mutaxassislar</span>
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4 sm:-mx-5 sm:px-5">
-          {CATEGORIES.map((cat) => {
-            const isActive = activeCategory === cat.v;
-            const Icon = cat.icon;
-            return (
+        <div className="pb-6">
+          <div className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100/70 border border-emerald-200 px-3.5 py-1 rounded-full mb-3">
+            <Users size={13} className="text-emerald-700" />
+            <span>Professional Mutaxassislar</span>
+          </div>
+
+          <h1 className="text-3xl sm:text-5xl font-extrabold text-[#191B1F] tracking-tight leading-tight">
+            Agronom va veterinar mutaxassislar konsultatsiyasi
+          </h1>
+
+          <p className="mt-2 text-xs sm:text-sm text-zinc-600 max-w-2xl leading-relaxed">
+            O‘zbekiston bo‘ylab malakali agronom va veterinar mutaxassislardan tezkor amaliy yordam, tomchilatib sug‘orish, ekin parvarishi va chorva sog‘lig‘i bo‘yicha konsultatsiya.
+          </p>
+        </div>
+
+        {/* 2. Apple-style Katta Qidiruv va Filtr Bar */}
+        <div className="bg-white rounded-3xl p-3 sm:p-4 border border-black/8 shadow-xs mb-6">
+          <div className="flex items-center gap-3 px-3 py-2">
+            <Search size={18} className="shrink-0 text-zinc-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Ism, soha yoki viloyat/tuman bo‘yicha qidirish..."
+              className="w-full bg-transparent text-xs sm:text-sm font-medium text-zinc-900 outline-none placeholder:text-zinc-400"
+            />
+            {searchQuery && (
               <button
-                key={cat.v}
                 type="button"
-                onClick={() => setActiveCategory(cat.v)}
-                className={`inline-flex items-center gap-2 py-2.5 px-3.5 rounded-2xl border transition-all shrink-0 font-bold text-[12.5px] sm:text-[13px] active:scale-95 ${
-                  isActive
-                    ? "bg-[#039e1e] text-white border-[#039e1e] shadow-xs"
-                    : "bg-white text-neutral-700 border-neutral-200/80 hover:bg-neutral-50 shadow-2xs"
-                }`}
+                onClick={() => setSearchQuery("")}
+                className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
               >
-                <Icon size={15} />
-                <span>{cat.l}</span>
+                <X size={13} />
               </button>
-            );
-          })}
+            )}
+          </div>
+
+          {/* Kategoriyalar (Apple style pills) */}
+          <div className="flex items-center gap-2 pt-3 border-t border-zinc-100 overflow-x-auto no-scrollbar">
+            {CATEGORIES.map((cat) => {
+              const isActive = activeCategory === cat.v;
+              const Icon = cat.icon;
+              return (
+                <button
+                  key={cat.v}
+                  type="button"
+                  onClick={() => setActiveCategory(cat.v)}
+                  className={`shrink-0 rounded-full px-4 py-2 text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 ${
+                    isActive
+                      ? "bg-[#191B1F] text-white shadow-xs"
+                      : "bg-[#FAF9F5] text-zinc-700 hover:bg-zinc-200/80 border border-black/5"
+                  }`}
+                >
+                  <Icon size={13} className={isActive ? "text-amber-400" : "text-zinc-500"} />
+                  <span>{cat.l}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
 
       {/* 4. Mutaxassis xizmati yakunlangan va hali baholanmagan chaqiruvlar bo'lsa */}
       {calls.filter((c) => c.status === "completed" && !c.stars).length > 0 && (
@@ -289,7 +292,7 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
           </p>
         </div>
       ) : (
-        <ul className="mt-3 grid grid-cols-1 web:grid-cols-2 gap-3.5">
+        <ul className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {filteredSpecialists.map((s) => (
             <li key={s.id}>
               <SpecialistCard
@@ -301,6 +304,7 @@ export default function SpecialistsClient({ initialRole = "all" }: { initialRole
           ))}
         </ul>
       )}
+      </div>
 
       {/* 7. MUTAXASSISNING TO'LIQ PROFILI (SCREEN 2) */}
       {selectedProfile && (

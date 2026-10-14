@@ -13,6 +13,7 @@ import {
   User,
   Car,
   ArrowLeft,
+  ArrowRight,
   Share2,
 } from "lucide-react";
 
@@ -228,8 +229,8 @@ export function SpecialistProfileModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[190] flex justify-center bg-neutral-900/50 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="w-full max-w-[500px] h-[100dvh] flex flex-col bg-white overflow-hidden shadow-2xl">
+    <div className="fixed inset-0 z-[190] flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="w-full max-w-xl max-h-[92vh] flex flex-col bg-white rounded-3xl overflow-hidden shadow-2xl border border-black/10">
         {/* 1. Header (Sticky Top Bar) */}
         <div className="shrink-0 flex items-center justify-between px-5 pt-4 pb-3 border-b border-neutral-100 bg-white z-10">
           <button
@@ -340,8 +341,15 @@ export function SpecialistProfileModal({
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 border border-blue-200/70 shadow-xs group-hover:bg-blue-100 group-active:scale-90 transition">
                 <Star size={19} className="fill-blue-500" />
               </div>
-              <span className="text-[11px] font-bold text-neutral-600">
-                {specialist.ratingAvg ? `★ ${specialist.ratingAvg.toFixed(1)}` : "Baholash"}
+              <span className="text-[11px] font-bold text-neutral-600 flex items-center gap-1">
+                {specialist.ratingAvg ? (
+                  <>
+                    <Star size={11} className="fill-amber-400 text-amber-400" />
+                    <span>{specialist.ratingAvg.toFixed(1)}</span>
+                  </>
+                ) : (
+                  "Baholash"
+                )}
               </span>
             </button>
           </div>
@@ -451,7 +459,7 @@ export function SpecialistProfileModal({
               className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-[#039e1e] py-3.5 text-[15px] font-black text-white shadow-md hover:bg-[#028518] active:scale-[0.99] transition"
             >
               <span>Mutaxassisni chaqirish</span>
-              <span>➔</span>
+              <ArrowRight size={16} />
             </button>
           )}
         </div>

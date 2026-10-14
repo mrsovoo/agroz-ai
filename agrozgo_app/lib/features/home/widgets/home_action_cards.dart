@@ -100,8 +100,8 @@ class _ActionCard extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           child: Container(
-            constraints: const BoxConstraints(minHeight: 125),
-            padding: const EdgeInsets.all(AppSpacing.md),
+            constraints: const BoxConstraints(minHeight: 92),
+            padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
             child: Stack(
               children: [
                 // Top-left Titles
@@ -116,19 +116,20 @@ class _ActionCard extends StatelessWidget {
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.3,
+                          fontFamily: 'PingFang SC',
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.2,
                         ),
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.xs),
+                    const SizedBox(height: 2),
                     Text(
                       subtitle,
                       style: const TextStyle(
                         color: Colors.white70,
-                        fontSize: 11,
+                        fontSize: 10.5,
                         fontWeight: FontWeight.w500,
-                        height: 1.25,
+                        height: 1.2,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -138,11 +139,11 @@ class _ActionCard extends StatelessWidget {
 
                 // Bottom-right decorative icon bubble
                 Positioned(
-                  right: -8,
-                  bottom: -8,
+                  right: -6,
+                  bottom: -6,
                   child: Container(
-                    width: 58,
-                    height: 58,
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
                       color: bubbleColor,
                       shape: BoxShape.circle,
@@ -151,7 +152,7 @@ class _ActionCard extends StatelessWidget {
                     child: Icon(
                       icon,
                       color: Colors.white,
-                      size: 28,
+                      size: 22,
                     ),
                   ),
                 ),

@@ -59,6 +59,12 @@ export default function BottomNav() {
     }
   }, [pathname]);
 
+  // Web muhitida (kompyuter, planshet yoki mobil brauzerda) BottomNav mutlaqo ko'rinmaydi!
+  // Bu faqat va faqat Telegram Mini App ichida dehqonlar uchun ishlaydi.
+  if (typeof window !== "undefined" && document.documentElement.classList.contains("is-web")) {
+    return null;
+  }
+
   // Ob-havo ichki sahifasida, mutaxassis chaqirish modalida yoki savat ochiqligida pastki nav bar ko'rinmasligi kerak
   if (
     pathname === "/ob-havo" ||

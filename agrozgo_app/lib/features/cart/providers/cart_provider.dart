@@ -12,6 +12,8 @@ class CartState {
   int get selectedCount =>
       items.where((it) => it.isSelected).fold(0, (sum, it) => sum + it.quantity);
 
+  List<CartItem> get selectedItems => items.where((it) => it.isSelected).toList();
+
   int get selectedSubtotal =>
       items.where((it) => it.isSelected).fold(0, (sum, it) => sum + ((it.oldPrice ?? it.price) * it.quantity));
 

@@ -1,11 +1,142 @@
-import { requireAuth } from "../middleware/auth";
+import { requireAuth } from "../middleware/auth.js";
 import { Router, Request, Response } from "express";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { notificationReads } from "../db/schema.js";
+import { broadcasts, notificationReads } from "../db/schema.js";
 import { getUserFromReq } from "../lib/user-auth.js";
 
 const router = Router();
+
+/**
+ * GET /api/notifications
+ * Barcha bildirishnomalar (Super admin broadcastlari + mavsumiy / tizim xabarlari) ro'yxatini qaytaradi.
+ */
+router.get("/", async (req: Request, res: Response) => {
+  try {
+    const user = await getUserFromReq(req).catch(() => null);
+
+    // 1. Super admin broadcasts
+    const broadcastRows = await db
+      .select()
+      .from(broadcasts)
+      .orderBy(desc(broadcasts.createdAt))
+      .limit(30)
+      .catch(() => []);
+
+    const items: Array<{
+      id: string;
+      type: "weather" | "crop" | "animal" | "order" | "system";
+      severity: "critical" | "warning" | "info" | "success";
+      title: string;
+      body: string;
+      actionUrl?: string | null;
+      actionLabel?: string | null;
+      createdAt: string;
+      timestamp: number;
+    }> = [];
+
+    for (const b of broadcastRows) {
+      const text = (b.text || "").trim();
+      const firstLine = text.split("\n")[0].replace(/^[#*_\s]+/, "").trim();
+      const title = firstLine.length >= 4 && firstLine.length <= 80 ? firstLine : "📢 AgrozGO xabarnomasi";
+      const body = text;
+
+      let type: "weather" | "crop" | "animal" | "order" | "system" = "system";
+      const lower = text.toLowerCase();
+      if (lower.includes("shamol") || lower.includes("yomg'ir") || lower.includes("ob-havo") || lower.includes("sovuq") || lower.includes("harorat")) {
+        type = "weather";
+      } else if (lower.includes("ekin") || lower.includes("hosil") || lower.includes("paxta") || lower.includes("bug'doy") || lower.includes("o'g'it")) {
+        type = "crop";
+      } else if (lower.includes("chorva") || lower.includes("mol") || lower.includes("veterinar") || lower.includes("emlash")) {
+        type = "animal";
+      }
+
+      let severity: "critical" | "warning" | "info" | "success" = "info";
+      if (lower.includes("xavf") || lower.includes("ogohlantirish") || lower.includes("diqqat")) {
+        severity = "warning";
+      }
+
+      const createdAtDate = b.createdAt ? new Date(b.createdAt) : new Date();
+
+      items.push({
+        id: `broadcast-${b.id}`,
+        type,
+        severity,
+        title,
+        body,
+        actionUrl: b.buttonUrl || null,
+        actionLabel: b.buttonText || null,
+        createdAt: createdAtDate.toISOString(),
+        timestamp: createdAtDate.getTime(),
+      });
+    }
+
+    // 2. Barqaror, o'zgarmas sana va vaqtga ega tizim xabarlari
+    const baselineItems = [
+      {
+        id: "weather-wind-alert-12oct",
+        type: "weather" as const,
+        severity: "warning" as const,
+        title: "💨 Kuchli shamol ogohlantirishi (6 m/s)",
+        body: "Shamol tezligi yuqori bo'lgani sababli kimyoviy preparatlar purkash tavsiya etilmaydi. Dori shamolda tarqab ketib samarasiz bo'ladi.",
+        createdAt: new Date("2026-10-12T14:30:00.000Z").toISOString(),
+        timestamp: new Date("2026-10-12T14:30:00.000Z").getTime(),
+      },
+      {
+        id: "season-crop-autumn-11oct",
+        type: "crop" as const,
+        severity: "info" as const,
+        title: "🌾 Kuzgi shudgor va mevali bog'larni parvarishlash",
+        body: "Hosil yig'ishtirilgach, daraxt tanalarini oqlash, quruq shoxlarni kesish va tuproqqa fosforli-kaliyli o'g'it solish lozim.",
+        actionUrl: "/medicines",
+        actionLabel: "Dorilar katalogi",
+        createdAt: new Date("2026-10-11T10:15:00.000Z").toISOString(),
+        timestamp: new Date("2026-10-11T10:15:00.000Z").getTime(),
+      },
+      {
+        id: "season-animal-autumn-10oct",
+        type: "animal" as const,
+        severity: "info" as const,
+        title: "🐄 Chorva mollarni sovuqqa tayyorlash va profilaktik emlash",
+        body: "Kuzda havo harorati o'zgarishi sababli qoramol va qo'ylarda nafas yo'li kasalliklari ko'payadi. Molxona tirqishlarini yopib, quruq to'shama soling.",
+        actionUrl: "/specialists",
+        actionLabel: "Veterinarlar",
+        createdAt: new Date("2026-10-10T16:45:00.000Z").toISOString(),
+        timestamp: new Date("2026-10-10T16:45:00.000Z").getTime(),
+      },
+      {
+        id: "system-status-welcome-08oct",
+        type: "system" as const,
+        severity: "info" as const,
+        title: "📱 AgrozGO xizmatlari faol",
+        body: "Dorilar yetkazib berish, veterinarlar va agronomlar chaqiruvi hamda sun'iy intellekt agro-tashxisi 24/7 ishlamoqda.",
+        createdAt: new Date("2026-10-08T09:00:00.000Z").toISOString(),
+        timestamp: new Date("2026-10-08T09:00:00.000Z").getTime(),
+      },
+    ];
+
+    const combined = [...items, ...baselineItems].sort((a, b) => b.timestamp - a.timestamp);
+
+    let readIds: string[] = [];
+    if (user) {
+      const readRows = await db
+        .select({ notificationKey: notificationReads.notificationKey })
+        .from(notificationReads)
+        .where(eq(notificationReads.userId, user.id))
+        .catch(() => []);
+      readIds = readRows.map((r) => r.notificationKey);
+    }
+
+    return res.json({
+      ok: true,
+      notifications: combined,
+      readIds,
+    });
+  } catch (err: any) {
+    console.error("[GET /api/notifications error]:", err);
+    return res.status(500).json({ ok: false, error: "Bildirishnomalarni olishda xatolik" });
+  }
+});
 
 /**
  * GET /api/notifications/read-status

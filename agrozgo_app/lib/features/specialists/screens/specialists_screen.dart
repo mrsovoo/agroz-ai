@@ -50,7 +50,10 @@ class _SpecialistsScreenState extends ConsumerState<SpecialistsScreen> {
           children: [
             Column(
               children: [
-                const HomeHeader(),
+                const HomeHeader(
+                  showFullHeader: false,
+                  showSavedInsteadOfNotification: true,
+                ),
                 CatalogSearchBar(
                   controller: _controller,
                   onQueryChanged: (v) => setState(() => _query = v),

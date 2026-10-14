@@ -95,8 +95,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Header checks
-      expect(find.text('AGROZ'), findsOneWidget);
-      expect(find.text('GO'), findsOneWidget);
+      expect(find.bySemanticsLabel('AGROZGO'), findsOneWidget);
       expect(find.text(AppStrings.defaultLocation), findsOneWidget);
 
       // Weather checks
@@ -140,7 +139,7 @@ void main() {
       await tester.pump();
 
       expect(find.byType(HomeScreen), findsOneWidget);
-      expect(find.text('AGROZ'), findsOneWidget);
+      expect(find.bySemanticsLabel('AGROZGO'), findsOneWidget);
       expect(find.text(AppStrings.medicinesSectionTitle), findsWidgets);
     });
 

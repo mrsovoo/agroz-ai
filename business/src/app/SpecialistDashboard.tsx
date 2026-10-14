@@ -11,6 +11,11 @@ import {
   Phone,
   Power,
   Navigation,
+  Sparkles,
+  ShieldCheck,
+  UserCheck,
+  ArrowUpRight,
+  Clock,
 } from "lucide-react";
 import { haptic } from "@/lib/telegram";
 
@@ -74,14 +79,14 @@ export default function SpecialistDashboard({
     };
   }, [calls]);
 
-  // Faqat shoshilinch yangi so'rovlar (maksimal 2 ta)
+  // Faqat shoshilinch yangi so'rovlar (maksimal 4 ta)
   const pendingCalls = useMemo(() => {
-    return calls.filter((c) => c.status === "yangi").slice(0, 2);
+    return calls.filter((c) => c.status === "yangi").slice(0, 4);
   }, [calls]);
 
-  // Hozir yo'lda/jarayondagi faol chaqiruvlar (maksimal 2 ta)
+  // Hozir yo'lda/jarayondagi faol chaqiruvlar (maksimal 4 ta)
   const activeCalls = useMemo(() => {
-    return calls.filter((c) => c.status === "qabul_qilindi").slice(0, 2);
+    return calls.filter((c) => c.status === "qabul_qilindi").slice(0, 4);
   }, [calls]);
 
   const isVet = Boolean(
@@ -89,293 +94,300 @@ export default function SpecialistDashboard({
   );
 
   return (
-    <div className="space-y-3.5 px-4 pb-20 animate-in fade-in duration-150">
-      {/* 1. Mutaxassis Qisqa Profil Kartasi */}
-      <div className="flex items-center justify-between rounded-2xl bg-white border border-zinc-200 p-3.5 shadow-2xs">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-zinc-100 text-2xl shrink-0">
-            {isVet ? "🐾" : "🌱"}
+    <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6">
+      {/* 1. Mutaxassis Boshqaruv Kartasi */}
+      <div className="rounded-2xl border border-[#E5E5EA] bg-white p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#1D1D1F] text-white font-medium text-sm shrink-0">
+            <UserCheck size={18} />
           </div>
           <div className="min-w-0">
-            <h2 className="text-sm font-black text-zinc-900 truncate">{partner.name}</h2>
-            <p className="text-[11px] font-semibold text-zinc-500 truncate">
-              {partner.specialty || (isVet ? "Veterinar" : "Agronom")}
-              {partner.experienceYears ? ` · ${partner.experienceYears} yil staj` : ""}
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-[#1D1D1F] truncate">{partner.name}</h2>
+              <span className="rounded-full bg-[#F5F5F7] text-[#1D1D1F] px-2 py-0.5 text-[10px] font-medium shrink-0">
+                Faol
+              </span>
+            </div>
+            <p className="text-xs text-[#86868B] mt-0.5 flex flex-wrap items-center gap-2">
+              <span>{partner.specialty || (isVet ? "Veterinariya mutaxassisi" : "Agronom maslahatchi")}</span>
+              {partner.experienceYears ? (
+                <>
+                  <span className="text-[#E5E5EA]">•</span>
+                  <span className="text-[#1D1D1F] font-mono">{partner.experienceYears} yil tajriba</span>
+                </>
+              ) : null}
             </p>
           </div>
         </div>
 
-        {/* Reyting */}
-        <div className="shrink-0 flex items-center gap-1 rounded-xl bg-amber-50 px-2.5 py-1 text-xs font-black text-amber-800 border border-amber-200">
-          <Star size={12} className="fill-amber-400 text-amber-400" />
-          <span>{partner.rating?.avg ? partner.rating.avg.toFixed(1) : "5.0"}</span>
+        <div className="flex items-center gap-2.5 shrink-0">
+          {/* Reyting */}
+          <div className="flex items-center gap-1 rounded-full bg-[#F5F5F7] px-3 py-1.5 text-xs font-mono font-medium text-[#1D1D1F]">
+            <Star size={13} className="fill-[#1D1D1F] text-[#1D1D1F]" />
+            <span>{partner.rating?.avg ? partner.rating.avg.toFixed(1) : "5.0"}</span>
+          </div>
+
+          {/* 1-Tap Bandlik Kaliti */}
+          <button
+            type="button"
+            onClick={() => {
+              haptic("medium");
+              onToggleBusy();
+            }}
+            className={`flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-medium transition active:scale-95 border ${
+              isBusy
+                ? "bg-white text-[#1D1D1F] border-[#E5E5EA] hover:bg-[#F5F5F7]"
+                : "bg-[#1D1D1F] text-white border-[#1D1D1F] hover:bg-black"
+            }`}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${isBusy ? "bg-amber-500" : "bg-emerald-400"}`} />
+            <span>{isBusy ? "Band" : "Qabulga tayyor"}</span>
+          </button>
         </div>
       </div>
 
-      {/* 2. Holat (Band / Bo'sh) - 1-Bosishda tushunarli tugma */}
-      <div
-        className={`flex items-center justify-between gap-3 rounded-2xl border p-3.5 transition ${
-          isBusy
-            ? "bg-red-50/80 border-red-200"
-            : "bg-emerald-50/80 border-emerald-200"
-        }`}
-      >
-        <div className="flex items-center gap-2.5 min-w-0">
-          <span className="relative flex h-3 w-3 shrink-0">
-            <span
-              className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                isBusy ? "bg-red-400 animate-ping" : "bg-emerald-400 animate-ping"
-              }`}
-            />
-            <span
-              className={`relative inline-flex h-3 w-3 rounded-full ${
-                isBusy ? "bg-red-600" : "bg-emerald-600"
-              }`}
-            />
-          </span>
-          <div className="min-w-0">
-            <p className="text-xs font-black text-zinc-900">
-              {isBusy ? "Hozirda bandman" : "Qabulga tayyorman"}
-            </p>
-            <p className="text-[11px] text-zinc-500 font-medium">
-              {isBusy ? "Mijozlarga 'Chaqiruvda' deb ko'rinasiz" : "Mijozlar sizni chaqira oladi"}
-            </p>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            haptic("medium");
-            onToggleBusy();
-          }}
-          className={`shrink-0 flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold text-white shadow-2xs active:scale-95 transition ${
-            isBusy
-              ? "bg-emerald-600 hover:bg-emerald-700"
-              : "bg-red-600 hover:bg-red-700"
-          }`}
-        >
-          <Power size={13} />
-          <span>{isBusy ? "Bo'shatish" : "Band qilish"}</span>
-        </button>
-      </div>
-
-      {/* 3. 3 ta Asosiy Ko'rsatkich (Yangi, Jarayonda, Yakunlangan) */}
-      <div className="grid grid-cols-3 gap-2">
-        {/* Yangi */}
+      {/* 2. 3 ta Asosiy Ko'rsatkich (KPI Kartochkalar) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Yangi Chaqiruvlar */}
         <button
           type="button"
           onClick={() => {
             haptic("light");
             onGoCalls("yangi");
           }}
-          className={`rounded-2xl border p-3 text-left transition active:scale-95 ${
-            stats.pendingCount > 0
-              ? "bg-amber-50 border-amber-300"
-              : "bg-white border-zinc-200"
-          }`}
+          className="rounded-2xl border border-[#E5E5EA] bg-white p-4 text-left transition hover:border-[#1D1D1F] active:scale-98"
         >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-zinc-500">Yangi</span>
-            <PhoneCall size={13} className={stats.pendingCount > 0 ? "text-amber-600" : "text-zinc-400"} />
+          <div className="flex items-center justify-between text-xs font-medium text-[#86868B]">
+            <span className="flex items-center gap-1.5">
+              <PhoneCall size={14} className="text-[#1D1D1F]" />
+              <span>Yangi so&apos;rovlar</span>
+            </span>
+            <ArrowUpRight size={13} className="text-[#86868B]" />
           </div>
-          <p className={`mt-1.5 text-xl font-black ${stats.pendingCount > 0 ? "text-amber-700" : "text-zinc-900"}`}>
-            {stats.pendingCount}
+          <p className="mt-2 text-2xl font-semibold font-mono text-[#1D1D1F]">
+            {stats.pendingCount} <span className="text-xs font-normal text-[#86868B] font-sans">ta</span>
           </p>
+          <p className="mt-1 text-[11px] text-[#86868B]">Kutilayotgan so&apos;rovlar</p>
         </button>
 
-        {/* Jarayonda */}
+        {/* Jarayondagi Chaqiruvlar */}
         <button
           type="button"
           onClick={() => {
             haptic("light");
             onGoCalls("qabul_qilindi");
           }}
-          className={`rounded-2xl border p-3 text-left transition active:scale-95 ${
-            stats.inProgressCount > 0
-              ? "bg-blue-50 border-blue-300"
-              : "bg-white border-zinc-200"
-          }`}
+          className="rounded-2xl border border-[#E5E5EA] bg-white p-4 text-left transition hover:border-[#1D1D1F] active:scale-98"
         >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-zinc-500">Jarayonda</span>
-            <Car size={13} className={stats.inProgressCount > 0 ? "text-blue-600" : "text-zinc-400"} />
+          <div className="flex items-center justify-between text-xs font-medium text-[#86868B]">
+            <span className="flex items-center gap-1.5">
+              <Car size={14} className="text-[#1D1D1F]" />
+              <span>Yo&apos;lda / Jarayonda</span>
+            </span>
+            <ArrowUpRight size={13} className="text-[#86868B]" />
           </div>
-          <p className={`mt-1.5 text-xl font-black ${stats.inProgressCount > 0 ? "text-blue-700" : "text-zinc-900"}`}>
-            {stats.inProgressCount}
+          <p className="mt-2 text-2xl font-semibold font-mono text-[#1D1D1F]">
+            {stats.inProgressCount} <span className="text-xs font-normal text-[#86868B] font-sans">ta</span>
           </p>
+          <p className="mt-1 text-[11px] text-[#86868B]">Faol qabul qilingan</p>
         </button>
 
-        {/* Yakunlangan */}
+        {/* Yakunlangan Chaqiruvlar */}
         <button
           type="button"
           onClick={() => {
             haptic("light");
             onGoCalls("bajarildi");
           }}
-          className="rounded-2xl border border-zinc-200 bg-white p-3 text-left transition active:scale-95"
+          className="rounded-2xl border border-[#E5E5EA] bg-white p-4 text-left transition hover:border-[#1D1D1F] active:scale-98"
         >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-zinc-500">Bajarildi</span>
-            <CheckCircle2 size={13} className="text-emerald-600" />
+          <div className="flex items-center justify-between text-xs font-medium text-[#86868B]">
+            <span className="flex items-center gap-1.5">
+              <CheckCircle2 size={14} className="text-[#1D1D1F]" />
+              <span>Yakunlangan</span>
+            </span>
+            <ArrowUpRight size={13} className="text-[#86868B]" />
           </div>
-          <p className="mt-1.5 text-xl font-black text-zinc-900">
-            {stats.completedCount}
+          <p className="mt-2 text-2xl font-semibold font-mono text-[#1D1D1F]">
+            {stats.completedCount} <span className="text-xs font-normal text-[#86868B] font-sans">ta</span>
           </p>
+          <p className="mt-1 text-[11px] text-[#86868B]">Bajarilgan chaqiruvlar</p>
         </button>
       </div>
 
-      {/* 4. Yangi So'rovlar (Faqat bor bo'lganda ko'rinadi) */}
-      {pendingCalls.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-black uppercase text-amber-900 tracking-wider">
-              Yangi so&apos;rovlar ({pendingCalls.length})
-            </span>
+      {/* 3. Chaqiruvlar Ro'yxati (Desktopda 2-ustunli split) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Chap: Shoshilinch Yangi So'rovlar */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-semibold text-[#1D1D1F] flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#1D1D1F]" />
+              <span>Yangi chaqiruvlar ({stats.pendingCount})</span>
+            </h3>
             <button
               type="button"
               onClick={() => onGoCalls("yangi")}
-              className="text-[11px] font-bold text-amber-700 hover:underline"
+              className="text-xs text-[#86868B] hover:text-[#1D1D1F] flex items-center gap-0.5"
             >
-              Barchasi →
+              <span>Barchasi</span>
+              <ChevronRight size={12} />
             </button>
           </div>
 
-          <div className="space-y-2">
-            {pendingCalls.map((c) => (
-              <div
-                key={c.id}
-                className="rounded-2xl border border-amber-200 bg-white p-3.5 shadow-2xs space-y-2.5"
-              >
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-extrabold text-zinc-900">#{c.id} · {c.customerName}</span>
-                  <span className="text-[10px] font-mono text-zinc-400">
-                    {new Date(c.createdAt).toLocaleTimeString("uz-UZ", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                </div>
-
-                <p className="text-xs text-zinc-700 bg-amber-50/70 p-2 rounded-xl font-medium">
-                  {c.problem}
-                </p>
-
-                {c.address && (
-                  <div className="flex items-center gap-1 text-[11px] text-zinc-500 truncate">
-                    <MapPin size={12} className="shrink-0 text-zinc-400" />
-                    <span className="truncate">{c.address}</span>
+          {pendingCalls.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-[#E5E5EA] bg-white p-8 text-center text-[#86868B]">
+              <PhoneCall size={28} className="mx-auto mb-2 opacity-30 text-[#1D1D1F]" />
+              <p className="text-xs font-medium text-[#1D1D1F]">Yangi chaqiruvlar yo&apos;q</p>
+              <p className="text-[11px] text-[#86868B] mt-0.5">So&apos;rov tushganda shu yerda ko&apos;rinadi</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {pendingCalls.map((c) => (
+                <div
+                  key={c.id}
+                  className="rounded-2xl border border-[#E5E5EA] bg-white p-4 shadow-xs space-y-3"
+                >
+                  <div className="flex items-center justify-between border-b border-[#F5F5F7] pb-2">
+                    <span className="font-medium text-xs text-[#1D1D1F]">
+                      Chaqiruv #{c.id} · <span>{c.customerName}</span>
+                    </span>
+                    <span className="text-[11px] font-mono text-[#86868B]">
+                      {new Date(c.createdAt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })}
+                    </span>
                   </div>
-                )}
 
-                <div className="flex gap-2 pt-0.5">
-                  <button
-                    type="button"
-                    disabled={actionBusyId === c.id}
-                    onClick={() => onCallAction(c.id, "accept")}
-                    className="flex-1 rounded-xl bg-emerald-600 py-2 text-center text-xs font-bold text-white shadow-2xs hover:bg-emerald-700 active:scale-95 transition disabled:opacity-50"
-                  >
-                    Qabul qilish
-                  </button>
-                  <button
-                    type="button"
-                    disabled={actionBusyId === c.id}
-                    onClick={() => onCallAction(c.id, "reject")}
-                    className="rounded-xl bg-zinc-100 px-3 py-2 text-center text-xs font-bold text-red-600 hover:bg-red-50 active:scale-95 transition disabled:opacity-50"
-                  >
-                    Rad etish
-                  </button>
+                  <p className="text-xs text-[#1D1D1F] bg-[#FBFBFD] border border-[#E5E5EA] p-3 rounded-xl leading-relaxed">
+                    {c.problem}
+                  </p>
+
+                  {c.address && (
+                    <div className="flex items-center justify-between text-xs text-[#86868B] bg-[#F5F5F7] p-2 rounded-xl">
+                      <span className="truncate flex items-center gap-1.5">
+                        <MapPin size={12} className="text-[#86868B] shrink-0" />
+                        <span className="truncate">{c.address}</span>
+                      </span>
+                      <a
+                        href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(c.address)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="shrink-0 flex items-center gap-1 text-[#1D1D1F] font-medium hover:underline ml-2"
+                      >
+                        <Navigation size={11} />
+                        <span>Xarita</span>
+                      </a>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      type="button"
+                      disabled={actionBusyId === c.id}
+                      onClick={() => onCallAction(c.id, "accept")}
+                      className="flex-1 rounded-full bg-[#1D1D1F] hover:bg-black py-2 text-center text-xs font-medium text-white transition active:scale-95 disabled:opacity-50"
+                    >
+                      Qabul qilish
+                    </button>
+                    <button
+                      type="button"
+                      disabled={actionBusyId === c.id}
+                      onClick={() => onCallAction(c.id, "reject")}
+                      className="rounded-full bg-[#F5F5F7] px-4 py-2 text-center text-xs font-medium text-[#86868B] hover:text-[#1D1D1F] hover:bg-[#E5E5EA] transition active:scale-95 disabled:opacity-50"
+                    >
+                      Rad etish
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
-      )}
 
-      {/* 5. Jarayondagi Faol Chaqiruvlar (Faqat bor bo'lganda ko'rinadi) */}
-      {activeCalls.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-black uppercase text-blue-900 tracking-wider">
-              Yo&apos;lda / Faol chaqiruvlar ({activeCalls.length})
-            </span>
+        {/* O'ng: Jarayondagi / Faol Chaqiruvlar */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-semibold text-[#1D1D1F] flex items-center gap-2">
+              <Car size={14} className="text-[#1D1D1F]" />
+              <span>Yo&apos;lda / Faol chaqiruvlar ({stats.inProgressCount})</span>
+            </h3>
             <button
               type="button"
               onClick={() => onGoCalls("qabul_qilindi")}
-              className="text-[11px] font-bold text-blue-700 hover:underline"
+              className="text-xs text-[#86868B] hover:text-[#1D1D1F] flex items-center gap-0.5"
             >
-              Barchasi →
+              <span>Barchasi</span>
+              <ChevronRight size={12} />
             </button>
           </div>
 
-          <div className="space-y-2">
-            {activeCalls.map((c) => (
-              <div
-                key={c.id}
-                className="rounded-2xl border border-blue-200 bg-white p-3.5 shadow-2xs space-y-2.5"
-              >
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-extrabold text-zinc-900">#{c.id} · {c.customerName}</span>
-                  <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-extrabold text-blue-800">
-                    Jarayonda
-                  </span>
-                </div>
-
-                {c.address && (
-                  <div className="flex items-center justify-between gap-2 text-xs text-zinc-700 bg-zinc-50 p-2 rounded-xl">
-                    <span className="truncate">{c.address}</span>
-                    <a
-                      href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(c.address)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="shrink-0 flex items-center gap-1 text-blue-600 font-bold hover:underline"
-                    >
-                      <Navigation size={11} />
-                      <span>Xarita</span>
-                    </a>
+          {activeCalls.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-[#E5E5EA] bg-white p-8 text-center text-[#86868B]">
+              <Car size={28} className="mx-auto mb-2 opacity-30 text-[#1D1D1F]" />
+              <p className="text-xs font-medium text-[#1D1D1F]">Faol chaqiruv yo&apos;q</p>
+              <p className="text-[11px] text-[#86868B] mt-0.5">Qabul qilingan chaqiruvlar shu yerda chiqadi</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {activeCalls.map((c) => (
+                <div
+                  key={c.id}
+                  className="rounded-2xl border border-[#E5E5EA] bg-white p-4 shadow-xs space-y-3"
+                >
+                  <div className="flex items-center justify-between border-b border-[#F5F5F7] pb-2">
+                    <span className="font-medium text-xs text-[#1D1D1F]">
+                      Chaqiruv #{c.id} · <span>{c.customerName}</span>
+                    </span>
+                    <span className="rounded-full bg-[#F5F5F7] text-[#1D1D1F] px-2 py-0.5 text-[10px] font-medium">
+                      Jarayonda
+                    </span>
                   </div>
-                )}
 
-                <div className="flex gap-2">
-                  {c.customerPhone && (
-                    <a
-                      href={`tel:${c.customerPhone}`}
-                      className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 py-2 text-xs font-bold hover:bg-emerald-100 transition"
-                    >
-                      <Phone size={13} />
-                      <span>{c.customerPhone}</span>
-                    </a>
+                  <p className="text-xs text-[#1D1D1F] bg-[#FBFBFD] border border-[#E5E5EA] p-2.5 rounded-xl">
+                    {c.problem}
+                  </p>
+
+                  {c.address && (
+                    <div className="flex items-center justify-between text-xs text-[#86868B] bg-[#F5F5F7] p-2 rounded-xl">
+                      <span className="truncate flex items-center gap-1.5">
+                        <MapPin size={12} className="text-[#86868B] shrink-0" />
+                        <span className="truncate">{c.address}</span>
+                      </span>
+                      <a
+                        href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(c.address)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="shrink-0 flex items-center gap-1 text-[#1D1D1F] font-medium hover:underline ml-2"
+                      >
+                        <Navigation size={11} />
+                        <span>Xarita</span>
+                      </a>
+                    </div>
                   )}
-                  <button
-                    type="button"
-                    disabled={actionBusyId === c.id}
-                    onClick={() => onCallAction(c.id, "done")}
-                    className="flex-1 rounded-xl bg-zinc-900 py-2 text-center text-xs font-bold text-white shadow-2xs hover:bg-zinc-800 active:scale-95 transition disabled:opacity-50"
-                  >
-                    Yakunlash
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
-      {/* 6. Barcha chaqiruvlarga tezkor o'tish */}
-      <button
-        type="button"
-        onClick={() => {
-          haptic("light");
-          onGoCalls("all");
-        }}
-        className="w-full flex items-center justify-between rounded-2xl border border-zinc-200 bg-white p-3.5 text-left shadow-2xs hover:border-zinc-300 active:scale-[0.99] transition"
-      >
-        <div>
-          <p className="text-xs font-black text-zinc-900">Barcha chaqiruvlar tarixi</p>
-          <p className="text-[11px] text-zinc-400 font-medium">Jami: {calls.length} ta chaqiruv</p>
+                  <div className="flex gap-2 pt-1">
+                    {c.customerPhone && (
+                      <a
+                        href={`tel:${c.customerPhone}`}
+                        className="flex-1 flex items-center justify-center gap-1.5 rounded-full border border-[#E5E5EA] bg-white text-[#1D1D1F] py-2 text-xs font-medium hover:bg-[#F5F5F7] transition"
+                      >
+                        <Phone size={12} />
+                        <span>{c.customerPhone}</span>
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      disabled={actionBusyId === c.id}
+                      onClick={() => onCallAction(c.id, "done")}
+                      className="flex-1 rounded-full bg-[#1D1D1F] hover:bg-black py-2 text-center text-xs font-medium text-white transition active:scale-95 disabled:opacity-50"
+                    >
+                      Yakunlash
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-        <ChevronRight size={16} className="text-zinc-400" />
-      </button>
+      </div>
     </div>
   );
 }
