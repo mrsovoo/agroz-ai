@@ -163,6 +163,7 @@ export const specialists = pgTable("specialists", {
   subscriptionStatus: varchar("subscription_status", { length: 32 }).default("trial").notNull(), // trial | active | expired
   paidUntil: timestamp("paid_until"),
   trialWarningSentAt: timestamp("trial_warning_sent_at"),
+  passwordHash: varchar("password_hash", { length: 255 }),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

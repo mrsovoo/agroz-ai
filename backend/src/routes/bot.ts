@@ -24,6 +24,7 @@ import { cleanText, normalizePhone, parseSafePrice } from "../lib/validate.js";
 import { purgeUserAccount } from "../lib/user-auth.js";
 import { escapeHtml } from "../lib/tg-escape.js";
 import { randomBytes, randomInt } from "node:crypto";
+import { hashPassword, verifyPassword } from "../lib/password.js";
 
 const router = Router();
 const API_BASE = "https://api.telegram.org";
@@ -1947,10 +1948,168 @@ router.get("/partner/check-login-otp", async (req, res) => {
   }
 });
 
-// POST /api/bot/partner/web-login (Eski formatni saqlab qolgan holda)
+// POST /api/bot/partner/request-reset-password-otp (Parolni yangilash uchun Telegram OTP so'rash)
+router.post("/partner/request-reset-password-otp", async (req, res) => {
+  try {
+    const { phone } = req.body || {};
+    const cleanPhone = normalizePhone(phone || "");
+    if (!cleanPhone) {
+      return res.status(400).json({ ok: false, error: "Telefon raqamingizni to'liq kiriting" });
+    }
+
+    const spec = (
+      await db
+        .select()
+        .from(specialists)
+        .where(and(eq(specialists.phone, cleanPhone), eq(specialists.isActive, true)))
+        .limit(1)
+    )[0];
+
+    if (!spec) {
+      return res.status(404).json({
+        ok: false,
+        error: "Ushbu telefon raqam bilan ro'yxatdan o'tgan hamkor topilmadi",
+      });
+    }
+
+    const otpCode = String(randomInt(100000, 999999));
+    const otpToken = `pwd_reset_${randomBytes(20).toString("hex")}`;
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 daqiqa
+
+    // Eski kiritilmagan kodlarni bekor qilish
+    await db
+      .update(otpCodes)
+      .set({ used: true })
+      .where(and(eq(otpCodes.phone, cleanPhone), eq(otpCodes.used, false)));
+
+    // Yangi kodni saqlash
+    await db.insert(otpCodes).values({
+      phone: cleanPhone,
+      code: otpCode,
+      token: otpToken,
+      telegramId: spec.telegramId,
+      expiresAt,
+    });
+
+    // Telegram orqali xabar yuborish
+    const botUser = partnerBotUsername() || "agroz_auth_bot";
+    if (spec.telegramId && !spec.botBlocked) {
+      sendToSpecialist(
+        spec.telegramId,
+        `🔐 <b>Agroz Business: Parolni yangilash</b>\n\n` +
+          `Hurmatli <b>${escapeHtml(spec.name)}</b>, boshqaruv kabinetingiz parolini yangilash uchun tasdiqlash kodingiz:\n\n` +
+          `🔑 Tasdiqlash kodi: <code>${otpCode}</code>\n\n` +
+          `<i>Ushbu kod 5 daqiqa davomida amal qiladi. Begonalarga bermang!</i>`
+      ).catch((e) => console.error("[sendToSpecialist reset pwd error]:", e));
+    }
+
+    return res.json({
+      ok: true,
+      token: otpToken,
+      botUsername: botUser,
+      phone: cleanPhone,
+    });
+  } catch (err: any) {
+    console.error("[partner:request-reset-password-otp error]:", err);
+    res.status(500).json({ ok: false, error: "Parolni yangilash kodini yuborishda xatolik yuz berdi" });
+  }
+});
+
+// POST /api/bot/partner/reset-password (Telegram orqali tasdiqlab, BAZADA yangi parol o'rnatish)
+router.post("/partner/reset-password", async (req, res) => {
+  try {
+    const { phone, code, newPassword } = req.body || {};
+    const cleanPhone = normalizePhone(phone || "");
+    const cleanCode = String(code || "").trim();
+    const cleanPass = String(newPassword || "").trim();
+
+    if (!cleanPhone) {
+      return res.status(400).json({ ok: false, error: "Telefon raqami kiritilmadi" });
+    }
+    if (!cleanCode || cleanCode.length < 4) {
+      return res.status(400).json({ ok: false, error: "Telegram tasdiqlash kodi to'liq kiritilmadi" });
+    }
+    if (!cleanPass || cleanPass.length < 6) {
+      return res.status(400).json({ ok: false, error: "Yangi parol kamida 6 ta belgidan iborat bo'lishi kerak" });
+    }
+
+    // Kodni tekshirish
+    const otp = (
+      await db
+        .select()
+        .from(otpCodes)
+        .where(
+          and(
+            eq(otpCodes.phone, cleanPhone),
+            eq(otpCodes.code, cleanCode),
+            eq(otpCodes.used, false),
+            gt(otpCodes.expiresAt, new Date())
+          )
+        )
+        .limit(1)
+    )[0];
+
+    if (!otp) {
+      return res.status(400).json({ ok: false, error: "Tasdiqlash kodi noto'g'ri yoki muddati tugagan" });
+    }
+
+    // Hamkorni topish
+    const spec = (
+      await db
+        .select()
+        .from(specialists)
+        .where(and(eq(specialists.phone, cleanPhone), eq(specialists.isActive, true)))
+        .limit(1)
+    )[0];
+
+    if (!spec) {
+      return res.status(404).json({ ok: false, error: "Hamkor profili topilmadi" });
+    }
+
+    // Kodni ishlatilgan deb belgilash
+    await db.update(otpCodes).set({ used: true }).where(eq(otpCodes.id, otp.id));
+
+    // Parolni xavfsiz hash qilib BAZADA (specialists.password_hash) yangilash
+    const passwordHash = hashPassword(cleanPass);
+    await db
+      .update(specialists)
+      .set({ passwordHash, updatedAt: new Date() })
+      .where(eq(specialists.id, spec.id));
+
+    // Telegram botga tasdiq xabarini yuborish
+    if (spec.telegramId && !spec.botBlocked) {
+      sendToSpecialist(
+        spec.telegramId,
+        `✅ <b>Agroz Business:</b> Boshqaruv kabinetingiz paroli bazada muvaffaqiyatli yangilandi.\n\n` +
+          `Endi tizimga yangi parolingiz orqali xavfsiz kirishingiz mumkin.`
+      ).catch(() => {});
+    }
+
+    // Avtomatik kirish uchun sessiya tokeni yaratish
+    let user = (await db.select().from(users).where(eq(users.phone, cleanPhone)).limit(1))[0];
+    if (!user) {
+      const [createdUser] = await db.insert(users).values({ phone: cleanPhone, name: spec.name }).returning();
+      user = createdUser;
+    }
+
+    const sessionToken = `biz_${randomBytes(24).toString("hex")}`;
+    await db.insert(sessions).values({ id: sessionToken, userId: user.id });
+
+    return res.json({
+      ok: true,
+      token: sessionToken,
+      message: "Parolingiz bazada muvaffaqiyatli yangilandi!",
+    });
+  } catch (err: any) {
+    console.error("[partner:reset-password error]:", err);
+    res.status(500).json({ ok: false, error: "Parolni yangilashda server xatosi yuz berdi" });
+  }
+});
+
+// POST /api/bot/partner/web-login (Telefon raqam yoki Parol orqali kirish)
 router.post("/partner/web-login", async (req, res) => {
   try {
-    const { phone, demoRole, partnerId } = req.body || {};
+    const { phone, password, demoRole, partnerId } = req.body || {};
 
     // 0. Agar aniq partnerId berilgan bo'lsa (tezkor tanlash)
     if (partnerId) {
@@ -2027,8 +2186,23 @@ router.post("/partner/web-login", async (req, res) => {
       return res.status(404).json({
         ok: false,
         notRegistered: true,
-        error: "Ushbu telefon raqam bilan ro'yxatdan o'tgan dorixona yoki mutaxassis topilmadi. Avval @agroz_auth_bot orqali ariza topshiring yoki to'liq ro'yxatdan o'ting.",
+        error: "Ushbu telefon raqam bilan ro'yxatdan o'tgan dorixona yoki mutaxassis topilmadi. Avval ariza topshiring.",
       });
+    }
+
+    // 3. Agar parol yuborilgan bo'lsa: parolni tekshirish
+    if (password) {
+      if (spec.passwordHash) {
+        const isMatch = verifyPassword(String(password), spec.passwordHash);
+        if (!isMatch) {
+          return res.status(401).json({ ok: false, error: "Maxfiy parol noto'g'ri kiritildi" });
+        }
+      } else {
+        return res.status(400).json({
+          ok: false,
+          error: "Hisobingiz uchun hali parol o'rnatilmagan. Iltimos, Telegram orqali kiring yoki «Parolni yangilash» tugmasini bosing.",
+        });
+      }
     }
 
     // Sessiya yaratish

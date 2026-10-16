@@ -219,6 +219,18 @@ export default function PartnerKabinetPage() {
   // Rasmiy xizmat ko'rsatish shartnomasi modali
   const [showContractModal, setShowContractModal] = useState(false);
 
+  // Parolni yangilash (Telegram orqali tasdiqlash) holatlari
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
+  const [resetPhone, setResetPhone] = useState("");
+  const [resetCode, setResetCode] = useState("");
+  const [resetNewPassword, setResetNewPassword] = useState("");
+  const [resetConfirmPassword, setResetConfirmPassword] = useState("");
+  const [resetStep, setResetStep] = useState<"request" | "verify">("request");
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null);
+  const [resetCountdown, setResetCountdown] = useState(0);
+
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [quickList, setQuickList] = useState<{
@@ -378,6 +390,15 @@ export default function PartnerKabinetPage() {
     }, 1000);
     return () => clearInterval(timer);
   }, [otpCountdown]);
+
+  // Parol yangilash taymeri
+  useEffect(() => {
+    if (resetCountdown <= 0) return;
+    const timer = setInterval(() => {
+      setResetCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resetCountdown]);
 
   async function loadData(tgData = initData, token = webToken) {
     if (!tgData && !token) {
@@ -689,6 +710,97 @@ export default function PartnerKabinetPage() {
       setLoginError("Server bilan aloqa uzildi. Internetni tekshiring.");
     } finally {
       setLoginLoading(false);
+    }
+  }
+
+  // Telegram orqali parolni yangilash kodini so'rash
+  async function handleRequestResetOtp(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    setResetError(null);
+    setResetSuccess(null);
+    const cleanPhone = resetPhone.replace(/\D/g, "");
+    if (cleanPhone.length < 9) {
+      setResetError("Iltimos, to'liq telefon raqamingizni kiriting (+998 XX XXX XX XX)");
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      const res = await apiFetch("/api/bot/partner/request-reset-password-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: cleanPhone }),
+      });
+      const data = await res.json();
+      if (data?.ok) {
+        setResetStep("verify");
+        setResetCountdown(60);
+        setResetSuccess(data.message || "Tasdiqlash kodi Telegram botingizga yuborildi");
+      } else {
+        setResetError(data?.error || "Kodni yuborishda xatolik yuz berdi");
+      }
+    } catch {
+      setResetError("Server bilan aloqa uzildi. Internet aloqasini tekshiring.");
+    } finally {
+      setResetLoading(false);
+    }
+  }
+
+  // Telegram kodi va yangi parolni yuborib parolni bazada yangilash
+  async function handleResetPasswordSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setResetError(null);
+    setResetSuccess(null);
+
+    const cleanPhone = resetPhone.replace(/\D/g, "");
+    if (!resetCode.trim() || resetCode.trim().length < 4) {
+      setResetError("Iltimos, Telegram botga yuborilgan 6 xonali tasdiqlash kodini kiriting");
+      return;
+    }
+
+    if (!resetNewPassword || resetNewPassword.length < 6) {
+      setResetError("Yangi parol kamida 6 ta belgidan iborat bo'lishi kerak");
+      return;
+    }
+
+    if (resetNewPassword !== resetConfirmPassword) {
+      setResetError("Yangi parollar mos kelmadi");
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      const res = await apiFetch("/api/bot/partner/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: cleanPhone,
+          code: resetCode.trim(),
+          newPassword: resetNewPassword,
+        }),
+      });
+      const data = await res.json();
+      if (data?.ok && data.token) {
+        setResetSuccess("Parolingiz muvaffaqiyatli yangilandi va bazada saqlandi!");
+        setWebToken(data.token);
+        if (rememberMe) {
+          localStorage.setItem("agroz_business_token", data.token);
+        }
+        setTimeout(async () => {
+          setShowResetPasswordModal(false);
+          setResetStep("request");
+          setResetCode("");
+          setResetNewPassword("");
+          setResetConfirmPassword("");
+          await loadData(initData, data.token);
+        }, 800);
+      } else {
+        setResetError(data?.error || "Parolni yangilashda xatolik yuz berdi");
+      }
+    } catch {
+      setResetError("Server bilan aloqa uzildi. Qayta urinib ko'ring.");
+    } finally {
+      setResetLoading(false);
     }
   }
 
@@ -1731,12 +1843,7 @@ export default function PartnerKabinetPage() {
       <div className="min-h-screen bg-[#F5F5F7] flex flex-col justify-between py-8 px-4 sm:px-6 antialiased font-sans text-[#1D1D1F]">
         {/* Yuqori brend qatori */}
         <header className="max-w-md mx-auto w-full flex items-center justify-between pb-4">
-          <div className="flex items-center gap-2">
-            <AgrozBusinessLogo className="h-7 w-auto" />
-            <span className="text-[10px] font-bold tracking-wider text-zinc-600 uppercase bg-zinc-200/80 px-2.5 py-0.5 rounded-full">
-              ERP Kabinet
-            </span>
-          </div>
+          <AgrozBusinessLogo className="h-7 w-auto" />
           <Link
             href="/"
             className="text-xs font-semibold text-zinc-500 hover:text-black transition flex items-center gap-1"
@@ -1746,19 +1853,16 @@ export default function PartnerKabinetPage() {
           </Link>
         </header>
 
-        {/* Markaziy Kirish Kartochkasi (Apple-style clean ERP auth) */}
+        {/* Markaziy Kirish Kartochkasi (Apple-style minimalist auth) */}
         <main className="w-full max-w-md mx-auto my-auto">
           <div className="rounded-[28px] border border-[#E5E5EA] bg-white p-6 sm:p-8 shadow-xl shadow-black/5 space-y-6">
             {/* Sarlavha va Tavsif */}
-            <div className="text-center space-y-1.5">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[#191B1F] text-white shadow-md mb-2">
-                <Store size={22} />
-              </div>
+            <div className="text-center space-y-1">
               <h1 className="text-xl sm:text-2xl font-black text-[#191B1F] tracking-tight">
-                Agroz Business Tizimi
+                Agroz Business
               </h1>
-              <p className="text-xs text-zinc-500 max-w-xs mx-auto leading-relaxed">
-                Agro-do‘kon va mutaxassislar uchun yagona ERP platformasi. Telegram bot orqali tezkor va xavfsiz kirish.
+              <p className="text-xs text-zinc-500">
+                Biznes profilingizga kiring
               </p>
             </div>
 
@@ -1936,7 +2040,7 @@ export default function PartnerKabinetPage() {
               </div>
             )}
 
-            {/* Tab 2: Parol bilan kirish (Zaxira) */}
+            {/* Tab 2: Parol bilan kirish */}
             {authTab === "password" && (
               <form onSubmit={handlePasswordLogin} className="space-y-4">
                 <div>
@@ -1947,7 +2051,7 @@ export default function PartnerKabinetPage() {
                     type="text"
                     value={loginPhone}
                     onChange={(e) => setLoginPhone(e.target.value)}
-                    placeholder="+998 90 123 45 67 yoki login"
+                    placeholder="+998 90 123 45 67"
                     className="w-full rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-3 text-sm font-medium text-zinc-900 focus:border-black focus:bg-white focus:outline-none transition"
                   />
                 </div>
@@ -1958,12 +2062,15 @@ export default function PartnerKabinetPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        setAuthTab("otp");
-                        setLoginError(null);
+                        setShowResetPasswordModal(true);
+                        setResetPhone(loginPhone);
+                        setResetStep("request");
+                        setResetError(null);
+                        setResetSuccess(null);
                       }}
-                      className="text-[11px] font-semibold text-zinc-500 hover:text-black transition"
+                      className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 transition"
                     >
-                      Parolni unutdingizmi?
+                      Parolni yangilash
                     </button>
                   </div>
                   <div className="relative">
@@ -2014,63 +2121,216 @@ export default function PartnerKabinetPage() {
               </form>
             )}
 
-            {/* Pastki: Yangi Hamkor Ro'yxatdan O'tish & 1 Oylik Bepul Sinov */}
-            <div className="pt-4 border-t border-zinc-100 text-center space-y-3">
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-3.5 text-left">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black text-emerald-950">1 Oylik Bepul Sinov Davri</span>
-                  <span className="bg-emerald-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full">
-                    0 so‘m
-                  </span>
-                </div>
-                <p className="text-[11px] text-emerald-800 mt-1 leading-relaxed">
-                  Yangi agro-do‘kon yoki mutaxassis to‘liq ma’lumotlar bilan ro‘yxatdan o‘tib, 30 kun bepul foydalanishi mumkin. 1 oydan so‘ng oylik xizmat haqi 149 000 so‘m.
-                </p>
-              </div>
-
+            {/* Pastki: Yangi Hamkor Ro'yxatdan O'tish & Shartnoma */}
+            <div className="pt-4 border-t border-zinc-100 space-y-2.5 text-center">
               <button
                 type="button"
                 onClick={() => setShowRegisterModal(true)}
-                className="inline-flex items-center justify-center gap-2 w-full rounded-2xl bg-[#191B1F] hover:bg-black text-white text-xs font-bold py-3.5 transition active:scale-98 shadow-sm"
+                className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 text-zinc-900 text-xs font-bold py-3 transition flex items-center justify-center gap-1.5 active:scale-98"
               >
                 <span>Yangi hamkor sifatida ro‘yxatdan o‘tish</span>
                 <ArrowRight size={14} />
               </button>
 
-              <button
-                type="button"
-                onClick={() => setShowContractModal(true)}
-                className="text-[11px] text-zinc-500 hover:text-black transition"
-              >
-                📄 Xizmat ko‘rsatish shartnomasi va oferta shartlari
-              </button>
+              <div className="flex items-center justify-center gap-3 text-[11px] text-zinc-400">
+                <button
+                  type="button"
+                  onClick={() => setShowContractModal(true)}
+                  className="hover:text-zinc-700 transition"
+                >
+                  Shartnoma va oferta
+                </button>
+                <span>·</span>
+                <a
+                  href="https://t.me/agroz_support"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-zinc-700 transition"
+                >
+                  Yordam: @agroz_support
+                </a>
+              </div>
             </div>
-          </div>
-
-          {/* Qo'shimcha yordam */}
-          <div className="mt-4 text-center">
-            <p className="text-[11px] text-zinc-500">
-              Texnik yordam:{" "}
-              <a href="tel:+998908383772" className="font-bold text-zinc-800 hover:underline">
-                +998 90 838 37 72
-              </a>{" "}
-              |{" "}
-              <a
-                href="https://t.me/agroz_support"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-bold text-blue-600 hover:underline"
-              >
-                @agroz_support
-              </a>
-            </p>
           </div>
         </main>
 
         {/* Footer */}
         <footer className="text-center text-[11px] text-zinc-400 pt-6">
-          © {new Date().getFullYear()} AgrozGO Business. Barcha huquqlar himoyalangan.
+          © {new Date().getFullYear()} Agroz Business
         </footer>
+
+        {/* PAROLNI YANGILASH (TELEGRAM BOT ORQALI) MODALI */}
+        {showResetPasswordModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto animate-in fade-in duration-200">
+            <div className="relative w-full max-w-md my-auto rounded-[28px] border border-[#E5E5EA] bg-white p-6 sm:p-7 shadow-2xl space-y-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowResetPasswordModal(false);
+                  setResetStep("request");
+                  setResetError(null);
+                  setResetSuccess(null);
+                }}
+                className="absolute top-4 right-4 h-8 w-8 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-600 flex items-center justify-center transition"
+                title="Yopish"
+              >
+                <X size={16} />
+              </button>
+
+              <div className="text-center space-y-1">
+                <div className="inline-flex items-center justify-center w-11 h-11 rounded-2xl bg-zinc-900 text-white shadow-xs mb-1">
+                  <KeyRound size={20} />
+                </div>
+                <h3 className="text-lg font-black text-zinc-900">Parolni yangilash</h3>
+                <p className="text-xs text-zinc-500 max-w-xs mx-auto">
+                  {resetStep === "request"
+                    ? "Telegram botingiz orqali tasdiqlab, yangi parol o‘rnating."
+                    : "Telegram botga yuborilgan 6 xonali kod va yangi parolingizni kiriting."}
+                </p>
+              </div>
+
+              {resetError && (
+                <div className="rounded-2xl bg-red-50 p-3 text-xs font-semibold text-red-700 border border-red-200 flex items-start gap-2">
+                  <AlertCircle size={15} className="shrink-0 mt-0.5" />
+                  <span>{resetError}</span>
+                </div>
+              )}
+
+              {resetSuccess && (
+                <div className="rounded-2xl bg-emerald-50 p-3 text-xs font-semibold text-emerald-700 border border-emerald-200 flex items-start gap-2">
+                  <CheckCircle2 size={15} className="shrink-0 mt-0.5" />
+                  <span>{resetSuccess}</span>
+                </div>
+              )}
+
+              {resetStep === "request" ? (
+                <form onSubmit={handleRequestResetOtp} className="space-y-4 pt-1">
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 mb-1.5">
+                      Telefon raqamingiz:
+                    </label>
+                    <input
+                      type="tel"
+                      value={resetPhone}
+                      onChange={(e) => setResetPhone(e.target.value)}
+                      placeholder="+998 90 123 45 67"
+                      required
+                      autoFocus
+                      className="w-full rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-3 text-sm font-medium text-zinc-900 focus:border-black focus:bg-white focus:outline-none transition"
+                    />
+                    <p className="text-[11px] text-zinc-400 mt-1.5 leading-relaxed">
+                      Ushbu raqamga ulangan Telegram botingizga 6 xonali tasdiqlash kodi yuboriladi.
+                    </p>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={resetLoading || resetPhone.replace(/\D/g, "").length < 9}
+                    className="w-full rounded-2xl bg-[#191B1F] hover:bg-black text-white text-sm font-bold py-3.5 transition-all shadow-md active:scale-98 disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {resetLoading ? (
+                      <>
+                        <RefreshCw size={16} className="animate-spin" />
+                        <span>Kodni yuborish...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send size={15} />
+                        <span>Tasdiqlash kodini olish</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleResetPasswordSubmit} className="space-y-3.5 pt-1">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-bold text-zinc-700">Telegramdagi 6 xonali kod: *</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setResetStep("request");
+                          setResetCode("");
+                        }}
+                        className="text-[11px] font-semibold text-zinc-500 hover:text-black transition"
+                      >
+                        Raqamni o‘zgartirish
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={resetCode}
+                      onChange={(e) => setResetCode(e.target.value.replace(/\D/g, ""))}
+                      placeholder="123456"
+                      required
+                      autoFocus
+                      className="w-full rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-2.5 text-center text-lg font-mono font-bold tracking-widest text-zinc-900 focus:border-black focus:bg-white focus:outline-none transition"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 mb-1">Yangi maxfiy parol: *</label>
+                    <input
+                      type="password"
+                      value={resetNewPassword}
+                      onChange={(e) => setResetNewPassword(e.target.value)}
+                      placeholder="Kamida 6 ta belgi"
+                      required
+                      className="w-full rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-2.5 text-sm font-medium text-zinc-900 focus:border-black focus:bg-white focus:outline-none transition"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 mb-1">Yangi parolni takrorlang: *</label>
+                    <input
+                      type="password"
+                      value={resetConfirmPassword}
+                      onChange={(e) => setResetConfirmPassword(e.target.value)}
+                      placeholder="Parolni qayta kiriting"
+                      required
+                      className="w-full rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-2.5 text-sm font-medium text-zinc-900 focus:border-black focus:bg-white focus:outline-none transition"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-zinc-500 pt-1">
+                    <span>Kod kelmadimi?</span>
+                    {resetCountdown > 0 ? (
+                      <span className="font-mono text-zinc-400">{resetCountdown} soniya</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleRequestResetOtp}
+                        disabled={resetLoading}
+                        className="font-bold text-black hover:underline"
+                      >
+                        Qayta yuborish
+                      </button>
+                    )}
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={resetLoading || resetCode.length < 4 || resetNewPassword.length < 6}
+                    className="w-full rounded-2xl bg-[#191B1F] hover:bg-black text-white text-sm font-bold py-3.5 transition-all shadow-md active:scale-98 disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {resetLoading ? (
+                      <>
+                        <RefreshCw size={16} className="animate-spin" />
+                        <span>Bazada yangilanmoqda...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 size={16} />
+                        <span>Parolni yangilash va Saqlash</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* TO'LIQ HAMKOR RO'YXATDAN O'TISH MODALI */}
         {showRegisterModal && (
