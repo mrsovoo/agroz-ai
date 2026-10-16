@@ -12,6 +12,8 @@ import {
   orders,
 } from "../db/schema.js";
 import { eq, sql } from "drizzle-orm";
+import { isAllowUnverifiedTelegramAllowed } from "./security-flags.js";
+import { verifyInitData } from "./tg-auth.js";
 
 /**
  * Request ichidan foydalanuvchini aniqlash:
@@ -54,18 +56,22 @@ export async function getUserFromReq(req: any): Promise<typeof users.$inferSelec
   // 2. Telegram Auth (x-telegram-user-id, x-telegram-init-data, ?telegramId)
   const tgHeaderId = req.headers?.["x-telegram-user-id"] || req.headers?.["x-telegram-id"] || req.query?.telegramId;
   let telegramId: number | null = null;
-  if (tgHeaderId && Number.isSafeInteger(Number(tgHeaderId))) {
+  if (tgHeaderId && Number.isSafeInteger(Number(tgHeaderId)) && isAllowUnverifiedTelegramAllowed()) {
     telegramId = Number(tgHeaderId);
   }
 
   const initData = req.headers?.["x-telegram-init-data"];
   if (!telegramId && typeof initData === "string" && initData) {
     try {
-      const rawUser = new URLSearchParams(initData).get("user");
-      if (rawUser) {
-        const parsed = JSON.parse(rawUser);
-        if (parsed?.id && Number.isSafeInteger(Number(parsed.id))) {
-          telegramId = Number(parsed.id);
+      const botToken = process.env.TELEGRAM_BOT_TOKEN || "";
+      const isVerified = botToken ? verifyInitData(initData, botToken) : false;
+      if (isVerified || isAllowUnverifiedTelegramAllowed()) {
+        const rawUser = new URLSearchParams(initData).get("user");
+        if (rawUser) {
+          const parsed = JSON.parse(rawUser);
+          if (parsed?.id && Number.isSafeInteger(Number(parsed.id))) {
+            telegramId = Number(parsed.id);
+          }
         }
       }
     } catch {}

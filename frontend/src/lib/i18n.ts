@@ -11,7 +11,7 @@ export interface LanguageOption {
   flag: string;
 }
 
-export const LANGUAGES: LanguageOption[] = [
+export const ALL_LANGUAGES: LanguageOption[] = [
   { code: "uz", name: "O‘zbekcha", nativeName: "O‘zbekcha", flag: "🇺🇿" },
   { code: "en", name: "English", nativeName: "English", flag: "🇬🇧" },
   { code: "ru", name: "Русский", nativeName: "Русский", flag: "🇷🇺" },
@@ -19,6 +19,12 @@ export const LANGUAGES: LanguageOption[] = [
   { code: "ky", name: "Kyrgyzcha", nativeName: "Кыргызча", flag: "🇰🇬" },
   { code: "tg", name: "Tojikī", nativeName: "Тоҷикӣ", flag: "🇹🇯" },
 ];
+
+/** Tarjimasi bo'sh yoki to'liq bo'lmagan tillar til tanlash menyusidan yashiriladi */
+export const SUPPORTED_LANGUAGES: Language[] = ["uz", "ru", "en"];
+export const LANGUAGES: LanguageOption[] = ALL_LANGUAGES.filter((lang) =>
+  SUPPORTED_LANGUAGES.includes(lang.code)
+);
 
 export const LANG_STORAGE_KEY = "agroz_selected_lang";
 export const LANG_EVENT = "agroz_lang_changed";

@@ -1,5 +1,5 @@
 import HomeViewDispatcher from "@/components/HomeViewDispatcher";
-import type { HomeMedicine, HomeSpecialist } from "@/components/HomeClientView";
+import type { HomeMedicine, HomeSpecialist } from "@/components/app/HomeClientView";
 import { apiUrl } from "@/lib/api-config";
 
 // Doimiy jonli va tasodifiy yangilanish uchun

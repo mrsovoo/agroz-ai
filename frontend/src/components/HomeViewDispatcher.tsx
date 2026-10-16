@@ -1,8 +1,8 @@
 "use client";
 
 import { useEnvironment } from "@/lib/env";
-import HomeClientView, { type HomeMedicine, type HomeSpecialist } from "@/components/HomeClientView";
-import MainWebLanding from "@/components/MainWebLanding";
+import HomeClientView, { type HomeMedicine, type HomeSpecialist } from "@/components/app/HomeClientView";
+import MainWebLanding from "@/components/web/MainWebLanding";
 
 export default function HomeViewDispatcher({
   initialMedicines = [],

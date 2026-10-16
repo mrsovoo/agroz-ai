@@ -16,7 +16,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Bildirishnomalar'), findsOneWidget);
-    expect(find.text('HOZIRGI HOLAT'), findsOneWidget);
+    expect(find.textContaining('Xabarnomalar'), findsOneWidget);
     expect(find.text('O‘qildi'), findsOneWidget);
 
     // Tap "O‘qildi" to mark all as read

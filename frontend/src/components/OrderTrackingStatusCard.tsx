@@ -1,7 +1,9 @@
 "use client";
 
-import { Check, Clock, AlertCircle } from "lucide-react";
+import { useState } from "react";
+import { Check, Clock, AlertCircle, XCircle, Loader2 } from "lucide-react";
 import { formatOrderNumber } from "@/lib/format";
+import { apiFetch } from "@/lib/api-config";
 
 export type OrderTrackingItem = {
   name: string;
@@ -21,6 +23,7 @@ export interface OrderTrackingProps {
   pharmacyName?: string;
   pharmacyPhone?: string | null;
   compact?: boolean;
+  onStatusChange?: (newStatus: OrderTrackingStatus) => void;
 }
 
 function shortSum(val: number): string {
@@ -29,22 +32,52 @@ function shortSum(val: number): string {
 
 export default function OrderTrackingStatusCard({
   orderId,
-  status,
+  status: initialStatus,
   totalSum,
   items,
   deliveryType = "delivery",
   customerAddress,
   pharmacyName,
-  compact = false,
+  onStatusChange,
 }: OrderTrackingProps) {
+  const [currentStatus, setCurrentStatus] = useState<OrderTrackingStatus>(initialStatus);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+
+  const status = currentStatus;
+
   // 4 ta bosqich:
   // 1: Yuborildi (yangi)
-  // 2: Agro-do&apos;kon qabul qildi (tasdiqlandi)
+  // 2: Agro-do'kon qabul qildi (tasdiqlandi)
   // 3: Yo'lda (yolda)
-  // 4: Yetkazildi (yetkazildi)
+  // 4: Olib ketildi / Yetkazildi (yetkazildi)
   const isPickup = deliveryType === "pickup";
   const step3Label = isPickup ? "Olib ketishga tayyor" : "Yo'lda";
   const step4Label = isPickup ? "Olib ketildi" : "Yetkazildi";
+
+  const canCancel = status === "yangi" || status === "tasdiqlandi";
+
+  async function handleCancelOrder() {
+    if (!canCancel || cancelling) return;
+    setCancelling(true);
+    setCancelError(null);
+    try {
+      const res = await apiFetch(`/api/orders/${orderId}/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.ok) {
+        throw new Error(data?.error || "Bronni bekor qilishda xatolik yuz berdi");
+      }
+      setCurrentStatus("bekor");
+      onStatusChange?.("bekor");
+    } catch (err: any) {
+      setCancelError(err?.message || "Tarmoq xatosi yuz berdi");
+    } finally {
+      setCancelling(false);
+    }
+  }
 
   const getStepState = (stepNumber: 1 | 2 | 3 | 4) => {
     if (status === "bekor") return { done: false, active: false, cancelled: true };
@@ -66,26 +99,46 @@ export default function OrderTrackingStatusCard({
 
   const steps: { num: 1 | 2 | 3 | 4; label: string }[] = [
     { num: 1, label: "Yuborildi" },
-    { num: 2, label: "Agro-do&apos;kon qabul qildi" },
+    { num: 2, label: "Agro-do'kon qabul qildi" },
     { num: 3, label: step3Label },
     { num: 4, label: step4Label },
   ];
 
   const itemsSummary = items && items.length > 0
     ? items.map((i) => `${i.name} x${i.qty}`).join(", ")
-    : "Dorilar";
+    : "Agro-mahsulotlar";
 
   return (
     <div className="w-full space-y-3.5 text-neutral-900">
       {/* Sarlavha: Buyurtma #... va summa */}
-      <div>
-        <h3 className="text-[20px] font-black tracking-tight text-neutral-900 leading-tight">
-          Buyurtma {typeof orderId === "number" ? formatOrderNumber(orderId) : orderId}
-        </h3>
-        <p className="text-[13.5px] font-medium text-neutral-500 mt-0.5">
-          {shortSum(totalSum)} so&apos;m · {itemsSummary}
-        </p>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h3 className="text-[20px] font-black tracking-tight text-neutral-900 leading-tight">
+            Buyurtma {typeof orderId === "number" ? formatOrderNumber(orderId) : orderId}
+          </h3>
+          <p className="text-[13.5px] font-medium text-neutral-500 mt-0.5">
+            {shortSum(totalSum)} so&apos;m · {itemsSummary}
+          </p>
+        </div>
+
+        {canCancel && (
+          <button
+            type="button"
+            onClick={handleCancelOrder}
+            disabled={cancelling}
+            className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-[12px] font-bold text-red-600 hover:bg-red-100 active:scale-95 transition disabled:opacity-50"
+          >
+            {cancelling ? <Loader2 size={14} className="animate-spin" /> : <XCircle size={14} />}
+            <span>Bekor qilish</span>
+          </button>
+        )}
       </div>
+
+      {cancelError && (
+        <div className="rounded-xl bg-red-50 border border-red-200 p-2.5 text-[12px] font-semibold text-red-600">
+          {cancelError}
+        </div>
+      )}
 
       {status === "bekor" ? (
         <div className="flex items-center gap-2.5 rounded-2xl bg-red-50 p-3.5 text-red-700 border border-red-200">
@@ -146,7 +199,7 @@ export default function OrderTrackingStatusCard({
         </div>
       )}
 
-      {/* Agro-do&apos;kon egasi botiga kelgan xabar bloki (rasmga 1:1) */}
+      {/* Agro-do'kon egasi botiga kelgan xabar bloki */}
       <div className="pt-1">
         <p className="text-[12px] font-bold text-neutral-500 uppercase tracking-wider mb-1.5">
           Agro-do&apos;kon egasi botiga kelgan xabar (real):
@@ -172,7 +225,7 @@ export default function OrderTrackingStatusCard({
           <p className="mt-1.5 text-[12.5px] text-neutral-600">
             <span className="font-semibold text-neutral-800">Manzil:</span>{" "}
             {isPickup ? (
-              <span>{pharmacyName ? `${pharmacyName} (Olib ketish)` : "Agro-do&apos;kondan olib ketish"}</span>
+              <span>{pharmacyName ? `${pharmacyName} (Olib ketish)` : "Agro-do'kondan olib ketish"}</span>
             ) : (
               <span>{customerAddress || "Ko'rsatilmagan"}</span>
             )}

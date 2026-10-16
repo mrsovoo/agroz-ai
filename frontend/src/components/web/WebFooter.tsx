@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Users,
   Sprout,
@@ -20,10 +21,16 @@ import {
 } from "lucide-react";
 import AgrozLogo from "@/components/AgrozLogo";
 import { useI18n } from "@/lib/i18n";
+import { isLaunchRoute, isErpOrAdminRoute } from "@/lib/env";
 
 export default function WebFooter() {
+  const pathname = usePathname();
   const year = new Date().getFullYear();
   const { t } = useI18n();
+
+  if (isLaunchRoute(pathname) || isErpOrAdminRoute(pathname)) {
+    return null;
+  }
 
   const columns = [
     {
@@ -31,8 +38,8 @@ export default function WebFooter() {
       links: [
         { href: "/#app", label: "AgrozGO Mobil Ilovasi", icon: Smartphone },
         { href: "/#business", label: "Agroz Business ERP", icon: Store },
-        { href: "/tashxis", label: "AI Agro-Diagnostika", icon: Sparkles },
-        { href: "/ob-havo", label: "Agro Ob-havo", icon: CloudSun },
+        { href: "/#about", label: "Ekotizim imkoniyatlari", icon: Sparkles },
+        { href: "/#tariffs", label: "Biznes tariflar", icon: CreditCard },
       ],
     },
     {
@@ -40,8 +47,8 @@ export default function WebFooter() {
       links: [
         { href: "/hamkorlik", label: t.nav.connect_store, icon: Store },
         { href: "/hamkorlik?mode=login", label: "Biznes kabinet", icon: ShieldCheck },
-        { href: "/#about", label: t.nav.debt_book, icon: Layers },
-        { href: "/#tariffs", label: t.tariffs.tag, icon: CreditCard },
+        { href: "/#business", label: t.nav.debt_book, icon: Layers },
+        { href: "/#tariffs", label: "1 oylik bepul sinov", icon: CreditCard },
       ],
     },
     {
@@ -58,7 +65,7 @@ export default function WebFooter() {
       links: [
         { href: "/maxfiylik", label: t.footer.privacy, icon: ShieldCheck },
         { href: "/shartlar", label: t.footer.terms, icon: FileText },
-        { href: "/kirish", label: "Kirish / Ro‘yxatdan o‘tish", icon: User },
+        { href: "/hamkorlik?mode=login", label: "Hamkorlar kirishi", icon: User },
       ],
     },
   ];

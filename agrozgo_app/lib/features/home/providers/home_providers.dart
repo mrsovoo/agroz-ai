@@ -38,7 +38,7 @@ MedicineModel _bento(int id, String asset, String type) => MedicineModel(
 SpecialistModel _specialist(int id, String specialty) => SpecialistModel(
       id: id,
       name: 'Sohibjon Sulaymonov',
-      phone: '+998901234567',
+      phone: '',
       role: 'specialist',
       specialty: specialty,
       address: 'Farg‘ona shahar',

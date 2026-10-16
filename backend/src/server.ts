@@ -26,6 +26,7 @@ import webRouter from "./routes/web.js";
 
 import { ensureSeed } from "./lib/seed.js";
 import { ensureSchema } from "./db/migrate.js";
+import { isSeedDemoDataAllowed } from "./lib/security-flags.js";
 
 // Production xavfsizlik tekshiruvi (kuchsiz admin parol bilan ishga tushishni taqiqlash)
 if (process.env.NODE_ENV === "production") {
@@ -212,8 +213,8 @@ app.listen(PORT, async () => {
     }
   }, 10 * 60 * 1000);
 
-  // Demo ma'lumotlar faqat SEED_DEMO_DATA === "true" bo'lganda kiritiladi
-  if (process.env.SEED_DEMO_DATA === "true") {
+  // Demo ma'lumotlar faqat isSeedDemoDataAllowed() bo'lganda kiritiladi (production'da majburan false)
+  if (isSeedDemoDataAllowed()) {
     try {
       await ensureSeed();
     } catch (seedErr) {

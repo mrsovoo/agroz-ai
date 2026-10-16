@@ -207,7 +207,7 @@ export default function HomeClientView({
     const pharmacy: CartStorePharmacy = {
       id: med.pharmacyId || 1,
       name: med.pharmacyName || "Agroz Agro-do'kon",
-      phone: med.pharmacyPhone || "+998901234567",
+      phone: med.pharmacyPhone || "",
       address: med.pharmacyAddress || "Toshkent",
     };
 
@@ -245,9 +245,9 @@ export default function HomeClientView({
   }
 
   return (
-    <div className="min-h-screen bg-white px-4 pt-3 pb-24 text-neutral-900 web:bg-transparent web:px-0 web:pt-0 web:pb-12">
-      {/* 1. Header: AgrozGO + Ekranimga + NotificationBell (faqat Mini App/mobil rejimida, vebda WebTopNav bor) */}
-      <header className="flex items-center justify-between py-2 web:hidden">
+    <div className="min-h-screen bg-white px-4 pt-3 pb-24 text-neutral-900">
+      {/* 1. Header: AgrozGO + NotificationBell */}
+      <header className="flex items-center justify-between py-2">
         <AgrozLogo className="h-8" />
         <div className="flex items-center gap-2">
           <NotificationBell />
@@ -259,10 +259,10 @@ export default function HomeClientView({
         <WeatherCard />
       </div>
 
-      {/* 3. Dorilar bo'limi */}
+      {/* 3. Agro-mahsulotlar bo'limi */}
       <section className="mt-6">
         <div className="flex items-center justify-between mb-3 px-0.5">
-          <h2 className="text-[20px] font-black tracking-tight text-neutral-900">Dorilar</h2>
+          <h2 className="text-[20px] font-black tracking-tight text-neutral-900">Agro-mahsulotlar</h2>
           <Link
             href="/dorilar"
             className="text-[14px] font-bold text-[#039e1e] hover:underline active:opacity-80 transition inline-flex items-center gap-1"
@@ -273,13 +273,13 @@ export default function HomeClientView({
           </Link>
         </div>
 
-        {/* Dorilar kartalari (aniq 4 ta dorilar ko'rsatiladi va har kirganda yangilanadi) */}
+        {/* Agro-mahsulotlar kartalari (aniq 4 ta mahsulot ko'rsatiladi va har kirganda yangilanadi) */}
         {displayedMedicines.length === 0 ? (
           <div className="rounded-2xl border border-neutral-100 bg-[#f8f9fa] p-6 text-center text-[13px] text-neutral-400">
-            Hozircha dorilar mavjud emas
+            Hozircha agro-mahsulotlar mavjud emas
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             {displayedMedicines.slice(0, 4).map((med, idx) => (
               <ProductCard
                 key={med.id || idx}
@@ -329,8 +329,7 @@ export default function HomeClientView({
             </Link>
           </div>
 
-          {/* Aniq 1 ta agronom va 1 ta veterinar ko'rsatiladi (vebda 2 ustunli toza qator) */}
-          <div className="grid grid-cols-1 web:grid-cols-2 gap-3.5">
+          <div className="grid grid-cols-1 gap-3.5">
             {specialists.slice(0, 2).map((s) => (
               <SpecialistCard
                 key={s.id}

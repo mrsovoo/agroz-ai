@@ -295,15 +295,17 @@ export function SpecialistProfileModal({
           {/* 4 ta haqiqiy va ishlaydigan tezkor tugmalar */}
           <div className="grid grid-cols-4 gap-2.5">
             {/* 1. Qo'ng'iroq */}
-            <a
-              href={`tel:${specialist.phone.replace(/\s/g, "")}`}
-              className="flex flex-col items-center gap-1.5 group"
-            >
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-100 text-neutral-800 border border-neutral-200/80 shadow-xs group-hover:bg-neutral-200 group-active:scale-90 transition">
-                <Phone size={19} />
-              </div>
-              <span className="text-[11px] font-bold text-neutral-600">Qo&apos;ng&apos;iroq</span>
-            </a>
+            {Boolean(specialist.phone && specialist.phone.trim().length > 0) ? (
+              <a
+                href={`tel:${specialist.phone.replace(/\s/g, "")}`}
+                className="flex flex-col items-center gap-1.5 group"
+              >
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-100 text-neutral-800 border border-neutral-200/80 shadow-xs group-hover:bg-neutral-200 group-active:scale-90 transition">
+                  <Phone size={19} />
+                </div>
+                <span className="text-[11px] font-bold text-neutral-600">Qo&apos;ng&apos;iroq</span>
+              </a>
+            ) : <div />}
 
             {/* 2. Chaqirish */}
             <button
@@ -432,13 +434,15 @@ export function SpecialistProfileModal({
 
         {/* 3. Sticky Bottom Action Bar — HAR DOIM EKRANDA, HECH QACHON CHIQIB KETMAYDI */}
         <div className="shrink-0 bg-white/95 backdrop-blur-md px-5 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] border-t border-neutral-100 flex items-center gap-3 shadow-lg z-20">
-          <a
-            href={`tel:${specialist.phone.replace(/\s/g, "")}`}
-            className="flex h-13 w-13 shrink-0 items-center justify-center rounded-2xl bg-neutral-100 text-neutral-800 hover:bg-neutral-200 active:scale-95 transition"
-            title="Qo'ng'iroq qilish"
-          >
-            <Phone size={21} />
-          </a>
+          {Boolean(specialist.phone && specialist.phone.trim().length > 0) && (
+            <a
+              href={`tel:${specialist.phone.replace(/\s/g, "")}`}
+              className="flex h-13 w-13 shrink-0 items-center justify-center rounded-2xl bg-neutral-100 text-neutral-800 hover:bg-neutral-200 active:scale-95 transition"
+              title="Qo'ng'iroq qilish"
+            >
+              <Phone size={21} />
+            </a>
+          )}
 
           {specialist.isBusy ? (
             <button

@@ -29,6 +29,13 @@ function getCallStatusMeta(status: string) {
       dotClass: "bg-emerald-500",
     };
   }
+  if (status === "javob_berilmadi") {
+    return {
+      label: "Javob berilmadi",
+      badgeClass: "bg-neutral-100 text-neutral-600 border-neutral-200/80",
+      dotClass: "bg-neutral-400",
+    };
+  }
   if (status === "bekor" || status === "bekor_qilindi" || status === "cancelled") {
     return {
       label: "Bekor qilindi",
@@ -399,6 +406,11 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
                         deliveryType={order.deliveryType}
                         customerAddress={order.customerAddress}
                         pharmacyName={order.pharmacyName}
+                        onStatusChange={(newStatus) => {
+                          setOrders((prev) =>
+                            prev.map((o) => (o.id === order.id ? { ...o, status: newStatus } : o))
+                          );
+                        }}
                       />
                     </div>
                   )}
@@ -523,7 +535,7 @@ export default function ProfileClientView({ initialUser }: { initialUser?: UserP
             href="/dorilar"
             className="text-[13px] font-semibold text-[#039e1e] hover:underline"
           >
-            Dorilar katalogi &rarr;
+            Agro-mahsulotlar katalogi &rarr;
           </Link>
         </div>
 

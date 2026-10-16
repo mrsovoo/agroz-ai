@@ -162,7 +162,7 @@ export function renderMedicinePlaceholder(type?: string | null, iconSize = 22) {
       <div className="flex items-center justify-center rounded-xl bg-white p-1.5 shadow-2xs border border-neutral-200/70">
         <Pill size={iconSize} className="text-neutral-500" />
       </div>
-      <span className="text-[9.5px] font-bold text-neutral-600/70">Dori</span>
+      <span className="text-[9.5px] font-bold text-neutral-600/70">Preparat</span>
     </div>
   );
 }
@@ -533,7 +533,7 @@ export function ProductCardUI({
                       ? "border-emerald-300 bg-emerald-50 text-emerald-800"
                       : "border-neutral-200 bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
                   }`}
-                  aria-label="Dori kelganda xabar berish"
+                  aria-label="Mahsulot kelganda xabar berish"
                 >
                   <Bell size={13} className={notified ? "text-emerald-700 fill-emerald-700" : "text-neutral-500"} />
                   <span>{notified ? "Xabar beriladi ✓" : "Kelganda xabar berish"}</span>

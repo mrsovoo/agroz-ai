@@ -472,11 +472,11 @@ export default function MarketClient() {
               <ShoppingCart size={13} className="text-emerald-700" />
               <span>Jonli Agro Bozor</span>
             </div>
-            <h1 className="text-3xl sm:text-5xl font-extrabold text-[#191B1F] tracking-tight">
-              Dorilar va agro-preparatlar katalogi
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#191B1F] tracking-tight">
+              Agro-mahsulotlar va preparatlar katalogi
             </h1>
             <p className="mt-2 text-xs sm:text-sm text-zinc-600 max-w-2xl leading-relaxed">
-              O‘zbekiston bo‘ylab ro‘yxatdan o‘tgan agro-dorixona va omborlar mahsulotlari. Sifatli preparatlar, narxlarni solishtirish va to‘g‘ridan-to‘g‘ri buyurtma.
+              O‘zbekiston bo‘ylab ro‘yxatdan o‘tgan agro-do‘kon va omborlar mahsulotlari. Sifatli preparatlar, narxlarni solishtirish va to‘g‘ridan-to‘g‘ri bron qilish.
             </p>
           </div>
 
@@ -502,7 +502,7 @@ export default function MarketClient() {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Dori nomi, faol modda, kasallik yoki do‘kon nomi bo‘yicha qidiruv..."
+              placeholder="Mahsulot nomi, faol modda, kasallik yoki agro-do‘kon nomi bo‘yicha qidiruv..."
               maxLength={80}
               className="w-full bg-transparent text-xs sm:text-sm font-medium text-zinc-900 outline-none placeholder:text-zinc-400"
             />
@@ -556,7 +556,7 @@ export default function MarketClient() {
           {query ? (
             <>
               <p className="mt-3.5 text-[17px] font-bold text-neutral-900">
-                «{query}» bo&apos;yicha dori topilmadi
+                «{query}» bo&apos;yicha mahsulot topilmadi
               </p>
               <p className="mt-1.5 text-[13.5px] leading-relaxed text-neutral-500 max-w-md mx-auto">
                 Qidiruv so&apos;zini tekshirib ko&apos;ring, boshqa bo&apos;limga o&apos;ting yoki qidiruvni tozalang.
@@ -571,16 +571,16 @@ export default function MarketClient() {
           ) : (
             <>
               <p className="mt-3.5 text-[17px] font-bold text-neutral-900">
-                Hozircha dorilar ro&apos;yxati mavjud emas
+                Hozircha agro-mahsulotlar ro&apos;yxati mavjud emas
               </p>
               <p className="mt-1.5 text-[13.5px] leading-relaxed text-neutral-500 max-w-md mx-auto">
-                Yaqin orada agro-do&apos;konlar tomonidan yangi dorilar joylashtiriladi.
+                Yaqin orada agro-do&apos;konlar tomonidan yangi mahsulotlar joylashtiriladi.
               </p>
             </>
           )}
         </div>
       ) : (
-        <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+        <div className="mt-4 grid grid-cols-2 gap-3">
           {displayCards.map((c) => (
             <ProductCard
               key={`${c.pharmacy.id}:${c.medicine.id}`}
@@ -833,7 +833,7 @@ export default function MarketClient() {
                 <ShoppingCart size={32} className="text-[var(--brand-muted)]" />
                 <p className="text-[15px] font-bold text-[var(--brand-ink)]">Savat bo&apos;sh</p>
                 <p className="text-[13px] text-[var(--brand-muted)]">
-                  Dorilardagi «Savatga» tugmasini bosing
+                  Mahsulotlardagi «Savatga» tugmasini bosing
                 </p>
                 <button onClick={() => setCartOpen(false)} className="ios-btn secondary mt-2 w-full">
                   <X size={17} /> Yopish
@@ -1047,7 +1047,7 @@ export default function MarketClient() {
                       )}
                       <div className="flex items-start gap-1.5 text-[11px] leading-relaxed text-[var(--brand-muted)]">
                         <Lightbulb size={13} className="shrink-0 mt-0.5 text-amber-500" />
-                        <span>Buyurtma berganingizdan so&apos;ng, agro-do&apos;kon xodimi dorilarni tayyorlab qo&apos;yadi va siz istalgan vaqtda borib olib ketishingiz mumkin.</span>
+                        <span>Buyurtma berganingizdan so&apos;ng, agro-do&apos;kon xodimi mahsulotlarni tayyorlab qo&apos;yadi va siz istalgan vaqtda borib olib ketishingiz mumkin.</span>
                       </div>
                     </div>
                   ) : (

@@ -1,21 +1,20 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { getTelegram, isTelegramUserAgent, onTelegramReady } from "@/lib/telegram";
 import { initNativeApp, isNativeApp } from "@/lib/capacitor";
-
-/** Keng ekranmi — globals.css'dagi media query bilan aynan bir xil shart. */
-function isWideScreen(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.innerWidth >= 900 && window.innerHeight >= 500;
-}
+import { isLaunchRoute } from "@/lib/env";
 
 /**
- * Telegram Mini App va Native Mobil Ilova (Capacitor) muhitini ishga tushiradi
+ * Telegram Mini App, Launch App va Native Mobil Ilova (Capacitor) muhitini ishga tushiradi
  */
 export default function TelegramInit() {
+  const pathname = usePathname();
+
   useEffect(() => {
     const root = document.documentElement;
+    const inLaunchRoute = isLaunchRoute(pathname);
 
     // 1. Agar native ilovada (Capacitor Android / iOS) bo'lsak:
     if (isNativeApp()) {
@@ -25,15 +24,19 @@ export default function TelegramInit() {
       return;
     }
 
-    // 2. Agar tashqi brauzerda bo'lsak (mobil yoki desktop), darhol web rejimini qo'llaymiz
-    if (!isNativeApp() && !getTelegram()?.initData && !isTelegramUserAgent()) {
+    // 2. Agar Launch App marshrutida bo'lsak (mobil telefon formatida turishi shart):
+    if (inLaunchRoute) {
+      root.classList.add("is-telegram");
+      root.classList.remove("is-web");
+    } else if (!getTelegram()?.initData && !isTelegramUserAgent()) {
+      // 3. Tashqi brauzerda Web Sayt sahifasida bo'lsak:
       root.classList.add("is-web");
       root.classList.remove("is-telegram");
     }
 
     const stopWaiting = onTelegramReady((tg) => {
-      // Faqat haqiqiy Telegram ichida initData mavjud bo'lsa Mini App rejimiga o'tadi
-      if (tg.initData) {
+      // Haqiqiy Telegram ichida initData mavjud bo'lsa yoki Launch marshrutda bo'lsa Mini App rejimi
+      if (tg.initData || isLaunchRoute(window.location.pathname)) {
         root.classList.add("is-telegram");
         root.classList.remove("is-web");
       } else {
@@ -79,7 +82,7 @@ export default function TelegramInit() {
     return () => {
       stopWaiting();
     };
-  }, []);
+  }, [pathname]);
 
   return null;
 }

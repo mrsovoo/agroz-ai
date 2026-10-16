@@ -4,6 +4,42 @@ import { useState, useEffect } from "react";
 
 export type EnvType = "telegram" | "desktop" | "phone" | "admin" | null;
 
+export const LAUNCH_APP_PREFIXES = [
+  "/agrozgo",
+  "/dorilar",
+  "/dori",
+  "/agro-mahsulot",
+  "/agro-mahsulotlar",
+  "/mutaxassislar",
+  "/savat",
+  "/ob-havo",
+  "/tashxis",
+  "/natija",
+  "/profil",
+  "/kirish",
+  "/bildirishnomalar",
+  "/xarita",
+];
+
+export function isLaunchRoute(pathname?: string | null): boolean {
+  if (!pathname) return false;
+  return LAUNCH_APP_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
+  );
+}
+
+export function isErpOrAdminRoute(pathname?: string | null): boolean {
+  if (!pathname) return false;
+  return (
+    pathname === "/kabinet" ||
+    pathname.startsWith("/kabinet/") ||
+    pathname === "/business" ||
+    pathname.startsWith("/business/") ||
+    pathname === "/admin" ||
+    pathname.startsWith("/admin/")
+  );
+}
+
 export function useEnvironment(isAdmin = false): EnvType {
   const [env, setEnv] = useState<EnvType>(null);
 

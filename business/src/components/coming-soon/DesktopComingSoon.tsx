@@ -16,9 +16,9 @@ export default function DesktopComingSoon({ type }: DesktopComingSoonProps) {
         </div>
       </header>
       
-      {/* Huge Background Text */}
+      {/* Background Brand Text */}
       <div className={styles.bgTextContainer}>
-        <div className={styles.bgText}>TEZ KUNDA</div>
+        <div className={styles.bgText}>AGROZ BUSINESS</div>
       </div>
       
       {/* Cards Container */}
@@ -140,7 +140,7 @@ export default function DesktopComingSoon({ type }: DesktopComingSoonProps) {
       </div>
 
       {/* Floating Support Button */}
-      <a href="https://t.me/bydsgn" target="_blank" rel="noopener noreferrer" className={styles.supportBtn}>
+      <a href={process.env.NEXT_PUBLIC_SUPPORT_TELEGRAM ? `https://t.me/${process.env.NEXT_PUBLIC_SUPPORT_TELEGRAM.replace(/^@/, '')}` : "https://t.me/agroz_support"} target="_blank" rel="noopener noreferrer" className={styles.supportBtn}>
         💬 Hamkorlik
       </a>
     </div>

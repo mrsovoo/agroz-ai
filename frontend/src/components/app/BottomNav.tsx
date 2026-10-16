@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Pill, ShoppingCart, UsersRound, UserRound } from "lucide-react";
+import { Home, Package, ShoppingCart, UsersRound, UserRound } from "lucide-react";
 import {
   loadCart,
   closeCart,
@@ -13,13 +13,15 @@ import {
   CLOSE_CART_EVENT,
   TOGGLE_CART_EVENT,
 } from "@/lib/cart-store";
-import { haptic } from "@/lib/telegram";
+import { haptic, getTelegram } from "@/lib/telegram";
+import { isLaunchRoute, isErpOrAdminRoute } from "@/lib/env";
 
 export default function BottomNav() {
   const pathname = usePathname();
   const [cartCount, setCartCount] = useState(0);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSpecialistModalOpen, setIsSpecialistModalOpen] = useState(false);
+  const [isTelegramEnv, setIsTelegramEnv] = useState(false);
 
   useEffect(() => {
     const sync = () => {
@@ -27,6 +29,7 @@ export default function BottomNav() {
       setCartCount(c?.lines?.reduce((s, l) => s + l.qty, 0) ?? 0);
     };
     sync();
+    setIsTelegramEnv(Boolean(getTelegram()?.initData));
 
     const handleOpen = () => setIsCartOpen(true);
     const handleClose = () => setIsCartOpen(false);
@@ -59,9 +62,13 @@ export default function BottomNav() {
     }
   }, [pathname]);
 
-  // Web muhitida (kompyuter, planshet yoki mobil brauzerda) BottomNav mutlaqo ko'rinmaydi!
-  // Bu faqat va faqat Telegram Mini App ichida dehqonlar uchun ishlaydi.
-  if (typeof window !== "undefined" && document.documentElement.classList.contains("is-web")) {
+  // Biznes/Admin marshrutlarida ko'rinmaydi
+  if (isErpOrAdminRoute(pathname)) {
+    return null;
+  }
+
+  // Agar Launch App marshrutida bo'lmasak va Telegram Mini App ichida ham bo'lmasak (ya'ni Web Sayt sahifalarida bo'lsak) ko'rinmaydi
+  if (!isLaunchRoute(pathname) && !isTelegramEnv) {
     return null;
   }
 
@@ -80,7 +87,9 @@ export default function BottomNav() {
   const isDorilar = !isSavat && Boolean(pathname?.startsWith("/dorilar") || pathname?.startsWith("/dori") || pathname?.startsWith("/agro-mahsulot"));
   const isSpecialists = !isSavat && Boolean(pathname?.startsWith("/mutaxassislar"));
   const isProfile = !isSavat && Boolean(pathname?.startsWith("/profil") || pathname?.startsWith("/kirish"));
-  const isHome = !isSavat && !isDorilar && !isSpecialists && !isProfile && (pathname === "/" || !pathname || pathname === "");
+  const isHome = !isSavat && !isDorilar && !isSpecialists && !isProfile && (pathname === "/" || pathname === "/agrozgo" || !pathname || pathname === "");
+
+  const homeHref = isTelegramEnv ? "/" : "/agrozgo";
 
   const handleNavClick = () => {
     haptic("light");
@@ -96,7 +105,7 @@ export default function BottomNav() {
         {/* 1. Asosiy */}
         <li>
           <Link
-            href="/"
+            href={homeHref}
             prefetch={true}
             onClick={handleNavClick}
             className={`flex flex-col items-center gap-1 py-1 text-[11px] font-bold transition-all active:scale-90 ${
@@ -108,7 +117,7 @@ export default function BottomNav() {
           </Link>
         </li>
 
-        {/* 2. Dorilar */}
+        {/* 2. Mahsulotlar */}
         <li>
           <Link
             href="/dorilar"
@@ -118,8 +127,8 @@ export default function BottomNav() {
               isDorilar ? "text-[#0ba324]" : "text-neutral-400 hover:text-neutral-700"
             }`}
           >
-            <Pill size={22} strokeWidth={isDorilar ? 2.6 : 2} className={isDorilar ? "text-[#0ba324]" : "text-neutral-400"} />
-            <span className={isDorilar ? "text-[#0ba324] font-bold" : "text-neutral-400"}>Dorilar</span>
+            <Package size={22} strokeWidth={isDorilar ? 2.6 : 2} className={isDorilar ? "text-[#0ba324]" : "text-neutral-400"} />
+            <span className={isDorilar ? "text-[#0ba324] font-bold" : "text-neutral-400"}>Mahsulotlar</span>
           </Link>
         </li>
 

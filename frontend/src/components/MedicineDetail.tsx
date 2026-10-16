@@ -254,7 +254,7 @@ export default async function MedicineDetail({ medicine }: { medicine: MedicineD
                 Mahsulot tavsifi & Qo‘llash bo‘yicha yo‘riqnoma
               </p>
               <p className="mt-2 text-sm leading-relaxed text-zinc-700 font-medium">
-                {medicine.usage ?? "Ushbu dori vositasi uchun batafsil qo‘llanma do‘kon xodimi tomonidan taqdim etiladi."}
+                {medicine.usage ?? "Ushbu agro-mahsulot uchun batafsil qo‘llanma agro-do‘kon xodimi tomonidan taqdim etiladi."}
               </p>
             </div>
 
@@ -273,13 +273,15 @@ export default async function MedicineDetail({ medicine }: { medicine: MedicineD
                   </div>
                 </div>
 
-                <a
-                  href={`tel:${medicine.pharmacyPhone.replace(/\s/g, "")}`}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white text-xs font-bold text-zinc-800 border border-black/8 hover:bg-zinc-50 transition shadow-2xs"
-                >
-                  <Phone size={12} />
-                  <span>Qo‘ng‘iroq</span>
-                </a>
+                {Boolean(medicine.pharmacyPhone && medicine.pharmacyPhone.trim().length > 0) && (
+                  <a
+                    href={`tel:${medicine.pharmacyPhone.replace(/\s/g, "")}`}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white text-xs font-bold text-zinc-800 border border-black/8 hover:bg-zinc-50 transition shadow-2xs"
+                  >
+                    <Phone size={12} />
+                    <span>Qo‘ng‘iroq</span>
+                  </a>
+                )}
               </div>
 
               <div className="flex items-center justify-between pt-2 border-t border-black/5 text-xs text-zinc-500">

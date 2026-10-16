@@ -4,7 +4,7 @@ import { handleAuthBotUpdate } from "../lib/auth-bot-flow.js";
 import { recordDataConsent } from "../lib/consent.js";
 import { db } from "../db/index.js";
 import { users, specialists, orders, orderItems, specialistCalls, specialistMedicines, specialistRatings, otpCodes, sessions } from "../db/schema.js";
-import { eq, and, desc, gt, isNotNull, or, ne, sql } from "drizzle-orm";
+import { eq, and, desc, gt, lt, isNotNull, or, ne, sql } from "drizzle-orm";
 import {
   farmerBotToken,
   farmerBotUsername,
@@ -23,10 +23,13 @@ import { verifyInitData } from "../lib/tg-auth.js";
 import { cleanText, normalizePhone, parseSafePrice } from "../lib/validate.js";
 import { purgeUserAccount } from "../lib/user-auth.js";
 import { escapeHtml } from "../lib/tg-escape.js";
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomInt } from "node:crypto";
 
 const router = Router();
 const API_BASE = "https://api.telegram.org";
+
+const SUPPORT_TG_HANDLE = (process.env.SUPPORT_TELEGRAM || "agroz_support").replace(/^@/, "");
+const SUPPORT_TG_URL = `https://t.me/${SUPPORT_TG_HANDLE}`;
 
 async function callTelegram(token: string, method: string, payload: Record<string, unknown>): Promise<any> {
   try {
@@ -85,7 +88,7 @@ export async function handleFarmerUpdate(update: any) {
     if (data === "support:open") {
       await callTelegram(token, "sendMessage", {
         chat_id: fromId,
-        text: `💬 <b>Qo'llab-quvvatlash xizmati</b>\n\nSavol yoki takliflaringiz bo'lsa, administrator bilan bog'laning:\n👉 @agroz_support`,
+        text: `💬 <b>Qo'llab-quvvatlash xizmati</b>\n\nSavol yoki takliflaringiz bo'lsa, administrator bilan bog'laning:\n👉 @${SUPPORT_TG_HANDLE}`,
         parse_mode: "HTML",
       });
       return;
@@ -706,12 +709,12 @@ export async function handleFarmerUpdate(update: any) {
     const url = webAppUrl();
     await callTelegram(token, "sendMessage", {
       chat_id: chatId,
-      text: `🌱 <b>AgrozGO — Fermer va dehqonlar uchun qulay raqamli platforma.</b>\n\n• Ilovani ochish uchun quyidagi tugmani yoki chat menyusidagi <b>«AgrozGO»</b> tugmasini bosing.\n• Dori va vositalarni buyurtma qilish, agronom va veterinar chaqirish uchun ilovadan foydalaning.\n• Savollaringiz yoki takliflaringiz bo'lsa: @agroz_support`,
+      text: `🌱 <b>AgrozGO — Fermer va dehqonlar uchun qulay raqamli platforma.</b>\n\n• Ilovani ochish uchun quyidagi tugmani yoki chat menyusidagi <b>«AgrozGO»</b> tugmasini bosing.\n• Dori va vositalarni buyurtma qilish, agronom va veterinar chaqirish uchun ilovadan foydalaning.\n• Savollaringiz yoki takliflaringiz bo'lsa: @${SUPPORT_TG_HANDLE}`,
       parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: [
           [{ text: "🚀 AgrozGO ilovasini ochish", web_app: { url } }],
-          [{ text: "💬 Qo'llab-quvvatlash", url: "https://t.me/agroz_support" }],
+          [{ text: "💬 Qo'llab-quvvatlash", url: SUPPORT_TG_URL }],
         ],
       },
     });
@@ -1240,7 +1243,7 @@ async function _legacyHandlePartnerUpdate(update: any) {
       text: "Siz hali ro'yxatdan o'tmagansiz, qo'llab-quvvatlashga murojaat qiling.",
       reply_markup: {
         inline_keyboard: [
-          [{ text: "💬 Qo'llab-quvvatlash", url: "https://t.me/agroz_support" }],
+          [{ text: "💬 Qo'llab-quvvatlash", url: SUPPORT_TG_URL }],
         ],
       },
     });
@@ -1389,7 +1392,7 @@ async function _legacyHandlePartnerUpdate(update: any) {
   if (command === "/yordam" || text === "💬 Yordam") {
     await callTelegram(token, "sendMessage", {
       chat_id: chatId,
-      text: `🤝 <b>AgrozGO Hamkorlar xizmati</b>\n\nSavollaringiz bo'lsa, administrator bilan bog'laning: @agroz_support\n\nBuyruqlar:\n/bronlar — bron qilingan mahsulotlar\n/chaqiruvlar — chaqiruvlar ro'yxati\n/band yoki /bosh — ish holatini o'zgartirish`,
+      text: `🤝 <b>AgrozGO Hamkorlar xizmati</b>\n\nSavollaringiz bo'lsa, administrator bilan bog'laning: @${SUPPORT_TG_HANDLE}\n\nBuyruqlar:\n/bronlar — bron qilingan mahsulotlar\n/chaqiruvlar — chaqiruvlar ro'yxati\n/band yoki /bosh — ish holatini o'zgartirish`,
       parse_mode: "HTML",
     });
     return;
@@ -1699,7 +1702,252 @@ router.get("/partner/quick-list", async (_req, res) => {
   }
 });
 
-// POST /api/bot/partner/web-login (Web brauzerdan yoki mobil ilovadan AgrozGO Business kabinetiga kirish)
+// POST /api/bot/partner/request-login-otp (Telegram orqali tasdiqlash kodini yuborish)
+router.post("/partner/request-login-otp", async (req, res) => {
+  try {
+    const { phone } = req.body || {};
+    const cleanPhone = normalizePhone(phone || "");
+    if (!cleanPhone || cleanPhone.length < 9) {
+      return res.status(400).json({ ok: false, error: "Iltimos, to'liq telefon raqamingizni kiriting (+998 XX XXX XX XX)" });
+    }
+
+    // specialists jadvalidan qidirish
+    const spec = (
+      await db
+        .select()
+        .from(specialists)
+        .where(and(eq(specialists.phone, cleanPhone), eq(specialists.isActive, true)))
+        .limit(1)
+    )[0];
+
+    if (!spec) {
+      return res.status(404).json({
+        ok: false,
+        notRegistered: true,
+        error: "Ushbu telefon raqam bilan ro'yxatdan o'tgan agro-do'kon yoki mutaxassis topilmadi. Yangi hamkor sifatida ro'yxatdan o'tish uchun quyidagi shaklni to'ldiring.",
+      });
+    }
+
+    const min = 100000;
+    const max = 999999;
+    const code = String(randomInt(min, max + 1));
+    const loginToken = `biz_login_${randomBytes(16).toString("hex")}`;
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 daqiqa
+
+    // Eski foydalanilmagan kodlarni tozalash
+    await db
+      .delete(otpCodes)
+      .where(and(eq(otpCodes.phone, cleanPhone), or(eq(otpCodes.used, true), lt(otpCodes.expiresAt, new Date()))));
+
+    await db.insert(otpCodes).values({
+      phone: cleanPhone,
+      code,
+      token: loginToken,
+      telegramId: spec.telegramId && spec.telegramId > 0 ? spec.telegramId : null,
+      expiresAt,
+    });
+
+    const botUser = (await partnerBotUsername()) || "agroz_auth_bot";
+    const cleanBotUser = botUser.replace(/^@/, "");
+
+    // Agar hamkorning Telegram hisobi ulangan bo'lsa (@agroz_auth_bot ga kirgan)
+    if (spec.telegramId && spec.telegramId > 0) {
+      const pToken = await partnerBotToken();
+      if (pToken) {
+        const text =
+          `🔐 <b>Agroz Business — Web kabinetga kirish</b>\n\n` +
+          `Hurmatli <b>${escapeHtml(spec.name)}</b>!\n` +
+          `Sizning shaxsiy kabinetingizga kirish uchun tasdiqlash kodi:\n\n` +
+          `👉 <b><code>${code}</code></b>\n\n` +
+          `<i>Ushbu kodni web brauzerdagi maydonga kiriting yoki pastdagi tugma orqali 1-bosishda tasdiqlang:</i>`;
+
+        await callTelegram(pToken, "sendMessage", {
+          chat_id: spec.telegramId,
+          text,
+          parse_mode: "HTML",
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "✅ Web kabinetga kirishni tasdiqlash",
+                  callback_data: `biz_web_login:${loginToken}`,
+                },
+              ],
+              [
+                {
+                  text: "❌ Rad etish",
+                  callback_data: `biz_web_reject:${loginToken}`,
+                },
+              ],
+            ],
+          },
+        }).catch((err) => console.error("[partner:request-login-otp tg send error]:", err));
+      }
+
+      return res.json({
+        ok: true,
+        method: "telegram_sent",
+        token: loginToken,
+        botUsername: cleanBotUser,
+        partnerName: spec.name,
+        organization: spec.organization || spec.specialty,
+        phone: cleanPhone,
+      });
+    }
+
+    // Agar Telegram hali ulanmagan bo'lsa (faqat web orqali ariza topshirgan bo'lsa)
+    const botStartUrl = `https://t.me/${cleanBotUser}?start=${loginToken}`;
+    return res.json({
+      ok: true,
+      method: "telegram_link_required",
+      token: loginToken,
+      botUsername: cleanBotUser,
+      botStartUrl,
+      partnerName: spec.name,
+      organization: spec.organization || spec.specialty,
+      phone: cleanPhone,
+    });
+  } catch (err: any) {
+    console.error("[partner:request-login-otp error]:", err);
+    res.status(500).json({ ok: false, error: "Tasdiqlash kodini yuborishda server xatosi yuz berdi" });
+  }
+});
+
+// POST /api/bot/partner/verify-login-otp (Kodni tekshirish va sessiya ochish)
+router.post("/partner/verify-login-otp", async (req, res) => {
+  try {
+    const { phone, code, token } = req.body || {};
+    const cleanPhone = normalizePhone(phone || "");
+    const cleanCode = String(code || "").trim();
+
+    if (!cleanPhone) {
+      return res.status(400).json({ ok: false, error: "Telefon raqami kiritilmadi" });
+    }
+
+    const spec = (
+      await db
+        .select()
+        .from(specialists)
+        .where(and(eq(specialists.phone, cleanPhone), eq(specialists.isActive, true)))
+        .limit(1)
+    )[0];
+
+    if (!spec) {
+      return res.status(404).json({ ok: false, error: "Hamkor profili topilmadi" });
+    }
+
+    // Kodni tekshirish
+    const otpRows = await db
+      .select()
+      .from(otpCodes)
+      .where(and(eq(otpCodes.phone, cleanPhone), eq(otpCodes.used, false)))
+      .orderBy(desc(otpCodes.id));
+
+    const matched = otpRows.find(
+      (r) => (r.code === cleanCode || (token && r.token === token && r.used)) && r.expiresAt.getTime() > Date.now()
+    );
+
+    if (!matched) {
+      return res.status(400).json({ ok: false, error: "Tasdiqlash kodi noto'g'ri yoki muddati tugagan" });
+    }
+
+    await db.update(otpCodes).set({ used: true, deliveredAt: new Date() }).where(eq(otpCodes.id, matched.id));
+
+    // Sessiya yaratish
+    let user = (await db.select().from(users).where(eq(users.phone, cleanPhone)).limit(1))[0];
+    if (!user) {
+      const [createdUser] = await db
+        .insert(users)
+        .values({
+          phone: cleanPhone,
+          name: spec.name,
+          telegramId: spec.telegramId && spec.telegramId > 0 ? spec.telegramId : null,
+        })
+        .returning();
+      user = createdUser;
+    } else if (spec.telegramId && spec.telegramId > 0 && !user.telegramId) {
+      await db.update(users).set({ telegramId: spec.telegramId }).where(eq(users.id, user.id));
+    }
+
+    const sessionToken = `biz_${randomBytes(24).toString("hex")}`;
+    await db.insert(sessions).values({ id: sessionToken, userId: user.id });
+
+    return res.json({
+      ok: true,
+      token: sessionToken,
+      partnerId: spec.id,
+      role: spec.role,
+      name: spec.name,
+    });
+  } catch (err: any) {
+    console.error("[partner:verify-login-otp error]:", err);
+    res.status(500).json({ ok: false, error: "Kodni tekshirishda xatolik yuz berdi" });
+  }
+});
+
+// GET /api/bot/partner/check-login-otp (Telegram botdagi "Tasdiqlash" tugmasini polling orqali tekshirish)
+router.get("/partner/check-login-otp", async (req, res) => {
+  try {
+    const token = String(req.query.token || "").trim();
+    if (!token) {
+      return res.status(400).json({ ok: false, error: "Token ko'rsatilmadi" });
+    }
+
+    const row = (await db.select().from(otpCodes).where(eq(otpCodes.token, token)).limit(1))[0];
+    if (!row) {
+      return res.status(404).json({ ok: false, error: "So'rov topilmadi" });
+    }
+
+    if (row.used) {
+      const spec = (
+        await db
+          .select()
+          .from(specialists)
+          .where(and(eq(specialists.phone, row.phone), eq(specialists.isActive, true)))
+          .limit(1)
+      )[0];
+
+      if (!spec) {
+        return res.status(404).json({ ok: false, error: "Hamkor profili topilmadi" });
+      }
+
+      let user = (await db.select().from(users).where(eq(users.phone, row.phone)).limit(1))[0];
+      if (!user) {
+        const [createdUser] = await db
+          .insert(users)
+          .values({
+            phone: row.phone,
+            name: spec.name,
+            telegramId: row.telegramId || (spec.telegramId && spec.telegramId > 0 ? spec.telegramId : null),
+          })
+          .returning();
+        user = createdUser;
+      }
+
+      const sessionToken = `biz_${randomBytes(24).toString("hex")}`;
+      await db.insert(sessions).values({ id: sessionToken, userId: user.id });
+
+      return res.json({
+        ok: true,
+        verified: true,
+        token: sessionToken,
+        partnerId: spec.id,
+        role: spec.role,
+        name: spec.name,
+      });
+    }
+
+    return res.json({
+      ok: true,
+      verified: false,
+    });
+  } catch (err: any) {
+    console.error("[partner:check-login-otp error]:", err);
+    res.status(500).json({ ok: false, error: "Tekshirishda xatolik yuz berdi" });
+  }
+});
+
+// POST /api/bot/partner/web-login (Eski formatni saqlab qolgan holda)
 router.post("/partner/web-login", async (req, res) => {
   try {
     const { phone, demoRole, partnerId } = req.body || {};
@@ -1778,7 +2026,8 @@ router.post("/partner/web-login", async (req, res) => {
     if (!spec) {
       return res.status(404).json({
         ok: false,
-        error: "Ushbu telefon raqam bilan ro'yxatdan o'tgan dorixona yoki mutaxassis topilmadi. Avval @agroz_auth_bot orqali ariza topshiring.",
+        notRegistered: true,
+        error: "Ushbu telefon raqam bilan ro'yxatdan o'tgan dorixona yoki mutaxassis topilmadi. Avval @agroz_auth_bot orqali ariza topshiring yoki to'liq ro'yxatdan o'ting.",
       });
     }
 
@@ -1805,24 +2054,60 @@ router.post("/partner/web-login", async (req, res) => {
   }
 });
 
-// POST /api/bot/partner/register-intent (Web formadan biznesni ro'yxatdan o'tkazish arizasi)
+// POST /api/bot/partner/register-intent (Yangi hamkor to'liq ma'lumotlari va 1 oylik sinov shartnomasi bilan ro'yxatdan o'tish)
 router.post("/partner/register-intent", async (req, res) => {
   try {
-    const { name, phone, organization, specialty, address, role } = req.body || {};
+    const {
+      name,
+      phone,
+      organization,
+      specialty,
+      address,
+      region,
+      district,
+      role,
+      education,
+      experienceYears,
+      workHours,
+      bio,
+      helpsWith,
+      contractAccepted,
+    } = req.body || {};
+
     const cleanPhone = normalizePhone(phone || "");
     if (!cleanPhone || cleanPhone.length < 9) {
       return res.status(400).json({ ok: false, error: "Telefon raqami noto'g'ri (namuna: +998 90 123 45 67)" });
     }
-    const cleanOrg = cleanText(organization || "", 200);
-    if (!cleanOrg || cleanOrg.length < 2) {
-      return res.status(400).json({ ok: false, error: "Do'kon yoki dorixona nomini kiriting" });
-    }
-    const cleanName = cleanText(name || "", 120) || cleanOrg;
-    const cleanAddr = cleanText(address || "", 500) || "O'zbekiston";
-    const cleanSpec = cleanText(specialty || "Agro-dorixona", 160);
-    const targetRole = role === "specialist" ? "specialist" : "pharmacy";
 
-    // 1. specialists jadvalida mavjudligini tekshiramiz
+    const cleanName = cleanText(name || "", 120);
+    if (!cleanName || cleanName.length < 3) {
+      return res.status(400).json({ ok: false, error: "Iltimos, to'liq F.I.SH (ism va familiyangizni) kiriting" });
+    }
+
+    const targetRole: "pharmacy" | "specialist" = role === "specialist" ? "specialist" : "pharmacy";
+    const cleanOrg = cleanText(organization || "", 200) || (targetRole === "pharmacy" ? cleanName : null);
+    if (targetRole === "pharmacy" && (!cleanOrg || cleanOrg.length < 2)) {
+      return res.status(400).json({ ok: false, error: "Iltimos, do'kon yoki dorixona nomini kiriting" });
+    }
+
+    const fullAddrParts = [region, district, address].filter(Boolean);
+    const cleanAddr = cleanText(fullAddrParts.join(", ") || address || "", 500) || "O'zbekiston";
+    if (cleanAddr.length < 4) {
+      return res.status(400).json({ ok: false, error: "Iltimos, hudud va to'liq manzilingizni kiriting" });
+    }
+
+    const cleanSpec = cleanText(specialty || (targetRole === "pharmacy" ? "Agro-do'kon" : "Agronom mutaxassis"), 160);
+    const cleanWorkHours = cleanText(workHours || "08:00 - 19:00", 60);
+    const cleanExp = Number(experienceYears) >= 0 ? Number(experienceYears) : 1;
+    const cleanEdu = cleanText(education || "", 300);
+    const cleanBio = cleanText(bio || "", 500);
+    const cleanHelpsWith = helpsWith === "animal" || helpsWith === "crop" ? helpsWith : "both";
+
+    // 1 Oylik bepul sinov sanasi: Hozirdan boshlab 30 kun
+    const now = new Date();
+    const trialEndsAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    // 1. specialists jadvalida mavjudligini tekshiramiz/yaratamiz
     let spec = (await db.select().from(specialists).where(eq(specialists.phone, cleanPhone)).limit(1))[0];
     if (spec) {
       await db
@@ -1832,8 +2117,18 @@ router.post("/partner/register-intent", async (req, res) => {
           organization: cleanOrg,
           address: cleanAddr,
           specialty: cleanSpec,
+          workHours: cleanWorkHours,
+          experienceYears: cleanExp,
+          education: cleanEdu || spec.education,
+          bio: cleanBio || spec.bio,
+          helpsWith: cleanHelpsWith,
+          role: targetRole,
           isActive: true,
           isApproved: true,
+          contractAcceptedAt: spec.contractAcceptedAt || now,
+          trialEndsAt: spec.trialEndsAt || trialEndsAt,
+          subscriptionStatus: spec.subscriptionStatus || "trial",
+          consentedAt: spec.consentedAt || now,
         })
         .where(eq(specialists.id, spec.id));
       spec = (await db.select().from(specialists).where(eq(specialists.id, spec.id)).limit(1))[0];
@@ -1849,17 +2144,38 @@ router.post("/partner/register-intent", async (req, res) => {
           specialty: cleanSpec,
           organization: cleanOrg,
           address: cleanAddr,
+          workHours: cleanWorkHours,
+          experienceYears: cleanExp,
+          education: cleanEdu,
+          bio: cleanBio,
+          helpsWith: cleanHelpsWith,
           lat: 41.3111,
           lng: 69.2797,
-          experienceYears: 1,
           isActive: true,
           isApproved: true,
+          contractAcceptedAt: now,
+          trialEndsAt,
+          subscriptionStatus: "trial",
+          consentedAt: now,
+          consentVersion: "v1.0",
+          consentChannel: "web_registration_contract",
         })
         .returning();
       spec = createdSpec;
     }
 
-    // 2. users jadvalida user borligini tekshiramiz/yaratamiz
+    // 2. O'RQ-547 Qonuniy Rozilik Jurnalini qayd etish
+    if (spec) {
+      recordDataConsent({
+        subjectType: targetRole,
+        subjectId: spec.id,
+        phone: cleanPhone,
+        fullName: cleanName,
+        consentChannel: "web_registration_contract",
+      }).catch(() => {});
+    }
+
+    // 3. users jadvalida user borligini tekshiramiz/yaratamiz
     let user = (await db.select().from(users).where(eq(users.phone, cleanPhone)).limit(1))[0];
     if (!user) {
       const [createdUser] = await db
@@ -1867,26 +2183,28 @@ router.post("/partner/register-intent", async (req, res) => {
         .values({
           phone: cleanPhone,
           name: cleanName,
+          region: region || null,
+          district: district || null,
         })
         .returning();
       user = createdUser;
     }
 
-    // 3. Bir martalik ro'yxatdan o'tish tokeni (Telegram /start uchun)
+    // 4. Bir martalik ro'yxatdan o'tish va Telegram botni ulash tokeni
     const regToken = `biz_reg_${randomBytes(12).toString("hex")}`;
     await db.insert(otpCodes).values({
       phone: cleanPhone,
       code: "BIZ",
       token: regToken,
       used: false,
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 soat
+      expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000), // 48 soat
     });
 
-    // 4. Web session token (To'g'ridan-to'g'ri kirish uchun)
+    // 5. Web session token (To'g'ridan-to'g'ri kirish uchun)
     const sessionToken = `biz_${randomBytes(24).toString("hex")}`;
     await db.insert(sessions).values({ id: sessionToken, userId: user.id });
 
-    // 5. Bot username va start havolasi
+    // 6. Bot username va start havolasi
     const botUser = (await partnerBotUsername()) || "agroz_auth_bot";
     const cleanBotUser = botUser.replace(/^@/, "");
     const startUrl = `https://t.me/${cleanBotUser}?start=${regToken}`;
@@ -1900,9 +2218,11 @@ router.post("/partner/register-intent", async (req, res) => {
       startUrl,
       webCabinetUrl,
       phone: cleanPhone,
-      organization: cleanOrg,
+      organization: cleanOrg || cleanName,
       name: cleanName,
       partnerId: spec.id,
+      trialEndsAt: trialEndsAt.toISOString(),
+      daysLeft: 30,
     });
   } catch (err: any) {
     console.error("[partner:register-intent error]:", err);
@@ -1932,6 +2252,7 @@ router.get("/partner/check-registration", async (req, res) => {
         partnerId: spec?.id,
         name: spec?.name,
         organization: spec?.organization,
+        isTelegramLinked: Boolean(spec?.telegramId && spec.telegramId > 0),
       });
     }
 
@@ -1951,6 +2272,66 @@ router.post("/partner/init", async (req, res) => {
     const spec = await getPartnerFromReq(req);
     if (!spec || !spec.isActive) {
       return res.status(401).json({ ok: false, error: "Hamkor profili topilmadi yoki avtorizatsiya talab etiladi" });
+    }
+
+    // 1 oylik sinov muddati (trial) hisob-kitobi
+    const now = new Date();
+    const trialEnd = spec.trialEndsAt ? new Date(spec.trialEndsAt) : new Date(spec.createdAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const msLeft = trialEnd.getTime() - now.getTime();
+    const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
+    let subscriptionStatus = spec.subscriptionStatus || "trial";
+    if (subscriptionStatus !== "active") {
+      if (daysLeft <= 0) {
+        subscriptionStatus = "expired";
+      } else {
+        subscriptionStatus = "trial";
+      }
+    }
+
+    const isTelegramLinked = Boolean(spec.telegramId && spec.telegramId > 0);
+    const botUser = (await partnerBotUsername()) || "agroz_auth_bot";
+    const cleanBotUser = botUser.replace(/^@/, "");
+
+    // 5 kunga qolganda Telegram ogohlantirishini yuborish (bir martalik tekshiruv)
+    if (
+      daysLeft <= 5 &&
+      daysLeft > 0 &&
+      !spec.trialWarningSentAt &&
+      isTelegramLinked &&
+      spec.telegramId &&
+      subscriptionStatus !== "active"
+    ) {
+      const pToken = await partnerBotToken();
+      if (pToken) {
+        const warningText =
+          `⚠️ <b>MUHIM OGOHLANTIRISH: Bepul sinov muddati tugashiga ${daysLeft} kun qoldi!</b>\n\n` +
+          `Hurmatli <b>${escapeHtml(spec.name)}</b> («${escapeHtml(spec.organization || spec.specialty || "Do'koningiz")}»),\n` +
+          `Sizning Agroz Business ERP tizimidagi 1 oylik (30 kunlik) bepul sinov davringiz <b>${trialEnd.toLocaleDateString("uz-UZ")}</b> kuni yakunlanadi.\n\n` +
+          `📌 <b>Shartnomaga muvofiq:</b>\n` +
+          `Sinov muddati tugagach tizim pullik obunaga (149 000 so'm/oy) o'tadi. Muddat yakunlangunga qadar to'lov qilinmasa, ma'lumotlar bazasi va kabinet vaqtincha yopilishi mumkin.\n\n` +
+          `Barcha tovarlar qoldig'i, kassa va qarz daftari uzluksiz ishlashi uchun obunani oldindan uzaytiring:`;
+
+        callTelegram(pToken, "sendMessage", {
+          chat_id: spec.telegramId,
+          text: warningText,
+          parse_mode: "HTML",
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "💳 Obunani uzaytirish (Tariflar)",
+                  web_app: { url: partnerMiniappUrl() },
+                },
+              ],
+            ],
+          },
+        }).catch((err) => console.error("[trial warning tg send error]:", err));
+
+        await db
+          .update(specialists)
+          .set({ trialWarningSentAt: new Date() })
+          .where(eq(specialists.id, spec.id));
+      }
     }
 
     if (!spec.isApproved) {
@@ -1975,6 +2356,12 @@ router.post("/partner/init", async (req, res) => {
           isApproved: false,
           consentedAt: spec.consentedAt,
           consentVersion: spec.consentVersion,
+          contractAcceptedAt: spec.contractAcceptedAt,
+          trialEndsAt: trialEnd.toISOString(),
+          daysLeft,
+          subscriptionStatus,
+          isTelegramLinked,
+          botUsername: cleanBotUser,
           rating: { avg: null, count: 0 },
           stats: { totalOrders: 0, totalCalls: 0, pendingOrders: 0, pendingCalls: 0, activeCalls: 0, completedCalls: 0 },
         },
@@ -2040,6 +2427,12 @@ router.post("/partner/init", async (req, res) => {
         isApproved: true,
         consentedAt: spec.consentedAt,
         consentVersion: spec.consentVersion,
+        contractAcceptedAt: spec.contractAcceptedAt,
+        trialEndsAt: trialEnd.toISOString(),
+        daysLeft,
+        subscriptionStatus,
+        isTelegramLinked,
+        botUsername: cleanBotUser,
         rating: {
           avg: ratingAvg,
           count: ratingCount,

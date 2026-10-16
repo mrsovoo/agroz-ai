@@ -1,15 +1,16 @@
 import { Request, Response, NextFunction } from "express";
 import { db } from "../db/index.js";
-import { users, adminSessions, sessions, specialists, pharmacies } from "../db/schema.js";
-import { eq } from "drizzle-orm";
+import { users, adminSessions, sessions, specialists } from "../db/schema.js";
+import { and, eq, or } from "drizzle-orm";
 import { verifyInitData as tgAuthVerifyInitData } from "../lib/tg-auth.js";
-
-const TG_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
-const TG_AUTH_BOT_TOKEN = process.env.TELEGRAM_AUTH_BOT_TOKEN || "";
+import { farmerBotToken, partnerBotToken } from "../lib/settings.js";
 
 // Custom wrapper to include botKind
-function verifyInitData(initData: string, botKind: "user" | "business"): boolean {
-  const token = botKind === "user" ? TG_BOT_TOKEN : TG_AUTH_BOT_TOKEN;
+async function verifyInitData(initData: string, botKind: "user" | "business"): Promise<boolean> {
+  const token =
+    botKind === "user"
+      ? (await farmerBotToken()) || process.env.TELEGRAM_BOT_TOKEN || ""
+      : (await partnerBotToken()) || process.env.TELEGRAM_AUTH_BOT_TOKEN || "";
   if (!token) return false;
   return tgAuthVerifyInitData(initData, token, 24 * 60 * 60); // 24 hours expiry
 }
@@ -21,7 +22,7 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
     const initData = (req.headers["x-telegram-init-data"] as string) || req.body?.initData || req.query?.initData;
     if (initData) {
       // By default, optionalAuth expects a "user" bot token, since it's for user endpoints
-      if (verifyInitData(initData as string, "user")) {
+      if (await verifyInitData(initData as string, "user")) {
         const params = new URLSearchParams(initData as string);
         const userStr = params.get("user");
         if (userStr) {
@@ -33,7 +34,7 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
               (req as any).tgBot = "user";
               return next();
             } else {
-              (req as any).user = { telegramId: tgUser.id, name: tgUser.first_name, role: 'user' };
+              (req as any).user = { telegramId: tgUser.id, name: tgUser.first_name, role: "user" };
               (req as any).tgBot = "user";
               return next();
             }
@@ -45,8 +46,17 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
     // 2. JWT / Session Token
     const authHeader = req.headers?.authorization;
     const cookieHeader = req.headers?.cookie;
-    const cookieSession = cookieHeader?.split(";").find((c: string) => c.trim().startsWith("agroai_session=") || c.trim().startsWith("agroz_session="))?.split("=")[1]?.trim();
-    const sessionId = authHeader?.replace("Bearer ", "")?.trim() || req.headers?.["x-session-id"] || req.cookies?.agroai_session || req.cookies?.agroz_session || cookieSession;
+    const cookieSession = cookieHeader
+      ?.split(";")
+      .find((c: string) => c.trim().startsWith("agroai_session=") || c.trim().startsWith("agroz_session="))
+      ?.split("=")[1]
+      ?.trim();
+    const sessionId =
+      authHeader?.replace("Bearer ", "")?.trim() ||
+      req.headers?.["x-session-id"] ||
+      req.cookies?.agroai_session ||
+      req.cookies?.agroz_session ||
+      cookieSession;
 
     if (sessionId) {
       const s = await db.select().from(sessions).where(eq(sessions.id, sessionId as string)).limit(1);
@@ -82,7 +92,7 @@ export const requireTelegramAuth = (botKind: "user" | "business") => {
       const initData = (req.headers["x-telegram-init-data"] as string) || req.body?.initData || req.query?.initData;
       let tgUserObj = null;
       if (initData) {
-        if (verifyInitData(initData, botKind)) {
+        if (await verifyInitData(initData, botKind)) {
           const params = new URLSearchParams(initData as string);
           const userStr = params.get("user");
           if (userStr) {
@@ -100,13 +110,13 @@ export const requireTelegramAuth = (botKind: "user" | "business") => {
         if (sessionRows[0]) {
           const userRows = await db.select().from(users).where(eq(users.id, sessionRows[0].userId)).limit(1);
           if (userRows[0]) {
-             (req as any).webUser = userRows[0];
+            (req as any).webUser = userRows[0];
           }
         }
       }
-      
+
       if (!(req as any).telegramUser && !(req as any).webUser) {
-          return res.status(401).json({ error: "Avtorizatsiya xatosi (Telegram/Web Token)" });
+        return res.status(401).json({ error: "Avtorizatsiya xatosi (Telegram/Web Token)" });
       }
       return next();
     } catch (e) {
@@ -129,12 +139,19 @@ export const requireRole = (allowedRoles: ("specialist" | "pharmacy" | "admin")[
         }
       }
 
-      const tgId = (req as any).telegramUser?.id || (req as any).webUser?.telegramId;
-      if (tgId) {
-        if (allowedRoles.includes("specialist") || allowedRoles.includes("pharmacy")) {
-          // specialists table handles both in bot.ts logic currently, let's just check specialists for now
-          const spec = await db.select().from(specialists).where(eq(specialists.telegramId, tgId)).limit(1);
-          if (spec.length > 0 && spec[0].isActive) {
+      if (allowedRoles.includes("specialist") || allowedRoles.includes("pharmacy")) {
+        const tgId = (req as any).telegramUser?.id || (req as any).webUser?.telegramId;
+        const webPhone = (req as any).webUser?.phone;
+        const conditions = [];
+        if (tgId) conditions.push(eq(specialists.telegramId, Number(tgId)));
+        if (webPhone) conditions.push(eq(specialists.phone, String(webPhone)));
+        if (conditions.length > 0) {
+          const spec = await db
+            .select()
+            .from(specialists)
+            .where(and(or(...conditions), eq(specialists.isActive, true)))
+            .limit(1);
+          if (spec.length > 0) {
             (req as any).specialist = spec[0];
             return next();
           }

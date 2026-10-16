@@ -4,9 +4,9 @@ import MarketClient from "@/components/MarketClient";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Dorilar — dorixonalar va agro-preparatlar katalogi",
+  title: "Agro-mahsulotlar — agro-do'konlar va preparatlar katalogi",
   description:
-    "Ekinlar va hayvonlar uchun dorilar, o'g'itlar va preparatlar katalogi. Savatga qo'shing va buyurtma bering.",
+    "Ekinlar va hayvonlar uchun agro-mahsulotlar, o'g'itlar va preparatlar katalogi. Savatga qo'shing va bron qiling.",
 };
 
 export default function MarketPage() {

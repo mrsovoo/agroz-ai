@@ -228,23 +228,23 @@ export default function HamkorlikPage() {
 
         <div className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100/70 border border-emerald-200 px-3.5 py-1.5 rounded-full mb-4">
           <Building2 size={13} className="text-emerald-700" />
-          <span>Agroz Business Ecosystem</span>
+          <span>1 oylik bepul sinov versiyasi (30 kun 0 so‘m)</span>
         </div>
 
         <h1 className="text-3xl sm:text-5xl lg:text-[54px] font-extrabold text-[#191B1F] tracking-tight leading-[1.12]">
           {lang === "ru"
-            ? "Партнерство с AgrozGO: автоматизация и рост вашего агробизнеса"
+            ? "Agroz Business: 1 месяц бесплатного тестирования для агроаптек"
             : lang === "en"
-            ? "Partner with AgrozGO: Scale and automate your agricultural business"
-            : "AgrozGO bilan hamkorlik: agro-biznesingizni yangi bosqichga olib chiqing"}
+            ? "Agroz Business: 1-Month Free Trial for Agro-Pharmacies"
+            : "Agroz Business: agro-dorixonalar uchun 1 oylik tekin sinov versiyasi"}
         </h1>
 
         <p className="mt-4 text-sm sm:text-base text-zinc-600 max-w-3xl leading-relaxed">
           {lang === "ru"
-            ? "Облачная книга долгов, учет склада, касса и онлайн-заказы от тысяч фермеров по всему Узбекистану в единой системе."
+            ? "Облачная книга долгов, учет склада, касса и финансовые отчеты. 30 дней бесплатно без привязки банковской карты."
             : lang === "en"
-            ? "Cloud debt ledger, inventory control, POS, and online order flow from thousands of farmers across Uzbekistan in one unified platform."
-            : "Bulutli qarz daftari, omborxona nazorati, kassa va O‘zbekiston bo‘ylab minglab dehqon va chorvadorlardan buyurtmalar oqimi — yagona raqamli platformada."}
+            ? "Cloud debt ledger, inventory control, POS, and financial reports. 30 days free, no bank card required."
+            : "Bulutli qarz daftari, omborxona nazorati, kunlik kassa va moliyaviy hisobotlar. 30 kun mutlaqo bepul, bank kartasi talab qilinmaydi."}
         </p>
       </section>
 
@@ -299,12 +299,12 @@ export default function HamkorlikPage() {
                   <h3 className="text-base font-bold text-[#191B1F] mb-1.5">
                     {lang === "ru" ? "Онлайн Агро Базар" : lang === "en" ? "Live Marketplace Showcase" : "Jonli Bozor Vitrinasi"}
                   </h3>
-                  <p className="text-xs text-zinc-500 leading-relaxed">
+                    <p className="text-xs text-zinc-500 leading-relaxed">
                     {lang === "ru"
                       ? "Ваши товары видны фермерам вашего района и города прямо на платформе и в Telegram."
                       : lang === "en"
                       ? "Your catalog becomes instantly visible to farmers in your region both on web and Telegram."
-                      : "Do‘koningizdagi tovarlar hududingizdagi minglab fermer va xaridorlarga to‘g‘ridan-to‘g‘ri ko‘rinadi."}
+                      : "Do‘koningizdagi tovarlar hududingizdagi dehqon, fermer va xaridorlarga to‘g‘ridan-to‘g‘ri ko‘rinadi."}
                   </p>
                 </div>
               </div>
@@ -319,35 +319,35 @@ export default function HamkorlikPage() {
                   </h3>
                   <p className="text-xs text-zinc-500 leading-relaxed">
                     {lang === "ru"
-                      ? "Первые 50 партнерских аптек получают полный функционал платформы бесплатно."
+                      ? "Первые партнерские аптеки получают полный функционал платформы бесплатно."
                       : lang === "en"
-                      ? "The first 50 partner pharmacies receive full platform features completely free."
-                      : "Dastlabki 50 ta hamkor agro-dorixona uchun barcha servislar 1 yil davomida mutlaqo bepul taqdim etiladi."}
+                      ? "Partner pharmacies receive full platform features completely free."
+                      : "Dastlabki hamkor agro-dorixonalar uchun barcha servislar bepul sinov tariqasida taqdim etiladi."}
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Qora Bento Statistika kartasi */}
+            {/* Bento Imkoniyatlar kartasi */}
             <div className="rounded-3xl bg-[#1E2024] text-white p-6 sm:p-8 shadow-xl border border-white/10 space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
-                  {lang === "ru" ? "Доверие партнеров" : lang === "en" ? "Partner Trust" : "Hamkorlar ishonchi"}
+                  {lang === "ru" ? "Условия платформы" : lang === "en" ? "Platform Terms" : "Platforma shartlari"}
                 </span>
                 <span className="text-xs text-zinc-400">O‘zbekiston bo‘ylab</span>
               </div>
               <div className="grid grid-cols-3 gap-3 pt-2">
                 <div>
-                  <div className="text-2xl sm:text-3xl font-extrabold text-white">50+</div>
-                  <div className="text-[11px] text-zinc-400 mt-0.5">Hamkor do‘konlar</div>
+                  <div className="text-xl sm:text-2xl font-extrabold text-white">30 kun</div>
+                  <div className="text-[11px] text-zinc-400 mt-0.5">Sinov muddati</div>
                 </div>
                 <div>
-                  <div className="text-2xl sm:text-3xl font-extrabold text-amber-400">12 000+</div>
-                  <div className="text-[11px] text-zinc-400 mt-0.5">Faol xaridorlar</div>
+                  <div className="text-xl sm:text-2xl font-extrabold text-amber-400">0 so‘m</div>
+                  <div className="text-[11px] text-zinc-400 mt-0.5">Boshlang‘ich to‘lov</div>
                 </div>
                 <div>
-                  <div className="text-2xl sm:text-3xl font-extrabold text-emerald-400">100%</div>
-                  <div className="text-[11px] text-zinc-400 mt-0.5">Xavfsiz ma'lumot</div>
+                  <div className="text-xl sm:text-2xl font-extrabold text-emerald-400">Bulutli</div>
+                  <div className="text-[11px] text-zinc-400 mt-0.5">Xavfsiz kassa</div>
                 </div>
               </div>
             </div>

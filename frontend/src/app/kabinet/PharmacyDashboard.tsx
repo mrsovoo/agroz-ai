@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   Boxes,
   ChevronRight,
@@ -8,11 +8,14 @@ import {
   Plus,
   Wallet,
   HandCoins,
-  Truck,
   ArrowUpRight,
+  ShoppingCart,
+  Download,
+  Calendar,
 } from "lucide-react";
 import { DualLineChart, DonutChart, SeriesPoint } from "@/components/charts";
 import { shortDay } from "@/lib/format";
+import { loadPartnerDebts } from "@/components/QarzDaftariSection";
 
 export type DashOrder = {
   id: number;
@@ -31,6 +34,8 @@ export type DashMedicine = {
   status: "bor" | "yoq" | "qoralama";
   photoData?: string | null;
   type: string;
+  batchNo?: string | null;
+  expiryDate?: string | null;
 };
 
 export const LOW_STOCK_THRESHOLD = 5;
@@ -58,20 +63,18 @@ const STATUS_BADGE: Record<string, { text: string; cls: string }> = {
   yetkazildi: { text: "Topshirildi", cls: "bg-black text-white" },
 };
 
-const DEMO_EXPIRING_BATCHES = [
-  { id: 1, name: "Bi-58 Insektitsid", batchNo: "B-2024/09", expiry: "2026-11-15", daysLeft: 33, qty: 12, unit: "dona" },
-  { id: 2, name: "Agro-Bio Stimulyator Pro", batchNo: "AB-8841", expiry: "2026-12-01", daysLeft: 49, qty: 8, unit: "dona" },
-  { id: 3, name: "Kalsiy-Fosfat Premiks", batchNo: "KF-102", expiry: "2026-12-18", daysLeft: 66, qty: 25, unit: "qop" },
-];
-
 export default function PharmacyDashboard({
+  partnerId,
   orders,
   medicines,
   onOpenOrders,
   onOpenStock,
   onAddMedicine,
   onOpenDebts,
+  onOpenPos,
+  onExportReport,
 }: {
+  partnerId?: number | string | null;
   orders: DashOrder[];
   medicines: DashMedicine[];
   rating?: { avg: number | null; count: number };
@@ -79,7 +82,27 @@ export default function PharmacyDashboard({
   onOpenStock: (filter?: "all" | "low" | "out" | "draft") => void;
   onAddMedicine: () => void;
   onOpenDebts?: () => void;
+  onOpenPos?: () => void;
+  onExportReport?: () => void;
 }) {
+  const [debtTotals, setDebtTotals] = useState({ customerDebt: 0, supplierDebt: 0 });
+
+  useEffect(() => {
+    const computeDebts = () => {
+      const list = loadPartnerDebts(partnerId);
+      let customerDebt = 0;
+      let supplierDebt = 0;
+      for (const d of list) {
+        if (d.kind === "mijoz") customerDebt += d.balance || 0;
+        else if (d.kind === "taminotchi") supplierDebt += d.balance || 0;
+      }
+      setDebtTotals({ customerDebt, supplierDebt });
+    };
+    computeDebts();
+    window.addEventListener("agroz_debts_updated", computeDebts);
+    return () => window.removeEventListener("agroz_debts_updated", computeDebts);
+  }, [partnerId]);
+
   const stats = useMemo(() => {
     const now = new Date();
     const today = tashkentDay(now);
@@ -89,14 +112,13 @@ export default function PharmacyDashboard({
     let newCount = 0;
     let inProgress = 0;
 
-    const days14: { key: string; label: string; sales: number; supply: number }[] = [];
+    const days14: { key: string; label: string; sales: number; completed: number }[] = [];
     for (let i = 13; i >= 0; i--) {
       const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
       const key = tashkentDay(d);
       const parts = key.split("-");
       const short = `${parts[2]}/${parts[1]}`;
-      const baseSupply = (i % 3 === 0 ? 350000 : i % 5 === 0 ? 800000 : 0) + (14 - i) * 20000;
-      days14.push({ key, label: short, sales: 0, supply: baseSupply });
+      days14.push({ key, label: short, sales: 0, completed: 0 });
     }
     const dayIndex = new Map(days14.map((d, i) => [d.key, i]));
 
@@ -111,19 +133,23 @@ export default function PharmacyDashboard({
         if (day === today) todayOrders++;
         const idx = dayIndex.get(day);
         if (idx !== undefined) {
-          days14[idx].sales += sum || 45000;
+          days14[idx].sales += sum;
         }
       }
 
       if (o.status === "yetkazildi") {
         if (day === today) todayRevenue += sum;
+        const idx = dayIndex.get(day);
+        if (idx !== undefined) {
+          days14[idx].completed += sum;
+        }
       }
     }
 
     const chartSeries: SeriesPoint[] = days14.map((d) => ({
       label: d.label,
-      a: d.sales || (d.supply ? Math.round(d.supply * 0.85) : 120000),
-      b: d.supply,
+      a: d.completed,
+      b: d.sales,
     }));
 
     return {
@@ -149,12 +175,34 @@ export default function PharmacyDashboard({
       .slice(0, 4);
 
     const donutData = [
-      { label: "Mavjud", value: ok || 1, color: "#1d1d1f" },
+      { label: "Mavjud", value: ok || (total === 0 ? 1 : 0), color: "#1d1d1f" },
       { label: "Kam qolgan", value: low, color: "#86868b" },
       { label: "Tugagan", value: out, color: "#d2d2d7" },
     ].filter((d) => d.value > 0);
 
     return { total, draft, out, low, ok, lowList, donutData };
+  }, [medicines]);
+
+  // Haqiqiy yaroqlilik muddati kiritilgan mahsulotlar
+  const expiringBatches = useMemo(() => {
+    const nowMs = new Date().getTime();
+    return medicines
+      .filter((m) => Boolean(m.expiryDate))
+      .map((m) => {
+        const expMs = new Date(m.expiryDate as string).getTime();
+        const daysLeft = Math.ceil((expMs - nowMs) / (1000 * 60 * 60 * 24));
+        return {
+          id: m.id,
+          name: m.name,
+          batchNo: m.batchNo || `P-${m.id}`,
+          expiry: m.expiryDate as string,
+          daysLeft,
+          qty: m.stock,
+          unit: m.stockUnit,
+        };
+      })
+      .sort((a, b) => a.daysLeft - b.daysLeft)
+      .slice(0, 4);
   }, [medicines]);
 
   const recent = orders.slice(0, 5);
@@ -165,16 +213,26 @@ export default function PharmacyDashboard({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-[#1d1d1f]">Dashboard</h1>
-          <p className="text-xs text-[#86868b] mt-0.5">Savdo, ombor va mijozlar hisobi</p>
+          <p className="text-xs text-[#86868b] mt-0.5">Kassa savdosi, ombor va mijozlar hisobi</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {onOpenPos && (
+            <button
+              type="button"
+              onClick={onOpenPos}
+              className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 text-white px-4 py-2 text-xs font-semibold hover:bg-emerald-700 transition active:scale-95 shadow-xs"
+            >
+              <ShoppingCart size={14} />
+              <span>Tezkor Kassa (Sotuv)</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={onAddMedicine}
             className="inline-flex items-center gap-1.5 rounded-full bg-[#1d1d1f] text-white px-4 py-2 text-xs font-medium hover:bg-black transition active:scale-95"
           >
             <Plus size={14} />
-            <span>Dori qo&apos;shish</span>
+            <span>Mahsulot qo&apos;shish</span>
           </button>
           <button
             type="button"
@@ -184,10 +242,21 @@ export default function PharmacyDashboard({
             <HandCoins size={14} />
             <span>Qarz daftari</span>
           </button>
+          {onExportReport && (
+            <button
+              type="button"
+              onClick={onExportReport}
+              className="inline-flex items-center gap-1.5 rounded-full bg-white border border-[#e5e5ea] text-[#1d1d1f] px-3.5 py-2 text-xs font-medium hover:bg-[#f5f5f7] transition active:scale-95"
+              title="Savdo va buyurtmalar hisobotini yuklab olish"
+            >
+              <Download size={14} />
+              <span>Hisobot (.csv)</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* 2. Apple Style Minimalist Stat Cards (Oq-qora, toza) */}
+      {/* 2. Apple Style Minimalist Stat Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* Savdo */}
         <div className="rounded-2xl border border-[#e5e5ea] bg-white p-5 shadow-xs">
@@ -215,7 +284,7 @@ export default function PharmacyDashboard({
           </div>
           <div className="mt-3">
             <span className="text-2xl font-semibold tracking-tight text-[#1d1d1f] font-mono">
-              {formatSum(2620000)}
+              {formatSum(debtTotals.customerDebt)}
             </span>
             <span className="text-xs text-[#86868b] ml-1">so&apos;m</span>
           </div>
@@ -233,7 +302,7 @@ export default function PharmacyDashboard({
           </div>
           <div className="mt-3">
             <span className="text-2xl font-semibold tracking-tight text-[#1d1d1f] font-mono">
-              {formatSum(6000000)}
+              {formatSum(debtTotals.supplierDebt)}
             </span>
             <span className="text-xs text-[#86868b] ml-1">so&apos;m</span>
           </div>
@@ -263,18 +332,18 @@ export default function PharmacyDashboard({
         <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#f5f5f7]">
           <div>
             <h2 className="text-sm font-semibold text-[#1d1d1f]">Savdo dinamikasi</h2>
-            <p className="text-xs text-[#86868b]">Oxirgi 14 kunlik ko&apos;rsatkich</p>
+            <p className="text-xs text-[#86868b]">Oxirgi 14 kunlik real sotuv va buyurtmalar</p>
           </div>
           <div className="flex items-center gap-4 text-xs text-[#86868b]">
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#1d1d1f]" /> Savdo
+              <span className="h-2 w-2 rounded-full bg-[#1d1d1f]" /> Yakunlangan savdo
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#d2d2d7]" /> Kirim
+              <span className="h-2 w-2 rounded-full bg-[#d2d2d7]" /> Jami buyurtmalar
             </span>
           </div>
         </div>
-        <DualLineChart data={stats.chartSeries} aLabel="Savdo" bLabel="Kirim" height={200} />
+        <DualLineChart data={stats.chartSeries} aLabel="Savdo" bLabel="Buyurtma" height={200} />
       </div>
 
       {/* 4. Ikki ustun: So'nggi buyurtmalar & Ombor / Partiyalar */}
@@ -282,7 +351,7 @@ export default function PharmacyDashboard({
         {/* So'nggi buyurtmalar */}
         <div className="lg:col-span-2 rounded-2xl border border-[#e5e5ea] bg-white p-6 shadow-xs">
           <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#f5f5f7]">
-            <h2 className="text-sm font-semibold text-[#1d1d1f]">So&apos;nggi buyurtmalar</h2>
+            <h2 className="text-sm font-semibold text-[#1d1d1f]">So&apos;nggi buyurtmalar va kassa sotuvi</h2>
             <button
               type="button"
               onClick={() => onOpenOrders("all")}
@@ -344,30 +413,45 @@ export default function PharmacyDashboard({
             <DonutChart
               data={stock.donutData}
               centerValue={`${stock.total}`}
-              centerLabel="dori"
+              centerLabel="mahsulot"
             />
           </div>
 
           <div className="rounded-2xl border border-[#e5e5ea] bg-white p-6 shadow-xs">
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#f5f5f7]">
-              <h2 className="text-sm font-semibold text-[#1d1d1f]">Muddati yaqin</h2>
+              <h2 className="text-sm font-semibold text-[#1d1d1f]">Muddati nazorati</h2>
               <span className="text-[10px] text-[#86868b]">Partiyalar</span>
             </div>
-            <div className="divide-y divide-[#f5f5f7]">
-              {DEMO_EXPIRING_BATCHES.slice(0, 3).map((b) => (
-                <div key={b.id} className="py-2.5 flex items-center justify-between text-xs">
-                  <div>
-                    <div className="font-medium text-[#1d1d1f]">{b.name}</div>
-                    <div className="text-[10px] text-[#86868b]">
-                      №{b.batchNo} · {shortDay(b.expiry)}
+            {expiringBatches.length === 0 ? (
+              <div className="py-4 text-center text-[#86868b] space-y-2">
+                <Calendar size={22} className="mx-auto opacity-30" />
+                <p className="text-[11px] leading-relaxed">
+                  Yaroqlilik muddati kiritilgan partiyalar yo&apos;q. Omborda mahsulot qo&apos;shish yoki tahrirlashda muddatni belgilang.
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-[#f5f5f7]">
+                {expiringBatches.map((b) => (
+                  <div key={b.id} className="py-2.5 flex items-center justify-between text-xs">
+                    <div>
+                      <div className="font-medium text-[#1d1d1f]">{b.name}</div>
+                      <div className="text-[10px] text-[#86868b]">
+                        №{b.batchNo} · {shortDay(b.expiry)}
+                      </div>
                     </div>
+                    <span
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${
+                        b.daysLeft <= 30
+                          ? "bg-red-50 text-red-700 font-semibold"
+                          : "bg-[#f5f5f7] text-[#86868b]"
+                      }`}
+                    >
+                      {b.daysLeft <= 0 ? "Muddati o'tgan" : `${b.daysLeft} kun`}
+                    </span>
                   </div>
-                  <span className="text-[10px] font-mono text-[#86868b] bg-[#f5f5f7] px-2 py-0.5 rounded-full">
-                    {b.daysLeft} kun
-                  </span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -574,12 +574,13 @@ async function handleCommand(
   const command = parts[0].split("@")[0];
   const payload = parts.slice(1).join(" ").trim();
 
-  // Web formadan kelgan bir martalik ro'yxatdan o'tish tokeni (/start biz_reg_... yoki reg_...)
+  // Web formadan kelgan bir martalik ro'yxatdan o'tish yoki kirish tokeni (/start biz_reg_..., biz_login_..., biz_link_...)
   if (command === "/start" && payload && (payload.startsWith("biz_") || payload.startsWith("reg_"))) {
     const row = (await db.select().from(otpCodes).where(eq(otpCodes.token, payload)).limit(1))[0];
     if (row && row.expiresAt.getTime() > Date.now()) {
       const spec = (await db.select().from(specialists).where(eq(specialists.phone, row.phone)).limit(1))[0];
       if (spec) {
+        const trialEnd = spec.trialEndsAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
         // Profilni ushbu Telegram akkauntga bog'laymiz
         await db
           .update(specialists)
@@ -587,6 +588,9 @@ async function handleCommand(
             telegramId,
             isActive: true,
             isApproved: true,
+            botStartedAt: new Date(),
+            botBlocked: false,
+            trialEndsAt: trialEnd,
           })
           .where(eq(specialists.id, spec.id));
 
@@ -629,33 +633,35 @@ async function handleCommand(
 
         const base = partnerMiniappUrl();
         const appUrl = `${base}?token=${sessionToken}&phone=${encodeURIComponent(spec.phone)}`;
+        const isPharm = spec.role === "pharmacy";
+        const trialDateStr = trialEnd.toLocaleDateString("uz-UZ");
 
         const welcomeText =
           `🎉 <b>Assalomu alaykum, ${escapeHtml(spec.name)}!</b>\n\n` +
-          `🏢 <b>«${escapeHtml(spec.organization || "Do'koningiz")}»</b> Agroz Business tizimida muvaffaqiyatli ro'yxatdan o'tdi va profilingiz faollashtirildi!\n\n` +
-          `Sizning shaxsiy biznes kabinetingiz tayyor:\n` +
+          `${isPharm ? "🏪" : "👨‍⚕️"} <b>«${escapeHtml(spec.organization || spec.specialty || spec.name)}»</b> Agroz Business tizimida muvaffaqiyatli tasdiqlandi va Telegram botga ulandi!\n\n` +
+          `🎁 <b>1 Oylik Bepul Sinov:</b> <code>${escapeHtml(trialDateStr)}</code> gacha faol (tugashiga 5 kun qolganda shu bot orqali ogohlantirish yuboriladi).\n` +
           `🌐 <b>Web manzil:</b> <code>${escapeHtml(base)}</code>\n` +
           `📱 <b>Login (Telefon):</b> <code>${escapeHtml(spec.phone)}</code>\n\n` +
-          `Do'koningizni boshqarish (Kassa, Qarz daftari, Mahsulotlar qoldig'i) uchun pastdagi tugmani bosing:`;
+          `Shaxsiy kabinetingizni (Telegram Mini App yoki Web brauzerda) ochish uchun pastdagi tugmani bosing:`;
 
         await sendAuthMessage(chatId, welcomeText, {
           inline: {
             inline_keyboard: [
               [
                 {
-                  text: "🏢 Do'kon kabinetini ochish",
+                  text: isPharm ? "🏪 Do'kon kabinetini ochish" : "👨‍⚕️ Mutaxassis kabinetini ochish",
                   web_app: { url: appUrl },
                 },
               ],
               [
                 {
-                  text: "🌐 Brauzerda ochish",
+                  text: "🌐 Web brauzerda ochish",
                   url: appUrl,
                 },
               ],
             ],
           },
-          replyKeyboard: approvedPharmacyMenuKeyboard(),
+          replyKeyboard: isPharm ? approvedPharmacyMenuKeyboard() : approvedSpecialistMenuKeyboard(),
         });
         return;
       }
@@ -1884,6 +1890,42 @@ async function handleIndependentCallback(
     await sendAuthMessage(
       chatId,
       askBio(profile?.specialty ?? undefined),
+    );
+    return true;
+  }
+
+  // 10. Web kabinetga kirishni 1-bosishda tasdiqlash yoki rad etish
+  if (data.startsWith("biz_web_login:")) {
+    const loginToken = data.slice("biz_web_login:".length).trim();
+    const row = (await db.select().from(otpCodes).where(eq(otpCodes.token, loginToken)).limit(1))[0];
+    if (!row || row.expiresAt.getTime() <= Date.now()) {
+      await answerCallbackQuery(query.id, "⚠️ So'rov muddati tugagan. Web sahifadan qayta yuboring.");
+      return true;
+    }
+    await db
+      .update(otpCodes)
+      .set({
+        used: true,
+        telegramId,
+        deliveredAt: new Date(),
+      })
+      .where(eq(otpCodes.id, row.id));
+
+    await answerCallbackQuery(query.id, "✅ Tasdiqlandi! Web kabinetingiz ochildi.");
+    await sendAuthMessage(
+      chatId,
+      `✅ <b>Web kabinetga kirish tasdiqlandi!</b>\n\nBrauzeringizda Agroz Business shaxsiy kabinetingiz avtomatik ochildi.`,
+    );
+    return true;
+  }
+
+  if (data.startsWith("biz_web_reject:")) {
+    const loginToken = data.slice("biz_web_reject:".length).trim();
+    await db.delete(otpCodes).where(eq(otpCodes.token, loginToken));
+    await answerCallbackQuery(query.id, "❌ Kirish so'rovi bekor qilindi.");
+    await sendAuthMessage(
+      chatId,
+      `❌ <b>Web kabinetga kirish so'rovi rad etildi.</b>\n\nAgar bu so'rovni siz yubormagan bo'lsangiz, xavotir olmang — hisobingiz himoyalangan.`,
     );
     return true;
   }

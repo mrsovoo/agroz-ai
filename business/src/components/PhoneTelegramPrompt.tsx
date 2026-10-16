@@ -18,14 +18,14 @@ export default function PhoneTelegramPrompt({ type = "frontend" }: { type?: "fro
       </div>
       
       <p className="text-gray-600 mb-8 max-w-sm text-lg">
-        Platforma hozircha faqat Telegram Mini App sifatida ishlaydi. Ilovani to'laqonli brauzer versiyasi <strong>Tez kunda</strong> ishga tushadi.
+        Agroz Business xizmatlaridan foydalanish uchun Telegram ilovasidan foydalaning.
       </p>
       
       <a 
         href={botLink}
         className={`w-full max-w-xs ${isBiz ? 'bg-[#1b1464]' : 'bg-[#028e11]'} text-white font-bold py-4 px-6 rounded-2xl hover:opacity-90 active:scale-95 transition-all shadow-lg flex items-center justify-center text-lg`}
       >
-        Telegramda ochish
+        Telegram ilovada ochish
       </a>
       
       <p className="mt-6 text-sm text-gray-400">

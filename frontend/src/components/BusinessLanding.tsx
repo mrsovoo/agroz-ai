@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import {
   Store,
   BookOpen,
@@ -28,7 +27,7 @@ export function TariffsBlock({ onSelectPlan }: { onSelectPlan?: (plan: "beta" | 
           Hozirda barcha imkoniyatlar — BETA sinovida
         </h2>
         <p className="mt-3 text-sm text-[#86868B]">
-          Birinchi 50 ta hamkor dorixona va agro-do‘kon uchun tizim <b>mutlaqo bepul (0 so‘m)</b>.
+          Birinchi 50 ta hamkor agro-do‘kon va ta’minot markazi uchun tizim <b>mutlaqo bepul (0 so‘m)</b>.
         </p>
       </div>
 
@@ -106,7 +105,7 @@ export function TariffsBlock({ onSelectPlan }: { onSelectPlan?: (plan: "beta" | 
               </li>
               <li className="flex items-start gap-2.5">
                 <Check size={16} className="text-zinc-400 shrink-0 mt-0.5" />
-                <span>Cheksiz dori va mahsulotlar</span>
+                <span>Cheksiz agro-mahsulotlar va tovarlar</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <Check size={16} className="text-zinc-400 shrink-0 mt-0.5" />
@@ -218,42 +217,42 @@ export default function BusinessLanding({
       {/* 2. Asosiy Navigatsiya */}
       <nav className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-[#E5E5EA] px-4 sm:px-8 py-3.5 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/" className="hover:opacity-85 transition">
+          <a href="https://agroz-ai.vercel.app" className="hover:opacity-85 transition">
             <AgrozBusinessLogo className="h-7 sm:h-8 w-auto" />
-          </Link>
+          </a>
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4">
-          <Link
-            href="/"
+          <a
+            href="https://agroz-ai.vercel.app"
             className="hidden md:inline-block text-xs font-semibold text-[#86868B] hover:text-[#1D1D1F] px-2 py-1.5 transition"
           >
             Asosiy sayt
-          </Link>
-          <Link
-            href="/dorilar"
+          </a>
+          <a
+            href="https://agroz-ai.vercel.app/dorilar"
             className="hidden sm:inline-flex items-center gap-1 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-full transition"
           >
             <span>🛒 Bozor</span>
-          </Link>
-          <Link
-            href="/mutaxassislar"
+          </a>
+          <a
+            href="https://agroz-ai.vercel.app/mutaxassislar"
             className="hidden sm:inline-block text-xs font-semibold text-[#86868B] hover:text-[#1D1D1F] px-2 py-1.5 transition"
           >
             Mutaxassislar
-          </Link>
+          </a>
           <a
             href="#tariffs"
             className="hidden lg:inline-block text-xs font-medium text-[#86868B] hover:text-[#1D1D1F] px-2 py-1.5 transition"
           >
             Tariflar
           </a>
-          <Link
-            href="/hamkorlik"
+          <a
+            href="https://agroz-ai.vercel.app/hamkorlik"
             className="hidden sm:inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-white border border-emerald-200 hover:bg-emerald-50 px-3 py-1.5 rounded-full transition shadow-2xs"
           >
             <span>+ Do‘konni ulash</span>
-          </Link>
+          </a>
           <button
             type="button"
             onClick={handleAction}
@@ -269,11 +268,11 @@ export default function BusinessLanding({
       <section className="relative px-4 sm:px-8 pt-16 pb-20 max-w-5xl mx-auto text-center">
         <div className="inline-flex items-center gap-2 bg-white border border-[#E5E5EA] text-zinc-700 px-3.5 py-1.5 rounded-full text-xs font-medium mb-6 shadow-xs">
           <Sparkles size={13} className="text-zinc-600" />
-          <span>Agro-do‘konlar va veterinariya dorixonalari uchun CRM</span>
+          <span>Agro-do‘konlar va ta’minot markazlari uchun CRM</span>
         </div>
 
         <h1 className="text-4xl sm:text-6xl font-bold tracking-tight text-[#1D1D1F] leading-[1.12] max-w-3xl mx-auto">
-          Agro-biznes va dorixonalar uchun sodda boshqaruv.
+          Agro-biznes va do‘konlar uchun sodda boshqaruv.
         </h1>
 
         <p className="mt-5 text-base sm:text-lg text-[#86868B] max-w-2xl mx-auto font-normal leading-relaxed">
@@ -361,7 +360,7 @@ export default function BusinessLanding({
                 </div>
                 <h3 className="text-base font-bold text-[#1D1D1F]">Ombor va qoldiq nazorati</h3>
                 <p className="text-xs text-[#86868B] mt-2 leading-relaxed">
-                  Qaysi dori yoki vosita kamayib borayotganini tizim oldindan ko‘rsatadi. 1-harakatda qoldiqni yangilang.
+                  Qaysi mahsulot yoki vosita kamayib borayotganini tizim oldindan ko‘rsatadi. 1-harakatda qoldiqni yangilang.
                 </p>
               </div>
               <div className="mt-6 pt-4 border-t border-[#E5E5EA] text-xs font-semibold text-zinc-700 flex items-center gap-2">
@@ -494,7 +493,7 @@ export default function BusinessLanding({
       <footer className="py-12 px-4 text-center border-t border-[#E5E5EA] bg-white flex flex-col items-center justify-center gap-3">
         <AgrozBusinessLogo className="h-6 w-auto opacity-75" />
         <p className="text-xs text-[#86868B]">
-          © {new Date().getFullYear()} AgrozGO Business · Agro-biznes va dorixonalar uchun sodda boshqaruv platformasi
+          © {new Date().getFullYear()} AgrozGO Business · Agro-biznes va agro-do‘konlar uchun sodda boshqaruv platformasi
         </p>
       </footer>
     </div>

@@ -86,6 +86,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [isNative, setIsNative] = useState(false);
+  const [consentAccepted, setConsentAccepted] = useState(false);
 
   // Polling tozalash va native ilova tekshiruvi
   useEffect(() => {
@@ -147,9 +148,9 @@ export default function LoginPage() {
     });
   }, []);
 
-  // Avtomatik tasdiqlash uchun (botUser topilsa, 60 soniyadan so'ng)
+  // Avtomatik tasdiqlash uchun (botUser topilsa va rozilik belgilangan bo'lsa, 60 soniyadan so'ng)
   useEffect(() => {
-    if (botUser && !busy) {
+    if (botUser && !busy && consentAccepted) {
       const timer = setInterval(() => {
         setAutoLoginCountdown((prev) => {
           if (prev <= 1) {
@@ -162,10 +163,14 @@ export default function LoginPage() {
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [botUser, busy]);
+  }, [botUser, busy, consentAccepted]);
 
   // Mini App ichida avtomatik yoki 1 bosishda kirish
   async function telegramMiniAppLogin() {
+    if (!consentAccepted) {
+      setError("Davom etish uchun ommaviy oferta va maxfiylik siyosatiga rozilik bildiring");
+      return;
+    }
     if (!name.trim() || name.trim().length < 2) {
       setError("Iltimos, ismingizni to'liq kiriting");
       return;
@@ -194,6 +199,7 @@ export default function LoginPage() {
           phone: `+998${cleanDigits}`,
           secondPhone: cleanSecond && cleanSecond.length === 9 ? `+998${cleanSecond}` : undefined,
           region,
+          consentAccepted: true,
         }),
       });
       const data = (await res.json()) as { ok?: boolean; sessionId?: string; error?: string };
@@ -214,6 +220,10 @@ export default function LoginPage() {
 
   // Brauzerda: Telegram bot ochish va avtomatik kutish (polling)
   async function startTelegramOneClickLogin() {
+    if (!consentAccepted) {
+      setError("Davom etish uchun ommaviy oferta va maxfiylik siyosatiga rozilik bildiring");
+      return;
+    }
     if (!name.trim() || name.trim().length < 2) {
       setError("Iltimos, ismingizni kiriting");
       return;
@@ -240,6 +250,7 @@ export default function LoginPage() {
           name: name.trim(),
           phone: `+998${cleanDigits}`,
           secondPhone: cleanSecond && cleanSecond.length === 9 ? `+998${cleanSecond}` : undefined,
+          consentAccepted: true,
         }),
       });
       const data = await res.json();
@@ -279,6 +290,10 @@ export default function LoginPage() {
 
   // Tezkor kirish (Ism + Hudud)
   async function handleQuickLogin() {
+    if (!consentAccepted) {
+      setError("Davom etish uchun ommaviy oferta va maxfiylik siyosatiga rozilik bildiring");
+      return;
+    }
     if (!name.trim() || name.trim().length < 2) {
       setError("Iltimos, ismingizni kiriting");
       return;
@@ -292,6 +307,7 @@ export default function LoginPage() {
         body: JSON.stringify({
           name: name.trim(),
           region,
+          consentAccepted: true,
         }),
       });
       const data = await res.json();
@@ -314,13 +330,17 @@ export default function LoginPage() {
 
   // Telefon orqali kirish
   async function sendCode() {
+    if (!consentAccepted) {
+      setError("Davom etish uchun ommaviy oferta va maxfiylik siyosatiga rozilik bildiring");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       const res = await fetch("/api/auth/request-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: phoneInput, initData: getTelegram()?.initData }),
+        body: JSON.stringify({ phone: phoneInput, initData: getTelegram()?.initData, consentAccepted: true }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Xatolik");
@@ -578,18 +598,41 @@ export default function LoginPage() {
                     </select>
                   </div>
 
+                  <label className="flex items-start gap-2.5 rounded-xl bg-slate-50 p-3 border border-slate-200/80 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={consentAccepted}
+                      onChange={(e) => {
+                        setConsentAccepted(e.target.checked);
+                        if (e.target.checked) setError(null);
+                      }}
+                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <span className="text-[12px] leading-snug text-slate-600 font-medium">
+                      Men{" "}
+                      <Link href="/shartlar" className="font-bold text-emerald-700 underline">
+                        Foydalanish shartlari
+                      </Link>{" "}
+                      va{" "}
+                      <Link href="/maxfiylik" className="font-bold text-emerald-700 underline">
+                        Maxfiylik siyosati
+                      </Link>
+                      ga roziman
+                    </span>
+                  </label>
+
                   <div className="flex flex-col gap-2">
                     <button
                       type="button"
                       onClick={telegramMiniAppLogin}
-                      disabled={busy}
-                      className="ios-btn"
+                      disabled={busy || !consentAccepted}
+                      className="ios-btn disabled:opacity-50"
                       style={{ background: "#028e11" }}
                     >
                       {busy ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
                       <span>{busy ? "Kirilmoqda..." : "Tasdiqlash va Kirish"}</span>
                     </button>
-                    {botUser && (
+                    {botUser && consentAccepted && (
                       <button
                         type="button"
                         onClick={telegramMiniAppLogin}
@@ -708,11 +751,34 @@ export default function LoginPage() {
                     </div>
                   </div>
 
+                  <label className="flex items-start gap-2.5 rounded-xl bg-slate-50 p-3 border border-slate-200/80 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={consentAccepted}
+                      onChange={(e) => {
+                        setConsentAccepted(e.target.checked);
+                        if (e.target.checked) setError(null);
+                      }}
+                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <span className="text-[12px] leading-snug text-slate-600 font-medium">
+                      Men{" "}
+                      <Link href="/shartlar" className="font-bold text-emerald-700 underline">
+                        Foydalanish shartlari
+                      </Link>{" "}
+                      va{" "}
+                      <Link href="/maxfiylik" className="font-bold text-emerald-700 underline">
+                        Maxfiylik siyosati
+                      </Link>
+                      ga roziman
+                    </span>
+                  </label>
+
                   <button
                     type="button"
                     onClick={startTelegramOneClickLogin}
-                    disabled={busy}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-[15px] font-extrabold text-white shadow-md hover:brightness-105 active:scale-[0.98] transition"
+                    disabled={busy || !consentAccepted}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-[15px] font-extrabold text-white shadow-md hover:brightness-105 active:scale-[0.98] transition disabled:opacity-50"
                     style={{ background: "#2AABEE" }}
                   >
                     {busy ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
@@ -762,11 +828,34 @@ export default function LoginPage() {
                 </select>
               </div>
 
+              <label className="flex items-start gap-2.5 rounded-xl bg-slate-50 p-3 border border-slate-200/80 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={consentAccepted}
+                  onChange={(e) => {
+                    setConsentAccepted(e.target.checked);
+                    if (e.target.checked) setError(null);
+                  }}
+                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="text-[12px] leading-snug text-slate-600 font-medium">
+                  Men{" "}
+                  <Link href="/shartlar" className="font-bold text-emerald-700 underline">
+                    Foydalanish shartlari
+                  </Link>{" "}
+                  va{" "}
+                  <Link href="/maxfiylik" className="font-bold text-emerald-700 underline">
+                    Maxfiylik siyosati
+                  </Link>
+                  ga roziman
+                </span>
+              </label>
+
               <button
                 type="button"
                 onClick={handleQuickLogin}
-                disabled={busy || !name.trim()}
-                className="ios-btn"
+                disabled={busy || !name.trim() || !consentAccepted}
+                className="ios-btn disabled:opacity-50"
                 style={{ background: "var(--brand-green)" }}
               >
                 {busy ? <Loader2 size={18} className="animate-spin" /> : <UserRound size={18} />}
@@ -796,11 +885,33 @@ export default function LoginPage() {
                       />
                     </div>
                   </div>
+                  <label className="flex items-start gap-2.5 rounded-xl bg-slate-50 p-3 border border-slate-200/80 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={consentAccepted}
+                      onChange={(e) => {
+                        setConsentAccepted(e.target.checked);
+                        if (e.target.checked) setError(null);
+                      }}
+                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <span className="text-[12px] leading-snug text-slate-600 font-medium">
+                      Men{" "}
+                      <Link href="/shartlar" className="font-bold text-emerald-700 underline">
+                        Foydalanish shartlari
+                      </Link>{" "}
+                      va{" "}
+                      <Link href="/maxfiylik" className="font-bold text-emerald-700 underline">
+                        Maxfiylik siyosati
+                      </Link>
+                      ga roziman
+                    </span>
+                  </label>
                   <button
                     type="button"
                     onClick={sendCode}
-                    disabled={busy || phoneInput.length < 9}
-                    className="ios-btn"
+                    disabled={busy || phoneInput.length < 9 || !consentAccepted}
+                    className="ios-btn disabled:opacity-50"
                   >
                     {busy ? <Loader2 size={18} className="animate-spin" /> : null}
                     {busy ? "Yuborilmoqda..." : "Tasdiqlash kodini olish"}

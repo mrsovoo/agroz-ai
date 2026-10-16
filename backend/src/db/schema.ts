@@ -157,6 +157,13 @@ export const specialists = pgTable("specialists", {
   consentChannel: varchar("consent_channel", { length: 64 }).default("telegram_auth_bot"),
   consentText: text("consent_text"),
 
+  /** 1 oylik bepul sinov (trial) va shartnoma holati */
+  contractAcceptedAt: timestamp("contract_accepted_at"),
+  trialEndsAt: timestamp("trial_ends_at"),
+  subscriptionStatus: varchar("subscription_status", { length: 32 }).default("trial").notNull(), // trial | active | expired
+  paidUntil: timestamp("paid_until"),
+  trialWarningSentAt: timestamp("trial_warning_sent_at"),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

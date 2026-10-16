@@ -29,6 +29,7 @@ import {
 import AgrozLogo from "@/components/AgrozLogo";
 import { loadCart, closeCart, toggleCart, CART_EVENT } from "@/lib/cart-store";
 import { useI18n, LANGUAGES, type Language } from "@/lib/i18n";
+import { isLaunchRoute, isErpOrAdminRoute } from "@/lib/env";
 
 export default function WebTopNav() {
   const pathname = usePathname();
@@ -71,6 +72,11 @@ export default function WebTopNav() {
     setMobileMenuOpen(false);
     setLangMenuOpen(false);
   }, [pathname]);
+
+  // Launch App yoki Biznes/Admin marshrutlarida WebTopNav ko'rinmasligi shart
+  if (isLaunchRoute(pathname) || isErpOrAdminRoute(pathname)) {
+    return null;
+  }
 
   const navLinks = [
     { href: "/#about", label: t.nav.about, isAnchor: true },
@@ -248,7 +254,7 @@ export default function WebTopNav() {
               <span className="w-7 h-7 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
                 <Store size={15} />
               </span>
-              <span>Agroz Business ERP (Dorixonalar uchun)</span>
+              <span>Agroz Business ERP (Agro-do&apos;konlar uchun)</span>
             </Link>
 
             <Link

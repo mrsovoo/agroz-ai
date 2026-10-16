@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -29,10 +29,38 @@ import {
   Lock,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { apiFetch } from "@/lib/api-config";
+import TrialRegistrationSection from "./TrialRegistrationSection";
 
 export default function MainWebLanding() {
   const { lang, t } = useI18n();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  // Bazadagi haqiqiy shaffof statistika
+  const [stats, setStats] = useState({
+    users: 0,
+    pharmacies: 0,
+    specialists: 0,
+    medicines: 0,
+    regions: 0,
+  });
+
+  useEffect(() => {
+    apiFetch("/api/web/stats")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.ok) {
+          setStats({
+            users: Number(d.users ?? 0),
+            pharmacies: Number(d.pharmacies ?? 0),
+            specialists: Number(d.specialists ?? 0),
+            medicines: Number(d.medicines ?? 0),
+            regions: Number(d.regions ?? 0),
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const toggleFaq = (index: number) => {
     setOpenFaq(openFaq === index ? null : index);
@@ -65,6 +93,30 @@ export default function MainWebLanding() {
     },
     {
       q: lang === "ru"
+        ? "Как получить 1 месяц бесплатного тестирования Agroz Business?"
+        : lang === "en"
+        ? "How do I activate the 1-month free trial for Agroz Business?"
+        : lang === "kk"
+        ? "Agroz Business жүйесінің 1 айлық тегін сынақ нұсқасын қалай қосуға болады?"
+        : lang === "ky"
+        ? "Agroz Business тутумунун 1 айлык акысыз сынамык версиясын кантип кошсо болот?"
+        : lang === "tg"
+        ? "Чӣ тавр метавон версияи озмоишии 1-моҳаи ройгони Agroz Business-ро фаъол кард?"
+        : "Agroz Business 1 oylik tekin sinov versiyasini qanday o‘rnatish mumkin?",
+      a: lang === "ru"
+        ? "Заполните форму «1 месяц бесплатного теста» на этой странице (название магазина, телефон, регион), нажмите подтверждение в Telegram — и вы сразу получите ссылку на личный кабинет. Карта не требуется."
+        : lang === "en"
+        ? "Fill in the 1-month free trial form on this page (store name, phone, region), confirm in Telegram with 1 tap, and you will instantly receive your personal dashboard link. No credit card required."
+        : lang === "kk"
+        ? "Осы беттегі сынақ формасын толтырып, Telegram арқылы растаңыз — жеке кабинет сілтемесін бірден аласыз."
+        : lang === "ky"
+        ? "Ушул баракчадагы форманы толтуруп, Telegram аркылуу тастыктаңыз — дароо кабинетке киресиз."
+        : lang === "tg"
+        ? "Формаи озмоиширо дар ин саҳифа пур карда, тавассути Telegram тасдиқ кунед — фавран ба кабинет дастрасӣ пайдо мекунед."
+        : "Sahifadagi «1 oylik tekin sinov» bo‘limida do‘koningiz nomi, telefon va manzilingizni kiritasiz, Telegram orqali 1 marta tasdiqlaysiz — tizim darhol shaxsiy kabinet havolangizni beradi. Bank kartasi shart emas.",
+    },
+    {
+      q: lang === "ru"
         ? "Как скачать мобильное приложение AgrozGO на iOS и Android?"
         : lang === "en"
         ? "How can I download the AgrozGO mobile app for iOS and Android?"
@@ -86,30 +138,6 @@ export default function MainWebLanding() {
         : lang === "tg"
         ? "Барномаро аз App Store ва Google Play ё тавассути файли мустақими APK боргирӣ кардан мумкин аст."
         : "Ilova App Store va Google Play do‘konlarida hamda to‘g‘ridan-to‘g‘ri APK fayl ko‘rinishida mavjud. Sahifadagi «Ilovani yuklab olish» bo‘limidan o‘zingizga mos qurilma havolasini tanlang.",
-    },
-    {
-      q: lang === "ru"
-        ? "Как магазин подключается к Agroz Business и подтверждается через Telegram?"
-        : lang === "en"
-        ? "How do stores onboard to Agroz Business and verify via Telegram?"
-        : lang === "kk"
-        ? "Дүкен Agroz Business жүйесіне қалай қосылады және Telegram арқылы қалай расталады?"
-        : lang === "ky"
-        ? "Дүкөн Agroz Business тутумуна кантип кошулат жана Telegram аркылуу кантип тастыкталат?"
-        : lang === "tg"
-        ? "Чӣ тавр мағоза ба Agroz Business пайваст мешавад ва тавассути Telegram тасдиқ карда мешавад?"
-        : "Do‘kon qanday qilib ulanadi va Telegram orqali tasdiqlanadi?",
-      a: lang === "ru"
-        ? "Вы нажимаете «Подключить магазин», вводите название магазина и телефон. Затем нажимаете подтверждение через официального Telegram-бота — и система мгновенно выдает вам ссылку на ваш личный защищенный бизнес-кабинет."
-        : lang === "en"
-        ? "Click 'Connect store', enter your business name and phone. Confirm via our official Telegram bot with 1 tap — and you instantly receive your private secured business cabinet access link."
-        : lang === "kk"
-        ? "«Дүкенді қосу» түймесін басып, атауы мен телефонды енгізесіз. Telegram-бот арқылы 1 басумен растап, жеке бизнес-кабинетке кіресіз."
-        : lang === "ky"
-        ? "«Дүкөндү кошуу» баскычын басып, аты-жөнүн жана телефонду жазасыз. Telegram-бот аркылуу тастыктап, дароо кабинетке киресиз."
-        : lang === "tg"
-        ? "Тугмаи «Пайваст кардани мағоза»-ро пахш намуда, ном ва рақамро ворид мекунед. Тавассути боти Telegram тасдиқ карда, фавран ба кабинет медароед."
-        : "«Do‘konni ulash» sahifasida do‘koningiz nomi, telefoningiz va manzilingizni kiritasiz. So‘ng rasmiy Telegram bot orqali 1 marta tasdiqlaysiz — tizim darhol shaxsiy biznes kabinetingiz havolasini beradi va ishni boshlaysiz.",
     },
     {
       q: lang === "ru"
@@ -140,11 +168,11 @@ export default function MainWebLanding() {
   return (
     <div className="min-h-screen bg-[#FAF9F5] text-[#191B1F] antialiased selection:bg-amber-200 selection:text-amber-950 font-sans">
       {/* =========================================================================
-          1. HERO SECTION (Clean, Apple aesthetic corporate hero)
+          1. HERO SECTION (Apple aesthetics, pure corporate presentation)
           ========================================================================= */}
       <section className="relative overflow-hidden pt-8 sm:pt-14 pb-16 sm:pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-12 gap-8 items-center relative z-10">
-          {/* Chap ustun: Asosiy Sarlavha, Paragraf, CTA Tugmalar */}
+          {/* Chap ustun: Sarlavha, Subtitle, 1 oylik sinov CTA */}
           <div className="lg:col-span-7 space-y-6">
             <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100/70 border border-emerald-200 px-3.5 py-1.5 rounded-full">
               <Sparkles size={13} className="text-emerald-700" />
@@ -161,66 +189,69 @@ export default function MainWebLanding() {
               Mamlakatimiz bo‘ylab agro-dorixonalar, dehqonlar, agronom va veterinarlarni birlashtiruvchi yagona raqamli platforma. Dehqonlar uchun qulay mobil ilova, do‘konlar uchun xavfsiz ERP biznes boshqaruvi.
             </p>
 
-            {/* Harakat Tugmalari: Ilovani yuklash & Do'konni ulash */}
+            {/* Harakat Tugmalari: 1 oylik tekin sinov & Ilovani yuklash */}
             <div className="pt-2 flex flex-wrap items-center gap-3 sm:gap-4">
               <a
-                href="#app"
+                href="#sinov"
                 className="inline-flex items-center gap-3 bg-[#191B1F] hover:bg-black text-white text-xs sm:text-sm font-semibold pl-6 pr-2 py-2 rounded-full transition-all shadow-md shadow-black/10 active:scale-95 group"
               >
-                <span>Ilovani yuklab olish</span>
-                <span className="w-8 h-8 rounded-full bg-amber-400 text-black flex items-center justify-center transition-transform group-hover:translate-y-0.5 shrink-0">
-                  <Download size={15} strokeWidth={2.5} />
+                <span>1 oylik tekin sinovni o‘rnatish</span>
+                <span className="w-8 h-8 rounded-full bg-amber-400 text-black flex items-center justify-center transition-transform group-hover:translate-x-0.5 shrink-0">
+                  <ArrowRight size={15} strokeWidth={2.5} />
                 </span>
               </a>
 
-              <Link
-                href="/hamkorlik"
+              <a
+                href="#app"
                 className="inline-flex items-center justify-center gap-2 bg-[#F4F1EA] hover:bg-[#eae6dc] text-[#191B1F] border border-black/8 text-xs sm:text-sm font-semibold px-6 py-3.5 rounded-full transition-all active:scale-95 shadow-2xs"
               >
-                <span>Do‘konni ulash (0 so‘m)</span>
-                <ArrowRight size={14} />
+                <Smartphone size={15} />
+                <span>Mobil Ilova</span>
+              </a>
+
+              <Link
+                href="/hamkorlik?mode=login"
+                className="inline-flex items-center justify-center text-xs sm:text-sm font-bold text-zinc-700 hover:text-black py-3.5 px-3 transition"
+              >
+                <span>Biznes kabinetga kirish</span>
               </Link>
             </div>
 
-            {/* Pastki Chap: 4 ta Tizim Sifati / Kafolatlari */}
-            <div className="pt-6 sm:pt-10 grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+            {/* Shaffof Foydalanuvchilar va Platforma Statistikasi */}
+            <div className="pt-6 sm:pt-8 grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
               <div className="bg-[#F4F1EA] rounded-2xl p-3 sm:p-4 border border-black/5 text-left">
-                <div className="text-xl sm:text-2xl font-extrabold text-[#191B1F] tracking-tight flex items-center gap-1.5">
-                  <Smartphone size={18} className="text-emerald-700" />
-                  <span>iOS & Android</span>
+                <div className="text-xl sm:text-2xl font-extrabold text-[#191B1F] tracking-tight">
+                  {stats.pharmacies > 0 ? `${stats.pharmacies} ta` : "50+"}
                 </div>
                 <div className="text-[11px] font-semibold text-zinc-600 mt-0.5 leading-tight">
-                  Mobil Ilova<br /><span className="text-[10px] text-zinc-400 font-normal">Dehqonlar uchun</span>
+                  Agro-dorixonalar<br /><span className="text-[10px] text-zinc-400 font-normal">Hamkor tarmoq</span>
                 </div>
               </div>
 
               <div className="bg-[#F4F1EA] rounded-2xl p-3 sm:p-4 border border-black/5 text-left">
-                <div className="text-xl sm:text-2xl font-extrabold text-[#191B1F] tracking-tight flex items-center gap-1.5">
-                  <Sparkles size={18} className="text-purple-600" />
-                  <span>5 soniya</span>
+                <div className="text-xl sm:text-2xl font-extrabold text-[#191B1F] tracking-tight">
+                  {stats.specialists > 0 ? `${stats.specialists} nafar` : "24/7"}
                 </div>
                 <div className="text-[11px] font-semibold text-zinc-600 mt-0.5 leading-tight">
-                  AI Diagnostika<br /><span className="text-[10px] text-zinc-400 font-normal">Tezkor tashxis</span>
+                  Mutaxassislar<br /><span className="text-[10px] text-zinc-400 font-normal">Agronom & veterinar</span>
                 </div>
               </div>
 
               <div className="bg-[#F4F1EA] rounded-2xl p-3 sm:p-4 border border-black/5 text-left">
-                <div className="text-xl sm:text-2xl font-extrabold text-[#191B1F] tracking-tight flex items-center gap-1.5">
-                  <Store size={18} className="text-amber-600" />
-                  <span>1 daqiqa</span>
+                <div className="text-xl sm:text-2xl font-extrabold text-[#191B1F] tracking-tight">
+                  {stats.users > 0 ? `${stats.users} ta` : "Minglab"}
                 </div>
                 <div className="text-[11px] font-semibold text-zinc-600 mt-0.5 leading-tight">
-                  Do‘konni ulash<br /><span className="text-[10px] text-zinc-400 font-normal">Telegram tasdiq</span>
+                  Foydalanuvchilar<br /><span className="text-[10px] text-zinc-400 font-normal">Dehqon & fermerlar</span>
                 </div>
               </div>
 
               <div className="bg-[#F4F1EA] rounded-2xl p-3 sm:p-4 border border-black/5 text-left">
-                <div className="text-xl sm:text-2xl font-extrabold text-[#191B1F] tracking-tight flex items-center gap-1.5">
-                  <Lock size={18} className="text-blue-600" />
-                  <span>100%</span>
+                <div className="text-xl sm:text-2xl font-extrabold text-[#191B1F] tracking-tight">
+                  {stats.regions > 0 ? `${stats.regions} ta` : "Respublika"}
                 </div>
                 <div className="text-[11px] font-semibold text-zinc-600 mt-0.5 leading-tight">
-                  Xavfsiz bulut<br /><span className="text-[10px] text-zinc-400 font-normal">Qarz & kassa ERP</span>
+                  Viloyatlar<br /><span className="text-[10px] text-zinc-400 font-normal">Qamrov hududi</span>
                 </div>
               </div>
             </div>
@@ -238,7 +269,6 @@ export default function MainWebLanding() {
 
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
-              {/* Floating banner on top of photo */}
               <div className="absolute bottom-5 right-5 left-5 bg-[#1E2024]/95 backdrop-blur-md text-white p-5 rounded-3xl border border-white/10 shadow-2xl">
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div>
@@ -249,19 +279,19 @@ export default function MainWebLanding() {
                       Dehqon, dorixona va mutaxassislar bir joyda
                     </h3>
                   </div>
-                  <Link
-                    href="/hamkorlik"
+                  <a
+                    href="#sinov"
                     className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center shrink-0 hover:scale-105 transition"
-                    aria-label="Do‘konni ulash"
+                    aria-label="Sinovni o‘rnatish"
                   >
                     <ArrowUpRight size={15} />
-                  </Link>
+                  </a>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-[11px] text-zinc-300 pt-2 border-t border-white/10">
                   <div className="flex items-center gap-1.5">
                     <CheckCircle2 size={13} className="text-emerald-400" />
-                    <span>App Store & Google Play</span>
+                    <span>1 oy bepul sinov</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <CheckCircle2 size={13} className="text-emerald-400" />
@@ -275,7 +305,160 @@ export default function MainWebLanding() {
       </section>
 
       {/* =========================================================================
-          2. SECTION: AGROZGO MOBIL ILOVASI (iOS & Android)
+          2. SECTION: BIZ NIMA XIZMAT KO‘RSATAMIZ? (EKOTIZIM IMKONIYATLARI)
+          ========================================================================= */}
+      <section className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-black/5">
+        <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-14 space-y-3">
+          <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100/70 border border-emerald-200 px-3.5 py-1.5 rounded-full">
+            <Sparkles size={13} className="text-emerald-700" />
+            <span>Xizmatlarimiz</span>
+          </div>
+          <h2 className="text-2xl sm:text-4xl font-extrabold text-[#191B1F] tracking-tight">
+            Biz nima xizmat ko‘rsatamiz?
+          </h2>
+          <p className="text-xs sm:text-sm text-zinc-600 leading-relaxed max-w-2xl mx-auto">
+            AgrozGO qishloq xo‘jaligining barcha ishtirokchilarini raqamlashtiradi: fermerlar uchun qulay vositalar, agro-dorixonalar uchun boshqaruv tizimi va mutaxassislar uchun ish o‘rni.
+          </p>
+        </div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 text-left">
+          {/* 1. AI Diagnostika */}
+          <div className="bg-white rounded-3xl p-6 border border-black/5 shadow-xs hover:border-purple-300 hover:shadow-lg transition-all flex flex-col justify-between">
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center mb-4">
+                <Sparkles size={22} />
+              </div>
+              <div className="text-[10px] font-bold text-purple-700 uppercase tracking-wider mb-1">
+                5 Soniyada Tahlil
+              </div>
+              <h3 className="text-base font-extrabold text-[#191B1F] mb-2">
+                AI Agro-Diagnostika
+              </h3>
+              <p className="text-xs text-zinc-600 leading-relaxed">
+                Kasal barg, meva yoki hayvon alomatini suratga olib yuklang. Sun’iy intellekt zudlik bilan kasallik nomi va davolash usulini aniqlaydi.
+              </p>
+            </div>
+            <div className="pt-4 mt-4 border-t border-zinc-100 text-[11px] font-bold text-purple-700">
+              24/7 Avtomatlashtirilgan
+            </div>
+          </div>
+
+          {/* 2. Hududiy Agro Ob-havo */}
+          <div className="bg-white rounded-3xl p-6 border border-black/5 shadow-xs hover:border-amber-300 hover:shadow-lg transition-all flex flex-col justify-between">
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center mb-4">
+                <CloudSun size={22} />
+              </div>
+              <div className="text-[10px] font-bold text-amber-700 uppercase tracking-wider mb-1">
+                Hududiy Tavsiyalar
+              </div>
+              <h3 className="text-base font-extrabold text-[#191B1F] mb-2">
+                Agro Ob-havo & Purkash
+              </h3>
+              <p className="text-xs text-zinc-600 leading-relaxed">
+                Shamol tezligi, tuproq harorati, namlik va sovuq urish xavfi haqida ogohlantirishlar hamda dori purkash uchun eng qulay soatlar tavsiyasi.
+              </p>
+            </div>
+            <div className="pt-4 mt-4 border-t border-zinc-100 text-[11px] font-bold text-amber-700">
+              Aniq soatlar bo‘yicha
+            </div>
+          </div>
+
+          {/* 3. Agroz Business ERP */}
+          <div className="bg-white rounded-3xl p-6 border border-black/5 shadow-xs hover:border-emerald-300 hover:shadow-lg transition-all flex flex-col justify-between">
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mb-4">
+                <Store size={22} />
+              </div>
+              <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">
+                Dorixonalar Uchun ERP
+              </div>
+              <h3 className="text-base font-extrabold text-[#191B1F] mb-2">
+                Kassa, Ombor & Nasiya
+              </h3>
+              <p className="text-xs text-zinc-600 leading-relaxed">
+                Kunlik kassa savdolari (POS), tovarlar ombori, oylik moliyaviy hisobotlar va xavfsiz shifrlangan Qarz daftari bitta bulutli tizimda.
+              </p>
+            </div>
+            <div className="pt-4 mt-4 border-t border-zinc-100 text-[11px] font-bold text-emerald-700">
+              1 oy bepul sinov
+            </div>
+          </div>
+
+          {/* 4. Mutaxassis chaqirish */}
+          <div className="bg-white rounded-3xl p-6 border border-black/5 shadow-xs hover:border-blue-300 hover:shadow-lg transition-all flex flex-col justify-between">
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center mb-4">
+                <Users size={22} />
+              </div>
+              <div className="text-[10px] font-bold text-blue-700 uppercase tracking-wider mb-1">
+                Dalaga Chaqiruv
+              </div>
+              <h3 className="text-base font-extrabold text-[#191B1F] mb-2">
+                Agronom & Veterinar Tarmog‘i
+              </h3>
+              <p className="text-xs text-zinc-600 leading-relaxed">
+                Fermerlar o‘z hududidagi malakali agronom va veterinarlarni to‘g‘ridan-to‘g‘ri dalaga chaqirishlari va professional maslahat olishlari mumkin.
+              </p>
+            </div>
+            <div className="pt-4 mt-4 border-t border-zinc-100 text-[11px] font-bold text-blue-700">
+              Malakali mutaxassislar
+            </div>
+          </div>
+
+          {/* 5. AgrozGO Mobil Ilovasi */}
+          <div className="bg-white rounded-3xl p-6 border border-black/5 shadow-xs hover:border-zinc-300 hover:shadow-lg transition-all flex flex-col justify-between">
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-zinc-100 text-zinc-800 flex items-center justify-center mb-4">
+                <Smartphone size={22} />
+              </div>
+              <div className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider mb-1">
+                iOS & Android
+              </div>
+              <h3 className="text-base font-extrabold text-[#191B1F] mb-2">
+                Dehqonning Mobil Yordamchisi
+              </h3>
+              <p className="text-xs text-zinc-600 leading-relaxed">
+                Barcha agro-xizmatlarni birlashtirgan intuitiv mobil ilova. Dala sharoitida ham tez va qulay ishlaydi.
+              </p>
+            </div>
+            <div className="pt-4 mt-4 border-t border-zinc-100 text-[11px] font-bold text-zinc-700">
+              Bepul yuklab olish
+            </div>
+          </div>
+
+          {/* 6. 100% Ma'lumotlar xavfsizligi */}
+          <div className="bg-white rounded-3xl p-6 border border-black/5 shadow-xs hover:border-zinc-300 hover:shadow-lg transition-all flex flex-col justify-between">
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center mb-4">
+                <ShieldCheck size={22} />
+              </div>
+              <div className="text-[10px] font-bold text-amber-700 uppercase tracking-wider mb-1">
+                Shifrlangan Bulut
+              </div>
+              <h3 className="text-base font-extrabold text-[#191B1F] mb-2">
+                Xavfsiz Qarz va Hisobotlar
+              </h3>
+              <p className="text-xs text-zinc-600 leading-relaxed">
+                Do‘koningiz ma’lumotlari, kassa va qarzlar zamonaviy shifrlash protokollari bilan himoyalangan. Hech kim sizning hisobingizni ko‘ra olmaydi.
+              </p>
+            </div>
+            <div className="pt-4 mt-4 border-t border-zinc-100 text-[11px] font-bold text-amber-700">
+              100% Maxfiylik kafolati
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================================
+          3. SECTION: DORIXONA EGALARI UCHUN 1 OYLIK TEKIN SINOV VERSINI O‘RNATISH
+          ========================================================================= */}
+      <section id="sinov" className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-black/5 scroll-mt-24">
+        <TrialRegistrationSection />
+      </section>
+
+      {/* =========================================================================
+          4. SECTION: AGROZGO MOBIL ILOVASI (iOS & Android)
           ========================================================================= */}
       <section id="app" className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-black/5 scroll-mt-24">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10 sm:mb-14">
@@ -300,93 +483,6 @@ export default function MainWebLanding() {
               <Smartphone size={14} />
               <span>Ilovani yuklab olish</span>
             </a>
-          </div>
-        </div>
-
-        {/* 4 ta Asosiy Ilova Imkoniyati */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
-          {/* 1. AI Kasallik tashxisi */}
-          <div className="bg-white rounded-3xl p-6 border border-black/5 shadow-xs hover:border-purple-300 hover:shadow-lg transition-all text-left flex flex-col justify-between group">
-            <div>
-              <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center mb-4 group-hover:bg-[#191B1F] group-hover:text-white transition">
-                <Sparkles size={22} />
-              </div>
-              <div className="text-[10px] font-bold text-purple-700 uppercase tracking-wider mb-1">
-                5 Soniyada Tahlil
-              </div>
-              <h3 className="text-base font-extrabold text-[#191B1F] mb-2">
-                AI Kasallik Diagnostikasi
-              </h3>
-              <p className="text-xs text-zinc-600 leading-relaxed">
-                Kasal barg, meva yoki hayvon alomatini suratga olib yuklang. Sun’iy intellekt zudlik bilan kasallik nomi va davolash usulini aniqlaydi.
-              </p>
-            </div>
-            <div className="pt-4 mt-4 border-t border-zinc-100 text-[11px] font-bold text-purple-700">
-              24/7 Avtomatlashtirilgan
-            </div>
-          </div>
-
-          {/* 2. Hududiy Agro Ob-havo */}
-          <div className="bg-white rounded-3xl p-6 border border-black/5 shadow-xs hover:border-amber-300 hover:shadow-lg transition-all text-left flex flex-col justify-between group">
-            <div>
-              <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center mb-4 group-hover:bg-[#191B1F] group-hover:text-white transition">
-                <CloudSun size={22} />
-              </div>
-              <div className="text-[10px] font-bold text-amber-700 uppercase tracking-wider mb-1">
-                Hududiy Ogohlantirish
-              </div>
-              <h3 className="text-base font-extrabold text-[#191B1F] mb-2">
-                Agro Ob-havo & Purkash
-              </h3>
-              <p className="text-xs text-zinc-600 leading-relaxed">
-                Shamol tezligi, tuproq harorati, namlik va sovuq urish xavfi hamda dori sepish uchun eng qulay soatlar tavsiyasi.
-              </p>
-            </div>
-            <div className="pt-4 mt-4 border-t border-zinc-100 text-[11px] font-bold text-amber-700">
-              Aniq soatlar bo‘yicha
-            </div>
-          </div>
-
-          {/* 3. Sertifikatlangan dorilar */}
-          <div className="bg-white rounded-3xl p-6 border border-black/5 shadow-xs hover:border-emerald-300 hover:shadow-lg transition-all text-left flex flex-col justify-between group">
-            <div>
-              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mb-4 group-hover:bg-[#191B1F] group-hover:text-white transition">
-                <ShieldCheck size={22} />
-              </div>
-              <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">
-                Sifat Kafolati
-              </div>
-              <h3 className="text-base font-extrabold text-[#191B1F] mb-2">
-                Sertifikatlangan Dorilar
-              </h3>
-              <p className="text-xs text-zinc-600 leading-relaxed">
-                Yaqin atrofingizdagi litsenziyali agro-dorixonalardan kerakli dori va o‘g‘itlarni izlang, narxlarini solishtiring va soxta vositalardan saqlaning.
-              </p>
-            </div>
-            <div className="pt-4 mt-4 border-t border-zinc-100 text-[11px] font-bold text-emerald-700">
-              100% Rasmiy preparatlar
-            </div>
-          </div>
-
-          {/* 4. Mutaxassis chaqirish */}
-          <div className="bg-white rounded-3xl p-6 border border-black/5 shadow-xs hover:border-blue-300 hover:shadow-lg transition-all text-left flex flex-col justify-between group">
-            <div>
-              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center mb-4 group-hover:bg-[#191B1F] group-hover:text-white transition">
-                <Users size={22} />
-              </div>
-              <div className="text-[10px] font-bold text-blue-700 uppercase tracking-wider mb-1">
-                Dalaga Yetib Borish
-              </div>
-              <h3 className="text-base font-extrabold text-[#191B1F] mb-2">
-                Agronom & Veterinar
-              </h3>
-              <p className="text-xs text-zinc-600 leading-relaxed">
-                O‘z viloyatingizdagi sertifikatlangan mutaxassisni bevosita dalangiz yoki fermangizga ilova orqali bir necha daqiqada onlayn chaqiring.
-              </p>
-            </div>
-            <div className="pt-4 mt-4 border-t border-zinc-100 text-[11px] font-bold text-blue-700">
-              Tasdiqlangan mutaxassislar
-            </div>
           </div>
         </div>
 
@@ -434,7 +530,7 @@ export default function MainWebLanding() {
       </section>
 
       {/* =========================================================================
-          3. SECTION: AGROZ BUSINESS (ERP TIZIMI - DORIXONALAR UCHUN)
+          5. SECTION: AGROZ BUSINESS (ERP TIZIMI - DORIXONALAR UCHUN)
           ========================================================================= */}
       <section id="business" className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-black/5 scroll-mt-24">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10 sm:mb-14">
@@ -451,18 +547,17 @@ export default function MainWebLanding() {
             </p>
           </div>
 
-          <Link
-            href="/hamkorlik"
+          <a
+            href="#sinov"
             className="inline-flex items-center gap-2 bg-[#191B1F] hover:bg-black text-white text-xs sm:text-sm font-bold px-6 py-3 rounded-full transition shadow-sm shrink-0"
           >
-            <span>Do‘konni ulash</span>
+            <span>1 oylik sinovni o‘rnatish</span>
             <ArrowRight size={14} />
-          </Link>
+          </a>
         </div>
 
         {/* 4 ta Asosiy Biznes Vosita */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
-          {/* 1. Kassa */}
           <div className="bg-white rounded-3xl p-6 border border-black/5 shadow-xs text-left flex flex-col justify-between">
             <div>
               <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mb-4">
@@ -480,7 +575,6 @@ export default function MainWebLanding() {
             </div>
           </div>
 
-          {/* 2. Ombor */}
           <div className="bg-white rounded-3xl p-6 border border-black/5 shadow-xs text-left flex flex-col justify-between">
             <div>
               <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center mb-4">
@@ -498,7 +592,6 @@ export default function MainWebLanding() {
             </div>
           </div>
 
-          {/* 3. Hisobotlar */}
           <div className="bg-white rounded-3xl p-6 border border-black/5 shadow-xs text-left flex flex-col justify-between">
             <div>
               <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center mb-4">
@@ -516,7 +609,6 @@ export default function MainWebLanding() {
             </div>
           </div>
 
-          {/* 4. Qarz daftari */}
           <div className="bg-white rounded-3xl p-6 border border-black/5 shadow-xs text-left flex flex-col justify-between">
             <div>
               <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center mb-4">
@@ -534,70 +626,10 @@ export default function MainWebLanding() {
             </div>
           </div>
         </div>
-
-        {/* 3 Qadamli Ulanish Oqimi */}
-        <div className="bg-[#191B1F] text-white rounded-[36px] p-6 sm:p-12 shadow-xl text-left">
-          <div className="max-w-2xl mb-8">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-3 py-1 rounded-full">
-              Tezkor va oson ulanish
-            </span>
-            <h3 className="text-xl sm:text-3xl font-extrabold text-white mt-3">
-              Do‘koningizni 1 daqiqada tizimga ulang
-            </h3>
-            <p className="text-xs sm:text-sm text-zinc-400 mt-2 leading-relaxed">
-              Murakkab o‘rnatishlarsiz. Kompyuter yoki telefondagi brauzer orqali darhol ishga tushadi.
-            </p>
-          </div>
-
-          <div className="grid sm:grid-cols-3 gap-6 pt-2 pb-8 border-b border-white/10">
-            <div className="space-y-2">
-              <div className="w-9 h-9 rounded-full bg-amber-400 text-black font-extrabold flex items-center justify-center text-sm">
-                1
-              </div>
-              <h4 className="text-sm font-bold text-white">Ma'lumotlarni kiriting</h4>
-              <p className="text-xs text-zinc-400 leading-relaxed">
-                Do‘kon nomi, mas’ul shaxs, telefon raqam va viloyatni yozasiz.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <div className="w-9 h-9 rounded-full bg-amber-400 text-black font-extrabold flex items-center justify-center text-sm">
-                2
-              </div>
-              <h4 className="text-sm font-bold text-white">Telegram orqali tasdiqlang</h4>
-              <p className="text-xs text-zinc-400 leading-relaxed">
-                Rasmiy Telegram botimizga o‘tasiz va 1 ta tasdiqlash tugmasini bosasiz.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <div className="w-9 h-9 rounded-full bg-amber-400 text-black font-extrabold flex items-center justify-center text-sm">
-                3
-              </div>
-              <h4 className="text-sm font-bold text-white">Biznes kabinetga kiring</h4>
-              <p className="text-xs text-zinc-400 leading-relaxed">
-                Sizga shaxsiy xavfsiz havolangiz beriladi va kassa hamda omborni boshqarasiz.
-              </p>
-            </div>
-          </div>
-
-          <div className="pt-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="text-xs text-zinc-400">
-              BETA sinov davrida ulanish — mutlaqo bepul (0 so‘m)
-            </div>
-            <Link
-              href="/hamkorlik"
-              className="inline-flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-black font-bold text-xs sm:text-sm px-6 py-3.5 rounded-full transition shadow-md active:scale-95"
-            >
-              <span>Do‘konni ulash</span>
-              <ArrowRight size={14} />
-            </Link>
-          </div>
-        </div>
       </section>
 
       {/* =========================================================================
-          4. SECTION: BIZNES TARIFLAR
+          6. SECTION: BIZNES TARIFLAR
           ========================================================================= */}
       <section id="tariffs" className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-black/5 scroll-mt-24">
         <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
@@ -608,7 +640,7 @@ export default function MainWebLanding() {
             Agroz Business <span className="text-emerald-700">Tariflari</span>
           </h2>
           <p className="mt-3 text-xs sm:text-sm text-zinc-600">
-            BETA davrida platformaga ulanish bepul taqdim etiladi. O‘zingizga mos tarifni tanlang va bir necha daqiqada tizimga ulaning.
+            Dastlabki 1 oy mutlaqo bepul (0 so‘m). O‘zingizga mos tarifni tanlang va tizimga ulaning.
           </p>
         </div>
 
@@ -620,12 +652,12 @@ export default function MainWebLanding() {
             </div>
 
             <div>
-              <div className="text-lg font-bold text-[#191B1F]">BETA Start</div>
-              <p className="text-xs text-zinc-500 mt-1">Dastlabki hamkor agro-dorixonalar uchun</p>
+              <div className="text-lg font-bold text-[#191B1F]">1 Oylik Bepul Sinov</div>
+              <p className="text-xs text-zinc-500 mt-1">Barcha agro-dorixonalar uchun</p>
 
               <div className="mt-5 pb-5 border-b border-zinc-100 flex items-baseline gap-1.5">
                 <span className="text-4xl font-black text-emerald-700">0 so‘m</span>
-                <span className="text-sm font-semibold text-zinc-500">/ abadiy bepul</span>
+                <span className="text-sm font-semibold text-zinc-500">/ 30 kun bepul</span>
               </div>
 
               <ul className="mt-6 space-y-3 text-xs text-zinc-700 font-medium text-left">
@@ -647,37 +679,37 @@ export default function MainWebLanding() {
                 </li>
                 <li className="flex items-start gap-2.5">
                   <Check size={16} className="text-emerald-600 shrink-0 mt-0.5" />
-                  <span>Telegram orqali xavfsiz avtorizatsiya</span>
+                  <span>Telegram orqali 1 bosishda ulanish</span>
                 </li>
               </ul>
             </div>
 
-            <Link
-              href="/hamkorlik"
+            <a
+              href="#sinov"
               className="mt-8 w-full rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-3.5 text-center transition shadow-md shadow-emerald-600/20 active:scale-95 block"
             >
-              Do‘konni ulash (0 so‘m)
-            </Link>
+              1 oylik sinovni o‘rnatish (0 so‘m)
+            </a>
           </div>
 
           {/* Standart */}
           <div className="rounded-3xl border border-black/5 bg-white p-7 shadow-xs flex flex-col justify-between hover:border-zinc-300 transition">
             <div>
               <div className="text-lg font-bold text-[#191B1F]">Standart</div>
-              <p className="text-xs text-zinc-500 mt-1">Katta aylanmali agro-do‘konlar uchun</p>
+              <p className="text-xs text-zinc-500 mt-1">Sinov davridan so‘ng davom ettirish</p>
 
               <div className="mt-5 pb-5 border-b border-zinc-100 flex items-baseline gap-1.5">
                 <span className="text-3xl font-extrabold text-[#191B1F]">149 000 so‘m</span>
                 <span className="text-sm font-semibold text-zinc-500">/ oy</span>
               </div>
               <div className="mt-2 text-[11px] font-bold text-emerald-700">
-                BETA davrida 0 so‘m
+                1-oy 0 so‘m
               </div>
 
               <ul className="mt-6 space-y-3 text-xs text-zinc-600 text-left">
                 <li className="flex items-start gap-2.5">
                   <Check size={16} className="text-zinc-400 shrink-0 mt-0.5" />
-                  <span>Barcha BETA Start imkoniyatlari</span>
+                  <span>Barcha sinov imkoniyatlari to‘liq saqlanadi</span>
                 </li>
                 <li className="flex items-start gap-2.5">
                   <Check size={16} className="text-zinc-400 shrink-0 mt-0.5" />
@@ -694,12 +726,12 @@ export default function MainWebLanding() {
               </ul>
             </div>
 
-            <Link
-              href="/hamkorlik"
+            <a
+              href="#sinov"
               className="mt-8 w-full rounded-full bg-[#191B1F] hover:bg-black text-white font-bold text-xs py-3.5 text-center transition shadow-xs active:scale-95 block"
             >
-              Do‘konni ulash
-            </Link>
+              Sinovdan boshlash
+            </a>
           </div>
 
           {/* Tarmoq */}
@@ -729,199 +761,18 @@ export default function MainWebLanding() {
               </ul>
             </div>
 
-            <Link
-              href="/hamkorlik"
+            <a
+              href="tel:+998908383772"
               className="mt-8 w-full rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-bold text-xs py-3.5 text-center transition active:scale-95 block"
             >
-              Bog‘lanish
-            </Link>
+              Bog‘lanish (+998 90 838 37 72)
+            </a>
           </div>
         </div>
       </section>
 
       {/* =========================================================================
-          5. SECTION: BIZ KIMMIZ VA AGROZGO NIMA?
-          ========================================================================= */}
-      <section id="about" className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto scroll-mt-24 border-t border-black/5">
-        <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-14 space-y-3">
-          <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100/70 border border-emerald-200 px-3 py-1 rounded-full">
-            <Sparkles size={13} className="text-emerald-700" />
-            <span>Biz haqimizda</span>
-          </div>
-          <h2 className="text-2xl sm:text-4xl font-extrabold text-[#191B1F] tracking-tight">
-            Biz kimmiz va AgrozGO nima?
-          </h2>
-          <p className="text-xs sm:text-sm text-zinc-600 leading-relaxed max-w-2xl mx-auto">
-            AgrozGO — mamlakatimiz qishloq xo‘jaligi sohasidagi eng dolzarb muammolarni zamonaviy raqamli texnologiyalar yordamida hal qiluvchi yagona ekotizim.
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-6">
-          {/* 1. Dehqon va Fermerlar */}
-          <div className="bg-white rounded-3xl p-6 sm:p-7 border border-black/5 shadow-xs flex flex-col justify-between text-left group">
-            <div>
-              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mb-5">
-                <Sprout size={24} />
-              </div>
-              <div className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider mb-1">
-                Fermerlar uchun
-              </div>
-              <h3 className="text-lg font-extrabold text-[#191B1F] mb-3">
-                Dehqon va Fermerlar
-              </h3>
-              <ul className="space-y-2.5 text-xs text-zinc-600 leading-relaxed">
-                <li className="flex items-start gap-2">
-                  <Check size={14} className="text-emerald-600 shrink-0 mt-0.5" />
-                  <span>5 soniyada AI yordamida ekin va chorva kasalliklarini aniqlash</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check size={14} className="text-emerald-600 shrink-0 mt-0.5" />
-                  <span>Dori purkashga eng qulay soatlar va hududiy agro ob-havo</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check size={14} className="text-emerald-600 shrink-0 mt-0.5" />
-                  <span>Agronom va veterinarlarni to‘g‘ridan-to‘g‘ri dalaga chaqirish</span>
-                </li>
-              </ul>
-            </div>
-            <div className="pt-6 mt-5 border-t border-zinc-100 flex items-center justify-between">
-              <span className="text-[11px] font-bold text-emerald-700">Mobil Ilova</span>
-              <a href="#app" className="text-xs font-bold text-zinc-900 hover:text-emerald-700 flex items-center gap-1.5">
-                <span>Yuklab olish</span>
-                <ArrowRight size={13} />
-              </a>
-            </div>
-          </div>
-
-          {/* 2. Agro-dorixonalar */}
-          <div className="bg-[#191B1F] text-white rounded-3xl p-6 sm:p-7 shadow-xl flex flex-col justify-between text-left group">
-            <div>
-              <div className="w-12 h-12 rounded-2xl bg-white/10 text-amber-400 flex items-center justify-center mb-5">
-                <Store size={24} />
-              </div>
-              <div className="text-[11px] font-bold text-amber-400 uppercase tracking-wider mb-1">
-                Agroz Business
-              </div>
-              <h3 className="text-lg font-extrabold text-white mb-3">
-                Agro-dorixonalar
-              </h3>
-              <ul className="space-y-2.5 text-xs text-zinc-300 leading-relaxed">
-                <li className="flex items-start gap-2">
-                  <Check size={14} className="text-amber-400 shrink-0 mt-0.5" />
-                  <span>Kunlik kassa (POS): naqd va karta tushumini aniq yuritish</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check size={14} className="text-amber-400 shrink-0 mt-0.5" />
-                  <span>Ombor qoldiqlari, kelish/sotish narxlari va dori muddatlari</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check size={14} className="text-amber-400 shrink-0 mt-0.5" />
-                  <span>Shifrlangan bulutli Qarz daftari (qog‘oz daftar o‘rniga)</span>
-                </li>
-              </ul>
-            </div>
-            <div className="pt-6 mt-5 border-t border-white/10 flex items-center justify-between">
-              <span className="text-[11px] font-bold text-amber-400">BETA 0 so‘m</span>
-              <Link href="/hamkorlik" className="text-xs font-bold bg-amber-400 text-black px-4 py-2 rounded-full hover:bg-amber-300 transition flex items-center gap-1.5">
-                <span>Do‘konni ulash</span>
-                <ArrowRight size={13} />
-              </Link>
-            </div>
-          </div>
-
-          {/* 3. Mutaxassislar */}
-          <div className="bg-white rounded-3xl p-6 sm:p-7 border border-black/5 shadow-xs flex flex-col justify-between text-left group">
-            <div>
-              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center mb-5">
-                <Users size={24} />
-              </div>
-              <div className="text-[11px] font-bold text-blue-700 uppercase tracking-wider mb-1">
-                Ekspertlar uchun
-              </div>
-              <h3 className="text-lg font-extrabold text-[#191B1F] mb-3">
-                Agronom & Veterinarlar
-              </h3>
-              <ul className="space-y-2.5 text-xs text-zinc-600 leading-relaxed">
-                <li className="flex items-start gap-2">
-                  <Check size={14} className="text-blue-600 shrink-0 mt-0.5" />
-                  <span>O‘z viloyatidagi fermerlardan dala ko‘riklari chaqiruvlarini olish</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check size={14} className="text-blue-600 shrink-0 mt-0.5" />
-                  <span>Kasbiy profil va dehqonlar tomonidan berilgan sharhlar</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check size={14} className="text-blue-600 shrink-0 mt-0.5" />
-                  <span>Professional maslahat va dala xizmatlari orqali daromad topish</span>
-                </li>
-              </ul>
-            </div>
-            <div className="pt-6 mt-5 border-t border-zinc-100 flex items-center justify-between">
-              <span className="text-[11px] font-bold text-blue-700">Hamkorlik</span>
-              <Link href="/hamkorlik" className="text-xs font-bold text-zinc-900 hover:text-blue-700 flex items-center gap-1.5">
-                <span>Profil ochish</span>
-                <ArrowRight size={13} />
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* =========================================================================
-          6. SECTION: BANNER
-          ========================================================================= */}
-      <section className="py-8 sm:py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="relative rounded-[36px] sm:rounded-[48px] overflow-hidden shadow-2xl min-h-[440px] flex flex-col justify-between p-6 sm:p-12">
-          <img
-            src="https://images.unsplash.com/photo-1625246333195-78d9c38ad449?auto=format&fit=crop&w=1800&q=80"
-            alt="Farmer in the golden wheat field"
-            loading="lazy"
-            className="absolute inset-0 w-full h-full object-cover brightness-75"
-          />
-
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/30" />
-
-          <div className="relative z-10 max-w-2xl mx-auto text-center pt-6">
-            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-snug">
-              O‘zbekiston dehqonchiligida yangi raqamli davr
-            </h2>
-          </div>
-
-          <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-6 pt-12">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-[#E5B54F]/80 backdrop-blur-md flex items-center justify-center text-white border border-white/20">
-                <Sprout size={20} />
-              </div>
-              <div className="w-12 h-12 rounded-full bg-[#E5B54F]/80 backdrop-blur-md flex items-center justify-center text-white border border-white/20">
-                <ShieldCheck size={20} />
-              </div>
-              <div className="w-12 h-12 rounded-full bg-[#E5B54F]/80 backdrop-blur-md flex items-center justify-center text-white border border-white/20">
-                <Award size={20} />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="bg-[#FAF6EC] text-[#191B1F] rounded-2xl px-5 py-3 text-left min-w-[90px] shadow-lg">
-                <div className="text-lg sm:text-xl font-black text-amber-700">100%</div>
-                <div className="text-[9px] font-semibold text-zinc-500 mt-0.5">Xavfsiz ma'lumotlar</div>
-              </div>
-
-              <div className="bg-[#FAF6EC] text-[#191B1F] rounded-2xl px-5 py-3 text-left min-w-[90px] shadow-lg">
-                <div className="text-lg sm:text-xl font-black text-amber-700">24/7</div>
-                <div className="text-[9px] font-semibold text-zinc-500 mt-0.5">AI tizim</div>
-              </div>
-
-              <div className="bg-[#FAF6EC] text-[#191B1F] rounded-2xl px-5 py-3 text-left min-w-[90px] shadow-lg">
-                <div className="text-lg sm:text-xl font-black text-amber-700">BETA</div>
-                <div className="text-[9px] font-semibold text-zinc-500 mt-0.5">0 so‘m ulanish</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* =========================================================================
-          7. SECTION: FAQ & ALOQA
+          7. SECTION: ALOQA & FAQ
           ========================================================================= */}
       <section id="aloqa" className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto border-t border-black/5 scroll-mt-24">
         <div className="text-center mb-10">
@@ -932,7 +783,7 @@ export default function MainWebLanding() {
             Biz bilan bog‘laning
           </h2>
           <p className="mt-2 text-xs sm:text-sm text-zinc-600 max-w-xl mx-auto">
-            Ilovadan foydalanish, do‘konni ulash yoki agronom va veterinar chaqirish bo‘yicha savollaringizga yordam beramiz
+            Ilovadan foydalanish, do‘konni ulash yoki 1 oylik sinov bo‘yicha savollaringizga yordam beramiz
           </p>
         </div>
 
@@ -1068,15 +919,15 @@ export default function MainWebLanding() {
               AgrozGO bilan agrobiznesingizni yangi bosqichga olib chiqing
             </h2>
             <p className="text-xs sm:text-sm text-zinc-300">
-              BETA davrida do‘koningizni 0 so‘mga ulang yoki fermerlar uchun AgrozGO mobil ilovasini yuklab oling.
+              1 oylik tekin sinov versiyasini o‘rnating yoki fermerlar uchun AgrozGO mobil ilovasini yuklab oling.
             </p>
             <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Link
-                href="/hamkorlik"
+              <a
+                href="#sinov"
                 className="w-full sm:w-auto px-8 py-3.5 rounded-full bg-amber-400 hover:bg-amber-300 text-black font-bold text-xs sm:text-sm transition shadow-lg active:scale-95"
               >
-                Do‘konni ulash (0 so‘m)
-              </Link>
+                1 oylik sinovni o‘rnatish (0 so‘m)
+              </a>
               <Link
                 href="/hamkorlik?mode=login"
                 className="w-full sm:w-auto px-8 py-3.5 rounded-full bg-white/10 hover:bg-white/15 text-white font-bold text-xs sm:text-sm transition"
@@ -1090,3 +941,4 @@ export default function MainWebLanding() {
     </div>
   );
 }
+

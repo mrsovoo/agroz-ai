@@ -9,13 +9,10 @@ import {
   MapPin,
   ChevronRight,
   Phone,
-  Power,
   Navigation,
-  Sparkles,
-  ShieldCheck,
   UserCheck,
   ArrowUpRight,
-  Clock,
+  FileText,
 } from "lucide-react";
 import { haptic } from "@/lib/telegram";
 
@@ -28,6 +25,7 @@ export type DashPartnerCall = {
   address: string | null;
   status: string;
   createdAt: string;
+  conclusion?: string | null;
 };
 
 export type DashPartnerProfile = {
@@ -51,6 +49,7 @@ export default function SpecialistDashboard({
   onToggleBusy,
   onGoCalls,
   onCallAction,
+  onOpenCompleteModal,
   actionBusyId,
 }: {
   partner: DashPartnerProfile;
@@ -59,6 +58,7 @@ export default function SpecialistDashboard({
   onToggleBusy: () => Promise<void>;
   onGoCalls: (filter?: "all" | "yangi" | "qabul_qilindi" | "bajarildi") => void;
   onCallAction: (callId: number, action: "accept" | "reject" | "done") => Promise<void>;
+  onOpenCompleteModal?: (call: DashPartnerCall) => void;
   actionBusyId?: number | null;
 }) {
   const stats = useMemo(() => {
@@ -148,7 +148,6 @@ export default function SpecialistDashboard({
 
       {/* 2. 3 ta Asosiy Ko'rsatkich (KPI Kartochkalar) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Yangi Chaqiruvlar */}
         <button
           type="button"
           onClick={() => {
@@ -170,7 +169,6 @@ export default function SpecialistDashboard({
           <p className="mt-1 text-[11px] text-[#86868B]">Kutilayotgan so&apos;rovlar</p>
         </button>
 
-        {/* Jarayondagi Chaqiruvlar */}
         <button
           type="button"
           onClick={() => {
@@ -192,7 +190,6 @@ export default function SpecialistDashboard({
           <p className="mt-1 text-[11px] text-[#86868B]">Faol qabul qilingan</p>
         </button>
 
-        {/* Yakunlangan Chaqiruvlar */}
         <button
           type="button"
           onClick={() => {
@@ -376,10 +373,17 @@ export default function SpecialistDashboard({
                     <button
                       type="button"
                       disabled={actionBusyId === c.id}
-                      onClick={() => onCallAction(c.id, "done")}
-                      className="flex-1 rounded-full bg-[#1D1D1F] hover:bg-black py-2 text-center text-xs font-medium text-white transition active:scale-95 disabled:opacity-50"
+                      onClick={() => {
+                        if (onOpenCompleteModal) {
+                          onOpenCompleteModal(c);
+                        } else {
+                          onCallAction(c.id, "done");
+                        }
+                      }}
+                      className="flex-1 flex items-center justify-center gap-1.5 rounded-full bg-[#1D1D1F] hover:bg-black py-2 text-center text-xs font-medium text-white transition active:scale-95 disabled:opacity-50"
                     >
-                      Yakunlash
+                      <FileText size={12} />
+                      <span>Xulosa & Yakunlash</span>
                     </button>
                   </div>
                 </div>

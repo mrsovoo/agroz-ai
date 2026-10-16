@@ -19,6 +19,7 @@ import { BOT_OTP_TTL_MINUTES, OTP_LENGTH, OTP_TTL_MINUTES } from "../lib/constan
 import { telegramBotToken } from "../lib/settings.js";
 import { rateLimit, RATE_LIMITS } from "../lib/rate-limit.js";
 import { purgeUserAccount } from "../lib/user-auth.js";
+import { isAllowUnverifiedTelegramAllowed } from "../lib/security-flags.js";
 
 const router = Router();
 
@@ -280,8 +281,9 @@ router.post("/telegram/check", async (req, res) => {
     const body = req.body || {};
     const initData = body.initData;
     const botToken = await telegramBotToken();
+    const isVerified = Boolean(botToken && initData && verifyInitData(initData, botToken));
 
-    if (!botToken || !initData || !verifyInitData(initData, botToken)) {
+    if (!isVerified && !isAllowUnverifiedTelegramAllowed()) {
       return res.status(401).json({ error: "Telegram ma'lumotlari haqiqiy emas" });
     }
 
@@ -340,8 +342,9 @@ router.post("/telegram", async (req, res) => {
     const body = req.body || {};
     const initData = body.initData;
     const botToken = await telegramBotToken();
+    const isVerified = Boolean(botToken && initData && verifyInitData(initData, botToken));
 
-    if (!botToken || !initData || !verifyInitData(initData, botToken)) {
+    if (!isVerified && !isAllowUnverifiedTelegramAllowed()) {
       return res.status(401).json({ error: "Telegram ma'lumotlari haqiqiy emas" });
     }
 

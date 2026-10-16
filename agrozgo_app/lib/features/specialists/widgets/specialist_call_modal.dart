@@ -776,75 +776,77 @@ class _SpecialistCallModalState extends ConsumerState<SpecialistCallModal> {
         ),
         const SizedBox(height: 20),
 
-        // Mutaxassisga qo'ng'iroq qilish tugmasi
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8F9FA),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFEEEEEE)),
-          ),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: const Color(0xFF35CA56).withValues(alpha: 0.15),
-                child: Text(
-                  widget.specialist.name.isNotEmpty ? widget.specialist.name[0] : 'M',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF039E1E),
+        // Mutaxassisga qo'ng'iroq qilish tugmasi (faqat telefon raqam mavjud bo'lsa)
+        if (widget.specialist.phone.trim().isNotEmpty) ...[
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8F9FA),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFEEEEEE)),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: const Color(0xFF35CA56).withValues(alpha: 0.15),
+                  child: Text(
+                    widget.specialist.name.isNotEmpty ? widget.specialist.name[0] : 'M',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF039E1E),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.specialist.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                        color: Color(0xFF1C1C1E),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.specialist.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: Color(0xFF1C1C1E),
+                        ),
                       ),
-                    ),
-                    Text(
-                      widget.specialist.phone,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF8E8E93),
+                      Text(
+                        widget.specialist.phone,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF8E8E93),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              ElevatedButton.icon(
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  Clipboard.setData(ClipboardData(text: widget.specialist.phone));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Raqam nusxalandi: ${widget.specialist.phone}'),
-                      behavior: SnackBarBehavior.floating,
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF35CA56),
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    Clipboard.setData(ClipboardData(text: widget.specialist.phone));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Raqam nusxalandi: ${widget.specialist.phone}'),
+                        behavior: SnackBarBehavior.floating,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF35CA56),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  icon: const Icon(Icons.phone_rounded, size: 16),
+                  label: const Text('Qo‘ng‘iroq', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
                 ),
-                icon: const Icon(Icons.phone_rounded, size: 16),
-                label: const Text('Qo‘ng‘iroq', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
 
         // Agar bajarilgan bo'lsa reyting qoldirish
         if (_callProgress == 3) ...[
