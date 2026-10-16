@@ -153,6 +153,8 @@ app.use("/api/auth", authRouter);
 app.use("/api/profile", profileRouter);
 app.use("/api/telegram", telegramRouter);
 app.use("/api/bot", botRouter);
+app.use("/api/partner", botRouter);
+app.use("/api", botRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/advertisements", advertisementsRouter);
 app.use("/api/pharmacies", pharmaciesRouter);

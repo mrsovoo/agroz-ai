@@ -1703,32 +1703,96 @@ router.get("/partner/quick-list", async (_req, res) => {
   }
 });
 
+// Yordamchi: Telefon raqam yoki Login bo'yicha hamkorni bazadan topish
+async function findSpecialistByPhoneOrLogin(query: string) {
+  const target = String(query || "").trim();
+  if (!target) return null;
+
+  const digits = target.replace(/\D/g, "");
+  const last9 = digits.slice(-9);
+  const standardPhone = digits.length >= 9 ? `+998${last9}` : null;
+
+  return (
+    await db
+      .select()
+      .from(specialists)
+      .where(
+        and(
+          or(
+            eq(specialists.login, target.toLowerCase()),
+            standardPhone ? eq(specialists.phone, standardPhone) : sql`false`,
+            digits.length >= 9 ? eq(specialists.phone, `998${last9}`) : sql`false`,
+            digits.length >= 9 ? eq(specialists.phone, last9) : sql`false`,
+            digits.length >= 9 ? sql`replace(replace(${specialists.phone}, '+', ''), ' ', '') LIKE ${'%' + last9}` : sql`false`
+          ),
+          eq(specialists.isActive, true)
+        )
+      )
+      .limit(1)
+  )[0] || null;
+}
+
+// Yordamchi: Do'kon yoki mutaxassis nomidan kelib chiqib takrorlanmas login yaratish
+async function generateUniquePartnerLogin(nameOrOrg: string): Promise<string> {
+  let base = (nameOrOrg || "")
+    .toLowerCase()
+    .replace(/['`ʻʼ]/g, "")
+    .replace(/[^a-z0-9]/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_|_$/g, "");
+
+  if (!base || base.length < 3) {
+    base = "partner";
+  }
+  base = base.slice(0, 24);
+
+  let candidate = base;
+  let counter = 1;
+  while (true) {
+    const existing = await db
+      .select({ id: specialists.id })
+      .from(specialists)
+      .where(eq(specialists.login, candidate))
+      .limit(1);
+    if (existing.length === 0) {
+      return candidate;
+    }
+    candidate = `${base}_${counter}`;
+    counter++;
+  }
+}
+
+// GET /api/bot/partner/suggest-login (Do'kon nomiga qarab unikal login tavsiya qilish)
+router.get("/partner/suggest-login", async (req, res) => {
+  try {
+    const name = String(req.query.name || "").trim();
+    const login = await generateUniquePartnerLogin(name || "agro_partner");
+    return res.json({ ok: true, login });
+  } catch (err: any) {
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // POST /api/bot/partner/request-login-otp (Telegram orqali tasdiqlash kodini yuborish)
 router.post("/partner/request-login-otp", async (req, res) => {
   try {
     const { phone } = req.body || {};
-    const cleanPhone = normalizePhone(phone || "");
-    if (!cleanPhone || cleanPhone.length < 9) {
-      return res.status(400).json({ ok: false, error: "Iltimos, to'liq telefon raqamingizni kiriting (+998 XX XXX XX XX)" });
+    const rawTarget = String(phone || "").trim();
+    if (!rawTarget) {
+      return res.status(400).json({ ok: false, error: "Iltimos, telefon raqamingizni kiriting" });
     }
 
-    // specialists jadvalidan qidirish
-    const spec = (
-      await db
-        .select()
-        .from(specialists)
-        .where(and(eq(specialists.phone, cleanPhone), eq(specialists.isActive, true)))
-        .limit(1)
-    )[0];
+    const spec = await findSpecialistByPhoneOrLogin(rawTarget);
 
     if (!spec) {
       return res.status(404).json({
         ok: false,
         notRegistered: true,
-        error: "Ushbu telefon raqam bilan ro'yxatdan o'tgan agro-do'kon yoki mutaxassis topilmadi. Yangi hamkor sifatida ro'yxatdan o'tish uchun quyidagi shaklni to'ldiring.",
+        error: "Ushbu telefon raqam bilan ro'yxatdan o'tgan agro-do'kon yoki mutaxassis topilmadi. Yangi hamkor sifatida ro'yxatdan o'ting.",
       });
     }
 
+    const cleanPhone = spec.phone;
     const min = 100000;
     const max = 999999;
     const code = String(randomInt(min, max + 1));
@@ -1793,10 +1857,11 @@ router.post("/partner/request-login-otp", async (req, res) => {
         partnerName: spec.name,
         organization: spec.organization || spec.specialty,
         phone: cleanPhone,
+        login: spec.login,
       });
     }
 
-    // Agar Telegram hali ulanmagan bo'lsa (faqat web orqali ariza topshirgan bo'lsa)
+    // Agar Telegram hali ulanmagan bo'lsa (faqat web orqali ro'yxatdan o'tgan bo'lsa)
     const botStartUrl = `https://t.me/${cleanBotUser}?start=${loginToken}`;
     return res.json({
       ok: true,
@@ -1807,6 +1872,7 @@ router.post("/partner/request-login-otp", async (req, res) => {
       partnerName: spec.name,
       organization: spec.organization || spec.specialty,
       phone: cleanPhone,
+      login: spec.login,
     });
   } catch (err: any) {
     console.error("[partner:request-login-otp error]:", err);
@@ -1818,24 +1884,14 @@ router.post("/partner/request-login-otp", async (req, res) => {
 router.post("/partner/verify-login-otp", async (req, res) => {
   try {
     const { phone, code, token } = req.body || {};
-    const cleanPhone = normalizePhone(phone || "");
     const cleanCode = String(code || "").trim();
 
-    if (!cleanPhone) {
-      return res.status(400).json({ ok: false, error: "Telefon raqami kiritilmadi" });
-    }
-
-    const spec = (
-      await db
-        .select()
-        .from(specialists)
-        .where(and(eq(specialists.phone, cleanPhone), eq(specialists.isActive, true)))
-        .limit(1)
-    )[0];
-
+    const spec = await findSpecialistByPhoneOrLogin(phone || "");
     if (!spec) {
       return res.status(404).json({ ok: false, error: "Hamkor profili topilmadi" });
     }
+
+    const cleanPhone = spec.phone;
 
     // Kodni tekshirish
     const otpRows = await db
@@ -1879,6 +1935,9 @@ router.post("/partner/verify-login-otp", async (req, res) => {
       partnerId: spec.id,
       role: spec.role,
       name: spec.name,
+      organization: spec.organization,
+      login: spec.login,
+      phone: spec.phone,
     });
   } catch (err: any) {
     console.error("[partner:verify-login-otp error]:", err);
@@ -1900,14 +1959,7 @@ router.get("/partner/check-login-otp", async (req, res) => {
     }
 
     if (row.used) {
-      const spec = (
-        await db
-          .select()
-          .from(specialists)
-          .where(and(eq(specialists.phone, row.phone), eq(specialists.isActive, true)))
-          .limit(1)
-      )[0];
-
+      const spec = await findSpecialistByPhoneOrLogin(row.phone);
       if (!spec) {
         return res.status(404).json({ ok: false, error: "Hamkor profili topilmadi" });
       }
@@ -1935,6 +1987,9 @@ router.get("/partner/check-login-otp", async (req, res) => {
         partnerId: spec.id,
         role: spec.role,
         name: spec.name,
+        organization: spec.organization,
+        login: spec.login,
+        phone: spec.phone,
       });
     }
 
@@ -1952,29 +2007,23 @@ router.get("/partner/check-login-otp", async (req, res) => {
 router.post("/partner/request-reset-password-otp", async (req, res) => {
   try {
     const { phone } = req.body || {};
-    const cleanPhone = normalizePhone(phone || "");
-    if (!cleanPhone) {
-      return res.status(400).json({ ok: false, error: "Telefon raqamingizni to'liq kiriting" });
+    const rawTarget = String(phone || "").trim();
+    if (!rawTarget) {
+      return res.status(400).json({ ok: false, error: "Telefon raqami yoki login kiritilmadi" });
     }
 
-    const spec = (
-      await db
-        .select()
-        .from(specialists)
-        .where(and(eq(specialists.phone, cleanPhone), eq(specialists.isActive, true)))
-        .limit(1)
-    )[0];
-
+    const spec = await findSpecialistByPhoneOrLogin(rawTarget);
     if (!spec) {
       return res.status(404).json({
         ok: false,
-        error: "Ushbu telefon raqam bilan ro'yxatdan o'tgan hamkor topilmadi",
+        error: "Ushbu telefon raqam yoki login bilan ro'yxatdan o'tgan hamkor topilmadi",
       });
     }
 
+    const cleanPhone = spec.phone;
     const otpCode = String(randomInt(100000, 999999));
     const otpToken = `pwd_reset_${randomBytes(20).toString("hex")}`;
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 daqiqa
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 daqiqa
 
     // Eski kiritilmagan kodlarni bekor qilish
     await db
@@ -1987,27 +2036,43 @@ router.post("/partner/request-reset-password-otp", async (req, res) => {
       phone: cleanPhone,
       code: otpCode,
       token: otpToken,
-      telegramId: spec.telegramId,
+      telegramId: spec.telegramId && spec.telegramId > 0 ? spec.telegramId : null,
       expiresAt,
     });
 
+    const botUser = (await partnerBotUsername()) || "agroz_auth_bot";
+    const cleanBotUser = botUser.replace(/^@/, "");
+
     // Telegram orqali xabar yuborish
-    const botUser = partnerBotUsername() || "agroz_auth_bot";
-    if (spec.telegramId && !spec.botBlocked) {
+    if (spec.telegramId && spec.telegramId > 0 && !spec.botBlocked) {
       sendToSpecialist(
         spec.telegramId,
         `🔐 <b>Agroz Business: Parolni yangilash</b>\n\n` +
           `Hurmatli <b>${escapeHtml(spec.name)}</b>, boshqaruv kabinetingiz parolini yangilash uchun tasdiqlash kodingiz:\n\n` +
           `🔑 Tasdiqlash kodi: <code>${otpCode}</code>\n\n` +
-          `<i>Ushbu kod 5 daqiqa davomida amal qiladi. Begonalarga bermang!</i>`
+          `<i>Ushbu kod 10 daqiqa davomida amal qiladi. Begonalarga bermang!</i>`
       ).catch((e) => console.error("[sendToSpecialist reset pwd error]:", e));
+
+      return res.json({
+        ok: true,
+        method: "telegram_sent",
+        token: otpToken,
+        botUsername: cleanBotUser,
+        phone: cleanPhone,
+        message: "Tasdiqlash kodi Telegram botingizga yuborildi",
+      });
     }
 
+    // Agar Telegram hali ulanmagan bo'lsa
+    const botStartUrl = `https://t.me/${cleanBotUser}?start=${otpToken}`;
     return res.json({
       ok: true,
+      method: "telegram_link_required",
       token: otpToken,
-      botUsername: botUser,
+      botUsername: cleanBotUser,
+      botStartUrl,
       phone: cleanPhone,
+      message: "Tasdiqlash kodini olish uchun Telegram botga kiring",
     });
   } catch (err: any) {
     console.error("[partner:request-reset-password-otp error]:", err);
@@ -2019,19 +2084,25 @@ router.post("/partner/request-reset-password-otp", async (req, res) => {
 router.post("/partner/reset-password", async (req, res) => {
   try {
     const { phone, code, newPassword } = req.body || {};
-    const cleanPhone = normalizePhone(phone || "");
     const cleanCode = String(code || "").trim();
     const cleanPass = String(newPassword || "").trim();
 
-    if (!cleanPhone) {
-      return res.status(400).json({ ok: false, error: "Telefon raqami kiritilmadi" });
-    }
     if (!cleanCode || cleanCode.length < 4) {
       return res.status(400).json({ ok: false, error: "Telegram tasdiqlash kodi to'liq kiritilmadi" });
     }
-    if (!cleanPass || cleanPass.length < 6) {
-      return res.status(400).json({ ok: false, error: "Yangi parol kamida 6 ta belgidan iborat bo'lishi kerak" });
+    if (!cleanPass || cleanPass.length < 8) {
+      return res.status(400).json({ ok: false, error: "Yangi parol xavfsizlik uchun kamida 8 ta belgidan iborat bo'lishi kerak" });
     }
+    if (!/(?=.*[a-zA-Z])(?=.*[0-9])/.test(cleanPass)) {
+      return res.status(400).json({ ok: false, error: "Parolda kamida bitta harf va bitta raqam bo'lishi shart" });
+    }
+
+    const spec = await findSpecialistByPhoneOrLogin(phone || "");
+    if (!spec) {
+      return res.status(404).json({ ok: false, error: "Hamkor profili topilmadi" });
+    }
+
+    const cleanPhone = spec.phone;
 
     // Kodni tekshirish
     const otp = (
@@ -2053,39 +2124,32 @@ router.post("/partner/reset-password", async (req, res) => {
       return res.status(400).json({ ok: false, error: "Tasdiqlash kodi noto'g'ri yoki muddati tugagan" });
     }
 
-    // Hamkorni topish
-    const spec = (
-      await db
-        .select()
-        .from(specialists)
-        .where(and(eq(specialists.phone, cleanPhone), eq(specialists.isActive, true)))
-        .limit(1)
-    )[0];
+    await db.update(otpCodes).set({ used: true, deliveredAt: new Date() }).where(eq(otpCodes.id, otp.id));
 
-    if (!spec) {
-      return res.status(404).json({ ok: false, error: "Hamkor profili topilmadi" });
+    // Yangi parolni xavfsiz hash qilib BAZADA saqlash
+    const hashed = hashPassword(cleanPass);
+    let finalLogin = spec.login;
+    if (!finalLogin) {
+      finalLogin = await generateUniquePartnerLogin(spec.organization || spec.name);
     }
 
-    // Kodni ishlatilgan deb belgilash
-    await db.update(otpCodes).set({ used: true }).where(eq(otpCodes.id, otp.id));
-
-    // Parolni xavfsiz hash qilib BAZADA (specialists.password_hash) yangilash
-    const passwordHash = hashPassword(cleanPass);
     await db
       .update(specialists)
-      .set({ passwordHash, updatedAt: new Date() })
+      .set({ passwordHash: hashed, login: finalLogin, updatedAt: new Date() })
       .where(eq(specialists.id, spec.id));
 
-    // Telegram botga tasdiq xabarini yuborish
-    if (spec.telegramId && !spec.botBlocked) {
+    // Telegram orqali xabar
+    if (spec.telegramId && spec.telegramId > 0 && !spec.botBlocked) {
       sendToSpecialist(
         spec.telegramId,
-        `✅ <b>Agroz Business:</b> Boshqaruv kabinetingiz paroli bazada muvaffaqiyatli yangilandi.\n\n` +
-          `Endi tizimga yangi parolingiz orqali xavfsiz kirishingiz mumkin.`
+        `✅ <b>Agroz Business: Parolingiz muvaffaqiyatli yangilandi!</b>\n\n` +
+          `Hurmatli <b>${escapeHtml(spec.name)}</b>, profilingiz uchun yangi parol o'rnatildi va bazada saqlandi.\n` +
+          `Sizning login nomingiz: <code>${finalLogin}</code>\n\n` +
+          `Endi web kabinetga ushbu login va yangi parolingiz bilan kirishingiz mumkin.`
       ).catch(() => {});
     }
 
-    // Avtomatik kirish uchun sessiya tokeni yaratish
+    // Sessiya yaratish
     let user = (await db.select().from(users).where(eq(users.phone, cleanPhone)).limit(1))[0];
     if (!user) {
       const [createdUser] = await db.insert(users).values({ phone: cleanPhone, name: spec.name }).returning();
@@ -2097,8 +2161,16 @@ router.post("/partner/reset-password", async (req, res) => {
 
     return res.json({
       ok: true,
+      message: "Parolingiz muvaffaqiyatli yangilandi va bazada saqlandi",
       token: sessionToken,
-      message: "Parolingiz bazada muvaffaqiyatli yangilandi!",
+      partner: {
+        id: spec.id,
+        name: spec.name,
+        organization: spec.organization,
+        role: spec.role,
+        login: finalLogin,
+        phone: spec.phone,
+      },
     });
   } catch (err: any) {
     console.error("[partner:reset-password error]:", err);
@@ -2106,7 +2178,7 @@ router.post("/partner/reset-password", async (req, res) => {
   }
 });
 
-// POST /api/bot/partner/web-login (Telefon raqam yoki Parol orqali kirish)
+// POST /api/bot/partner/web-login (Telefon raqam yoki Login yoki Parol orqali kirish)
 router.post("/partner/web-login", async (req, res) => {
   try {
     const { phone, password, demoRole, partnerId } = req.body || {};
@@ -2141,6 +2213,9 @@ router.post("/partner/web-login", async (req, res) => {
         partnerId: spec.id,
         role: spec.role,
         name: spec.name,
+        organization: spec.organization,
+        login: spec.login,
+        phone: spec.phone,
       });
     }
 
@@ -2165,28 +2240,24 @@ router.post("/partner/web-login", async (req, res) => {
         partnerId: spec.id,
         role: spec.role,
         name: spec.name,
+        organization: spec.organization,
+        login: spec.login,
+        phone: spec.phone,
       });
     }
 
-    // 2. Telefon raqam orqali qidirish
-    const cleanPhone = normalizePhone(phone || "");
-    if (!cleanPhone) {
-      return res.status(400).json({ ok: false, error: "Telefon raqami kiritilmadi (namuna: +998 90 123 45 67)" });
+    // 2. Telefon raqam yoki Login orqali qidirish
+    const target = String(phone || "").trim();
+    if (!target) {
+      return res.status(400).json({ ok: false, error: "Telefon raqami yoki Login kiritilmadi" });
     }
 
-    const spec = (
-      await db
-        .select()
-        .from(specialists)
-        .where(and(eq(specialists.phone, cleanPhone), eq(specialists.isActive, true)))
-        .limit(1)
-    )[0];
-
+    const spec = await findSpecialistByPhoneOrLogin(target);
     if (!spec) {
       return res.status(404).json({
         ok: false,
         notRegistered: true,
-        error: "Ushbu telefon raqam bilan ro'yxatdan o'tgan dorixona yoki mutaxassis topilmadi. Avval ariza topshiring.",
+        error: "Ushbu telefon raqam yoki login bilan ro'yxatdan o'tgan hamkor topilmadi. Avval ro'yxatdan o'ting.",
       });
     }
 
@@ -2206,9 +2277,9 @@ router.post("/partner/web-login", async (req, res) => {
     }
 
     // Sessiya yaratish
-    let user = (await db.select().from(users).where(eq(users.phone, cleanPhone)).limit(1))[0];
+    let user = (await db.select().from(users).where(eq(users.phone, spec.phone)).limit(1))[0];
     if (!user) {
-      const [createdUser] = await db.insert(users).values({ phone: cleanPhone, name: spec.name }).returning();
+      const [createdUser] = await db.insert(users).values({ phone: spec.phone, name: spec.name }).returning();
       user = createdUser;
     }
 
@@ -2221,6 +2292,9 @@ router.post("/partner/web-login", async (req, res) => {
       partnerId: spec.id,
       role: spec.role,
       name: spec.name,
+      organization: spec.organization,
+      login: spec.login,
+      phone: spec.phone,
     });
   } catch (err: any) {
     console.error("[partner:web-login error]:", err);
@@ -2258,9 +2332,10 @@ router.post("/partner/register-intent", async (req, res) => {
       return res.status(400).json({ ok: false, error: "Iltimos, to'liq F.I.SH (ism va familiyangizni) kiriting" });
     }
 
-    const targetRole: "pharmacy" | "specialist" = role === "specialist" ? "specialist" : "pharmacy";
-    const cleanOrg = cleanText(organization || "", 200) || (targetRole === "pharmacy" ? cleanName : null);
-    if (targetRole === "pharmacy" && (!cleanOrg || cleanOrg.length < 2)) {
+    const targetRole: "pharmacy" | "specialist" | "both" =
+      role === "both" ? "both" : role === "specialist" ? "specialist" : "pharmacy";
+    const cleanOrg = cleanText(organization || "", 200) || (targetRole !== "specialist" ? cleanName : null);
+    if (targetRole !== "specialist" && (!cleanOrg || cleanOrg.length < 2)) {
       return res.status(400).json({ ok: false, error: "Iltimos, do'kon yoki dorixona nomini kiriting" });
     }
 
@@ -2270,12 +2345,26 @@ router.post("/partner/register-intent", async (req, res) => {
       return res.status(400).json({ ok: false, error: "Iltimos, hudud va to'liq manzilingizni kiriting" });
     }
 
-    const cleanSpec = cleanText(specialty || (targetRole === "pharmacy" ? "Agro-do'kon" : "Agronom mutaxassis"), 160);
+    const defaultSpecName = targetRole === "both" ? "Agro-do'kon va Mutaxassis" : targetRole === "pharmacy" ? "Agro-do'kon" : "Agronom mutaxassis";
+    const cleanSpec = cleanText(specialty || defaultSpecName, 160);
     const cleanWorkHours = cleanText(workHours || "08:00 - 19:00", 60);
     const cleanExp = Number(experienceYears) >= 0 ? Number(experienceYears) : 1;
     const cleanEdu = cleanText(education || "", 300);
     const cleanBio = cleanText(bio || "", 500);
     const cleanHelpsWith = helpsWith === "animal" || helpsWith === "crop" ? helpsWith : "both";
+
+    // Parol xavfsizligini tekshirish
+    const rawPass = String(req.body?.password || "").trim();
+    let passwordHashToSave: string | null = null;
+    if (rawPass) {
+      if (rawPass.length < 8) {
+        return res.status(400).json({ ok: false, error: "Parol xavfsizlik uchun kamida 8 ta belgidan iborat bo'lishi kerak" });
+      }
+      if (!/(?=.*[a-zA-Z])(?=.*[0-9])/.test(rawPass)) {
+        return res.status(400).json({ ok: false, error: "Parolda kamida bitta harf va bitta raqam bo'lishi shart" });
+      }
+      passwordHashToSave = hashPassword(rawPass);
+    }
 
     // 1 Oylik bepul sinov sanasi: Hozirdan boshlab 30 kun
     const now = new Date();
@@ -2283,6 +2372,18 @@ router.post("/partner/register-intent", async (req, res) => {
 
     // 1. specialists jadvalida mavjudligini tekshiramiz/yaratamiz
     let spec = (await db.select().from(specialists).where(eq(specialists.phone, cleanPhone)).limit(1))[0];
+
+    // Login yaratish yoki tekshirish
+    let finalLogin = String(req.body?.login || "").trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
+    if (!finalLogin) {
+      finalLogin = spec?.login || (await generateUniquePartnerLogin(cleanOrg || cleanName));
+    } else {
+      const existingLogin = await db.select({ id: specialists.id }).from(specialists).where(eq(specialists.login, finalLogin)).limit(1);
+      if (existingLogin.length > 0 && (!spec || existingLogin[0].id !== spec.id)) {
+        finalLogin = await generateUniquePartnerLogin(finalLogin);
+      }
+    }
+
     if (spec) {
       await db
         .update(specialists)
@@ -2297,6 +2398,8 @@ router.post("/partner/register-intent", async (req, res) => {
           bio: cleanBio || spec.bio,
           helpsWith: cleanHelpsWith,
           role: targetRole,
+          login: finalLogin,
+          passwordHash: passwordHashToSave || spec.passwordHash,
           isActive: true,
           isApproved: true,
           contractAcceptedAt: spec.contractAcceptedAt || now,
@@ -2315,6 +2418,8 @@ router.post("/partner/register-intent", async (req, res) => {
           name: cleanName,
           phone: cleanPhone,
           role: targetRole,
+          login: finalLogin,
+          passwordHash: passwordHashToSave,
           specialty: cleanSpec,
           organization: cleanOrg,
           address: cleanAddr,
@@ -2394,6 +2499,8 @@ router.post("/partner/register-intent", async (req, res) => {
       phone: cleanPhone,
       organization: cleanOrg || cleanName,
       name: cleanName,
+      role: targetRole,
+      login: finalLogin,
       partnerId: spec.id,
       trialEndsAt: trialEndsAt.toISOString(),
       daysLeft: 30,
@@ -2426,6 +2533,7 @@ router.get("/partner/check-registration", async (req, res) => {
         partnerId: spec?.id,
         name: spec?.name,
         organization: spec?.organization,
+        login: spec?.login,
         isTelegramLinked: Boolean(spec?.telegramId && spec.telegramId > 0),
       });
     }
@@ -2514,6 +2622,7 @@ router.post("/partner/init", async (req, res) => {
         partner: {
           id: spec.id,
           name: spec.name,
+          login: spec.login,
           role: spec.role,
           organization: spec.organization,
           specialty: spec.specialty,
@@ -2585,6 +2694,7 @@ router.post("/partner/init", async (req, res) => {
       partner: {
         id: spec.id,
         name: spec.name,
+        login: spec.login,
         role: spec.role,
         organization: spec.organization,
         specialty: spec.specialty,

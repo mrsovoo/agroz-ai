@@ -43,6 +43,7 @@ export async function ensureSchema(): Promise<void> {
       ALTER TABLE specialists ADD COLUMN IF NOT EXISTS paid_until timestamp;
       ALTER TABLE specialists ADD COLUMN IF NOT EXISTS trial_warning_sent_at timestamp;
       ALTER TABLE specialists ADD COLUMN IF NOT EXISTS password_hash varchar(255);
+      ALTER TABLE specialists ADD COLUMN IF NOT EXISTS login varchar(64);
     `);
 
     // 2b. Shaxsiy ma'lumotlar rozilik jurnali (O'RQ-547 bo'yicha o'zgarmas audit log)

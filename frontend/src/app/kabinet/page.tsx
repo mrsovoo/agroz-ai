@@ -91,10 +91,33 @@ function parsePriceNumber(val: string | null | undefined): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
+/** O'zbekiston telefon raqamini avtomatik +998 XX XXX XX XX formatlash */
+function formatUzbekPhone(val: string): string {
+  let digits = val.replace(/\D/g, "");
+  if (digits.startsWith("998")) {
+    digits = digits.slice(3);
+  }
+  digits = digits.slice(0, 9);
+  if (!digits) return "+998 ";
+
+  let res = "+998 ";
+  if (digits.length <= 2) {
+    res += digits;
+  } else if (digits.length <= 5) {
+    res += `${digits.slice(0, 2)} ${digits.slice(2)}`;
+  } else if (digits.length <= 7) {
+    res += `${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5)}`;
+  } else {
+    res += `${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5, 7)} ${digits.slice(7, 9)}`;
+  }
+  return res;
+}
+
 type PartnerProfile = {
   id: number;
   name: string;
-  role: "pharmacy" | "specialist";
+  login?: string | null;
+  role: "pharmacy" | "specialist" | "both";
   organization?: string | null;
   specialty?: string | null;
   phone: string;
@@ -178,6 +201,15 @@ export default function PartnerKabinetPage() {
   const [authTab, setAuthTab] = useState<"otp" | "password">("otp");
   const [rememberMe, setRememberMe] = useState(true);
 
+  // Qurilmani eslab qolish (Remembered Partner / Device)
+  const [rememberedPartner, setRememberedPartner] = useState<{
+    login: string;
+    name: string;
+    organization?: string | null;
+    role: string;
+    phone: string;
+  } | null>(null);
+
   // Telegram Bot orqali tasdiqlash holatlari
   const [otpCode, setOtpCode] = useState("");
   const [otpSent, setOtpSent] = useState(false);
@@ -191,15 +223,22 @@ export default function PartnerKabinetPage() {
 
   // To'liq ro'yxatdan o'tish modali (yangi hamkorlar uchun)
   const [showRegisterModal, setShowRegisterModal] = useState(false);
-  const [regRole, setRegRole] = useState<"pharmacy" | "specialist">("pharmacy");
+  const [regRole, setRegRole] = useState<"pharmacy" | "specialist" | "both">("pharmacy");
   const [regSpecialty, setRegSpecialty] = useState("Agro-do'kon");
   const [regName, setRegName] = useState("");
   const [regOrganization, setRegOrganization] = useState("");
+  const [regLogin, setRegLogin] = useState("");
+  const [regLoginIsManual, setRegLoginIsManual] = useState(false);
+  const [regPassword, setRegPassword] = useState("");
+  const [regConfirmPassword, setRegConfirmPassword] = useState("");
+  const [regShowPassword, setRegShowPassword] = useState(false);
+  const suggestTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const [regEducation, setRegEducation] = useState("");
   const [regRegion, setRegRegion] = useState("Toshkent viloyati");
   const [regDistrict, setRegDistrict] = useState("");
   const [regAddress, setRegAddress] = useState("");
-  const [regPhone, setRegPhone] = useState("");
+  const [regPhone, setRegPhone] = useState("+998 ");
   const [regWorkHours, setRegWorkHours] = useState("08:00 - 19:00");
   const [regExperienceYears, setRegExperienceYears] = useState("3");
   const [regBio, setRegBio] = useState("");
@@ -213,6 +252,8 @@ export default function PartnerKabinetPage() {
     botUsername: string;
     phone: string;
     name: string;
+    role?: string;
+    login?: string;
     trialEndsAt: string;
   } | null>(null);
 
@@ -364,6 +405,17 @@ export default function PartnerKabinetPage() {
           loadData("", stored);
         } else {
           setLoading(false);
+          try {
+            const remStr = localStorage.getItem("agroz_remembered_partner");
+            if (remStr) {
+              const rem = JSON.parse(remStr);
+              if (rem && (rem.login || rem.phone)) {
+                setRememberedPartner(rem);
+                setLoginPhone(rem.login || rem.phone);
+                setAuthTab("password");
+              }
+            }
+          } catch {}
         }
       }
     }
@@ -381,6 +433,26 @@ export default function PartnerKabinetPage() {
       })
       .catch(() => {});
   }, []);
+
+  // Ro'yxatdan o'tishda do'kon yoki hamkor nomiga qarab unikal login tavsiya qilish
+  useEffect(() => {
+    if (regLoginIsManual) return;
+    const target = regOrganization.trim() || regName.trim();
+    if (!target || target.length < 2) return;
+    if (suggestTimerRef.current) clearTimeout(suggestTimerRef.current);
+    suggestTimerRef.current = setTimeout(async () => {
+      try {
+        const res = await apiFetch(`/api/bot/partner/suggest-login?name=${encodeURIComponent(target)}`);
+        const data = await res.json();
+        if (data?.ok && data.login) {
+          setRegLogin(data.login);
+        }
+      } catch {}
+    }, 400);
+    return () => {
+      if (suggestTimerRef.current) clearTimeout(suggestTimerRef.current);
+    };
+  }, [regOrganization, regName, regLoginIsManual]);
 
   // OTP Taymeri
   useEffect(() => {
@@ -423,10 +495,24 @@ export default function PartnerKabinetPage() {
         setPartner(p);
         setIsBusy(Boolean(p.isBusy));
 
+        // Qurilmani eslab qolish
+        try {
+          localStorage.setItem(
+            "agroz_remembered_partner",
+            JSON.stringify({
+              login: p.login || p.phone,
+              name: p.name,
+              organization: p.organization,
+              role: p.role,
+              phone: p.phone,
+            })
+          );
+        } catch {}
+
         // Default tabni belgilash
         if (p.role === "pharmacy") {
           setActiveTab((prev) => (prev === "calls" ? "dashboard" : prev));
-        } else {
+        } else if (p.role === "specialist") {
           setActiveTab((prev) => (prev === "orders" || prev === "medicines" ? "dashboard" : prev));
         }
 
@@ -436,8 +522,8 @@ export default function PartnerKabinetPage() {
           return;
         }
 
-        // 2. Rolga qarab ma'lumotlarni yuklash
-        if (p.role === "pharmacy") {
+        // 2. Rolga qarab ma'lumotlarni yuklash (Do'kon yoki Ikkala rejim bo'lsa)
+        if (p.role === "pharmacy" || p.role === "both") {
           const [ordersRes, medsRes] = await Promise.allSettled([
             apiFetch(`/api/bot/partner/orders`, { headers }),
             apiFetch(`/api/bot/partner/medicines`, { headers }),
@@ -479,8 +565,10 @@ export default function PartnerKabinetPage() {
               );
             }
           }
-        } else {
-          // Mutaxassis (Agronom yoki Veterinar)
+        }
+
+        // Mutaxassis yoki Ikkala rejim bo'lsa Chaqiruvlarni yuklash
+        if (p.role === "specialist" || p.role === "both") {
           const callsRes = await apiFetch(`/api/bot/partner/calls`, { headers });
           if (callsRes.ok) {
             const d = await callsRes.json();
@@ -504,6 +592,17 @@ export default function PartnerKabinetPage() {
         if (token && !tgData) {
           localStorage.removeItem("agroz_business_token");
           setWebToken("");
+          try {
+            const remStr = localStorage.getItem("agroz_remembered_partner");
+            if (remStr) {
+              const rem = JSON.parse(remStr);
+              if (rem && (rem.login || rem.phone)) {
+                setRememberedPartner(rem);
+                setLoginPhone(rem.login || rem.phone);
+                setAuthTab("password");
+              }
+            }
+          } catch {}
         }
         setError(initJson?.error || "Hamkor profili topilmadi.");
       }
@@ -520,7 +619,7 @@ export default function PartnerKabinetPage() {
     const interval = setInterval(async () => {
       try {
         const headers = getHeaders();
-        if (partner.role === "pharmacy") {
+        if (partner.role === "pharmacy" || partner.role === "both") {
           const res = await apiFetch(`/api/bot/partner/orders`, { headers });
           if (res.ok) {
             const d = await res.json();
@@ -538,7 +637,8 @@ export default function PartnerKabinetPage() {
               ]);
             }
           }
-        } else {
+        }
+        if (partner.role === "specialist" || partner.role === "both") {
           const res = await apiFetch(`/api/bot/partner/calls`, { headers });
           if (res.ok) {
             const d = await res.json();
@@ -605,6 +705,18 @@ export default function PartnerKabinetPage() {
               setWebToken(pollData.token);
               if (rememberMe) {
                 localStorage.setItem("agroz_business_token", pollData.token);
+                try {
+                  localStorage.setItem(
+                    "agroz_remembered_partner",
+                    JSON.stringify({
+                      login: pollData.login || pollData.phone,
+                      name: pollData.name,
+                      organization: pollData.organization,
+                      role: pollData.role,
+                      phone: pollData.phone,
+                    })
+                  );
+                } catch {}
               }
               await loadData(initData, pollData.token);
             }
@@ -654,6 +766,18 @@ export default function PartnerKabinetPage() {
         setWebToken(data.token);
         if (rememberMe) {
           localStorage.setItem("agroz_business_token", data.token);
+          try {
+            localStorage.setItem(
+              "agroz_remembered_partner",
+              JSON.stringify({
+                login: data.login || data.phone || cleanPhone,
+                name: data.name,
+                organization: data.organization,
+                role: data.role,
+                phone: data.phone || cleanPhone,
+              })
+            );
+          } catch {}
         }
         await loadData(initData, data.token);
         setShowLoginModal(false);
@@ -685,12 +809,12 @@ export default function PartnerKabinetPage() {
 
     setLoginLoading(true);
     try {
-      const cleanPhone = targetPhone.replace(/\D/g, "");
+      const digits = targetPhone.replace(/\D/g, "");
       const res = await apiFetch(`/api/bot/partner/web-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          phone: cleanPhone || targetPhone,
+          phone: digits.length >= 9 ? digits : targetPhone,
           password: loginPassword,
         }),
       });
@@ -699,6 +823,18 @@ export default function PartnerKabinetPage() {
         setWebToken(data.token);
         if (rememberMe) {
           localStorage.setItem("agroz_business_token", data.token);
+          try {
+            localStorage.setItem(
+              "agroz_remembered_partner",
+              JSON.stringify({
+                login: data.login || targetPhone,
+                name: data.name,
+                organization: data.organization,
+                role: data.role,
+                phone: data.phone || targetPhone,
+              })
+            );
+          } catch {}
         }
         await loadData(initData, data.token);
         setShowLoginModal(false);
@@ -758,8 +894,13 @@ export default function PartnerKabinetPage() {
       return;
     }
 
-    if (!resetNewPassword || resetNewPassword.length < 6) {
-      setResetError("Yangi parol kamida 6 ta belgidan iborat bo'lishi kerak");
+    if (!resetNewPassword || resetNewPassword.length < 8) {
+      setResetError("Yangi parol xavfsizlik uchun kamida 8 ta belgidan iborat bo'lishi kerak");
+      return;
+    }
+
+    if (!/(?=.*[a-zA-Z])(?=.*[0-9])/.test(resetNewPassword)) {
+      setResetError("Parolda kamida bitta harf va bitta raqam bo'lishi shart");
       return;
     }
 
@@ -785,6 +926,20 @@ export default function PartnerKabinetPage() {
         setWebToken(data.token);
         if (rememberMe) {
           localStorage.setItem("agroz_business_token", data.token);
+          try {
+            if (data.partner) {
+              localStorage.setItem(
+                "agroz_remembered_partner",
+                JSON.stringify({
+                  login: data.partner.login || cleanPhone,
+                  name: data.partner.name,
+                  organization: data.partner.organization,
+                  role: data.partner.role,
+                  phone: data.partner.phone || cleanPhone,
+                })
+              );
+            }
+          } catch {}
         }
         setTimeout(async () => {
           setShowResetPasswordModal(false);
@@ -820,6 +975,21 @@ export default function PartnerKabinetPage() {
       return;
     }
 
+    if (regRole !== "specialist" && !regOrganization.trim()) {
+      alert("Iltimos, do'kon yoki dorixona nomini kiriting");
+      return;
+    }
+
+    if (!regPassword || regPassword.length < 8) {
+      alert("Parol xavfsizlik uchun kamida 8 ta belgidan iborat bo'lishi kerak");
+      return;
+    }
+
+    if (!/(?=.*[a-zA-Z])(?=.*[0-9])/.test(regPassword)) {
+      alert("Parolda kamida bitta harf va bitta raqam bo'lishi shart");
+      return;
+    }
+
     setRegSubmitting(true);
     try {
       const res = await apiFetch("/api/bot/partner/register-intent", {
@@ -831,6 +1001,8 @@ export default function PartnerKabinetPage() {
           role: regRole,
           specialty: regSpecialty,
           organization: regOrganization.trim() || regName.trim(),
+          login: regLogin.trim(),
+          password: regPassword.trim(),
           education: regEducation.trim(),
           region: regRegion,
           district: regDistrict.trim(),
@@ -848,6 +1020,18 @@ export default function PartnerKabinetPage() {
         if (data.sessionToken) {
           setWebToken(data.sessionToken);
           localStorage.setItem("agroz_business_token", data.sessionToken);
+          try {
+            localStorage.setItem(
+              "agroz_remembered_partner",
+              JSON.stringify({
+                login: data.login || cleanP,
+                name: data.name,
+                organization: data.organization,
+                role: data.role || regRole,
+                phone: data.phone || cleanP,
+              })
+            );
+          } catch {}
         }
       } else {
         alert(data?.error || "Ro'yxatdan o'tishda xatolik yuz berdi");
@@ -1639,7 +1823,9 @@ export default function PartnerKabinetPage() {
     return c;
   }, [medicines]);
 
-  const isPharmacy = partner?.role === "pharmacy";
+  const isPharmacy = partner?.role === "pharmacy" || partner?.role === "both";
+  const isSpecialist = partner?.role === "specialist" || partner?.role === "both";
+  const isBoth = partner?.role === "both";
 
   // Tab almashtirish: sahifa tepasiga qaytariladi
   function goTab(tab: string) {
@@ -1874,6 +2060,41 @@ export default function PartnerKabinetPage() {
               </div>
             )}
 
+            {/* Eslab qolingan qurilma / hisob kartochkasi */}
+            {rememberedPartner && (
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-3.5 flex items-center justify-between">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-9 h-9 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
+                    {rememberedPartner.role === "specialist" ? "👨‍🌾" : rememberedPartner.role === "both" ? "🌟" : "🏪"}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-800">Ushbu qurilmada saqlangan</p>
+                    <h3 className="text-xs font-black text-zinc-900 truncate">
+                      {rememberedPartner.organization || rememberedPartner.name}
+                    </h3>
+                    <p className="text-[11px] font-mono text-zinc-500 truncate">
+                      @{rememberedPartner.login || rememberedPartner.phone}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRememberedPartner(null);
+                    setLoginPhone("");
+                    setLoginPassword("");
+                    try {
+                      localStorage.removeItem("agroz_remembered_partner");
+                    } catch {}
+                  }}
+                  className="text-[11px] font-bold text-zinc-500 hover:text-red-600 transition px-2 py-1 rounded-lg hover:bg-white shrink-0"
+                  title="Boshqa hisobga o'tish"
+                >
+                  Boshqa hisob
+                </button>
+              </div>
+            )}
+
             {/* Kirish usullari tablari: Telegram orqali / Parol bilan */}
             <div className="grid grid-cols-2 p-1 rounded-2xl bg-zinc-100 text-xs font-bold text-zinc-600">
               <button
@@ -1924,13 +2145,16 @@ export default function PartnerKabinetPage() {
                       <input
                         type="tel"
                         value={loginPhone}
-                        onChange={(e) => setLoginPhone(e.target.value)}
+                        onChange={(e) => setLoginPhone(formatUzbekPhone(e.target.value))}
+                        onFocus={() => {
+                          if (!loginPhone) setLoginPhone("+998 ");
+                        }}
                         placeholder="+998 90 123 45 67"
                         required
-                        className="w-full rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-3 text-sm font-medium text-zinc-900 focus:border-black focus:bg-white focus:outline-none transition"
+                        className="w-full rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-3 text-sm font-mono font-bold text-zinc-900 focus:border-black focus:bg-white focus:outline-none transition"
                       />
                       <p className="text-[11px] text-zinc-400 mt-1.5 leading-relaxed">
-                        Raqamingiz kiritilgach, <b>@{botUsername}</b> Telegram botingizga 1-tap tasdiqlash tugmasi va kod yuboriladi.
+                        Raqamingiz kiritilgach, <b>@{botUsername}</b> Telegram botingizga tasdiqlash tugmasi va kod yuboriladi.
                       </p>
                     </div>
 
@@ -1964,7 +2188,7 @@ export default function PartnerKabinetPage() {
                         <span>Telegram botingizga tasdiqlash yuborildi</span>
                       </div>
                       <p className="text-xs text-blue-800 leading-relaxed">
-                        Telegramdagi <b>@{botUsername}</b> botida <b>«✅ Kabinetga kirishni tasdiqlash»</b> tugmasini bossangiz, bu oyna bir zumda avtomatik kiradi.
+                        Telegramdagi <b>@{botUsername}</b> botida <b>«✅ Kabinetga kirishni tasdiqlash»</b> tugmasini bossangiz, bu oyna avtomatik ochiladi.
                       </p>
                       {botStartUrl && (
                         <a
@@ -1974,7 +2198,7 @@ export default function PartnerKabinetPage() {
                           className="flex items-center justify-center gap-2 w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 text-xs shadow-xs transition"
                         >
                           <Send size={14} />
-                          <span>Telegram botda tasdiqlashni ochish</span>
+                          <span>Telegram botda ochish</span>
                           <ExternalLink size={12} />
                         </a>
                       )}
@@ -1982,7 +2206,7 @@ export default function PartnerKabinetPage() {
 
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-xs font-bold text-zinc-700">Yoki 6 xonali kodni kiriting:</label>
+                        <label className="text-xs font-bold text-zinc-700">Yoki botdagi 6 xonali kodni yozing:</label>
                         <button
                           type="button"
                           onClick={() => {
@@ -2043,18 +2267,42 @@ export default function PartnerKabinetPage() {
             {/* Tab 2: Parol bilan kirish */}
             {authTab === "password" && (
               <form onSubmit={handlePasswordLogin} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-zinc-700 mb-1.5">
-                    Telefon raqam yoki Login:
-                  </label>
-                  <input
-                    type="text"
-                    value={loginPhone}
-                    onChange={(e) => setLoginPhone(e.target.value)}
-                    placeholder="+998 90 123 45 67"
-                    className="w-full rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-3 text-sm font-medium text-zinc-900 focus:border-black focus:bg-white focus:outline-none transition"
-                  />
-                </div>
+                {rememberedPartner ? (
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 mb-1.5">
+                      Kirilayotgan hisob:
+                    </label>
+                    <div className="w-full rounded-2xl border border-zinc-200 bg-zinc-100/80 px-4 py-2.5 text-xs font-mono font-bold text-zinc-800 flex items-center justify-between">
+                      <span>@{rememberedPartner.login || rememberedPartner.phone}</span>
+                      <span className="text-[11px] font-sans font-semibold text-zinc-500">
+                        {rememberedPartner.organization || rememberedPartner.name}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 mb-1.5">
+                      Telefon raqam yoki Login:
+                    </label>
+                    <input
+                      type="text"
+                      value={loginPhone}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (/^[\d+\s]+$/.test(v) && v.length >= 2) {
+                          setLoginPhone(formatUzbekPhone(v));
+                        } else {
+                          setLoginPhone(v);
+                        }
+                      }}
+                      onFocus={() => {
+                        if (!loginPhone) setLoginPhone("+998 ");
+                      }}
+                      placeholder="+998 90 123 45 67 yoki login"
+                      className="w-full rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-3 text-sm font-medium text-zinc-900 focus:border-black focus:bg-white focus:outline-none transition"
+                    />
+                  </div>
+                )}
 
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
@@ -2063,7 +2311,7 @@ export default function PartnerKabinetPage() {
                       type="button"
                       onClick={() => {
                         setShowResetPasswordModal(true);
-                        setResetPhone(loginPhone);
+                        setResetPhone(rememberedPartner?.phone || loginPhone);
                         setResetStep("request");
                         setResetError(null);
                         setResetSuccess(null);
@@ -2078,7 +2326,8 @@ export default function PartnerKabinetPage() {
                       type={showPassword ? "text" : "password"}
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
-                      placeholder="••••••••"
+                      placeholder="Kamida 8 ta belgi"
+                      autoFocus={Boolean(rememberedPartner)}
                       className="w-full rounded-2xl border border-zinc-200 bg-zinc-50/70 pl-4 pr-11 py-3 text-sm font-medium text-zinc-900 focus:border-black focus:bg-white focus:outline-none transition"
                     />
                     <button
@@ -2100,13 +2349,13 @@ export default function PartnerKabinetPage() {
                       onChange={(e) => setRememberMe(e.target.checked)}
                       className="w-4 h-4 rounded-md border-zinc-300 text-black focus:ring-black accent-black"
                     />
-                    <span className="text-xs font-medium text-zinc-600">Eslab qolish</span>
+                    <span className="text-xs font-medium text-zinc-600">Devaysni eslab qolish</span>
                   </label>
                 </div>
 
                 <button
                   type="submit"
-                  disabled={loginLoading}
+                  disabled={loginLoading || !loginPassword.trim()}
                   className="w-full rounded-2xl bg-[#191B1F] hover:bg-black text-white text-sm font-bold py-3.5 transition-all shadow-md active:scale-98 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {loginLoading ? (
@@ -2212,11 +2461,14 @@ export default function PartnerKabinetPage() {
                     <input
                       type="tel"
                       value={resetPhone}
-                      onChange={(e) => setResetPhone(e.target.value)}
+                      onChange={(e) => setResetPhone(formatUzbekPhone(e.target.value))}
+                      onFocus={() => {
+                        if (!resetPhone) setResetPhone("+998 ");
+                      }}
                       placeholder="+998 90 123 45 67"
                       required
                       autoFocus
-                      className="w-full rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-3 text-sm font-medium text-zinc-900 focus:border-black focus:bg-white focus:outline-none transition"
+                      className="w-full rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-3 text-sm font-mono font-bold text-zinc-900 focus:border-black focus:bg-white focus:outline-none transition"
                     />
                     <p className="text-[11px] text-zinc-400 mt-1.5 leading-relaxed">
                       Ushbu raqamga ulangan Telegram botingizga 6 xonali tasdiqlash kodi yuboriladi.
@@ -2275,10 +2527,17 @@ export default function PartnerKabinetPage() {
                       type="password"
                       value={resetNewPassword}
                       onChange={(e) => setResetNewPassword(e.target.value)}
-                      placeholder="Kamida 6 ta belgi"
+                      placeholder="Kamida 8 ta belgi (harf va raqam)"
                       required
                       className="w-full rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-2.5 text-sm font-medium text-zinc-900 focus:border-black focus:bg-white focus:outline-none transition"
                     />
+                    <div className="mt-1 flex items-center gap-1.5 text-[10px]">
+                      {resetNewPassword.length > 0 && (resetNewPassword.length < 8 || !/(?=.*[a-zA-Z])(?=.*[0-9])/.test(resetNewPassword)) ? (
+                        <span className="text-amber-600 font-semibold">⚠️ Kamida 8 ta belgi, harf va raqam qatnashishi kerak</span>
+                      ) : resetNewPassword.length >= 8 ? (
+                        <span className="text-emerald-600 font-semibold">✓ Xavfsiz parol</span>
+                      ) : null}
+                    </div>
                   </div>
 
                   <div>
@@ -2311,7 +2570,7 @@ export default function PartnerKabinetPage() {
 
                   <button
                     type="submit"
-                    disabled={resetLoading || resetCode.length < 4 || resetNewPassword.length < 6}
+                    disabled={resetLoading || resetCode.length < 4 || resetNewPassword.length < 8}
                     className="w-full rounded-2xl bg-[#191B1F] hover:bg-black text-white text-sm font-bold py-3.5 transition-all shadow-md active:scale-98 disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {resetLoading ? (
@@ -2363,24 +2622,24 @@ export default function PartnerKabinetPage() {
                   </div>
 
                   <form onSubmit={handleRegisterSubmit} className="space-y-4 pt-2 text-xs">
-                    {/* Yo'nalish tanlash: Agro-do'kon yoki Mutaxassis */}
+                    {/* Yo'nalish tanlash: Agro-do'kon, Mutaxassis yoki Ikkalasi */}
                     <div>
                       <label className="block font-bold text-zinc-700 mb-1.5">Faoliyat yo‘nalishi: *</label>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <button
                           type="button"
                           onClick={() => {
                             setRegRole("pharmacy");
                             setRegSpecialty("Agro-do'kon");
                           }}
-                          className={`flex items-center justify-center gap-2 rounded-2xl p-3 border font-bold transition ${
+                          className={`flex items-center justify-center gap-2 rounded-2xl p-3 border font-bold transition text-xs ${
                             regRole === "pharmacy"
                               ? "bg-zinc-900 text-white border-zinc-900 shadow-xs"
                               : "bg-zinc-50 text-zinc-700 border-zinc-200 hover:bg-zinc-100"
                           }`}
                         >
-                          <Store size={16} />
-                          <span>Agro-Do‘kon (Dorixona)</span>
+                          <Store size={15} />
+                          <span>Agro-Do‘kon</span>
                         </button>
 
                         <button
@@ -2389,20 +2648,49 @@ export default function PartnerKabinetPage() {
                             setRegRole("specialist");
                             setRegSpecialty("Agronom");
                           }}
-                          className={`flex items-center justify-center gap-2 rounded-2xl p-3 border font-bold transition ${
+                          className={`flex items-center justify-center gap-2 rounded-2xl p-3 border font-bold transition text-xs ${
                             regRole === "specialist"
                               ? "bg-zinc-900 text-white border-zinc-900 shadow-xs"
                               : "bg-zinc-50 text-zinc-700 border-zinc-200 hover:bg-zinc-100"
                           }`}
                         >
-                          <UserCheck size={16} />
-                          <span>Mutaxassis (Konsultant)</span>
+                          <UserCheck size={15} />
+                          <span>Mutaxassis</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRegRole("both");
+                            setRegSpecialty("Agro-do'kon va Mutaxassis");
+                          }}
+                          className={`flex items-center justify-center gap-2 rounded-2xl p-3 border font-bold transition text-xs ${
+                            regRole === "both"
+                              ? "bg-gradient-to-r from-emerald-700 to-teal-800 text-white border-emerald-700 shadow-xs"
+                              : "bg-emerald-50/70 text-emerald-800 border-emerald-200 hover:bg-emerald-100/70"
+                          }`}
+                        >
+                          <Sparkles size={15} />
+                          <span>Ham Do‘kon, ham Mutaxassis</span>
                         </button>
                       </div>
                     </div>
 
-                    {/* Mutaxassis turi (agar mutaxassis bo'lsa) */}
-                    {regRole === "specialist" && (
+                    {/* Dual role maxsus tushuntirish */}
+                    {regRole === "both" && (
+                      <div className="rounded-2xl bg-emerald-50/80 border border-emerald-200 p-3 space-y-1">
+                        <div className="flex items-center gap-1.5 font-bold text-emerald-900">
+                          <Sparkles size={14} className="text-emerald-600" />
+                          <span>Universal rejim tanlandi</span>
+                        </div>
+                        <p className="text-[11px] text-emerald-800 leading-relaxed">
+                          Siz o‘z savdo do‘koningiz tovarlari, kassa va qarz daftarini boshqarasiz hamda mutaxassis sifatida fermerlarning maslahat va ko‘rik chaqiruvlarini ham qabul qilasiz.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Mutaxassis yoki Ikkala rejim bo'lsa yo'nalish tanlash */}
+                    {(regRole === "specialist" || regRole === "both") && (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="block font-bold text-zinc-700 mb-1">Mutaxassislik sohasi: *</label>
@@ -2413,6 +2701,7 @@ export default function PartnerKabinetPage() {
                           >
                             <option value="Agronom">Agronom (Ekinlar)</option>
                             <option value="Veterinar">Veterinar (Chorva mollari)</option>
+                            <option value="Agro-do'kon va Mutaxassis">Agro-do‘kon va Agronom</option>
                             <option value="O‘simliklar himoyasi">O‘simliklar himoyasi (Entomolog)</option>
                             <option value="Chorvachilik mutaxassisi">Chorvachilik mutaxassisi</option>
                           </select>
@@ -2433,7 +2722,7 @@ export default function PartnerKabinetPage() {
                       </div>
                     )}
 
-                    {/* F.I.SH va Tashkilot / Do'kon nomi */}
+                    {/* F.I.SH va Do'kon nomi */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block font-bold text-zinc-700 mb-1">To‘liq ism (F.I.SH): *</label>
@@ -2449,14 +2738,14 @@ export default function PartnerKabinetPage() {
 
                       <div>
                         <label className="block font-bold text-zinc-700 mb-1">
-                          {regRole === "pharmacy" ? "Agro-do‘kon rasmiy nomi: *" : "Tashkilot yoki brend nomi:"}
+                          {regRole !== "specialist" ? "Agro-do‘kon rasmiy nomi: *" : "Tashkilot yoki brend nomi:"}
                         </label>
                         <input
                           type="text"
-                          required={regRole === "pharmacy"}
+                          required={regRole !== "specialist"}
                           value={regOrganization}
                           onChange={(e) => setRegOrganization(e.target.value)}
-                          placeholder={regRole === "pharmacy" ? "Masalan: Baraka Agro Kimyo" : "Ixtiyoriy"}
+                          placeholder={regRole !== "specialist" ? "Masalan: Baraka Agro Kimyo" : "Ixtiyoriy"}
                           className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-zinc-900 font-medium focus:border-black focus:bg-white focus:outline-none"
                         />
                       </div>
@@ -2470,7 +2759,10 @@ export default function PartnerKabinetPage() {
                           type="tel"
                           required
                           value={regPhone}
-                          onChange={(e) => setRegPhone(e.target.value)}
+                          onChange={(e) => setRegPhone(formatUzbekPhone(e.target.value))}
+                          onFocus={() => {
+                            if (!regPhone) setRegPhone("+998 ");
+                          }}
                           placeholder="+998 90 123 45 67"
                           className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-zinc-900 font-mono font-bold focus:border-black focus:bg-white focus:outline-none"
                         />
@@ -2486,6 +2778,70 @@ export default function PartnerKabinetPage() {
                           placeholder="08:00 - 19:00"
                           className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-zinc-900 font-medium focus:border-black focus:bg-white focus:outline-none"
                         />
+                      </div>
+                    </div>
+
+                    {/* Avtomatik unikal Login va Maxfiy Parol */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-zinc-100/70 border border-zinc-200">
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="font-bold text-zinc-800">Tizimga kirish logini: *</label>
+                          <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                            Avto yaratilgan
+                          </span>
+                        </div>
+                        <div className="relative">
+                          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 font-mono font-bold text-xs">@</span>
+                          <input
+                            type="text"
+                            required
+                            value={regLogin}
+                            onChange={(e) => {
+                              setRegLogin(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""));
+                              setRegLoginIsManual(true);
+                            }}
+                            placeholder="dokon_login"
+                            className="w-full rounded-2xl border border-zinc-200 bg-white pl-8 pr-3.5 py-2 text-zinc-900 font-mono font-bold text-xs focus:border-black focus:outline-none"
+                          />
+                        </div>
+                        <p className="text-[10px] text-zinc-400 mt-1">Ushbu login orqali istalgan qurilmadan tezkor kirasiz.</p>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="font-bold text-zinc-800">Maxfiy parol: *</label>
+                          <span className="text-[10px] text-zinc-500 font-semibold">Kamida 8 belgi</span>
+                        </div>
+                        <div className="relative">
+                          <input
+                            type={regShowPassword ? "text" : "password"}
+                            required
+                            value={regPassword}
+                            onChange={(e) => setRegPassword(e.target.value)}
+                            placeholder="Kamida 8 ta belgi (harf+raqam)"
+                            className="w-full rounded-2xl border border-zinc-200 bg-white pl-3.5 pr-9 py-2 text-zinc-900 font-medium text-xs focus:border-black focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setRegShowPassword(!regShowPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700"
+                          >
+                            {regShowPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                          </button>
+                        </div>
+                        <div className="mt-1 flex items-center gap-1.5 text-[10px]">
+                          {regPassword.length === 0 ? (
+                            <span className="text-zinc-400">Harf va raqam qatnashishi shart</span>
+                          ) : regPassword.length < 8 || !/(?=.*[a-zA-Z])(?=.*[0-9])/.test(regPassword) ? (
+                            <span className="text-amber-600 font-semibold">
+                              ⚠️ Oddiy: kamida 8 ta belgi, harf va raqam
+                            </span>
+                          ) : (
+                            <span className="text-emerald-600 font-bold">
+                              ✓ Ishonchli va xavfsiz parol
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -2542,7 +2898,7 @@ export default function PartnerKabinetPage() {
                     </div>
 
                     {/* Mutaxassis qo'shimcha: Tajriba va Ma'lumot */}
-                    {regRole === "specialist" && (
+                    {(regRole === "specialist" || regRole === "both") && (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="block font-bold text-zinc-700 mb-1">Tajriba (yil): *</label>
@@ -2628,6 +2984,12 @@ export default function PartnerKabinetPage() {
                       Hurmatli <b>{regSuccess.name}</b>, sizga 1 oylik (30 kunlik) bepul sinov davri faollashtirildi.
                       Sinov muddati: <b>{new Date(regSuccess.trialEndsAt).toLocaleDateString("uz-UZ")}</b> gacha.
                     </p>
+                    {regSuccess.login && (
+                      <div className="mt-2.5 inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-zinc-100 border border-zinc-200 text-xs font-mono font-bold text-zinc-800">
+                        <span>Kirish loginingiz:</span>
+                        <span className="text-emerald-700">@{regSuccess.login}</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="rounded-2xl bg-blue-50 border border-blue-200 p-4 text-left space-y-2">
@@ -2770,14 +3132,14 @@ export default function PartnerKabinetPage() {
         <div className="flex h-16 shrink-0 items-center justify-between px-4 border-b border-[#E5E5EA]">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#1D1D1F] text-white">
-              {isPharmacy ? <Store size={16} /> : <UserCheck size={16} />}
+              {isBoth ? <Sparkles size={16} /> : isPharmacy ? <Store size={16} /> : <UserCheck size={16} />}
             </div>
             <div className="min-w-0">
               <h2 className="text-xs font-semibold text-[#1D1D1F] truncate leading-tight">
                 {partner ? partner.organization || partner.name : "Do'kon paneli"}
               </h2>
               <p className="text-[10px] text-[#86868B] truncate mt-0.5">
-                {isPharmacy ? "Agro-Do‘kon" : partner?.specialty || "Mutaxassis"}
+                {isBoth ? "🌟 Do‘kon + Mutaxassis" : isPharmacy ? "Agro-Do‘kon" : partner?.specialty || "Mutaxassis"}
               </p>
             </div>
           </div>
@@ -2788,7 +3150,7 @@ export default function PartnerKabinetPage() {
 
         {/* Sidebar Navigatsiya Menyu */}
         <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
-          {/* Agro-do'kon menyusi */}
+          {/* Agro-do'kon menyusi (Hamkor Do'kon yoki Ikkala rejim bo'lsa) */}
           {isPharmacy && partner?.isApproved && (
             <>
               <button
@@ -2855,6 +3217,29 @@ export default function PartnerKabinetPage() {
                   <span>Qarz daftari</span>
                 </div>
               </button>
+
+              {/* Universal rejimda Mutaxassis chaqiruvlari tabini qo'shish */}
+              {isSpecialist && isBoth && (
+                <button
+                  type="button"
+                  onClick={() => goTab("calls")}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition ${
+                    activeTab === "calls"
+                      ? "bg-[#1D1D1F] text-white font-semibold"
+                      : "text-[#515154] hover:bg-[#F5F5F7] hover:text-[#1D1D1F]"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <PhoneCall size={16} />
+                    <span>Fermer Chaqiruvlari</span>
+                  </div>
+                  {pendingCallsCount > 0 && (
+                    <span className="rounded-full bg-black/10 text-[#1D1D1F] px-1.5 py-0.2 text-[10px] font-mono font-medium">
+                      {pendingCallsCount}
+                    </span>
+                  )}
+                </button>
+              )}
 
               <button
                 type="button"
@@ -3397,7 +3782,7 @@ export default function PartnerKabinetPage() {
           )}
 
           {/* 3.1. MUTAXASSIS: CHAQIRUVLAR TABI */}
-          {!isPharmacy && activeTab === "calls" && (
+          {isSpecialist && activeTab === "calls" && (
             <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-4">
               {/* Filter tugmalari */}
               <div className="flex gap-1.5 overflow-x-auto pb-1 text-[11px] font-bold scrollbar-none">
@@ -4206,7 +4591,9 @@ export default function PartnerKabinetPage() {
             {[
               { id: "dashboard", label: "Asosiy", Icon: LayoutDashboard, badge: 0 },
               { id: "orders", label: "Bronlar", Icon: Package, badge: pendingOrdersCount },
-              { id: "__add", label: "", Icon: Plus, badge: 0 },
+              isBoth
+                ? { id: "calls", label: "Chaqiruv", Icon: PhoneCall, badge: pendingCallsCount }
+                : { id: "__add", label: "", Icon: Plus, badge: 0 },
               { id: "medicines", label: "Qoldiq", Icon: Boxes, badge: stockCounts.low + stockCounts.out },
               { id: "debts", label: "Qarzlar", Icon: HandCoins, badge: 0 },
             ].map(({ id, label, Icon, badge }) => {

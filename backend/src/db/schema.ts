@@ -164,6 +164,7 @@ export const specialists = pgTable("specialists", {
   paidUntil: timestamp("paid_until"),
   trialWarningSentAt: timestamp("trial_warning_sent_at"),
   passwordHash: varchar("password_hash", { length: 255 }),
+  login: varchar("login", { length: 64 }).unique(),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

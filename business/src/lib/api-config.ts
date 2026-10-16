@@ -5,7 +5,7 @@ export function getApiBaseUrl(): string {
     if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
       return "http://localhost:4000";
     }
-    return process.env.NODE_ENV === "production" ? "https://agroz-ai-backend-production.up.railway.app" : "";
+    return "https://agroz-ai-backend-production.up.railway.app";
   }
   return process.env.NODE_ENV === "production" ? "https://agroz-ai-backend-production.up.railway.app" : "http://localhost:4000";
 }

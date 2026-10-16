@@ -16,7 +16,12 @@ const nextConfig: NextConfig = {
           },
         ];
       }
-      return [];
+      return [
+        {
+          source: "/api/:path*",
+          destination: "https://agroz-ai-backend-production.up.railway.app/api/:path*",
+        },
+      ];
     }
 
     let cleanUrl = rawUrl.replace(/\/+$/, "");

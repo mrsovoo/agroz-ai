@@ -12,7 +12,7 @@ export const DEFAULT_LEGAL_BASIS =
 export const CURRENT_POLICY_VERSION = "v1.0 (2026)";
 
 export interface RecordConsentParams {
-  subjectType: "specialist" | "pharmacy" | "user";
+  subjectType: "specialist" | "pharmacy" | "user" | "both";
   subjectId: number;
   telegramId?: number | null;
   phone: string;

@@ -31,7 +31,7 @@ export type DashPartnerCall = {
 export type DashPartnerProfile = {
   id: number;
   name: string;
-  role: "pharmacy" | "specialist";
+  role: "pharmacy" | "specialist" | "both";
   specialty?: string | null;
   phone: string;
   address?: string | null;
