@@ -237,7 +237,10 @@ export default function PartnerKabinetPage() {
     organization?: string | null;
     role: string;
     phone: string;
+    token?: string;
   } | null>(null);
+  const [isDeviceRemembered, setIsDeviceRemembered] = useState(false);
+  const [showRememberPrompt, setShowRememberPrompt] = useState(false);
 
   // Telegram Bot orqali tasdiqlash holatlari
   const [otpCode, setOtpCode] = useState("");
@@ -450,9 +453,28 @@ export default function PartnerKabinetPage() {
             if (remStr) {
               const rem = JSON.parse(remStr);
               if (rem && (rem.login || rem.phone)) {
-                setRememberedPartner(rem);
-                setLoginPhone(rem.login || rem.phone);
-                setAuthTab("password");
+                apiFetch(`/api/bot/partner/verify-remembered?target=${encodeURIComponent(rem.login || rem.phone)}`)
+                  .then((r) => r.json())
+                  .then((d) => {
+                    if (d?.ok && d.exists && d.partner) {
+                      setRememberedPartner({
+                        ...d.partner,
+                        token: rem.token || "",
+                      });
+                      setLoginPhone(d.partner.login || d.partner.phone || rem.login || rem.phone);
+                      setAuthTab("password");
+                    } else {
+                      localStorage.removeItem("agroz_remembered_partner");
+                      localStorage.removeItem("agroz_business_token");
+                      localStorage.removeItem("agroz_device_remembered");
+                      setRememberedPartner(null);
+                    }
+                  })
+                  .catch(() => {
+                    setRememberedPartner(rem);
+                    setLoginPhone(rem.login || rem.phone);
+                    setAuthTab("password");
+                  });
               }
             }
           } catch {}
@@ -583,18 +605,28 @@ export default function PartnerKabinetPage() {
         setPartner(p);
         setIsBusy(Boolean(p.isBusy));
 
-        // Qurilmani eslab qolish
+        // Qurilmani eslab qolish holatini tekshirish
         try {
-          localStorage.setItem(
-            "agroz_remembered_partner",
-            JSON.stringify({
-              login: p.login || p.phone,
-              name: p.name,
-              organization: p.organization,
-              role: p.role,
-              phone: p.phone,
-            })
-          );
+          const isRem = localStorage.getItem("agroz_device_remembered") === "true";
+          setIsDeviceRemembered(isRem);
+          if (isRem) {
+            localStorage.setItem(
+              "agroz_remembered_partner",
+              JSON.stringify({
+                login: p.login || p.phone,
+                name: p.name,
+                organization: p.organization,
+                role: p.role,
+                phone: p.phone,
+                token: token || "",
+              })
+            );
+          } else {
+            const dismissed = sessionStorage.getItem("agroz_remember_prompt_dismissed") === "true";
+            if (!dismissed) {
+              setShowRememberPrompt(true);
+            }
+          }
         } catch {}
 
         // Default tabni belgilash
@@ -685,9 +717,27 @@ export default function PartnerKabinetPage() {
             if (remStr) {
               const rem = JSON.parse(remStr);
               if (rem && (rem.login || rem.phone)) {
-                setRememberedPartner(rem);
-                setLoginPhone(rem.login || rem.phone);
-                setAuthTab("password");
+                apiFetch(`/api/bot/partner/verify-remembered?target=${encodeURIComponent(rem.login || rem.phone)}`)
+                  .then((r) => r.json())
+                  .then((d) => {
+                    if (d?.ok && d.exists && d.partner) {
+                      setRememberedPartner({
+                        ...d.partner,
+                        token: "",
+                      });
+                      setLoginPhone(d.partner.login || d.partner.phone || rem.login || rem.phone);
+                      setAuthTab("password");
+                    } else {
+                      localStorage.removeItem("agroz_remembered_partner");
+                      localStorage.removeItem("agroz_device_remembered");
+                      setRememberedPartner(null);
+                    }
+                  })
+                  .catch(() => {
+                    setRememberedPartner(rem);
+                    setLoginPhone(rem.login || rem.phone);
+                    setAuthTab("password");
+                  });
               }
             }
           } catch {}
@@ -793,6 +843,8 @@ export default function PartnerKabinetPage() {
               setWebToken(pollData.token);
               if (rememberMe) {
                 localStorage.setItem("agroz_business_token", pollData.token);
+                localStorage.setItem("agroz_device_remembered", "true");
+                setIsDeviceRemembered(true);
                 try {
                   localStorage.setItem(
                     "agroz_remembered_partner",
@@ -802,6 +854,7 @@ export default function PartnerKabinetPage() {
                       organization: pollData.organization,
                       role: pollData.role,
                       phone: pollData.phone,
+                      token: pollData.token,
                     })
                   );
                 } catch {}
@@ -867,6 +920,8 @@ export default function PartnerKabinetPage() {
         setWebToken(data.token);
         if (rememberMe) {
           localStorage.setItem("agroz_business_token", data.token);
+          localStorage.setItem("agroz_device_remembered", "true");
+          setIsDeviceRemembered(true);
           try {
             localStorage.setItem(
               "agroz_remembered_partner",
@@ -876,6 +931,7 @@ export default function PartnerKabinetPage() {
                 organization: data.organization,
                 role: data.role,
                 phone: data.phone || cleanPhone,
+                token: data.token,
               })
             );
           } catch {}
@@ -924,6 +980,8 @@ export default function PartnerKabinetPage() {
         setWebToken(data.token);
         if (rememberMe) {
           localStorage.setItem("agroz_business_token", data.token);
+          localStorage.setItem("agroz_device_remembered", "true");
+          setIsDeviceRemembered(true);
           try {
             localStorage.setItem(
               "agroz_remembered_partner",
@@ -933,6 +991,7 @@ export default function PartnerKabinetPage() {
                 organization: data.organization,
                 role: data.role,
                 phone: data.phone || targetPhone,
+                token: data.token,
               })
             );
           } catch {}
@@ -1196,6 +1255,43 @@ export default function PartnerKabinetPage() {
       setRegVerifying(false);
     }
   }
+
+  // Qurilmani eslab qolish amallari (Panel ichida yoki Sozlamalardan boshqarish)
+  const handleAcceptRememberDevice = () => {
+    try {
+      localStorage.setItem("agroz_device_remembered", "true");
+      setIsDeviceRemembered(true);
+      if (partner) {
+        localStorage.setItem(
+          "agroz_remembered_partner",
+          JSON.stringify({
+            login: partner.login || partner.phone,
+            name: partner.name,
+            organization: partner.organization,
+            role: partner.role,
+            phone: partner.phone,
+            token: webToken || localStorage.getItem("agroz_business_token") || "",
+          })
+        );
+      }
+    } catch {}
+    setShowRememberPrompt(false);
+  };
+
+  const handleDismissRememberPrompt = () => {
+    try {
+      sessionStorage.setItem("agroz_remember_prompt_dismissed", "true");
+    } catch {}
+    setShowRememberPrompt(false);
+  };
+
+  const handleForgetDevice = () => {
+    try {
+      localStorage.removeItem("agroz_device_remembered");
+      localStorage.removeItem("agroz_remembered_partner");
+      setIsDeviceRemembered(false);
+    } catch {}
+  };
 
   // Tezkor almashtirish (Demo yoki ro'yxatdan tanlash)
   async function handleWebLogin(phoneToUse?: string, demoRole?: "pharmacy" | "specialist", partnerId?: number) {
@@ -2217,36 +2313,72 @@ export default function PartnerKabinetPage() {
 
             {/* Eslab qolingan qurilma / hisob kartochkasi */}
             {rememberedPartner && (
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-3.5 flex items-center justify-between">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-9 h-9 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
-                    {rememberedPartner.role === "specialist" ? "👨‍🌾" : rememberedPartner.role === "both" ? "🌟" : "🏪"}
+              <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50/90 to-teal-50/70 p-4 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-bold text-base shadow-xs shrink-0">
+                      {rememberedPartner.role === "specialist" ? "👨‍🌾" : rememberedPartner.role === "both" ? "🌟" : "🏪"}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                        <p className="text-[10px] font-black uppercase tracking-wider text-emerald-800">
+                          Ushbu qurilmada saqlangan
+                        </p>
+                      </div>
+                      <h3 className="text-xs sm:text-sm font-black text-zinc-900 truncate">
+                        {rememberedPartner.organization || rememberedPartner.name}
+                      </h3>
+                      <p className="text-[11px] font-mono text-zinc-500 truncate">
+                        @{rememberedPartner.login || rememberedPartner.phone}
+                      </p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-800">Ushbu qurilmada saqlangan</p>
-                    <h3 className="text-xs font-black text-zinc-900 truncate">
-                      {rememberedPartner.organization || rememberedPartner.name}
-                    </h3>
-                    <p className="text-[11px] font-mono text-zinc-500 truncate">
-                      @{rememberedPartner.login || rememberedPartner.phone}
-                    </p>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRememberedPartner(null);
+                      setLoginPhone("");
+                      setLoginPassword("");
+                      try {
+                        localStorage.removeItem("agroz_remembered_partner");
+                        localStorage.removeItem("agroz_business_token");
+                        localStorage.removeItem("agroz_device_remembered");
+                      } catch {}
+                    }}
+                    className="text-[11px] font-bold text-zinc-500 hover:text-red-600 transition px-2.5 py-1 rounded-lg hover:bg-white/80 shrink-0"
+                    title="Boshqa hisobga o'tish"
+                  >
+                    Boshqa hisob
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRememberedPartner(null);
-                    setLoginPhone("");
-                    setLoginPassword("");
-                    try {
-                      localStorage.removeItem("agroz_remembered_partner");
-                    } catch {}
-                  }}
-                  className="text-[11px] font-bold text-zinc-500 hover:text-red-600 transition px-2 py-1 rounded-lg hover:bg-white shrink-0"
-                  title="Boshqa hisobga o'tish"
-                >
-                  Boshqa hisob
-                </button>
+
+                <div className="pt-0.5">
+                  <button
+                    type="button"
+                    disabled={loginLoading}
+                    onClick={async () => {
+                      if (rememberedPartner.token) {
+                        setLoginLoading(true);
+                        setWebToken(rememberedPartner.token);
+                        localStorage.setItem("agroz_business_token", rememberedPartner.token);
+                        await loadData("", rememberedPartner.token);
+                        setLoginLoading(false);
+                      } else {
+                        setLoginPhone(rememberedPartner.login || rememberedPartner.phone);
+                        setAuthTab("password");
+                        setTimeout(() => {
+                          const input = document.getElementById("login-password-input") as HTMLInputElement;
+                          if (input) input.focus();
+                        }, 50);
+                      }
+                    }}
+                    className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white text-xs font-bold shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition cursor-pointer"
+                  >
+                    <span>⚡ Shunchaki kirish</span>
+                    <ArrowRight size={14} />
+                  </button>
+                </div>
               </div>
             )}
 
@@ -2478,6 +2610,7 @@ export default function PartnerKabinetPage() {
                   </div>
                   <div className="relative">
                     <input
+                      id="login-password-input"
                       type={showPassword ? "text" : "password"}
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
@@ -3362,6 +3495,53 @@ export default function PartnerKabinetPage() {
 
   return (
     <div className="min-h-screen bg-[#FBFBFD] text-[#1D1D1F] font-sans antialiased">
+      {/* Qurilmani eslab qolish taklifi (Panel ichida chiquvchi eslatma) */}
+      {showRememberPrompt && (
+        <aside
+          role="dialog"
+          aria-label="Qurilmani eslab qolish"
+          className="fixed bottom-20 md:bottom-6 right-4 left-4 md:left-auto md:w-[380px] z-50 rounded-2xl border border-emerald-200 bg-white p-4 shadow-2xl shadow-emerald-950/15 animate-in slide-in-from-bottom-5 duration-300"
+        >
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-lg shrink-0">
+              📱
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-black text-zinc-900">Ushbu qurilmani eslab qolaylikmi?</h4>
+                <button
+                  type="button"
+                  onClick={handleDismissRememberPrompt}
+                  className="text-zinc-400 hover:text-zinc-600 p-0.5 rounded-lg -mr-1"
+                  title="Yopish"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+              <p className="text-[11px] text-zinc-600 mt-1 leading-relaxed">
+                Keyingi safar ushbu brauzerdan parolsiz va bir zumda kirish uchun qurilmani saqlab qo‘yishingiz mumkin.
+              </p>
+              <div className="flex items-center gap-2 mt-3">
+                <button
+                  type="button"
+                  onClick={handleAcceptRememberDevice}
+                  className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white text-xs font-bold transition shadow-xs cursor-pointer"
+                >
+                  Ha, eslab qolinsin
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDismissRememberPrompt}
+                  className="py-2 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 active:scale-98 text-zinc-700 text-xs font-semibold transition cursor-pointer"
+                >
+                  Hozir emas
+                </button>
+              </div>
+            </div>
+          </div>
+        </aside>
+      )}
+
       {/* 0. DESKTOP SIDEBAR (Apple-style toza oq-qora sidebar) */}
       <aside className="hidden md:flex md:w-60 md:flex-col md:fixed md:inset-y-0 z-40 bg-white border-r border-[#E5E5EA]">
         {/* Yuqori qism: Do'kon / Biznes nomi */}
@@ -4753,7 +4933,39 @@ export default function PartnerKabinetPage() {
                 )}
               </div>
 
-
+              {/* Ushbu qurilmada eslab qolish sozlamasi */}
+              <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-xs flex items-center justify-between gap-3">
+                <div className="space-y-0.5 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">📱</span>
+                    <h4 className="text-xs font-bold text-zinc-900">Ushbu qurilmada eslab qolish</h4>
+                  </div>
+                  <p className="text-[11px] text-zinc-500">
+                    {isDeviceRemembered
+                      ? "Qurilma eslab qolingan: keyingi safar parolsiz bir zumda kirasiz."
+                      : "Qurilma saqlanmagan: har safar tizimga kirish talab etiladi."}
+                  </p>
+                </div>
+                <div className="shrink-0">
+                  {isDeviceRemembered ? (
+                    <button
+                      type="button"
+                      onClick={handleForgetDevice}
+                      className="rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 text-xs font-bold transition active:scale-95 cursor-pointer"
+                    >
+                      O‘chirish
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleAcceptRememberDevice}
+                      className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-xs font-bold transition active:scale-95 shadow-xs cursor-pointer"
+                    >
+                      Eslab qolish
+                    </button>
+                  )}
+                </div>
+              </div>
 
               {/* O'RQ-547 Qonuniy Himoya Guvohnomasi */}
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 shadow-xs space-y-2.5">

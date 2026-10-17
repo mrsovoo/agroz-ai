@@ -1773,6 +1773,37 @@ router.get("/partner/suggest-login", async (req, res) => {
   }
 });
 
+// GET /api/bot/partner/verify-remembered (Qurilmada saqlangan profil bazada borligini tekshirish)
+router.get("/partner/verify-remembered", async (req, res) => {
+  try {
+    const target = String(req.query.target || "").trim();
+    if (!target) {
+      return res.json({ ok: true, exists: false });
+    }
+
+    const spec = await findSpecialistByPhoneOrLogin(target);
+    if (!spec || !spec.isActive || spec.botBlocked) {
+      return res.json({ ok: true, exists: false });
+    }
+
+    return res.json({
+      ok: true,
+      exists: true,
+      partner: {
+        id: spec.id,
+        name: spec.name,
+        organization: spec.organization,
+        role: spec.role,
+        login: spec.login,
+        phone: spec.phone,
+        hasPassword: Boolean(spec.passwordHash),
+      },
+    });
+  } catch (err: any) {
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // POST /api/bot/partner/request-login-otp (Telegram orqali tasdiqlash kodini yuborish)
 router.post("/partner/request-login-otp", async (req, res) => {
   try {
