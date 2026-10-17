@@ -4,9 +4,15 @@ import { users, adminSessions, sessions, specialists } from "../db/schema.js";
 import { and, eq, or } from "drizzle-orm";
 import { verifyInitData as tgAuthVerifyInitData } from "../lib/tg-auth.js";
 import { farmerBotToken, partnerBotToken } from "../lib/settings.js";
+import { verifyBiznesGoInitData, verifyBiznesGoSession } from "../lib/biznesgo-auth.js";
 
 // Custom wrapper to include botKind
 async function verifyInitData(initData: string, botKind: "user" | "business"): Promise<boolean> {
+  if (botKind === "business") {
+    if (verifyBiznesGoInitData(initData)) {
+      return true;
+    }
+  }
   const token =
     botKind === "user"
       ? (await farmerBotToken()) || process.env.TELEGRAM_BOT_TOKEN || ""
@@ -107,26 +113,49 @@ export const requireTelegramAuth = (botKind: "user" | "business") => {
         }
       }
 
-      const authHeader = String(req.headers["authorization"] || req.headers["x-partner-token"] || "").trim();
+      const authHeader = String(
+        req.headers["authorization"] || req.headers["x-partner-token"] || req.headers["x-session-id"] || "",
+      ).trim();
       const tokenStr = authHeader.replace(/^Bearer\s+/i, "").trim();
       if (tokenStr) {
-        const sessionRows = await db.select().from(sessions).where(eq(sessions.id, tokenStr)).limit(1);
-        if (sessionRows[0]) {
-          if (sessionRows[0].expiresAt && sessionRows[0].expiresAt <= new Date()) {
-            await db.delete(sessions).where(eq(sessions.id, tokenStr)).catch(() => {});
+        if (botKind === "business") {
+          const bizSession = await verifyBiznesGoSession(tokenStr);
+          if (bizSession.error === "expired") {
             if (!(req as any).telegramUser) {
               return res.status(401).json({ ok: false, error: "Sessiya muddati tugagan. Iltimos, qaytadan kiring" });
             }
-          } else {
-            const userRows = await db.select().from(users).where(eq(users.id, sessionRows[0].userId)).limit(1);
-            if (userRows[0]) {
-              (req as any).webUser = userRows[0];
+          } else if (bizSession.error === "blocked") {
+            return res.status(403).json({ ok: false, error: "Sotuvchi profili ma'muriyat tomonidan bloklangan" });
+          } else if (bizSession.merchant) {
+            (req as any).merchant = bizSession.merchant;
+            if (!(req as any).telegramUser) {
+              (req as any).telegramUser = {
+                id: bizSession.merchant.telegramId,
+                first_name: bizSession.merchant.name,
+              };
+            }
+          }
+        }
+
+        if (!(req as any).merchant) {
+          const sessionRows = await db.select().from(sessions).where(eq(sessions.id, tokenStr)).limit(1);
+          if (sessionRows[0]) {
+            if (sessionRows[0].expiresAt && sessionRows[0].expiresAt <= new Date()) {
+              await db.delete(sessions).where(eq(sessions.id, tokenStr)).catch(() => {});
+              if (!(req as any).telegramUser) {
+                return res.status(401).json({ ok: false, error: "Sessiya muddati tugagan. Iltimos, qaytadan kiring" });
+              }
+            } else {
+              const userRows = await db.select().from(users).where(eq(users.id, sessionRows[0].userId)).limit(1);
+              if (userRows[0]) {
+                (req as any).webUser = userRows[0];
+              }
             }
           }
         }
       }
 
-      if (!(req as any).telegramUser && !(req as any).webUser) {
+      if (!(req as any).telegramUser && !(req as any).webUser && !(req as any).merchant) {
         return res.status(401).json({ ok: false, error: "Avtorizatsiya xatosi (Telegram/Web Token)" });
       }
       return next();
@@ -151,8 +180,8 @@ export const requireRole = (allowedRoles: ("specialist" | "pharmacy" | "both" | 
       }
 
       if (allowedRoles.includes("specialist") || allowedRoles.includes("pharmacy") || allowedRoles.includes("both")) {
-        const tgId = (req as any).telegramUser?.id || (req as any).webUser?.telegramId;
-        const webPhone = (req as any).webUser?.phone;
+        const tgId = (req as any).telegramUser?.id || (req as any).webUser?.telegramId || (req as any).merchant?.telegramId;
+        const webPhone = (req as any).webUser?.phone || (req as any).merchant?.phone;
         const conditions = [];
         if (tgId) conditions.push(eq(specialists.telegramId, Number(tgId)));
         if (webPhone) conditions.push(eq(specialists.phone, String(webPhone)));
@@ -162,7 +191,33 @@ export const requireRole = (allowedRoles: ("specialist" | "pharmacy" | "both" | 
             .from(specialists)
             .where(and(or(...conditions), eq(specialists.isActive, true)))
             .limit(1);
-          const spec = specRows[0];
+          let spec = specRows[0];
+
+          // Agar yangi sotuvchi @biznesgo_bot orqali biznesgo_merchants ga qo'shilgan bo'lsa, specialists ga ham sinxronlaymiz
+          if (!spec && (req as any).merchant) {
+            const m = (req as any).merchant;
+            const [createdSpec] = await db
+              .insert(specialists)
+              .values({
+                telegramId: Number(m.telegramId),
+                name: m.name,
+                phone: m.phone,
+                role: "pharmacy",
+                specialty: m.merchantType === "veterinary_pharmacy" ? "vet_dorixona" : "agro_dorixona",
+                pharmacyName: m.organizationName,
+                address: m.address,
+                latitude: m.latitude,
+                longitude: m.longitude,
+                workingHours: m.workingHours || "09:00 - 18:00",
+                deliveryAvailable: Boolean(m.deliveryAvailable),
+                isVerified: true,
+                isActive: m.status === "active",
+                botBlocked: m.status === "blocked",
+              })
+              .returning();
+            spec = createdSpec;
+          }
+
           if (spec && !spec.botBlocked) {
             const roleAllowed =
               spec.role === "both"
