@@ -276,7 +276,7 @@ export default function PartnerKabinetPage() {
   const [regSubmitting, setRegSubmitting] = useState(false);
   const [regSuccess, setRegSuccess] = useState<{
     token: string;
-    sessionToken: string;
+    sessionToken?: string;
     startUrl: string;
     botUsername: string;
     phone: string;
@@ -285,6 +285,10 @@ export default function PartnerKabinetPage() {
     login?: string;
     trialEndsAt: string;
   } | null>(null);
+  const [regVerifyCode, setRegVerifyCode] = useState("");
+  const [regVerifying, setRegVerifying] = useState(false);
+  const [regVerifyError, setRegVerifyError] = useState<string | null>(null);
+  const regPollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [regNotice, setRegNotice] = useState<string | null>(null);
 
   // Rasmiy xizmat ko'rsatish shartnomasi modali
@@ -516,6 +520,45 @@ export default function PartnerKabinetPage() {
     }, 1000);
     return () => clearInterval(timer);
   }, [resetCountdown]);
+
+  // Ro'yxatdan o'tishda Telegram orqali tasdiqlanganini avtomatik tekshirish
+  useEffect(() => {
+    if (!showRegisterModal || !regSuccess || !regSuccess.token) {
+      if (regPollTimerRef.current) clearInterval(regPollTimerRef.current);
+      return;
+    }
+
+    regPollTimerRef.current = setInterval(async () => {
+      try {
+        const res = await apiFetch(`/api/bot/partner/check-registration?token=${encodeURIComponent(regSuccess.token)}`);
+        const data = await res.json();
+        if (data?.ok && data.verified && data.sessionToken) {
+          if (regPollTimerRef.current) clearInterval(regPollTimerRef.current);
+          setWebToken(data.sessionToken);
+          localStorage.setItem("agroz_business_token", data.sessionToken);
+          try {
+            localStorage.setItem(
+              "agroz_remembered_partner",
+              JSON.stringify({
+                login: data.login || regSuccess.phone,
+                name: data.name,
+                organization: data.organization,
+                role: data.role || regSuccess.role,
+                phone: data.phone || regSuccess.phone,
+              })
+            );
+          } catch {}
+          setShowRegisterModal(false);
+          setRegSuccess(null);
+          await loadData("", data.sessionToken);
+        }
+      } catch {}
+    }, 2500);
+
+    return () => {
+      if (regPollTimerRef.current) clearInterval(regPollTimerRef.current);
+    };
+  }, [showRegisterModal, regSuccess]);
 
   async function loadData(tgData = initData, token = webToken) {
     if (!tgData && !token) {
@@ -1093,22 +1136,8 @@ export default function PartnerKabinetPage() {
       const data = await res.json();
       if (data?.ok) {
         setRegSuccess(data);
-        if (data.sessionToken) {
-          setWebToken(data.sessionToken);
-          localStorage.setItem("agroz_business_token", data.sessionToken);
-          try {
-            localStorage.setItem(
-              "agroz_remembered_partner",
-              JSON.stringify({
-                login: data.login || cleanP,
-                name: data.name,
-                organization: data.organization,
-                role: data.role || regRole,
-                phone: data.phone || cleanP,
-              })
-            );
-          } catch {}
-        }
+        setRegVerifyCode("");
+        setRegVerifyError(null);
       } else {
         alert(data?.error || "Ro'yxatdan o'tishda xatolik yuz berdi");
       }
@@ -1116,6 +1145,55 @@ export default function PartnerKabinetPage() {
       alert("Server bilan aloqa uzildi. Internetni tekshiring.");
     } finally {
       setRegSubmitting(false);
+    }
+  }
+
+  // Telegram orqali olingan 8 xonali ID kodni tasdiqlash
+  async function handleVerifyRegistrationCode() {
+    if (!regSuccess || !regVerifyCode.trim()) return;
+    const cleanDigits = regVerifyCode.replace(/\D/g, "").slice(0, 8);
+    if (cleanDigits.length !== 8) {
+      setRegVerifyError("Iltimos, Telegram bot yuborgan 8 xonali ID kodni to'liq kiriting (8 ta raqam)");
+      return;
+    }
+    setRegVerifying(true);
+    setRegVerifyError(null);
+    try {
+      const res = await apiFetch("/api/bot/partner/verify-registration-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: regSuccess.token,
+          code: cleanDigits,
+        }),
+      });
+      const data = await res.json();
+      if (data?.ok && data.sessionToken) {
+        if (regPollTimerRef.current) clearInterval(regPollTimerRef.current);
+        setWebToken(data.sessionToken);
+        localStorage.setItem("agroz_business_token", data.sessionToken);
+        try {
+          localStorage.setItem(
+            "agroz_remembered_partner",
+            JSON.stringify({
+              login: data.login || regSuccess.phone,
+              name: data.name,
+              organization: data.organization,
+              role: data.role || regSuccess.role,
+              phone: data.phone || regSuccess.phone,
+            })
+          );
+        } catch {}
+        setShowRegisterModal(false);
+        setRegSuccess(null);
+        await loadData("", data.sessionToken);
+      } else {
+        setRegVerifyError(data?.error || "Tasdiqlashda xatolik yuz berdi");
+      }
+    } catch {
+      setRegVerifyError("Server bilan aloqa uzildi. Internetni tekshiring.");
+    } finally {
+      setRegVerifying(false);
     }
   }
 
@@ -3085,65 +3163,103 @@ export default function PartnerKabinetPage() {
                   </form>
                 </>
               ) : (
-                /* Muvaffaqiyatli ro'yxatdan o'tish natijasi */
-                <div className="py-4 text-center space-y-4">
-                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-                    <CheckCircle2 size={32} />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-black text-zinc-900">Arizangiz muvaffaqiyatli qabul qilindi!</h3>
-                    <p className="text-xs text-zinc-600 mt-1 max-w-sm mx-auto leading-relaxed">
-                      Hurmatli <b>{regSuccess.name}</b>, sizga 1 oylik (30 kunlik) bepul sinov davri faollashtirildi.
-                      Sinov muddati: <b>{new Date(regSuccess.trialEndsAt).toLocaleDateString("uz-UZ")}</b> gacha.
-                    </p>
-                    {regSuccess.login && (
-                      <div className="mt-3 flex flex-col items-center gap-1.5">
-                        <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-zinc-100 border border-zinc-200 text-xs font-mono font-bold text-zinc-800">
-                          <span>Kirish loginingiz:</span>
-                          <span className="text-emerald-700 font-extrabold">@{regSuccess.login}</span>
-                        </div>
-                        <div className="text-[11px] text-zinc-600 font-mono bg-zinc-50 border border-zinc-200/80 px-3 py-1 rounded-xl">
-                          Do‘kon havolasi: <span className="text-emerald-700 font-bold">biznesgo.vercel.app/@{regSuccess.login}</span>
-                        </div>
-                      </div>
-                    )}
+                /* Telegram orqali tasdiqlash va 8 xonali ID kodni kiritish bosqichi */
+                <div className="py-2 text-center space-y-4">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 shadow-xs">
+                    <Send size={28} />
                   </div>
 
-                  <div className="rounded-2xl bg-blue-50 border border-blue-200 p-4 text-left space-y-2">
-                    <span className="text-xs font-bold text-blue-950 block">
-                      🔔 Muhim: Telegram botingizni ulang!
+                  <div>
+                    <span className="text-[10px] font-bold tracking-wider text-blue-700 uppercase bg-blue-50 border border-blue-200 px-3 py-1 rounded-full">
+                      Oxirgi bosqich
                     </span>
-                    <p className="text-[11px] text-blue-800 leading-relaxed">
-                      To‘lov muddati tugashidan 5 kun oldin ogohlantirish olish va xaridorlardan keladigan buyurtmalarni o‘tkazib yubormaslik uchun Telegram botga start bosing:
+                    <h3 className="text-lg font-black text-zinc-900 mt-2">
+                      Telegram orqali tasdiqlang va biznesingizni boshqaring
+                    </h3>
+                    <p className="text-xs text-zinc-600 mt-1 max-w-sm mx-auto leading-relaxed">
+                      Hurmatli <b>{regSuccess.name}</b>, xavfsizlik va biznesingizni to‘liq boshqarish uchun arizada ko‘rsatilgan telefon raqamingizni (<b>{regSuccess.phone}</b>) Telegram botimizda tasdiqlashingiz lozim.
                     </p>
+                  </div>
+
+                  {/* 1. Telegram bot tugmasi */}
+                  <div className="rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50/60 border border-blue-200 p-4 text-left space-y-3 shadow-xs">
+                    <div className="flex items-start gap-2.5">
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white font-mono font-bold text-xs">
+                        1
+                      </div>
+                      <div className="text-xs text-zinc-800 leading-snug">
+                        Pastdagi havolani bosib <b>@{regSuccess.botUsername}</b> botimizga kiring va <b>«Start»</b> tugmasini bosing:
+                      </div>
+                    </div>
+
                     <a
                       href={regSuccess.startUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 text-xs shadow-xs transition"
+                      className="flex items-center justify-center gap-2 w-full rounded-2xl bg-[#0088cc] hover:bg-[#0077b5] text-white font-bold py-3 text-xs shadow-sm transition active:scale-98"
                     >
-                      <Send size={14} />
-                      <span>Telegram Botni Ulash (@{regSuccess.botUsername})</span>
-                      <ExternalLink size={12} />
+                      <Send size={15} />
+                      <span>Telegram Bot orqali tasdiqlash (@{regSuccess.botUsername})</span>
+                      <ExternalLink size={13} />
                     </a>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const nextToken = regSuccess?.sessionToken;
-                      setShowRegisterModal(false);
-                      setRegSuccess(null);
-                      if (nextToken) {
-                        setWebToken(nextToken);
-                        localStorage.setItem("agroz_business_token", nextToken);
-                        loadData("", nextToken);
-                      }
-                    }}
-                    className="w-full rounded-2xl bg-[#191B1F] hover:bg-black text-white text-xs font-bold py-3 transition shadow-sm"
-                  >
-                    Boshqaruv Kabinetiga o‘tish
-                  </button>
+                  {/* 2. 8 xonali ID kod kiritish */}
+                  <div className="rounded-2xl bg-zinc-50 border border-zinc-200 p-4 text-left space-y-3">
+                    <div className="flex items-start gap-2.5">
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-white font-mono font-bold text-xs">
+                        2
+                      </div>
+                      <div className="text-xs text-zinc-800 leading-snug">
+                        Bot raqamingizni tekshirib, sizga yuborgan <b>bir martalik 8 xonali tasdiqlash ID kodini</b> bu yerga kiriting:
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={8}
+                        value={regVerifyCode}
+                        onChange={(e) => {
+                          setRegVerifyCode(e.target.value.replace(/\D/g, "").slice(0, 8));
+                          setRegVerifyError(null);
+                        }}
+                        placeholder="Masalan: 12345678"
+                        className="w-full text-center tracking-[0.3em] font-mono text-lg font-black py-2.5 rounded-xl border border-zinc-300 bg-white text-zinc-900 focus:border-black focus:outline-none"
+                      />
+                      <p className="text-[10px] text-zinc-500 text-center">
+                        Telegram profilingiz raqami arizadagi <b>{regSuccess.phone}</b> raqami bilan bir xil bo‘lishi shart.
+                      </p>
+                    </div>
+
+                    {regVerifyError && (
+                      <div className="rounded-xl bg-amber-50 border border-amber-200 p-2.5 text-xs text-amber-900 leading-relaxed font-medium">
+                        ⚠️ {regVerifyError}
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      disabled={regVerifying || regVerifyCode.length !== 8}
+                      onClick={handleVerifyRegistrationCode}
+                      className="w-full rounded-xl bg-[#191B1F] hover:bg-black text-white text-xs font-bold py-3 transition shadow-xs disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {regVerifying ? (
+                        <>
+                          <RefreshCw size={14} className="animate-spin" />
+                          <span>Tekshirilmoqda...</span>
+                        </>
+                      ) : (
+                        <span>Tasdiqlash va Kabinetni ochish</span>
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-center gap-2 text-[11px] text-zinc-400">
+                    <RefreshCw size={12} className="animate-spin text-zinc-400" />
+                    <span>Telegramdan tasdiqlash avtomatik kutilmoqda...</span>
+                  </div>
                 </div>
               )}
             </div>

@@ -186,12 +186,17 @@ type Step =
   // Cross-bot OTP tasdiqlash (@agrozai_bot dagi foydalanuvchini tekshirish)
   | "cross_otp"
   // Qoldiq kamayganda zaxirani to'ldirish (Telegram bot)
-  | "restock_input";
+  | "restock_input"
+  // Web ro'yxatdan o'tishda telefon raqamini Telegram bilan tekshirish
+  | "verify_reg_phone";
 
 type Draft = {
   role?: SpecialistRole;
   name?: string;
   phone?: string;
+  token?: string;
+  expectedPhone?: string;
+  specId?: number;
   crossOtpAttempts?: number;
   lat?: number;
   lng?: number;
@@ -577,6 +582,87 @@ async function handleCommand(
 
   // Web formadan kelgan bir martalik ro'yxatdan o'tish yoki kirish tokeni (/start biz_reg_..., biz_login_..., biz_partner_...)
   if (command === "/start" && payload && (payload.startsWith("biz_") || payload.startsWith("reg_"))) {
+    // 1. Yangi ro'yxatdan o'tish (8 xonali ID kod va qat'iy telefon mosligi tekshiruvi)
+    if (payload.startsWith("biz_reg_")) {
+      const row = (await db.select().from(otpCodes).where(eq(otpCodes.token, payload)).limit(1))[0];
+      if (!row || row.expiresAt.getTime() <= Date.now()) {
+        await sendAuthMessage(
+          chatId,
+          `⚠️ <b>Havola muddati o'tgan!</b>\n\nUshbu ro'yxatdan o'tish arizasi topilmadi yoki muddati o'tib ketgan. Iltimos, brauzerda qaytadan ariza topshiring.`
+        );
+        return;
+      }
+
+      const spec = await findSpecialistByPhoneOrLogin(row.phone);
+      if (!spec) {
+        await sendAuthMessage(chatId, `⚠️ Hamkor ma'lumotlari topilmadi.`);
+        return;
+      }
+
+      if (spec.botBlocked) {
+        await sendAuthMessage(chatId, `❌ Ushbu hisob bloklangan. Administratorga murojaat qiling.`);
+        return;
+      }
+
+      // Telegram hisobidagi telefon raqamini aniqlaymiz
+      let knownTgPhone: string | null = null;
+      const u = (await db.select().from(users).where(eq(users.telegramId, telegramId)).limit(1))[0];
+      if (u?.phone) knownTgPhone = u.phone;
+      const s = (await db.select().from(specialists).where(eq(specialists.telegramId, telegramId)).limit(1))[0];
+      if (s?.phone) knownTgPhone = s.phone;
+
+      // Agar hali Telegram telefon raqami ma'lum bo'lmasa, kontakt yuborishni so'raymiz
+      if (!knownTgPhone) {
+        await setState(telegramId, "verify_reg_phone", {
+          token: payload,
+          expectedPhone: row.phone,
+          specId: spec.id,
+        });
+        await sendAuthMessage(
+          chatId,
+          `👋 <b>Assalomu alaykum, ${escapeHtml(spec.name || firstName || "Hamkor")}!</b>\n\n` +
+          `Agroz Business arizangizni tasdiqlash uchun Telegram hisobingiz telefon raqamini tasdiqlash lozim.\n\n` +
+          `Pastdagi <b>«📱 Raqamni yuborish»</b> tugmasini bosing:`,
+          {
+            replyKeyboard: {
+              keyboard: [[{ text: "📱 Raqamni yuborish", request_contact: true }]],
+              resize_keyboard: true,
+              one_time_keyboard: true,
+            },
+          }
+        );
+        return;
+      }
+
+      // Agar telefon ma'lum bo'lsa, mosligini tekshiramiz
+      const tgPhone = normalizePhone(knownTgPhone);
+      const webPhone = normalizePhone(row.phone);
+
+      if (tgPhone !== webPhone) {
+        await sendAuthMessage(
+          chatId,
+          `❌ <b>Telegram va telefon raqami boshqa!</b>\n\n` +
+          `Siz arizada <b>${escapeHtml(row.phone)}</b> raqamini kiritgansiz, lekin ushbu Telegram profilingiz raqami: <b>${escapeHtml(knownTgPhone)}</b>.\n\n` +
+          `Xavfsizlik talablariga ko'ra, biznes kabinet faqat arizada kiritilgan telefon raqami ulangan Telegram orqali ochiladi.\n\n` +
+          `Iltimos, aynan <b>${escapeHtml(row.phone)}</b> raqamingizga ochilgan Telegram hisobidan botga kiring yoki arizani to'g'ri raqam bilan to'ldiring.`
+        );
+        return;
+      }
+
+      // Raqamlar mos keldi! 8 xonali ID kodni chiqaramiz
+      await db.update(otpCodes).set({ telegramId, deliveredAt: new Date() }).where(eq(otpCodes.id, row.id));
+
+      await sendAuthMessage(
+        chatId,
+        `✅ <b>Telefon raqamingiz muvaffaqiyatli tasdiqlandi!</b>\n\n` +
+        `Hurmatli <b>${escapeHtml(spec.name)}</b>, Agroz Business hisobingizni brauzerda ochish uchun bir martalik 8 xonali tasdiqlash ID kodingiz:\n\n` +
+        `🔑 <code>${row.code}</code>\n\n` +
+        `Ushbu 8 xonali ID kodni brauzerdagi ro'yxatdan o'tish oynasiga kiriting va «Tasdiqlash va Kabinetni ochish» tugmasini bosing.\n\n` +
+        `<i>Eslatma: Ushbu kod faqat bir marta ishlatiladi va profilingiz xavfsizligini ta'minlaydi.</i>`
+      );
+      return;
+    }
+
     let spec: typeof specialists.$inferSelect | null = null;
     let linkingPhone: string | null = null;
 
@@ -3528,6 +3614,51 @@ async function handleContact(
   rawPhone: string | undefined,
 ): Promise<void> {
   const state = await getState(telegramId);
+  if (state?.step === "verify_reg_phone") {
+    const tgPhone = normalizePhone(rawPhone || "");
+    const expectedPhone = normalizePhone(state.draft.expectedPhone || "");
+    const token = state.draft.token;
+    const row = token ? (await db.select().from(otpCodes).where(eq(otpCodes.token, token)).limit(1))[0] : null;
+    const spec = await findSpecialistByPhoneOrLogin(state.draft.expectedPhone || "");
+
+    // Users jadvalida telefonni saqlaymiz
+    if (tgPhone) {
+      let u = (await db.select().from(users).where(eq(users.telegramId, telegramId)).limit(1))[0];
+      if (u) {
+        await db.update(users).set({ phone: tgPhone }).where(eq(users.id, u.id));
+      } else {
+        await db.insert(users).values({ phone: tgPhone, telegramId, name: spec?.name || "Hamkor" });
+      }
+    }
+
+    if (!tgPhone || tgPhone !== expectedPhone) {
+      await clearReplyKeyboard(
+        chatId,
+        `❌ <b>Telegram va telefon raqami boshqa!</b>\n\n` +
+        `Siz arizada <b>${escapeHtml(state.draft.expectedPhone || "")}</b> raqamini kiritgansiz, lekin yuborilgan Telegram raqamingiz: <b>${escapeHtml(tgPhone || rawPhone || "")}</b>.\n\n` +
+        `Xavfsizlik talablariga ko'ra, biznes kabinet faqat arizada kiritilgan telefon raqami ulangan Telegram orqali ochiladi.\n\n` +
+        `Iltimos, aynan <b>${escapeHtml(state.draft.expectedPhone || "")}</b> raqamingizga ochilgan Telegram hisobidan botga kiring yoki arizani to'g'ri raqam bilan to'ldiring.`
+      );
+      await clearState(telegramId);
+      return;
+    }
+
+    // Raqamlar to'g'ri keldi!
+    if (row && spec) {
+      await db.update(otpCodes).set({ telegramId, deliveredAt: new Date() }).where(eq(otpCodes.id, row.id));
+      await clearReplyKeyboard(
+        chatId,
+        `✅ <b>Telefon raqamingiz muvaffaqiyatli tasdiqlandi!</b>\n\n` +
+        `Hurmatli <b>${escapeHtml(spec.name)}</b>, Agroz Business hisobingizni brauzerda ochish uchun bir martalik 8 xonali tasdiqlash ID kodingiz:\n\n` +
+        `🔑 <code>${row.code}</code>\n\n` +
+        `Ushbu 8 xonali ID kodni brauzerdagi ro'yxatdan o'tish oynasiga kiriting va «Tasdiqlash va Kabinetni ochish» tugmasini bosing.\n\n` +
+        `<i>Eslatma: Ushbu kod faqat bir marta ishlatiladi va profilingiz xavfsizligini ta'minlaydi.</i>`
+      );
+    }
+    await clearState(telegramId);
+    return;
+  }
+
   if (!state || (state.step !== "phone" && state.step !== "edit_phone")) {
     await sendAuthMessage(chatId, helpMessage(), { inline: NEXT_STEP_KEYBOARD });
     return;

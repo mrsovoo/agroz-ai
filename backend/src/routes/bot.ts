@@ -2399,6 +2399,12 @@ router.post("/partner/register-intent", async (req, res) => {
 
     // 1. specialists jadvalida mavjudligini tekshiramiz/yaratamiz
     let spec = await findSpecialistByPhoneOrLogin(cleanPhone);
+    if (spec && spec.botBlocked) {
+      return res.status(403).json({
+        ok: false,
+        error: "Ushbu hisob yoki telefon raqami bloklangan. Administratorga murojaat qiling.",
+      });
+    }
 
     // Login yaratish yoki tekshirish
     let finalLogin = String(req.body?.login || "").trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
@@ -2427,8 +2433,8 @@ router.post("/partner/register-intent", async (req, res) => {
           role: targetRole,
           login: finalLogin || spec.login,
           passwordHash: passwordHashToSave || spec.passwordHash,
-          isActive: true,
-          isApproved: true,
+          isActive: false, // Telegram tasdiqlanguncha nofaol
+          isApproved: false,
           contractAcceptedAt: spec.contractAcceptedAt || now,
           trialEndsAt: spec.trialEndsAt || trialEndsAt,
           subscriptionStatus: spec.subscriptionStatus || "trial",
@@ -2459,8 +2465,8 @@ router.post("/partner/register-intent", async (req, res) => {
           helpsWith: cleanHelpsWith,
           lat: 41.3111,
           lng: 69.2797,
-          isActive: true,
-          isApproved: true,
+          isActive: false, // Telegram tasdiqlanguncha nofaol
+          isApproved: false,
           contractAcceptedAt: now,
           trialEndsAt,
           subscriptionStatus: "trial",
@@ -2498,35 +2504,29 @@ router.post("/partner/register-intent", async (req, res) => {
       user = createdUser;
     }
 
-    // 4. Bir martalik ro'yxatdan o'tish va Telegram botni ulash tokeni
-    const regToken = `biz_reg_${randomBytes(12).toString("hex")}`;
+    // 4. Bir martalik 8 xonali tasdiqlash ID kodi va Telegram bot havolasi
+    const eightDigitCode = Math.floor(10000000 + Math.random() * 90000000).toString();
+    const regToken = `biz_reg_${randomBytes(16).toString("hex")}`;
+    await db.delete(otpCodes).where(and(eq(otpCodes.phone, cleanPhone), eq(otpCodes.used, false)));
     await db.insert(otpCodes).values({
       phone: cleanPhone,
-      code: "BIZ",
+      code: eightDigitCode,
       token: regToken,
       used: false,
-      expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000), // 48 soat
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 soat
     });
 
-    // 5. Web session token (To'g'ridan-to'g'ri kirish uchun)
-    const sessionToken = `biz_${randomBytes(24).toString("hex")}`;
-    await db.insert(sessions).values({ id: sessionToken, userId: user.id });
-    partnerTokenToSpecId.set(sessionToken, spec.id);
-
-    // 6. Bot username va start havolasi
+    // Bot username va start havolasi
     const botUser = (await partnerBotUsername()) || "agroz_auth_bot";
     const cleanBotUser = botUser.replace(/^@/, "");
     const startUrl = `https://t.me/${cleanBotUser}?start=${regToken}`;
-    const businessBaseUrl = (process.env.BUSINESS_WEB_URL || "https://biznesgo.vercel.app").replace(/\/+$/, "");
-    const webCabinetUrl = `${businessBaseUrl}?token=${sessionToken}&phone=${encodeURIComponent(cleanPhone)}`;
 
     return res.json({
       ok: true,
+      requiresTelegramVerify: true,
       token: regToken,
-      sessionToken,
       botUsername: cleanBotUser,
       startUrl,
-      webCabinetUrl,
       domain: "biznesgo.vercel.app",
       phone: cleanPhone,
       organization: cleanOrg || cleanName,
@@ -2540,6 +2540,117 @@ router.post("/partner/register-intent", async (req, res) => {
   } catch (err: any) {
     console.error("[partner:register-intent error]:", err);
     res.status(500).json({ ok: false, error: "Ro'yxatdan o'tishda xatolik yuz berdi" });
+  }
+});
+
+// POST /api/bot/partner/verify-registration-code (Telegramdan olingan 8 xonali ID kod orqali biznes panelni ochish)
+router.post("/partner/verify-registration-code", async (req, res) => {
+  try {
+    const { token, code } = req.body || {};
+    const cleanToken = String(token || "").trim();
+    const cleanCode = String(code || "").trim();
+
+    if (!cleanToken || !cleanCode) {
+      return res.status(400).json({ ok: false, error: "8 xonali tasdiqlash ID kodi kiritilmadi" });
+    }
+
+    const row = (await db.select().from(otpCodes).where(eq(otpCodes.token, cleanToken)).limit(1))[0];
+    if (!row || row.expiresAt.getTime() < Date.now()) {
+      return res.status(400).json({ ok: false, error: "Ushbu ariza topilmadi yoki tasdiqlash muddati o'tgan" });
+    }
+
+    if (!row.telegramId) {
+      return res.status(400).json({
+        ok: false,
+        error: "Iltimos, avval Telegram botda (@agroz_auth_bot) «Start» tugmasini bosing va profilingizni tasdiqlang.",
+      });
+    }
+
+    // Telefon mosligini qat'iy tekshiramiz
+    const tgUser = (await db.select().from(users).where(eq(users.telegramId, row.telegramId)).limit(1))[0];
+    const tgSpec = (await db.select().from(specialists).where(eq(specialists.telegramId, row.telegramId)).limit(1))[0];
+    const actualTgPhone = normalizePhone(tgUser?.phone || tgSpec?.phone || "");
+    const webPhone = normalizePhone(row.phone);
+
+    if (actualTgPhone && webPhone && actualTgPhone !== webPhone) {
+      return res.status(400).json({
+        ok: false,
+        error: `Telegram hisobingizdagi telefon raqami (${actualTgPhone}) arizadagi raqam (${row.phone}) bilan bir xil emas! Iltimos, aynan arizadagi raqamga ulangan Telegram orqali tasdiqlang.`,
+      });
+    }
+
+    if (row.code !== cleanCode) {
+      return res.status(400).json({ ok: false, error: "8 xonali tasdiqlash ID kodi noto'g'ri kiritildi" });
+    }
+
+    const spec = await findSpecialistByPhoneOrLogin(row.phone);
+    if (!spec) {
+      return res.status(404).json({ ok: false, error: "Hamkor profili topilmadi" });
+    }
+
+    if (spec.botBlocked) {
+      return res.status(403).json({ ok: false, error: "Ushbu hisob bloklangan. Administratorga murojaat qiling." });
+    }
+
+    // Hamkorni faollashtiramiz va Telegram ID ni biriktiramiz
+    await db
+      .update(specialists)
+      .set({
+        telegramId: row.telegramId,
+        isActive: true,
+        isApproved: true,
+        botStartedAt: new Date(),
+        botBlocked: false,
+      })
+      .where(eq(specialists.id, spec.id));
+
+    let user = (await db.select().from(users).where(eq(users.phone, row.phone)).limit(1))[0];
+    if (user) {
+      await db.update(users).set({ telegramId: row.telegramId, botBlocked: false }).where(eq(users.id, user.id));
+    } else {
+      const [createdUser] = await db.insert(users).values({ phone: row.phone, name: spec.name, telegramId: row.telegramId }).returning();
+      user = createdUser;
+    }
+
+    await db.update(otpCodes).set({ used: true }).where(eq(otpCodes.id, row.id));
+
+    // Sessiya yaratamiz
+    const sessionToken = `biz_${randomBytes(24).toString("hex")}`;
+    await db.insert(sessions).values({ id: sessionToken, userId: user.id });
+    partnerTokenToSpecId.set(sessionToken, spec.id);
+
+    // Botga muvaffaqiyatli xabarnoma yuboramiz
+    const businessBaseUrl = (process.env.BUSINESS_WEB_URL || "https://biznesgo.vercel.app").replace(/\/+$/, "");
+    const appUrl = `${businessBaseUrl}?token=${sessionToken}&phone=${encodeURIComponent(spec.phone)}`;
+    sendToSpecialist(
+      { id: spec.id, telegramId: row.telegramId },
+      `🎉 <b>Tabriklaymiz, ${escapeHtml(spec.name)}!</b>\n\n` +
+      `Sizning <b>«${escapeHtml(spec.organization || spec.name)}»</b> biznes kabinetingiz muvaffaqiyatli tasdiqlandi va ochildi!\n\n` +
+      `Boshqaruv paneliga to'g'ridan-to'g'ri kirish uchun quyidagi tugmani bosing:`,
+      {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "🚀 Biznes Kabinetni ochish", web_app: { url: appUrl } }],
+            [{ text: "🌐 Web brauzerda ochish", url: appUrl }],
+          ],
+        },
+      }
+    ).catch(() => {});
+
+    return res.json({
+      ok: true,
+      verified: true,
+      sessionToken,
+      partnerId: spec.id,
+      role: spec.role,
+      name: spec.name,
+      organization: spec.organization,
+      login: spec.login,
+      phone: spec.phone,
+    });
+  } catch (err: any) {
+    console.error("[partner:verify-registration-code error]:", err);
+    res.status(500).json({ ok: false, error: "Tasdiqlashda server xatosi yuz berdi" });
   }
 });
 
@@ -2557,10 +2668,26 @@ router.get("/partner/check-registration", async (req, res) => {
     }
 
     if (row.used) {
-      const spec = (await db.select().from(specialists).where(eq(specialists.phone, row.phone)).limit(1))[0];
+      const spec = await findSpecialistByPhoneOrLogin(row.phone);
+      let user = (await db.select().from(users).where(eq(users.phone, row.phone)).limit(1))[0];
+      let sessionToken: string | null = null;
+      if (user) {
+        const latestSession = (await db.select().from(sessions).where(eq(sessions.userId, user.id)).orderBy(desc(sessions.createdAt)).limit(1))[0];
+        if (latestSession) {
+          sessionToken = latestSession.id;
+        } else {
+          sessionToken = `biz_${randomBytes(24).toString("hex")}`;
+          await db.insert(sessions).values({ id: sessionToken, userId: user.id });
+        }
+        if (spec) {
+          partnerTokenToSpecId.set(sessionToken, spec.id);
+        }
+      }
+
       return res.json({
         ok: true,
         verified: true,
+        sessionToken,
         phone: row.phone,
         partnerId: spec?.id,
         name: spec?.name,
@@ -2573,6 +2700,7 @@ router.get("/partner/check-registration", async (req, res) => {
     return res.json({
       ok: true,
       verified: false,
+      telegramLinked: Boolean(row.telegramId),
     });
   } catch (err: any) {
     console.error("[partner:check-registration error]:", err);
