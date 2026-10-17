@@ -1804,6 +1804,44 @@ router.get("/partner/verify-remembered", async (req, res) => {
   }
 });
 
+// GET /api/bot/partner/check-phone (Ro'yxatdan o'tishda telefon raqami mavjudligini va rolini tekshirish)
+router.get("/partner/check-phone", async (req, res) => {
+  try {
+    const rawTarget = String(req.query.phone || "").trim();
+    if (!rawTarget) {
+      return res.json({ ok: true, exists: false });
+    }
+
+    const cleanPhone = normalizePhone(rawTarget);
+    if (!cleanPhone || cleanPhone.length < 9) {
+      return res.json({ ok: true, exists: false });
+    }
+
+    const spec = await findSpecialistByPhoneOrLogin(cleanPhone, true);
+    if (!spec || spec.botBlocked) {
+      return res.json({ ok: true, exists: false });
+    }
+
+    return res.json({
+      ok: true,
+      exists: true,
+      partner: {
+        id: spec.id,
+        name: spec.name,
+        organization: spec.organization,
+        role: spec.role, // "pharmacy" | "specialist" | "both"
+        login: spec.login,
+        phone: spec.phone,
+        specialty: spec.specialty,
+        isActive: spec.isActive,
+        hasPassword: Boolean(spec.passwordHash),
+      },
+    });
+  } catch (err: any) {
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // POST /api/bot/partner/request-login-otp (Telegram orqali tasdiqlash kodini yuborish)
 router.post("/partner/request-login-otp", async (req, res) => {
   try {
@@ -2390,26 +2428,55 @@ router.post("/partner/register-intent", async (req, res) => {
       return res.status(400).json({ ok: false, error: "Iltimos, to'liq F.I.SH (ism va familiyangizni) kiriting" });
     }
 
-    const targetRole: "pharmacy" | "specialist" | "both" =
-      role === "both" ? "both" : role === "specialist" ? "specialist" : "pharmacy";
-    const cleanOrg = cleanText(organization || "", 200) || (targetRole !== "specialist" ? cleanName : null);
+    // 1. specialists jadvalida mavjudligini tekshiramiz
+    let spec = await findSpecialistByPhoneOrLogin(cleanPhone, true);
+    if (spec && spec.botBlocked) {
+      return res.status(403).json({
+        ok: false,
+        error: "Ushbu hisob yoki telefon raqami bloklangan. Administratorga murojaat qiling.",
+      });
+    }
+
+    const upgradeToUniversal = Boolean(req.body?.upgradeToUniversal);
+    let targetRole: "pharmacy" | "specialist" | "both" =
+      role === "both" || upgradeToUniversal ? "both" : role === "specialist" ? "specialist" : "pharmacy";
+
+    // Agar hisob avval mavjud bo'lsa va faoliyati kengaytirilayotgan bo'lsa (yoki biror taraf rolni birlashtirsa):
+    if (
+      spec &&
+      (role === "both" ||
+        upgradeToUniversal ||
+        (spec.role === "pharmacy" && targetRole === "specialist") ||
+        (spec.role === "specialist" && targetRole === "pharmacy") ||
+        spec.role === "both")
+    ) {
+      targetRole = "both";
+    }
+
+    const cleanOrg =
+      cleanText(organization || "", 200) || spec?.organization || (targetRole !== "specialist" ? cleanName : null);
     if (targetRole !== "specialist" && (!cleanOrg || cleanOrg.length < 2)) {
       return res.status(400).json({ ok: false, error: "Iltimos, do'kon yoki dorixona nomini kiriting" });
     }
 
     const fullAddrParts = [region, district, address].filter(Boolean);
-    const cleanAddr = cleanText(fullAddrParts.join(", ") || address || "", 500) || "O'zbekiston";
+    const cleanAddr = cleanText(fullAddrParts.join(", ") || address || "", 500) || spec?.address || "O'zbekiston";
     if (cleanAddr.length < 4) {
       return res.status(400).json({ ok: false, error: "Iltimos, hudud va to'liq manzilingizni kiriting" });
     }
 
-    const defaultSpecName = targetRole === "both" ? "Agro-do'kon va Mutaxassis" : targetRole === "pharmacy" ? "Agro-do'kon" : "Agronom mutaxassis";
-    const cleanSpec = cleanText(specialty || defaultSpecName, 160);
-    const cleanWorkHours = cleanText(workHours || "08:00 - 19:00", 60);
-    const cleanExp = Number(experienceYears) >= 0 ? Number(experienceYears) : 1;
-    const cleanEdu = cleanText(education || "", 300);
-    const cleanBio = cleanText(bio || "", 500);
-    const cleanHelpsWith = helpsWith === "animal" || helpsWith === "crop" ? helpsWith : "both";
+    const defaultSpecName =
+      targetRole === "both"
+        ? (specialty || "Agro-do'kon va Mutaxassis")
+        : targetRole === "pharmacy"
+        ? "Agro-do'kon"
+        : "Agronom mutaxassis";
+    const cleanSpec = cleanText(specialty || defaultSpecName, 160) || spec?.specialty || defaultSpecName;
+    const cleanWorkHours = cleanText(workHours || "08:00 - 19:00", 60) || spec?.workHours || "08:00 - 19:00";
+    const cleanExp = Number(experienceYears) >= 0 ? Number(experienceYears) : (spec?.experienceYears ?? 1);
+    const cleanEdu = cleanText(education || "", 300) || spec?.education || null;
+    const cleanBio = cleanText(bio || "", 500) || spec?.bio || null;
+    const cleanHelpsWith = helpsWith === "animal" || helpsWith === "crop" ? helpsWith : (spec?.helpsWith || "both");
 
     // Parol xavfsizligini tekshirish
     const rawPass = String(req.body?.password || "").trim();
@@ -2427,15 +2494,6 @@ router.post("/partner/register-intent", async (req, res) => {
     // 1 Oylik bepul sinov sanasi: Hozirdan boshlab 30 kun
     const now = new Date();
     const trialEndsAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-
-    // 1. specialists jadvalida mavjudligini tekshiramiz/yaratamiz
-    let spec = await findSpecialistByPhoneOrLogin(cleanPhone, true);
-    if (spec && spec.botBlocked) {
-      return res.status(403).json({
-        ok: false,
-        error: "Ushbu hisob yoki telefon raqami bloklangan. Administratorga murojaat qiling.",
-      });
-    }
 
     // Login yaratish yoki tekshirish
     let finalLogin = String(req.body?.login || "").trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
@@ -2458,14 +2516,14 @@ router.post("/partner/register-intent", async (req, res) => {
           specialty: cleanSpec,
           workHours: cleanWorkHours,
           experienceYears: cleanExp,
-          education: cleanEdu || spec.education,
-          bio: cleanBio || spec.bio,
+          education: cleanEdu,
+          bio: cleanBio,
           helpsWith: cleanHelpsWith,
           role: targetRole,
           login: finalLogin || spec.login,
           passwordHash: passwordHashToSave || spec.passwordHash,
-          isActive: false, // Telegram tasdiqlanguncha nofaol
-          isApproved: false,
+          isActive: spec.isActive ? true : false,
+          isApproved: spec.isApproved ? true : false,
           contractAcceptedAt: spec.contractAcceptedAt || now,
           trialEndsAt: spec.trialEndsAt || trialEndsAt,
           subscriptionStatus: spec.subscriptionStatus || "trial",

@@ -33,6 +33,7 @@ import {
   LayoutDashboard,
   Boxes,
   LogOut,
+  LogIn,
   HandCoins,
   Eye,
   EyeOff,
@@ -293,6 +294,18 @@ export default function PartnerKabinetPage() {
   const [regVerifyError, setRegVerifyError] = useState<string | null>(null);
   const regPollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [regNotice, setRegNotice] = useState<string | null>(null);
+  const [existingPartnerCheck, setExistingPartnerCheck] = useState<{
+    id: number;
+    name: string;
+    organization: string | null;
+    role: "pharmacy" | "specialist" | "both";
+    login: string | null;
+    phone: string;
+    specialty: string | null;
+    isActive: boolean;
+  } | null>(null);
+  const [checkingPhone, setCheckingPhone] = useState(false);
+  const checkPhoneTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Rasmiy xizmat ko'rsatish shartnomasi modali
   const [showContractModal, setShowContractModal] = useState(false);
@@ -524,6 +537,38 @@ export default function PartnerKabinetPage() {
       if (suggestTimerRef.current) clearTimeout(suggestTimerRef.current);
     };
   }, [regOrganization, regName, regLoginIsManual]);
+
+  // Ro'yxatdan o'tishda kiritilgan raqam avval ro'yxatdan o'tganligini tekshirish
+  useEffect(() => {
+    const digits = regPhone.replace(/\D/g, "");
+    if (digits.length < 9) {
+      setExistingPartnerCheck(null);
+      setCheckingPhone(false);
+      return;
+    }
+
+    if (checkPhoneTimerRef.current) clearTimeout(checkPhoneTimerRef.current);
+    setCheckingPhone(true);
+    checkPhoneTimerRef.current = setTimeout(async () => {
+      try {
+        const res = await apiFetch(`/api/bot/partner/check-phone?phone=${encodeURIComponent(regPhone)}`);
+        const data = await res.json();
+        if (data?.ok && data.exists && data.partner) {
+          setExistingPartnerCheck(data.partner);
+        } else {
+          setExistingPartnerCheck(null);
+        }
+      } catch {
+        setExistingPartnerCheck(null);
+      } finally {
+        setCheckingPhone(false);
+      }
+    }, 350);
+
+    return () => {
+      if (checkPhoneTimerRef.current) clearTimeout(checkPhoneTimerRef.current);
+    };
+  }, [regPhone]);
 
   // OTP Taymeri
   useEffect(() => {
@@ -1194,6 +1239,7 @@ export default function PartnerKabinetPage() {
           name: regName.trim(),
           phone: cleanP,
           role: regRole,
+          upgradeToUniversal: regRole === "both" || Boolean(existingPartnerCheck),
           specialty: regSpecialty,
           organization: regOrganization.trim() || regName.trim(),
           login: regLogin.trim(),
@@ -2900,6 +2946,7 @@ export default function PartnerKabinetPage() {
                 onClick={() => {
                   setShowRegisterModal(false);
                   setRegSuccess(null);
+                  setExistingPartnerCheck(null);
                 }}
                 className="absolute top-4 right-4 h-8 w-8 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-600 flex items-center justify-center transition"
                 title="Yopish"
@@ -2931,7 +2978,7 @@ export default function PartnerKabinetPage() {
 
                     {/* Yo'nalish tanlash: Agro-do'kon, Mutaxassis yoki Ikkalasi */}
                     <div>
-                      <label className="block font-bold text-zinc-700 mb-1.5">Faoliyat yo‘nalishi: *</label>
+                      <label className="block text-xs font-bold text-zinc-700 mb-1.5">Faoliyat yo‘nalishi: *</label>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <button
                           type="button"
@@ -2939,13 +2986,13 @@ export default function PartnerKabinetPage() {
                             setRegRole("pharmacy");
                             setRegSpecialty("Agro-do'kon");
                           }}
-                          className={`flex items-center justify-center gap-2 rounded-2xl p-3 border font-bold transition text-xs ${
+                          className={`flex items-center justify-center gap-2 rounded-xl p-2.5 border font-semibold transition text-xs cursor-pointer ${
                             regRole === "pharmacy"
                               ? "bg-zinc-900 text-white border-zinc-900 shadow-xs"
                               : "bg-zinc-50 text-zinc-700 border-zinc-200 hover:bg-zinc-100"
                           }`}
                         >
-                          <Store size={15} />
+                          <Store size={14} />
                           <span>Agro-Do‘kon</span>
                         </button>
 
@@ -2955,13 +3002,13 @@ export default function PartnerKabinetPage() {
                             setRegRole("specialist");
                             setRegSpecialty("Agronom");
                           }}
-                          className={`flex items-center justify-center gap-2 rounded-2xl p-3 border font-bold transition text-xs ${
+                          className={`flex items-center justify-center gap-2 rounded-xl p-2.5 border font-semibold transition text-xs cursor-pointer ${
                             regRole === "specialist"
                               ? "bg-zinc-900 text-white border-zinc-900 shadow-xs"
                               : "bg-zinc-50 text-zinc-700 border-zinc-200 hover:bg-zinc-100"
                           }`}
                         >
-                          <UserCheck size={15} />
+                          <UserCheck size={14} />
                           <span>Mutaxassis</span>
                         </button>
 
@@ -2971,27 +3018,27 @@ export default function PartnerKabinetPage() {
                             setRegRole("both");
                             setRegSpecialty("Agro-do'kon va Mutaxassis");
                           }}
-                          className={`flex items-center justify-center gap-2 rounded-2xl p-3 border font-bold transition text-xs ${
+                          className={`flex items-center justify-center gap-2 rounded-xl p-2.5 border font-semibold transition text-xs cursor-pointer ${
                             regRole === "both"
-                              ? "bg-gradient-to-r from-emerald-700 to-teal-800 text-white border-emerald-700 shadow-xs"
-                              : "bg-emerald-50/70 text-emerald-800 border-emerald-200 hover:bg-emerald-100/70"
+                              ? "bg-zinc-900 text-white border-zinc-900 shadow-xs"
+                              : "bg-zinc-50 text-zinc-700 border-zinc-200 hover:bg-zinc-100"
                           }`}
                         >
-                          <Sparkles size={15} />
-                          <span>Ham Do‘kon, ham Mutaxassis</span>
+                          <Sparkles size={14} />
+                          <span>Ikkalasi (Universal)</span>
                         </button>
                       </div>
                     </div>
 
                     {/* Dual role maxsus tushuntirish */}
                     {regRole === "both" && (
-                      <div className="rounded-2xl bg-emerald-50/80 border border-emerald-200 p-3 space-y-1">
-                        <div className="flex items-center gap-1.5 font-bold text-emerald-900">
-                          <Sparkles size={14} className="text-emerald-600" />
-                          <span>Universal rejim tanlandi</span>
+                      <div className="rounded-xl bg-zinc-50 border border-zinc-200 p-3 space-y-1">
+                        <div className="flex items-center gap-1.5 font-bold text-zinc-900 text-xs">
+                          <Sparkles size={13} />
+                          <span>Universal rejim: Ham do‘kon, ham mutaxassis</span>
                         </div>
-                        <p className="text-[11px] text-emerald-800 leading-relaxed">
-                          Siz o‘z savdo do‘koningiz tovarlari, kassa va qarz daftarini boshqarasiz hamda mutaxassis sifatida fermerlarning maslahat va ko‘rik chaqiruvlarini ham qabul qilasiz.
+                        <p className="text-[11px] text-zinc-500 leading-relaxed">
+                          Siz o‘z savdo do‘koningiz mahsulotlari (ombor, kassa, qarz daftari) bilan birga, mutaxassis sifatida fermerlarning maslahat va ko‘rik chaqiruvlarini ham bitta profilingizda qabul qilasiz.
                         </p>
                       </div>
                     )}
@@ -3000,11 +3047,11 @@ export default function PartnerKabinetPage() {
                     {(regRole === "specialist" || regRole === "both") && (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                          <label className="block font-bold text-zinc-700 mb-1">Mutaxassislik sohasi: *</label>
+                          <label className="block text-xs font-bold text-zinc-700 mb-1">Mutaxassislik sohasi: *</label>
                           <select
                             value={regSpecialty}
                             onChange={(e) => setRegSpecialty(e.target.value)}
-                            className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-zinc-900 font-medium focus:border-black focus:bg-white focus:outline-none"
+                            className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-2 text-zinc-900 text-xs font-medium focus:border-black focus:bg-white focus:outline-none"
                           >
                             <option value="Agronom">Agronom (Ekinlar)</option>
                             <option value="Veterinar">Veterinar (Chorva mollari)</option>
@@ -3015,11 +3062,11 @@ export default function PartnerKabinetPage() {
                         </div>
 
                         <div>
-                          <label className="block font-bold text-zinc-700 mb-1">Qaysi sohada xizmat: *</label>
+                          <label className="block text-xs font-bold text-zinc-700 mb-1">Qaysi sohada xizmat: *</label>
                           <select
                             value={regHelpsWith}
                             onChange={(e) => setRegHelpsWith(e.target.value as any)}
-                            className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-zinc-900 font-medium focus:border-black focus:bg-white focus:outline-none"
+                            className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-2 text-zinc-900 text-xs font-medium focus:border-black focus:bg-white focus:outline-none"
                           >
                             <option value="both">Har ikkisi (Ekinlar va Chorva)</option>
                             <option value="crop">Faqat ekinlar (Dehqonchilik)</option>
@@ -3032,19 +3079,19 @@ export default function PartnerKabinetPage() {
                     {/* F.I.SH va Do'kon nomi */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block font-bold text-zinc-700 mb-1">To‘liq ism (F.I.SH): *</label>
+                        <label className="block text-xs font-bold text-zinc-700 mb-1">To‘liq ism (F.I.SH): *</label>
                         <input
                           type="text"
                           required
                           value={regName}
                           onChange={(e) => setRegName(e.target.value)}
                           placeholder="Masalan: Alisher Qodirov"
-                          className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-zinc-900 font-medium focus:border-black focus:bg-white focus:outline-none"
+                          className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-2 text-zinc-900 text-xs font-medium focus:border-black focus:bg-white focus:outline-none"
                         />
                       </div>
 
                       <div>
-                        <label className="block font-bold text-zinc-700 mb-1">
+                        <label className="block text-xs font-bold text-zinc-700 mb-1">
                           {regRole !== "specialist" ? "Agro-do‘kon rasmiy nomi: *" : "Tashkilot yoki brend nomi:"}
                         </label>
                         <input
@@ -3053,7 +3100,7 @@ export default function PartnerKabinetPage() {
                           value={regOrganization}
                           onChange={(e) => setRegOrganization(e.target.value)}
                           placeholder={regRole !== "specialist" ? "Masalan: Baraka Agro Kimyo" : "Ixtiyoriy"}
-                          className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-zinc-900 font-medium focus:border-black focus:bg-white focus:outline-none"
+                          className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-2 text-zinc-900 text-xs font-medium focus:border-black focus:bg-white focus:outline-none"
                         />
                       </div>
                     </div>
@@ -3061,7 +3108,15 @@ export default function PartnerKabinetPage() {
                     {/* Telefon va Ish vaqti */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block font-bold text-zinc-700 mb-1">Telefon raqam: *</label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-xs font-bold text-zinc-700">Telefon raqam: *</label>
+                          {checkingPhone && (
+                            <span className="text-[10px] text-zinc-400 flex items-center gap-1">
+                              <RefreshCw size={10} className="animate-spin" />
+                              <span>Tekshirilmoqda...</span>
+                            </span>
+                          )}
+                        </div>
                         <input
                           type="tel"
                           required
@@ -3071,22 +3126,119 @@ export default function PartnerKabinetPage() {
                             if (!regPhone) setRegPhone("+998 ");
                           }}
                           placeholder="+998 90 123 45 67"
-                          className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-zinc-900 font-mono font-bold focus:border-black focus:bg-white focus:outline-none"
+                          className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-2 text-zinc-900 font-mono text-xs font-bold focus:border-black focus:bg-white focus:outline-none"
                         />
                       </div>
 
                       <div>
-                        <label className="block font-bold text-zinc-700 mb-1">Ish vaqti: *</label>
+                        <label className="block text-xs font-bold text-zinc-700 mb-1">Ish vaqti: *</label>
                         <input
                           type="text"
                           required
                           value={regWorkHours}
                           onChange={(e) => setRegWorkHours(e.target.value)}
                           placeholder="08:00 - 19:00"
-                          className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-zinc-900 font-medium focus:border-black focus:bg-white focus:outline-none"
+                          className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-2 text-zinc-900 text-xs font-medium focus:border-black focus:bg-white focus:outline-none"
                         />
                       </div>
                     </div>
+
+                    {/* Telefon orqali avval ro'yxatdan o'tgan hamkor aniqlanganda Universal rejim taklifi */}
+                    {existingPartnerCheck && (
+                      <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3.5 space-y-3">
+                        {existingPartnerCheck.role !== "both" ? (
+                          <>
+                            <div className="flex items-start gap-2.5">
+                              <div className="p-2 rounded-xl bg-zinc-900 text-white shrink-0 mt-0.5">
+                                <Sparkles size={15} />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-zinc-900">
+                                  Ushbu raqam avval {existingPartnerCheck.role === "pharmacy" ? "Agro-do‘kon" : "Mutaxassis"} sifatida ro‘yxatdan o‘tgan!
+                                </p>
+                                <p className="text-[11px] text-zinc-500 mt-0.5 leading-relaxed">
+                                  <b>{existingPartnerCheck.organization || existingPartnerCheck.name}</b> hisobingiz mavjud. Bitta raqam orqali ham tovarlar savdosini (ombor, kassa, qarz daftari), ham mutaxassislik (ko‘rik va chaqiruvlar) xizmatlarini yuritish uchun <b>Universal rejimga</b> birlashtirishingiz mumkin.
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setRegRole("both");
+                                  if (existingPartnerCheck.organization && (!regOrganization || regOrganization === regName)) {
+                                    setRegOrganization(existingPartnerCheck.organization);
+                                  }
+                                  if (existingPartnerCheck.name && !regName) {
+                                    setRegName(existingPartnerCheck.name);
+                                  }
+                                  if (existingPartnerCheck.specialty && (!regSpecialty || regSpecialty === "Agro-do'kon" || regSpecialty === "Agronom")) {
+                                    setRegSpecialty(existingPartnerCheck.specialty || "Agro-do'kon va Mutaxassis");
+                                  }
+                                  if (existingPartnerCheck.login && !regLoginIsManual) {
+                                    setRegLogin(existingPartnerCheck.login);
+                                  }
+                                  haptic("medium");
+                                }}
+                                className={`w-full py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-[0.99] cursor-pointer ${
+                                  regRole === "both"
+                                    ? "bg-zinc-900 text-white"
+                                    : "bg-zinc-900 hover:bg-black text-white"
+                                }`}
+                              >
+                                <Sparkles size={13} />
+                                <span>{regRole === "both" ? "✓ Universal rejim yoqildi" : "🌟 Universal rejimga birlashtirish"}</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setShowRegisterModal(false);
+                                  setLoginPhone(regPhone);
+                                  setAuthTab("otp");
+                                  haptic("light");
+                                }}
+                                className="w-full py-2 px-3 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-100 text-zinc-800 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                              >
+                                <LogIn size={13} />
+                                <span>Mavjud hisobga kirish</span>
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex items-start gap-2.5">
+                              <div className="p-2 rounded-xl bg-zinc-900 text-white shrink-0 mt-0.5">
+                                <CheckCircle2 size={15} />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-zinc-900">
+                                  Ushbu raqamda allaqachon Universal hisobingiz mavjud!
+                                </p>
+                                <p className="text-[11px] text-zinc-500 mt-0.5 leading-relaxed">
+                                  <b>{existingPartnerCheck.organization || existingPartnerCheck.name}</b> profilingizda ham do‘kon, ham mutaxassislik rejimi faol. Yangi ro‘yxatdan o‘tish shart emas.
+                                </p>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowRegisterModal(false);
+                                setLoginPhone(regPhone);
+                                setAuthTab("otp");
+                                haptic("light");
+                              }}
+                              className="w-full py-2 px-3 rounded-xl bg-zinc-900 hover:bg-black text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                            >
+                              <LogIn size={13} />
+                              <span>Kabinetga kirish</span>
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
 
                     {/* Avtomatik unikal Login va Maxfiy Parol */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-zinc-100/70 border border-zinc-200">
