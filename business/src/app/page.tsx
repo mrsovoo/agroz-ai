@@ -415,6 +415,7 @@ export default function PartnerKabinetPage() {
       const urlParams = new URLSearchParams(window.location.search);
       const tokenFromUrl = urlParams.get("token");
       const phoneFromUrl = urlParams.get("phone");
+      const loginFromUrl = urlParams.get("login");
 
       if (tokenFromUrl) {
         setWebToken(tokenFromUrl);
@@ -422,6 +423,11 @@ export default function PartnerKabinetPage() {
         loadData("", tokenFromUrl);
       } else if (phoneFromUrl) {
         handleWebLogin(phoneFromUrl);
+      } else if (loginFromUrl) {
+        setLoginPhone(loginFromUrl.replace(/^@/, ""));
+        setAuthTab("password");
+        setShowLoginModal(true);
+        setLoading(false);
       } else {
         const stored = localStorage.getItem("agroz_business_token");
         if (stored) {

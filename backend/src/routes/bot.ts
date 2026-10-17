@@ -3182,4 +3182,70 @@ router.post("/partner/busy", requireTelegramAuth("business"), requireRole(['spec
   }
 });
 
+// GET /api/bot/partner/store/:slug — Do'kon yoki mutaxassisning ommaviy veb-vitrinasi
+router.get("/partner/store/:slug", async (req, res) => {
+  try {
+    const rawSlug = String(req.params.slug || "").trim().toLowerCase();
+    const cleanSlug = rawSlug.replace(/^@/, "").replace(/[^a-z0-9_]/g, "");
+    if (!cleanSlug) {
+      return res.status(400).json({ ok: false, error: "Do'kon logini ko'rsatilmadi" });
+    }
+
+    const [spec] = await db
+      .select({
+        id: specialists.id,
+        name: specialists.name,
+        organization: specialists.organization,
+        role: specialists.role,
+        specialty: specialists.specialty,
+        phone: specialists.phone,
+        address: specialists.address,
+        workHours: specialists.workHours,
+        bio: specialists.bio,
+        experienceYears: specialists.experienceYears,
+        login: specialists.login,
+        isApproved: specialists.isApproved,
+        ratingAvg: sql<number>`coalesce(avg(${specialistRatings.stars}), 5.0)`,
+        ratingCount: sql<number>`count(${specialistRatings.id})`,
+      })
+      .from(specialists)
+      .leftJoin(specialistRatings, eq(specialists.id, specialistRatings.specialistId))
+      .where(and(eq(specialists.login, cleanSlug), eq(specialists.isActive, true)))
+      .groupBy(specialists.id)
+      .limit(1);
+
+    if (!spec) {
+      return res.status(404).json({ ok: false, error: "Do'kon yoki mutaxassis topilmadi" });
+    }
+
+    const meds = await db
+      .select({
+        id: specialistMedicines.id,
+        name: specialistMedicines.name,
+        type: specialistMedicines.type,
+        usage: specialistMedicines.usage,
+        status: specialistMedicines.status,
+        price: specialistMedicines.price,
+        stock: specialistMedicines.stock,
+        stockUnit: specialistMedicines.stockUnit,
+        hasPhoto: sql<boolean>`${specialistMedicines.photoData} IS NOT NULL OR ${specialistMedicines.photoFileId} IS NOT NULL`,
+        photoData: specialistMedicines.photoData,
+      })
+      .from(specialistMedicines)
+      .where(and(eq(specialistMedicines.specialistId, spec.id), eq(specialistMedicines.status, "bor")))
+      .orderBy(specialistMedicines.name);
+
+    return res.json({
+      ok: true,
+      store: {
+        ...spec,
+        medicines: meds,
+      },
+    });
+  } catch (err: any) {
+    console.error("[partner:store error]:", err);
+    return res.status(500).json({ ok: false, error: "Do'kon ma'lumotlarini yuklashda xatolik yuz berdi" });
+  }
+});
+
 export default router;
