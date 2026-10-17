@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   pgTable,
   serial,
@@ -52,6 +53,7 @@ export const otpCodes = pgTable("otp_codes", {
 export const sessions = pgTable("sessions", {
   id: varchar("id", { length: 64 }).primaryKey(),
   userId: integer("user_id").notNull(),
+  expiresAt: timestamp("expires_at").default(sql`now() + interval '30 days'`).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -435,6 +437,264 @@ export const pushTokens = pgTable("push_tokens", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+/**
+ * BiznesGO — Qarz daftari (mijozlar nasiyasi va ta'minotchilar oldidagi qarzlar).
+ * status: 'open' | 'partial' | 'paid' | 'cancelled'
+ */
+export const partnerDebts = pgTable("partner_debts", {
+  id: serial("id").primaryKey(),
+  partnerId: integer("partner_id").notNull(),
+  customerName: varchar("customer_name", { length: 160 }).notNull(),
+  customerPhone: varchar("customer_phone", { length: 32 }),
+  customerAddress: text("customer_address"),
+  kind: varchar("kind", { length: 20 }).notNull().default("mijoz"), // mijoz | taminotchi
+  creditLimit: integer("credit_limit").notNull().default(5000000),
+  description: text("description"),
+  totalAmount: integer("total_amount").notNull().default(0),
+  paidAmount: integer("paid_amount").notNull().default(0),
+  dueDate: timestamp("due_date"),
+  status: varchar("status", { length: 20 }).notNull().default("open"), // open | partial | paid | cancelled
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+/**
+ * BiznesGO — Qarz to'lovlari tarixi.
+ * payment_method: 'cash' | 'card' | 'transfer' (naqd | karta | otkazma)
+ */
+export const partnerDebtPayments = pgTable("partner_debt_payments", {
+  id: serial("id").primaryKey(),
+  debtId: integer("debt_id").notNull(),
+  amount: integer("amount").notNull(),
+  paymentMethod: varchar("payment_method", { length: 20 }).notNull().default("cash"),
+  note: text("note"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+/**
+ * BiznesGO — Tezkor Kassa (POS) sotuvlari.
+ * payment_type: 'cash' | 'card' | 'credit'
+ * status: 'completed' | 'cancelled'
+ */
+export const posSales = pgTable("pos_sales", {
+  id: serial("id").primaryKey(),
+  partnerId: integer("partner_id").notNull(),
+  customerName: varchar("customer_name", { length: 160 }).notNull(),
+  customerPhone: varchar("customer_phone", { length: 32 }),
+  totalAmount: integer("total_amount").notNull().default(0),
+  discount: integer("discount").notNull().default(0),
+  paymentType: varchar("payment_type", { length: 20 }).notNull().default("cash"), // cash | card | credit
+  status: varchar("status", { length: 20 }).notNull().default("completed"), // completed | cancelled
+  debtId: integer("debt_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+/**
+ * BiznesGO — POS sotuv ichidagi mahsulotlar.
+ */
+export const posSaleItems = pgTable("pos_sale_items", {
+  id: serial("id").primaryKey(),
+  saleId: integer("sale_id").notNull(),
+  medicineId: integer("medicine_id").notNull(),
+  medicineName: varchar("medicine_name", { length: 160 }),
+  quantity: integer("quantity").notNull().default(1),
+  unitPrice: integer("unit_price").notNull().default(0),
+  totalAmount: integer("total_amount").notNull().default(0),
+});
+
+/**
+ * BiznesGO — Sotuvchi (Merchant) profili.
+ * merchant_type:
+ *   - agro_shop (Agro-do'kon)
+ *   - veterinary_pharmacy (Veterinar dorixona)
+ *   - feed_store (Yem-ozuqa)
+ *   - warehouse (Ombor va ulgurji)
+ *   - seed_seedling_store (Urug' va ko'chat)
+ *   - equipment_store (Qishloq xo'jaligi jihozlari)
+ * status: 'pending' | 'active' | 'blocked'
+ */
+export const biznesgoMerchants = pgTable("biznesgo_merchants", {
+  id: serial("id").primaryKey(),
+  telegramId: bigint("telegram_id", { mode: "number" }).unique(),
+  phone: varchar("phone", { length: 32 }).notNull(),
+  name: varchar("name", { length: 120 }).notNull(),
+  organizationName: varchar("organization_name", { length: 200 }).notNull(),
+  merchantType: varchar("merchant_type", { length: 40 }).notNull(),
+  region: varchar("region", { length: 100 }),
+  district: varchar("district", { length: 100 }),
+  address: text("address"),
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
+  workingHours: varchar("working_hours", { length: 100 }).default("08:00 - 18:00"),
+  deliveryAvailable: boolean("delivery_available").default(false).notNull(),
+  status: varchar("status", { length: 20 }).default("active").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+/**
+ * BiznesGO — Xavfsiz sessiyalar jadvali.
+ * expires_at: har bir sessiya 30 kunlik muddatga ega bo'ladi.
+ */
+export const biznesgoSessions = pgTable("biznesgo_sessions", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  merchantId: integer("merchant_id")
+    .references(() => biznesgoMerchants.id, { onDelete: "cascade" })
+    .notNull(),
+  tokenHash: text("token_hash").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+/**
+ * BiznesGO — Mahsulotlar katalogi (biznesgo_products).
+ */
+export const biznesgoProducts = pgTable("biznesgo_products", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id")
+    .references(() => biznesgoMerchants.id, { onDelete: "cascade" })
+    .notNull(),
+  name: varchar("name", { length: 200 }).notNull(),
+  category: varchar("category", { length: 100 }),
+  unit: varchar("unit", { length: 40 }).default("dona").notNull(),
+  price: integer("price").default(0).notNull(),
+  costPrice: integer("cost_price").default(0),
+  stockQuantity: integer("stock_quantity").default(0).notNull(),
+  minStockLevel: integer("min_stock_level").default(5),
+  barcode: varchar("barcode", { length: 64 }),
+  description: text("description"),
+  imageUrl: text("image_url"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+/**
+ * BiznesGO — Doimiy mijozlar (biznesgo_customers).
+ */
+export const biznesgoCustomers = pgTable("biznesgo_customers", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id")
+    .references(() => biznesgoMerchants.id, { onDelete: "cascade" })
+    .notNull(),
+  name: varchar("name", { length: 160 }).notNull(),
+  phone: varchar("phone", { length: 32 }).notNull(),
+  region: varchar("region", { length: 100 }),
+  district: varchar("district", { length: 100 }),
+  address: text("address"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+/**
+ * BiznesGO — Qarz daftari (biznesgo_debts).
+ */
+export const biznesgoDebts = pgTable("biznesgo_debts", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id")
+    .references(() => biznesgoMerchants.id, { onDelete: "cascade" })
+    .notNull(),
+  customerId: integer("customer_id").references(() => biznesgoCustomers.id, {
+    onDelete: "set null",
+  }),
+  customerName: varchar("customer_name", { length: 160 }).notNull(),
+  customerPhone: varchar("customer_phone", { length: 32 }),
+  description: text("description"),
+  totalAmount: integer("total_amount").default(0).notNull(),
+  paidAmount: integer("paid_amount").default(0).notNull(),
+  dueDate: timestamp("due_date"),
+  status: varchar("status", { length: 32 }).default("open").notNull(), // open | partial | paid | cancelled
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+/**
+ * BiznesGO — Qarz to'lovlari tarixi (biznesgo_debt_payments).
+ */
+export const biznesgoDebtPayments = pgTable("biznesgo_debt_payments", {
+  id: serial("id").primaryKey(),
+  debtId: integer("debt_id")
+    .references(() => biznesgoDebts.id, { onDelete: "cascade" })
+    .notNull(),
+  amount: integer("amount").default(0).notNull(),
+  paymentMethod: varchar("payment_method", { length: 32 }).default("cash").notNull(),
+  note: text("note"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+/**
+ * BiznesGO — Tezkor Kassa / POS sotuvlari (biznesgo_pos_sales).
+ */
+export const biznesgoPosSales = pgTable("biznesgo_pos_sales", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id")
+    .references(() => biznesgoMerchants.id, { onDelete: "cascade" })
+    .notNull(),
+  customerId: integer("customer_id").references(() => biznesgoCustomers.id, {
+    onDelete: "set null",
+  }),
+  customerName: varchar("customer_name", { length: 160 }),
+  customerPhone: varchar("customer_phone", { length: 32 }),
+  totalAmount: integer("total_amount").default(0).notNull(),
+  discount: integer("discount").default(0).notNull(),
+  paymentType: varchar("payment_type", { length: 32 }).default("cash").notNull(), // cash | card | credit
+  status: varchar("status", { length: 32 }).default("completed").notNull(), // completed | cancelled
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+/**
+ * BiznesGO — POS sotuv tarkibidagi mahsulotlar (biznesgo_pos_sale_items).
+ */
+export const biznesgoPosSaleItems = pgTable("biznesgo_pos_sale_items", {
+  id: serial("id").primaryKey(),
+  saleId: integer("sale_id")
+    .references(() => biznesgoPosSales.id, { onDelete: "cascade" })
+    .notNull(),
+  productId: integer("product_id").references(() => biznesgoProducts.id, {
+    onDelete: "set null",
+  }),
+  productName: varchar("product_name", { length: 200 }).notNull(),
+  quantity: integer("quantity").default(1).notNull(),
+  unitPrice: integer("unit_price").default(0).notNull(),
+  totalAmount: integer("total_amount").default(0).notNull(),
+});
+
+/**
+ * BiznesGO — Onlayn buyurtmalar (biznesgo_orders).
+ */
+export const biznesgoOrders = pgTable("biznesgo_orders", {
+  id: serial("id").primaryKey(),
+  merchantId: integer("merchant_id")
+    .references(() => biznesgoMerchants.id, { onDelete: "cascade" })
+    .notNull(),
+  customerName: varchar("customer_name", { length: 160 }).notNull(),
+  customerPhone: varchar("customer_phone", { length: 32 }).notNull(),
+  customerTelegramId: bigint("customer_telegram_id", { mode: "number" }),
+  deliveryAddress: text("delivery_address"),
+  totalAmount: integer("total_amount").default(0).notNull(),
+  status: varchar("status", { length: 32 }).default("new").notNull(), // new | accepted | completed | cancelled
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+/**
+ * BiznesGO — Buyurtma tarkibidagi mahsulotlar (biznesgo_order_items).
+ */
+export const biznesgoOrderItems = pgTable("biznesgo_order_items", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id")
+    .references(() => biznesgoOrders.id, { onDelete: "cascade" })
+    .notNull(),
+  productId: integer("product_id").references(() => biznesgoProducts.id, {
+    onDelete: "set null",
+  }),
+  productName: varchar("product_name", { length: 200 }).notNull(),
+  quantity: integer("quantity").default(1).notNull(),
+  unitPrice: integer("unit_price").default(0).notNull(),
+  totalAmount: integer("total_amount").default(0).notNull(),
+});
+
 import { advertisements } from "./advertisements.js";
 export { advertisements };
-

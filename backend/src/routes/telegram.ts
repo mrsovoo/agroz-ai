@@ -294,7 +294,11 @@ async function finalizeUserRegistration(
     const row = rows[0];
     if (row && !row.used && row.expiresAt.getTime() > Date.now()) {
       const sessionId = randomBytes(32).toString("hex");
-      await db.insert(sessions).values({ id: sessionId, userId: user.id });
+      await db.insert(sessions).values({
+        id: sessionId,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      });
       await db
         .update(otpCodes)
         .set({

@@ -6,8 +6,8 @@
  * maskalangan ko'rinishni (`••••1234`) qaytaradi.
  */
 
-import { db } from "@/db";
-import { appSettings } from "@/db/schema";
+import { db } from "../db/index.js";
+import { appSettings } from "../db/schema.js";
 
 export const SETTING_KEYS = {
   telegramBotToken: "telegram_bot_token",
@@ -89,8 +89,11 @@ function eqKey(key: string) {
 export function envFallback(key: SettingKey): string | null {
   const envMap: Record<SettingKey, string | undefined> = {
     [SETTING_KEYS.telegramBotToken]:
-      process.env.FARMER_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN,
+      process.env.AGROZGO_BOT_TOKEN ||
+      process.env.FARMER_BOT_TOKEN ||
+      process.env.TELEGRAM_BOT_TOKEN,
     [SETTING_KEYS.telegramBotUsername]:
+      process.env.AGROZGO_BOT_USERNAME ||
       process.env.FARMER_BOT_USERNAME ||
       process.env.TELEGRAM_BOT_USERNAME ||
       process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ||
@@ -123,12 +126,14 @@ export function envFallback(key: SettingKey): string | null {
       process.env.admin_login ||
       "admin",
     [SETTING_KEYS.adminPassword]:
+      process.env.ADMIN_PASSWORD ||
+      process.env.ADMIN_TOKEN ||
+      process.env.ADMIN_SECRET ||
       process.env.ADMIN_PASSWOR ||
       process.env.admin_passwor ||
       process.env["admin passwor"] ||
       process.env.ADMIN_PASS ||
       process.env.admin_pass ||
-      process.env.ADMIN_PASSWORD ||
       process.env.admin_password ||
       process.env["admin password"] ||
       undefined,

@@ -23,6 +23,8 @@ import notificationsRouter from "./routes/notifications.js";
 import supportRouter from "./routes/support.js";
 import pushRouter from "./routes/push.js";
 import webRouter from "./routes/web.js";
+import agrozgoRouter from "./routes/agrozgo/index.js";
+import biznesgoRouter from "./routes/biznesgo/index.js";
 
 import { ensureSeed } from "./lib/seed.js";
 import { ensureSchema } from "./db/migrate.js";
@@ -30,10 +32,15 @@ import { isSeedDemoDataAllowed } from "./lib/security-flags.js";
 
 // Production xavfsizlik tekshiruvi (kuchsiz admin parol bilan ishga tushishni taqiqlash)
 if (process.env.NODE_ENV === "production") {
-  const adminPass = process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWOR || "";
+  const adminPass =
+    process.env.ADMIN_PASSWORD ||
+    process.env.ADMIN_TOKEN ||
+    process.env.ADMIN_SECRET ||
+    process.env.ADMIN_PASSWOR ||
+    "";
   if (!adminPass || adminPass.trim() === "admin123" || adminPass.trim().length < 8) {
-    console.error("\n❌ [XAVFSIZLIK XATOSI]: Production rejimida ADMIN_PASSWORD 'admin123' yoki 8 belgidan kam bo'lishi mumkin emas!");
-    console.error("Iltimos, server muhitida kuchli ADMIN_PASSWORD o'rnating.\n");
+    console.error("\n❌ [XAVFSIZLIK XATOSI]: Production rejimida ADMIN_PASSWORD (yoki ADMIN_TOKEN / ADMIN_SECRET) 'admin123' yoki 8 belgidan kam bo'lishi mumkin emas!");
+    console.error("Iltimos, server muhitida kuchli ADMIN_PASSWORD yoki ADMIN_TOKEN o'rnating.\n");
     process.exit(1);
   }
 }
@@ -60,6 +67,9 @@ const defaultAllowedOrigins = [
   "https://www.agroz.uz",
   "https://admin.agroz.uz",
   "https://business.agroz.uz",
+  "https://biznesgo.agroz.uz",
+  "https://biznesgo.uz",
+  "https://www.biznesgo.uz",
   "https://biznesgo.vercel.app",
 ];
 
@@ -70,6 +80,9 @@ const envOrigins = [
   process.env.FRONTEND_URL,
   process.env.ADMIN_URL,
   process.env.BUSINESS_URL,
+  process.env.BIZNESGO_URL,
+  process.env.BIZNESGO_MINI_APP_URL,
+  process.env.NEXT_PUBLIC_BIZNESGO_MINI_APP_URL,
   process.env.NEXT_PUBLIC_APP_URL,
 ]
   .filter(Boolean)
@@ -91,11 +104,17 @@ function isAllowedOrigin(origin: string): boolean {
       host === "127.0.0.1" ||
       host === "agroz.uz" ||
       host.endsWith(".agroz.uz") ||
+      host === "biznesgo.uz" ||
+      host.endsWith(".biznesgo.uz") ||
       host.endsWith(".vercel.app") ||
       host.endsWith(".up.railway.app") ||
       host.endsWith(".railway.app") ||
       host.endsWith(".onrender.com") ||
-      host.endsWith(".telegram.org")
+      host.endsWith(".telegram.org") ||
+      host.endsWith(".loca.lt") ||
+      host.endsWith(".ngrok-free.app") ||
+      host.endsWith(".ngrok.io") ||
+      host.endsWith(".trycloudflare.com")
     ) {
       return true;
     }
@@ -133,15 +152,22 @@ app.use(
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
-// Oddiy so'rov loglash
+// Oddiy so'rov loglash (query parametrlari olib tashlanadi — maxfiy ma'lumotlar logga tushmasligi uchun)
 app.use((req, _res, next) => {
   if (process.env.NODE_ENV !== "test") {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    const safePath = (req.originalUrl || req.url || "").split("?")[0];
+    console.log(`[${new Date().toISOString()}] ${req.method} ${safePath}`);
   }
   next();
 });
 
-// API Marshrutlari
+// Ajratilgan modul yo'llari (AgrozGO, BiznesGO, Admin)
+app.use("/api/agrozgo", agrozgoRouter);
+app.use("/api/biznesgo", biznesgoRouter);
+app.use("/api/bot/partner", biznesgoRouter);
+
+// API Marshrutlari va Healthcheck (/health va /api/health)
+app.use("/health", healthRouter);
 app.use("/api/health", healthRouter);
 app.use("/api/specialists", specialistsRouter);
 app.use("/api/orders", ordersRouter);
@@ -185,9 +211,12 @@ app.listen(PORT, async () => {
   // Bazadagi yetishmayotgan ustun va jadvallarni avtomatik yaratish/sinxronlash
   await ensureSchema();
 
-  // Telegram Mini App launch nomini va menyu tugmasini AgrozGO deb sinxronlash
+  // Telegram Mini App launch nomini va menyu tugmalarini sinxronlash
   import("./lib/telegram-bot.js")
-    .then(({ setAgrozGoMenuButton }) => setAgrozGoMenuButton())
+    .then(({ setAgrozGoMenuButton, setBiznesGoMenuButton }) => {
+      setAgrozGoMenuButton().catch(() => {});
+      setBiznesGoMenuButton().catch(() => {});
+    })
     .catch(() => {});
 
   // 30 daqiqadan ortiq "yangi" holatda qolgan buyurtmalar uchun yagona eslatma tekshiruvi (har 2 daqiqada)

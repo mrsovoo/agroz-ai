@@ -46,6 +46,8 @@ export function getEnvAdminPassword(): string {
 
   const standard =
     process.env.ADMIN_PASSWORD ||
+    process.env.ADMIN_TOKEN ||
+    process.env.ADMIN_SECRET ||
     process.env.admin_password ||
     process.env["admin password"];
   if (standard && standard.trim()) return standard.trim();

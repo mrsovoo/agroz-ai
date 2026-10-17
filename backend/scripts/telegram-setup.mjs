@@ -57,12 +57,17 @@ const setting = (key, envValue) => (dbSettings[key] || envValue || "").trim();
 
 const mainToken = setting("telegram_bot_token", process.env.TELEGRAM_BOT_TOKEN);
 const authToken = setting("telegram_auth_bot_token", process.env.TELEGRAM_AUTH_BOT_TOKEN);
+const biznesToken = setting("biznesgo_bot_token", process.env.BIZNESGO_BOT_TOKEN);
+const biznesSecret = process.env.BIZNESGO_WEBHOOK_SECRET?.trim() || mainSecret;
+const biznesMiniAppUrl =
+  process.env.BIZNESGO_MINI_APP_URL?.trim()?.replace(/\/+$/, "") ||
+  "https://biznesgo.agroz.uz";
 
 if (!webhookBaseUrl || !webhookBaseUrl.startsWith("https://")) {
   console.error("✗ BACKEND_PUBLIC_URL noto'g'ri yoki HTTPS emas:", webhookBaseUrl);
   process.exit(1);
 }
-if (!mainToken && !authToken) {
+if (!mainToken && !authToken && !biznesToken) {
   console.error(
     "✗ Hech bo'lmaganda bitta bot tokeni kerak (env yoki admin panel orqali kiritilgan).",
   );
@@ -175,5 +180,50 @@ async function setupAuthBot() {
   });
 }
 
+async function setupBiznesGoBot() {
+  if (!biznesToken) {
+    console.warn("⚠️  BiznesGO bot tokeni yo'q (BIZNESGO_BOT_TOKEN) — BiznesGO bot sozlanmadi.");
+    return;
+  }
+  const call = makeCall(biznesToken);
+
+  const me = await call("getMe");
+  console.log(`✓ BiznesGO bot: @${me.username} — ${me.first_name}`);
+
+  const webhookUrl = `${webhookBaseUrl}/api/biznesgo/telegram/webhook`;
+  await call("setWebhook", {
+    url: webhookUrl,
+    allowed_updates: ["message", "callback_query"],
+    ...(biznesSecret ? { secret_token: biznesSecret } : {}),
+  });
+  console.log(`✓ BiznesGO webhook: ${webhookUrl}`);
+
+  await call("setMyCommands", {
+    commands: [
+      { command: "start", description: "Boshlash / Boshqaruv panelini ochish" },
+      { command: "profil", description: "Do'kon ma'lumotlarini ko'rish" },
+      { command: "yordam", description: "BiznesGO haqida ma'lumot va yordam" },
+    ],
+  });
+  console.log("✓ BiznesGO bot buyruqlari o'rnatildi: /start, /profil, /yordam");
+
+  try {
+    await call("setChatMenuButton", {
+      menu_button: { type: "web_app", text: "BiznesGO", web_app: { url: biznesMiniAppUrl } },
+    });
+    console.log("✓ BiznesGO menyu tugmasi Mini Appga ulandi:", biznesMiniAppUrl);
+  } catch (err) {
+    console.warn("⚠️  BiznesGO menyu tugmasini o'rnatib bo'lmadi:", err.message);
+  }
+
+  const info = await call("getWebhookInfo");
+  console.log("ℹ️  BiznesGO bot holati:", {
+    url: info.url,
+    pending: info.pending_update_count,
+    lastError: info.last_error_message ?? null,
+  });
+}
+
 await setupMainBot();
 await setupAuthBot();
+await setupBiznesGoBot();

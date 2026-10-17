@@ -333,7 +333,22 @@ export function pendingApprovalMenuKeyboard(): ReplyKeyboard {
 /** Profilni ko'rish va to'g'ridan-to'g'ri tahrirlash klaviaturasi. */
 export function profileKeyboard(s: { role: string; name: string; isApproved?: boolean }): InlineKeyboard {
   const isPharmacy = s.role === "pharmacy";
+  const biznesBotUsername = (process.env.BIZNESGO_BOT_USERNAME || "biznesgo_bot").replace(/^@/, "");
+  const biznesAppUrl = (
+    process.env.BIZNESGO_MINI_APP_URL ||
+    process.env.NEXT_PUBLIC_BIZNESGO_MINI_APP_URL ||
+    "https://biznesgo.vercel.app"
+  ).replace(/\/+$/, "");
+
   const rows: InlineKeyboard["inline_keyboard"] = [
+    [
+      biznesAppUrl.startsWith("https://")
+        ? { text: "🚀 BiznesGO Boshqaruv Paneli", web_app: { url: biznesAppUrl } }
+        : { text: `🚀 BiznesGO (@${biznesBotUsername})`, url: `https://t.me/${biznesBotUsername}` },
+    ],
+    [
+      { text: `🤖 @${biznesBotUsername} botiga o'tish`, url: `https://t.me/${biznesBotUsername}` },
+    ],
     [
       { text: "✏️ Ismni o'zgartirish", callback_data: "ed:name" },
       { text: "📞 Telefonni o'zgartirish", callback_data: "ed:phone" },

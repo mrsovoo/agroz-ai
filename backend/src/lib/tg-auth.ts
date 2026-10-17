@@ -47,3 +47,33 @@ export function verifyInitData(
 
   return true;
 }
+
+export const verifyTelegramWebAppData = verifyInitData;
+
+export function extractVerifiedTelegramUser(
+  initData: string,
+  botToken: string,
+  maxAgeSeconds: number = INIT_DATA_MAX_AGE_SECONDS,
+): { id: number; telegramId: string; first_name?: string; last_name?: string; username?: string } | null {
+  if (!verifyTelegramWebAppData(initData, botToken, maxAgeSeconds)) {
+    return null;
+  }
+  try {
+    const params = new URLSearchParams(initData);
+    const userRaw = params.get("user");
+    if (!userRaw) return null;
+    const parsed = JSON.parse(userRaw);
+    const id = Number(parsed?.id);
+    if (!Number.isSafeInteger(id) || id <= 0) return null;
+    return {
+      id,
+      telegramId: String(id),
+      first_name: parsed.first_name,
+      last_name: parsed.last_name,
+      username: parsed.username,
+    };
+  } catch {
+    return null;
+  }
+}
+

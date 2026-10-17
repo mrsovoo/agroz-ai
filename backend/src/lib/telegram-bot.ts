@@ -8,7 +8,7 @@
  * env'dagi qiymatdan ustun turadi.
  */
 
-import { telegramBotToken } from "@/lib/settings";
+import { telegramBotToken } from "./settings.js";
 
 const API_BASE = "https://api.telegram.org";
 
@@ -139,6 +139,50 @@ export async function setAgrozGoMenuButton(chatId?: number): Promise<boolean> {
   }
   const res = await callBot("setChatMenuButton", payload);
   return res !== null;
+}
+
+/** BiznesGO Mini App manzili (Mini App tugmasi uchun). */
+export function biznesGoMiniAppUrl(): string {
+  const raw =
+    process.env.BIZNESGO_MINI_APP_URL?.trim() ||
+    process.env.NEXT_PUBLIC_BIZNESGO_MINI_APP_URL?.trim() ||
+    process.env.BIZNESGO_URL?.trim() ||
+    process.env.NEXT_PUBLIC_BIZNESGO_URL?.trim();
+  if (raw) return raw.replace(/\/+$/, "");
+  return process.env.NODE_ENV === "production" ? "https://biznesgo.uz" : "http://localhost:3002";
+}
+
+/** Telegram botda BiznesGO ochish tugmasini o'rnatish */
+export async function setBiznesGoMenuButton(chatId?: number): Promise<boolean> {
+  try {
+    const { getBiznesGoBotToken } = await import("./biznesgo-auth.js");
+    const token = getBiznesGoBotToken();
+    if (!token) return false;
+    const url = biznesGoMiniAppUrl();
+    if (!url.startsWith("https://")) {
+      // Telegram faqat HTTPS havolalarni web_app menyusi sifatida qabul qiladi
+      return false;
+    }
+    const payload: Record<string, unknown> = {
+      menu_button: {
+        type: "web_app",
+        text: "BiznesGO’ni ochish",
+        web_app: { url },
+      },
+    };
+    if (chatId) {
+      payload.chat_id = chatId;
+    }
+    const res = await fetch(`https://api.telegram.org/bot${token}/setChatMenuButton`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const json = (await res.json()) as { ok?: boolean };
+    return Boolean(json?.ok);
+  } catch {
+    return false;
+  }
 }
 
 /** `@agroz_auth_bot` username (ro'yxatdan o'tish havolasi uchun). */

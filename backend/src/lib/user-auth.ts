@@ -45,8 +45,12 @@ export async function getUserFromReq(req: any): Promise<typeof users.$inferSelec
     try {
       const s = (await db.select().from(sessions).where(eq(sessions.id, sessionId)).limit(1))[0];
       if (s) {
-        const u = (await db.select().from(users).where(eq(users.id, s.userId)).limit(1))[0];
-        if (u) return u;
+        if (s.expiresAt && s.expiresAt <= new Date()) {
+          await db.delete(sessions).where(eq(sessions.id, s.id)).catch(() => {});
+        } else {
+          const u = (await db.select().from(users).where(eq(users.id, s.userId)).limit(1))[0];
+          if (u) return u;
+        }
       }
     } catch (e) {
       console.error("[user-auth] session lookup error:", e);

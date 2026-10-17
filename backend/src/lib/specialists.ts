@@ -136,6 +136,12 @@ export async function upsertSpecialist(input: SpecialistInput & { isApproved?: b
     .values(values)
     .onConflictDoUpdate({ target: specialists.telegramId, set: values })
     .returning();
+
+  // BiznesGO jadvaliga avtomatik sinxronlash (@agroz_auth_bot -> @biznesgo_bot)
+  import("./biznesgo-auth.js")
+    .then(({ findOrSyncMerchantByTelegramId }) => findOrSyncMerchantByTelegramId(input.telegramId))
+    .catch(() => {});
+
   return rows[0];
 }
 
@@ -153,6 +159,11 @@ export async function updateSpecialistFields(
     .set(values)
     .where(eq(specialists.telegramId, telegramId))
     .returning();
+
+  import("./biznesgo-auth.js")
+    .then(({ findOrSyncMerchantByTelegramId }) => findOrSyncMerchantByTelegramId(telegramId))
+    .catch(() => {});
+
   return rows[0] ?? null;
 }
 

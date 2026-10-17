@@ -743,7 +743,11 @@ async function handleCommand(
       // Shaxsiy sessiya tokeni yaratamiz
       const sessionToken = `biz_${randomBytes(24).toString("hex")}`;
       if (user) {
-        await db.insert(sessions).values({ id: sessionToken, userId: user.id });
+        await db.insert(sessions).values({
+          id: sessionToken,
+          userId: user.id,
+          expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        });
       }
 
       const base = partnerMiniappUrl();
@@ -1136,7 +1140,11 @@ async function handleIndependentCallback(
     // Sessiya yaratamiz
     const sessionToken = `biz_${randomBytes(24).toString("hex")}`;
     if (user) {
-      await db.insert(sessions).values({ id: sessionToken, userId: user.id });
+      await db.insert(sessions).values({
+        id: sessionToken,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      });
     }
     try {
       const { partnerTokenToSpecId } = await import("@/routes/bot");

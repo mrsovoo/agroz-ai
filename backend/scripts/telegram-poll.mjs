@@ -36,11 +36,28 @@ const bots = [
     secret: process.env.TELEGRAM_AUTH_WEBHOOK_SECRET?.trim() || sharedSecret,
     updates: ["message", "callback_query"],
   },
+  {
+    name: "BiznesGO bot",
+    token: process.env.BIZNESGO_BOT_TOKEN?.trim(),
+    path: "/api/biznesgo/webhook",
+    secret: process.env.BIZNESGO_WEBHOOK_SECRET?.trim() || sharedSecret,
+    updates: ["message", "callback_query"],
+  },
 ].filter((b) => b.token);
 
-if (bots.length === 0) {
+// Takroriy tokenlar bo'lsa bittasini qoldiramiz (Telegram 409 Conflict bermasligi uchun)
+const uniqueBots = [];
+const seenTokens = new Set();
+for (const b of bots) {
+  if (b.token && !seenTokens.has(b.token)) {
+    seenTokens.add(b.token);
+    uniqueBots.push(b);
+  }
+}
+
+if (uniqueBots.length === 0) {
   console.error(
-    "✗ Hech qanday bot tokeni topilmadi. .env ga TELEGRAM_AUTH_BOT_TOKEN (va kerak bo'lsa TELEGRAM_BOT_TOKEN) qo'ying.",
+    "✗ Hech qanday bot tokeni topilmadi. .env ga BIZNESGO_BOT_TOKEN, TELEGRAM_AUTH_BOT_TOKEN yoki TELEGRAM_BOT_TOKEN qo'ying.",
   );
   process.exit(1);
 }
@@ -120,7 +137,7 @@ async function runBot(bot) {
 
 console.log(`🤖 Polling rejimi. Ilova manzili: ${appUrl}\n`);
 try {
-  await Promise.all(bots.map((bot) => runBot(bot)));
+  await Promise.all(uniqueBots.map((bot) => runBot(bot)));
 } catch (err) {
   console.error("✗ Polling to'xtadi:", err.message);
   process.exit(1);

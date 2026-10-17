@@ -19,7 +19,7 @@ import { BOT_OTP_TTL_MINUTES, OTP_LENGTH, OTP_TTL_MINUTES } from "../lib/constan
 import { telegramBotToken } from "../lib/settings.js";
 import { rateLimit, RATE_LIMITS } from "../lib/rate-limit.js";
 import { purgeUserAccount } from "../lib/user-auth.js";
-import { isAllowUnverifiedTelegramAllowed } from "../lib/security-flags.js";
+import { isAllowUnverifiedTelegramAllowed, createSessionExpiryDate } from "../lib/security-flags.js";
 
 const router = Router();
 
@@ -258,6 +258,7 @@ router.post("/verify", verifyCodeLimiter, async (req, res) => {
     await db.insert(sessions).values({
       id: sessionId,
       userId: user.id,
+      expiresAt: createSessionExpiryDate(),
     });
 
     res.cookie("agroai_session", sessionId, {
@@ -412,6 +413,7 @@ router.post("/telegram", async (req, res) => {
     await db.insert(sessions).values({
       id: sessionId,
       userId: user.id,
+      expiresAt: createSessionExpiryDate(),
     });
 
     res.cookie("agroai_session", sessionId, {
@@ -496,7 +498,7 @@ router.get("/poll-telegram-login", async (req, res) => {
         .where(eq(sessions.id, sessionId))
         .limit(1);
 
-      if (sessionRows[0]) {
+      if (sessionRows[0] && (!sessionRows[0].expiresAt || sessionRows[0].expiresAt > new Date())) {
         const userRows = await db
           .select()
           .from(users)
@@ -555,6 +557,7 @@ router.post("/quick-login", async (req, res) => {
     await db.insert(sessions).values({
       id: sessionId,
       userId: user.id,
+      expiresAt: createSessionExpiryDate(),
     });
 
     res.cookie("agroai_session", sessionId, {

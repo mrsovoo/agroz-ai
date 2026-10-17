@@ -6,7 +6,7 @@ ENV NODE_ENV=production
 ENV PORT=4000
 
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 COPY tsconfig.json ./
 COPY src ./src

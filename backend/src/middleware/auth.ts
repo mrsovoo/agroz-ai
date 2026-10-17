@@ -61,10 +61,14 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
     if (sessionId) {
       const s = await db.select().from(sessions).where(eq(sessions.id, sessionId as string)).limit(1);
       if (s.length > 0) {
-        const u = await db.select().from(users).where(eq(users.id, s[0].userId)).limit(1);
-        if (u.length > 0) {
-          (req as any).user = u[0];
-          return next();
+        if (s[0].expiresAt && s[0].expiresAt <= new Date()) {
+          await db.delete(sessions).where(eq(sessions.id, s[0].id)).catch(() => {});
+        } else {
+          const u = await db.select().from(users).where(eq(users.id, s[0].userId)).limit(1);
+          if (u.length > 0) {
+            (req as any).user = u[0];
+            return next();
+          }
         }
       }
     }
@@ -108,24 +112,31 @@ export const requireTelegramAuth = (botKind: "user" | "business") => {
       if (tokenStr) {
         const sessionRows = await db.select().from(sessions).where(eq(sessions.id, tokenStr)).limit(1);
         if (sessionRows[0]) {
-          const userRows = await db.select().from(users).where(eq(users.id, sessionRows[0].userId)).limit(1);
-          if (userRows[0]) {
-            (req as any).webUser = userRows[0];
+          if (sessionRows[0].expiresAt && sessionRows[0].expiresAt <= new Date()) {
+            await db.delete(sessions).where(eq(sessions.id, tokenStr)).catch(() => {});
+            if (!(req as any).telegramUser) {
+              return res.status(401).json({ ok: false, error: "Sessiya muddati tugagan. Iltimos, qaytadan kiring" });
+            }
+          } else {
+            const userRows = await db.select().from(users).where(eq(users.id, sessionRows[0].userId)).limit(1);
+            if (userRows[0]) {
+              (req as any).webUser = userRows[0];
+            }
           }
         }
       }
 
       if (!(req as any).telegramUser && !(req as any).webUser) {
-        return res.status(401).json({ error: "Avtorizatsiya xatosi (Telegram/Web Token)" });
+        return res.status(401).json({ ok: false, error: "Avtorizatsiya xatosi (Telegram/Web Token)" });
       }
       return next();
     } catch (e) {
-      return res.status(401).json({ error: "Tekshiruv xatosi" });
+      return res.status(401).json({ ok: false, error: "Tekshiruv xatosi" });
     }
   };
 };
 
-export const requireRole = (allowedRoles: ("specialist" | "pharmacy" | "admin")[]) => {
+export const requireRole = (allowedRoles: ("specialist" | "pharmacy" | "both" | "admin")[]) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (allowedRoles.includes("admin")) {
@@ -139,29 +150,55 @@ export const requireRole = (allowedRoles: ("specialist" | "pharmacy" | "admin")[
         }
       }
 
-      if (allowedRoles.includes("specialist") || allowedRoles.includes("pharmacy")) {
+      if (allowedRoles.includes("specialist") || allowedRoles.includes("pharmacy") || allowedRoles.includes("both")) {
         const tgId = (req as any).telegramUser?.id || (req as any).webUser?.telegramId;
         const webPhone = (req as any).webUser?.phone;
         const conditions = [];
         if (tgId) conditions.push(eq(specialists.telegramId, Number(tgId)));
         if (webPhone) conditions.push(eq(specialists.phone, String(webPhone)));
         if (conditions.length > 0) {
-          const spec = await db
+          const specRows = await db
             .select()
             .from(specialists)
             .where(and(or(...conditions), eq(specialists.isActive, true)))
             .limit(1);
-          if (spec.length > 0) {
-            (req as any).specialist = spec[0];
+          const spec = specRows[0];
+          if (spec && !spec.botBlocked) {
+            const roleAllowed =
+              spec.role === "both"
+                ? allowedRoles.includes("pharmacy") || allowedRoles.includes("specialist") || allowedRoles.includes("both")
+                : allowedRoles.includes(spec.role as any);
+
+            if (!roleAllowed) {
+              return res.status(403).json({ ok: false, error: "Ruxsat etilmagan rol" });
+            }
+
+            // Boshqa partnerId'ga tegishli resursga kirishni 403 bilan bloklash
+            const requestedPartnerId =
+              req.params?.partnerId ?? req.body?.partnerId ?? req.query?.partnerId;
+            if (
+              requestedPartnerId !== undefined &&
+              requestedPartnerId !== null &&
+              String(requestedPartnerId).trim() !== "" &&
+              Number(requestedPartnerId) !== spec.id
+            ) {
+              return res.status(403).json({
+                ok: false,
+                error: "Boshqa hamkorga tegishli resursga kirish taqiqlangan",
+              });
+            }
+
+            (req as any).specialist = spec;
             return next();
           }
         }
       }
-      return res.status(403).json({ error: "Ruxsat etilmagan rol" });
+      return res.status(403).json({ ok: false, error: "Ruxsat etilmagan rol" });
     } catch (e) {
-      return res.status(500).json({ error: "Rol tekshiruvi xatosi" });
+      return res.status(500).json({ ok: false, error: "Rol tekshiruvi xatosi" });
     }
   };
 };
 
 export const requireAdmin = requireRole(["admin"]);
+

@@ -163,3 +163,63 @@ test('Dual bot separation rules: Bot usernames and database targets', () => {
   assert.strictEqual(roles.specialist.bot, 'agroz_auth_bot');
   assert.strictEqual(roles.pharmacy.bot, 'agroz_auth_bot');
 });
+
+test('extractVerifiedTelegramUser: extracts telegramId only when HMAC signature is valid', async () => {
+  const { verifyTelegramWebAppData, extractVerifiedTelegramUser } = await import('../dist/lib/tg-auth.js');
+  const token = '123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11';
+  const now = Math.floor(Date.now() / 1000);
+  const userObj = { id: 5544332211, first_name: 'Sardor', username: 'sardor_agro' };
+  const rawParams = {
+    auth_date: String(now),
+    query_id: 'AAHdF6IQAAAAAN0XohDhrOrc',
+    user: JSON.stringify(userObj),
+  };
+  const sortedKeys = Object.keys(rawParams).sort();
+  const dataCheckString = sortedKeys.map((k) => `${k}=${rawParams[k]}`).join('\n');
+  const validHash = computeTelegramInitDataHash(dataCheckString, token);
+  const validInitData = `auth_date=${rawParams.auth_date}&hash=${validHash}&query_id=${rawParams.query_id}&user=${encodeURIComponent(rawParams.user)}`;
+
+  assert.strictEqual(verifyTelegramWebAppData(validInitData, token, 86400), true);
+  const extracted = extractVerifiedTelegramUser(validInitData, token, 86400);
+  assert.ok(extracted);
+  assert.strictEqual(extracted.telegramId, '5544332211');
+
+  // Tampered initData must return null
+  const tamperedInitData = validInitData.replace('5544332211', '9999999999');
+  assert.strictEqual(extractVerifiedTelegramUser(tamperedInitData, token, 86400), null);
+});
+
+test('evaluatePartnerAccess: enforces role and blocks cross-partnerId access (403)', async () => {
+  const { evaluatePartnerAccess } = await import('../dist/lib/security-flags.js');
+
+  // 1. Authenticated pharmacy accessing own partnerId -> allowed (200)
+  const ownRes = evaluatePartnerAccess({
+    allowedRoles: ['specialist', 'pharmacy'],
+    specialistRole: 'pharmacy',
+    specialistId: 100,
+    requestedPartnerId: 100,
+  });
+  assert.strictEqual(ownRes.allowed, true);
+  assert.strictEqual(ownRes.status, 200);
+
+  // 2. Authenticated pharmacy attempting to access another partnerId -> 403 Forbidden
+  const crossRes = evaluatePartnerAccess({
+    allowedRoles: ['specialist', 'pharmacy'],
+    specialistRole: 'pharmacy',
+    specialistId: 100,
+    requestedPartnerId: 999,
+  });
+  assert.strictEqual(crossRes.allowed, false);
+  assert.strictEqual(crossRes.status, 403);
+
+  // 3. Farmer role attempting to access partner endpoint -> 403 Forbidden
+  const farmerRes = evaluatePartnerAccess({
+    allowedRoles: ['specialist', 'pharmacy'],
+    specialistRole: 'farmer',
+    specialistId: 100,
+  });
+  assert.strictEqual(farmerRes.allowed, false);
+  assert.strictEqual(farmerRes.status, 403);
+});
+
+
