@@ -628,7 +628,7 @@ async function handleCommand(
         return;
       }
 
-      const spec = await findSpecialistByPhoneOrLogin(row.phone);
+      const spec = await findSpecialistByPhoneOrLogin(row.phone, true);
       if (!spec) {
         await sendAuthMessage(chatId, `⚠️ Hamkor ma'lumotlari topilmadi.`);
         return;
@@ -646,8 +646,11 @@ async function handleCommand(
       const s = (await db.select().from(specialists).where(eq(specialists.telegramId, telegramId)).limit(1))[0];
       if (s?.phone) knownTgPhone = s.phone;
 
-      // Agar hali Telegram telefon raqami ma'lum bo'lmasa, kontakt yuborishni so'raymiz
-      if (!knownTgPhone) {
+      const tgPhone = knownTgPhone ? normalizePhone(knownTgPhone) : null;
+      const webPhone = normalizePhone(row.phone);
+
+      // Agar Telegram raqami hali ma'lum bo'lmasa yoki arizadagi raqamga to'g'ri kelmasa, kontakt yuborishni so'raymiz
+      if (!tgPhone || tgPhone !== webPhone) {
         await setState(telegramId, "verify_reg_phone", {
           token: payload,
           expectedPhone: row.phone,
@@ -656,8 +659,9 @@ async function handleCommand(
         await sendAuthMessage(
           chatId,
           `👋 <b>Assalomu alaykum, ${escapeHtml(spec.name || firstName || "Hamkor")}!</b>\n\n` +
-          `Agroz Business arizangizni tasdiqlash uchun Telegram hisobingiz telefon raqamini tasdiqlash lozim.\n\n` +
-          `Pastdagi <b>«📱 Raqamni yuborish»</b> tugmasini bosing:`,
+          `Siz Agroz Business tizimida <b>${escapeHtml(row.phone)}</b> raqami bilan ro'yxatdan o'tish arizasini topshirdingiz.\n\n` +
+          `Xavfsizlik va profilingizni tasdiqlash uchun Telegram hisobingiz telefon raqamini tekshirishimiz zarur.\n\n` +
+          `Iltimos, pastdagi <b>«📱 Raqamni yuborish»</b> tugmasini bosing:`,
           {
             replyKeyboard: {
               keyboard: [[{ text: "📱 Raqamni yuborish", request_contact: true }]],
@@ -665,21 +669,6 @@ async function handleCommand(
               one_time_keyboard: true,
             },
           }
-        );
-        return;
-      }
-
-      // Agar telefon ma'lum bo'lsa, mosligini tekshiramiz
-      const tgPhone = normalizePhone(knownTgPhone);
-      const webPhone = normalizePhone(row.phone);
-
-      if (tgPhone !== webPhone) {
-        await sendAuthMessage(
-          chatId,
-          `❌ <b>Telegram va telefon raqami boshqa!</b>\n\n` +
-          `Siz arizada <b>${escapeHtml(row.phone)}</b> raqamini kiritgansiz, lekin ushbu Telegram profilingiz raqami: <b>${escapeHtml(knownTgPhone)}</b>.\n\n` +
-          `Xavfsizlik talablariga ko'ra, biznes kabinet faqat arizada kiritilgan telefon raqami ulangan Telegram orqali ochiladi.\n\n` +
-          `Iltimos, aynan <b>${escapeHtml(row.phone)}</b> raqamingizga ochilgan Telegram hisobidan botga kiring yoki arizani to'g'ri raqam bilan to'ldiring.`
         );
         return;
       }
@@ -1108,7 +1097,7 @@ async function handleIndependentCallback(
       return true;
     }
 
-    const spec = await findSpecialistByPhoneOrLogin(row.phone);
+    const spec = await findSpecialistByPhoneOrLogin(row.phone, true);
     if (!spec) {
       await answerCallbackQuery(query.id, "Hamkor profili topilmadi.");
       return true;
@@ -3749,7 +3738,7 @@ async function handleContact(
     const expectedPhone = normalizePhone(state.draft.expectedPhone || "");
     const token = state.draft.token;
     const row = token ? (await db.select().from(otpCodes).where(eq(otpCodes.token, token)).limit(1))[0] : null;
-    const spec = await findSpecialistByPhoneOrLogin(state.draft.expectedPhone || "");
+    const spec = await findSpecialistByPhoneOrLogin(state.draft.expectedPhone || "", true);
 
     // Users jadvalida telefonni saqlaymiz
     if (tgPhone) {

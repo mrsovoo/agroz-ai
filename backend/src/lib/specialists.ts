@@ -264,7 +264,7 @@ export async function getSpecialistByTelegramId(telegramId: number) {
  * Telefon raqami yoki Login bo'yicha hamkorni bazadan topish (turli formatlarni to'g'ri tushunadi).
  * Eng oxirgi (eng yangi) profilni birinchi tanlaydi.
  */
-export async function findSpecialistByPhoneOrLogin(query: string) {
+export async function findSpecialistByPhoneOrLogin(query: string, includeInactive = false) {
   const target = String(query || "").trim();
   if (!target) return null;
 
@@ -273,21 +273,22 @@ export async function findSpecialistByPhoneOrLogin(query: string) {
   const last9 = digits.slice(-9);
   const standardPhone = digits.length >= 9 ? `+998${last9}` : null;
 
+  const phoneConditions = or(
+    eq(specialists.login, cleanSlug),
+    standardPhone ? eq(specialists.phone, standardPhone) : sql`false`,
+    digits.length >= 9 ? eq(specialists.phone, `998${last9}`) : sql`false`,
+    digits.length >= 9 ? eq(specialists.phone, last9) : sql`false`,
+    digits.length >= 9 ? sql`replace(replace(${specialists.phone}, '+', ''), ' ', '') LIKE ${'%' + last9}` : sql`false`
+  );
+
+  const whereClause = includeInactive
+    ? phoneConditions
+    : and(phoneConditions, eq(specialists.isActive, true));
+
   const rows = await db
     .select()
     .from(specialists)
-    .where(
-      and(
-        or(
-          eq(specialists.login, cleanSlug),
-          standardPhone ? eq(specialists.phone, standardPhone) : sql`false`,
-          digits.length >= 9 ? eq(specialists.phone, `998${last9}`) : sql`false`,
-          digits.length >= 9 ? eq(specialists.phone, last9) : sql`false`,
-          digits.length >= 9 ? sql`replace(replace(${specialists.phone}, '+', ''), ' ', '') LIKE ${'%' + last9}` : sql`false`
-        ),
-        eq(specialists.isActive, true)
-      )
-    )
+    .where(whereClause)
     .orderBy(desc(specialists.id))
     .limit(1);
 

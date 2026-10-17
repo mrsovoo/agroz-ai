@@ -2429,7 +2429,7 @@ router.post("/partner/register-intent", async (req, res) => {
     const trialEndsAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
     // 1. specialists jadvalida mavjudligini tekshiramiz/yaratamiz
-    let spec = await findSpecialistByPhoneOrLogin(cleanPhone);
+    let spec = await findSpecialistByPhoneOrLogin(cleanPhone, true);
     if (spec && spec.botBlocked) {
       return res.status(403).json({
         ok: false,
@@ -2614,7 +2614,7 @@ router.post("/partner/verify-registration-code", async (req, res) => {
       return res.status(400).json({ ok: false, error: "8 xonali tasdiqlash ID kodi noto'g'ri kiritildi" });
     }
 
-    const spec = await findSpecialistByPhoneOrLogin(row.phone);
+    const spec = await findSpecialistByPhoneOrLogin(row.phone, true);
     if (!spec) {
       return res.status(404).json({ ok: false, error: "Hamkor profili topilmadi" });
     }
@@ -2699,7 +2699,7 @@ router.get("/partner/check-registration", async (req, res) => {
     }
 
     if (row.used) {
-      const spec = await findSpecialistByPhoneOrLogin(row.phone);
+      const spec = await findSpecialistByPhoneOrLogin(row.phone, true);
       let user = (await db.select().from(users).where(eq(users.phone, row.phone)).limit(1))[0];
       let sessionToken: string | null = null;
       if (user) {
