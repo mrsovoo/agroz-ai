@@ -6,7 +6,7 @@
 
 import { db } from "@/db";
 import { specialistMedicines, specialistRatings, specialists } from "@/db/schema";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, or, sql, desc } from "drizzle-orm";
 import { clampRadiusKm, distanceKm, roundKm } from "@/lib/geo";
 
 /**
@@ -258,6 +258,40 @@ export async function getSpecialistByTelegramId(telegramId: number) {
     .where(eq(specialists.telegramId, telegramId))
     .limit(1);
   return rows[0] ?? null;
+}
+
+/**
+ * Telefon raqami yoki Login bo'yicha hamkorni bazadan topish (turli formatlarni to'g'ri tushunadi).
+ * Eng oxirgi (eng yangi) profilni birinchi tanlaydi.
+ */
+export async function findSpecialistByPhoneOrLogin(query: string) {
+  const target = String(query || "").trim();
+  if (!target) return null;
+
+  const cleanSlug = target.toLowerCase().replace(/^@/, "");
+  const digits = target.replace(/\D/g, "");
+  const last9 = digits.slice(-9);
+  const standardPhone = digits.length >= 9 ? `+998${last9}` : null;
+
+  const rows = await db
+    .select()
+    .from(specialists)
+    .where(
+      and(
+        or(
+          eq(specialists.login, cleanSlug),
+          standardPhone ? eq(specialists.phone, standardPhone) : sql`false`,
+          digits.length >= 9 ? eq(specialists.phone, `998${last9}`) : sql`false`,
+          digits.length >= 9 ? eq(specialists.phone, last9) : sql`false`,
+          digits.length >= 9 ? sql`replace(replace(${specialists.phone}, '+', ''), ' ', '') LIKE ${'%' + last9}` : sql`false`
+        ),
+        eq(specialists.isActive, true)
+      )
+    )
+    .orderBy(desc(specialists.id))
+    .limit(1);
+
+  return rows[0] || null;
 }
 
 // ---------------------------------------------------------------------------

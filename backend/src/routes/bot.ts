@@ -18,13 +18,16 @@ import {
   googlePlayUrl,
 } from "../lib/settings.js";
 import { sendToSpecialist, sendToUser } from "../lib/bot-sender.js";
-import { addMedicine } from "../lib/specialists.js";
+import { addMedicine, findSpecialistByPhoneOrLogin } from "../lib/specialists.js";
 import { verifyInitData } from "../lib/tg-auth.js";
 import { cleanText, normalizePhone, parseSafePrice } from "../lib/validate.js";
 import { purgeUserAccount } from "../lib/user-auth.js";
 import { escapeHtml } from "../lib/tg-escape.js";
 import { randomBytes, randomInt } from "node:crypto";
 import { hashPassword, verifyPassword } from "../lib/password.js";
+
+// Token -> specialist.id tezkor xotira xaritasi (takroriy va chalkash qidiruvlarning oldini oladi)
+export const partnerTokenToSpecId = new Map<string, number>();
 
 const router = Router();
 const API_BASE = "https://api.telegram.org";
@@ -1645,29 +1648,23 @@ async function getPartnerFromReq(req: any): Promise<typeof specialists.$inferSel
     const authHeader = String(req.headers["authorization"] || req.headers["x-partner-token"] || "").trim();
     const tokenStr = authHeader.replace(/^Bearer\s+/i, "").trim();
     if (tokenStr) {
-      // Sessions jadvalidan qidirish
+      // 2a. Tezkor xotiradan (in-memory) aniqlash
+      const cachedPartnerId = partnerTokenToSpecId.get(tokenStr);
+      if (cachedPartnerId) {
+        const spec = (await db.select().from(specialists).where(eq(specialists.id, cachedPartnerId)).limit(1))[0];
+        if (spec && spec.isActive) return spec;
+      }
+
+      // 2b. Sessions jadvalidan qidirish
       const sessionRows = await db.select().from(sessions).where(eq(sessions.id, tokenStr)).limit(1);
       if (sessionRows[0]) {
         const userRows = await db.select().from(users).where(eq(users.id, sessionRows[0].userId)).limit(1);
         const u = userRows[0];
-        if (u) {
-          const conditions = [];
-          if (u.phone) {
-            const cleanUPhone = normalizePhone(u.phone) || u.phone;
-            const digits = cleanUPhone.replace(/\D/g, "");
-            const last9 = digits.slice(-9);
-            conditions.push(eq(specialists.phone, cleanUPhone));
-            if (digits.length >= 9) {
-              conditions.push(eq(specialists.phone, `+998${last9}`));
-              conditions.push(eq(specialists.phone, `998${last9}`));
-              conditions.push(eq(specialists.phone, last9));
-              conditions.push(sql`replace(replace(${specialists.phone}, '+', ''), ' ', '') LIKE ${'%' + last9}`);
-            }
-          }
-          if (u.telegramId) conditions.push(eq(specialists.telegramId, u.telegramId));
-          if (conditions.length > 0) {
-            const spec = (await db.select().from(specialists).where(and(or(...conditions), eq(specialists.isActive, true))).limit(1))[0];
-            if (spec) return spec;
+        if (u && u.phone) {
+          const spec = await findSpecialistByPhoneOrLogin(u.phone);
+          if (spec && spec.isActive) {
+            partnerTokenToSpecId.set(tokenStr, spec.id);
+            return spec;
           }
         }
       }
@@ -1714,35 +1711,6 @@ router.get("/partner/quick-list", async (_req, res) => {
   }
 });
 
-// Yordamchi: Telefon raqam yoki Login bo'yicha hamkorni bazadan topish
-async function findSpecialistByPhoneOrLogin(query: string) {
-  const target = String(query || "").trim();
-  if (!target) return null;
-
-  const digits = target.replace(/\D/g, "");
-  const last9 = digits.slice(-9);
-  const standardPhone = digits.length >= 9 ? `+998${last9}` : null;
-
-  return (
-    await db
-      .select()
-      .from(specialists)
-      .where(
-        and(
-          or(
-            eq(specialists.login, target.toLowerCase()),
-            standardPhone ? eq(specialists.phone, standardPhone) : sql`false`,
-            digits.length >= 9 ? eq(specialists.phone, `998${last9}`) : sql`false`,
-            digits.length >= 9 ? eq(specialists.phone, last9) : sql`false`,
-            digits.length >= 9 ? sql`replace(replace(${specialists.phone}, '+', ''), ' ', '') LIKE ${'%' + last9}` : sql`false`
-          ),
-          eq(specialists.isActive, true)
-        )
-      )
-      .limit(1)
-  )[0] || null;
-}
-
 function transliterateUzbek(text: string): string {
   const map: Record<string, string> = {
     а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "yo", ж: "j",
@@ -1761,8 +1729,9 @@ function transliterateUzbek(text: string): string {
 }
 
 // Yordamchi: Do'kon yoki mutaxassis nomidan kelib chiqib takrorlanmas login yaratish
-async function generateUniquePartnerLogin(nameOrOrg: string): Promise<string> {
-  const transliterated = transliterateUzbek(nameOrOrg || "");
+async function generateUniquePartnerLogin(nameOrOrg: string, additionalName?: string): Promise<string> {
+  const combined = [nameOrOrg, additionalName].filter(Boolean).join(" ");
+  const transliterated = transliterateUzbek(combined || "");
   let base = transliterated
     .replace(/['`ʻʼ]/g, "")
     .replace(/[^a-z0-9]/g, "_")
@@ -1785,16 +1754,19 @@ async function generateUniquePartnerLogin(nameOrOrg: string): Promise<string> {
     if (existing.length === 0) {
       return candidate;
     }
-    candidate = `${base}_${counter}`;
+    candidate = `${base.slice(0, 20)}_${counter}`;
     counter++;
   }
 }
 
-// GET /api/bot/partner/suggest-login (Do'kon nomiga qarab unikal login tavsiya qilish)
+// GET /api/bot/partner/suggest-login (Do'kon va ism nomiga qarab unikal login tavsiya qilish)
 router.get("/partner/suggest-login", async (req, res) => {
   try {
+    const org = String(req.query.org || "").trim();
     const name = String(req.query.name || "").trim();
-    const login = await generateUniquePartnerLogin(name || "agro_partner");
+    const fallback = String(req.query.fallback || "").trim();
+    const target = [org, name].filter(Boolean).join(" ") || fallback || "agro_partner";
+    const login = await generateUniquePartnerLogin(target);
     return res.json({ ok: true, login });
   } catch (err: any) {
     return res.status(500).json({ ok: false, error: err.message });
@@ -1978,6 +1950,7 @@ router.post("/partner/verify-login-otp", async (req, res) => {
 
     const sessionToken = `biz_${randomBytes(24).toString("hex")}`;
     await db.insert(sessions).values({ id: sessionToken, userId: user.id });
+    partnerTokenToSpecId.set(sessionToken, spec.id);
 
     return res.json({
       ok: true,
@@ -2029,6 +2002,7 @@ router.get("/partner/check-login-otp", async (req, res) => {
 
       const sessionToken = `biz_${randomBytes(24).toString("hex")}`;
       await db.insert(sessions).values({ id: sessionToken, userId: user.id });
+      partnerTokenToSpecId.set(sessionToken, spec.id);
 
       return res.json({
         ok: true,
@@ -2208,6 +2182,7 @@ router.post("/partner/reset-password", async (req, res) => {
 
     const sessionToken = `biz_${randomBytes(24).toString("hex")}`;
     await db.insert(sessions).values({ id: sessionToken, userId: user.id });
+    partnerTokenToSpecId.set(sessionToken, spec.id);
 
     return res.json({
       ok: true,
@@ -2256,6 +2231,7 @@ router.post("/partner/web-login", async (req, res) => {
 
       const sessionToken = `biz_${randomBytes(24).toString("hex")}`;
       await db.insert(sessions).values({ id: sessionToken, userId: user.id });
+      partnerTokenToSpecId.set(sessionToken, spec.id);
 
       return res.json({
         ok: true,
@@ -2335,6 +2311,7 @@ router.post("/partner/web-login", async (req, res) => {
 
     const sessionToken = `biz_${randomBytes(24).toString("hex")}`;
     await db.insert(sessions).values({ id: sessionToken, userId: user.id });
+    partnerTokenToSpecId.set(sessionToken, spec.id);
 
     return res.json({
       ok: true,
@@ -2421,19 +2398,12 @@ router.post("/partner/register-intent", async (req, res) => {
     const trialEndsAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
     // 1. specialists jadvalida mavjudligini tekshiramiz/yaratamiz
-    let spec = (await db.select().from(specialists).where(eq(specialists.phone, cleanPhone)).limit(1))[0];
-    if (spec && spec.passwordHash) {
-      return res.status(400).json({
-        ok: false,
-        alreadyRegistered: true,
-        error: `Ushbu telefon raqami (${cleanPhone}) bilan allaqachon ro'yxatdan o'tilgan. Tizimga kirish uchun «Kirish» tugmasini bosing yoki yangi biznes ochish uchun boshqa telefon raqam kiriting.`,
-      });
-    }
+    let spec = await findSpecialistByPhoneOrLogin(cleanPhone);
 
     // Login yaratish yoki tekshirish
     let finalLogin = String(req.body?.login || "").trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
     if (!finalLogin) {
-      finalLogin = spec?.login || (await generateUniquePartnerLogin(cleanOrg || cleanName));
+      finalLogin = spec?.login || (await generateUniquePartnerLogin(cleanOrg || cleanName, cleanName));
     } else {
       const existingLogin = await db.select({ id: specialists.id }).from(specialists).where(eq(specialists.login, finalLogin)).limit(1);
       if (existingLogin.length > 0 && (!spec || existingLogin[0].id !== spec.id)) {
@@ -2455,7 +2425,7 @@ router.post("/partner/register-intent", async (req, res) => {
           bio: cleanBio || spec.bio,
           helpsWith: cleanHelpsWith,
           role: targetRole,
-          login: finalLogin,
+          login: finalLogin || spec.login,
           passwordHash: passwordHashToSave || spec.passwordHash,
           isActive: true,
           isApproved: true,
@@ -2467,7 +2437,9 @@ router.post("/partner/register-intent", async (req, res) => {
         .where(eq(specialists.id, spec.id));
       spec = (await db.select().from(specialists).where(eq(specialists.id, spec.id)).limit(1))[0];
     } else {
-      const tempTgId = -(Math.floor(Date.now() / 1000) + Math.floor(Math.random() * 100000));
+      const minTgRow = (await db.select({ minTg: sql<number>`min(${specialists.telegramId})` }).from(specialists))[0];
+      const currentMin = minTgRow?.minTg != null && Number(minTgRow.minTg) < 0 ? Number(minTgRow.minTg) : -1000000;
+      const tempTgId = currentMin - (1 + Math.floor(Math.random() * 50));
       const [createdSpec] = await db
         .insert(specialists)
         .values({
@@ -2539,6 +2511,7 @@ router.post("/partner/register-intent", async (req, res) => {
     // 5. Web session token (To'g'ridan-to'g'ri kirish uchun)
     const sessionToken = `biz_${randomBytes(24).toString("hex")}`;
     await db.insert(sessions).values({ id: sessionToken, userId: user.id });
+    partnerTokenToSpecId.set(sessionToken, spec.id);
 
     // 6. Bot username va start havolasi
     const botUser = (await partnerBotUsername()) || "agroz_auth_bot";

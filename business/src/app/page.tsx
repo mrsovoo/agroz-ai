@@ -135,6 +135,13 @@ function transliterateToLogin(text: string): string {
     .slice(0, 24);
 }
 
+function generateDefaultPassword(): string {
+  const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const num = Math.floor(100 + Math.random() * 900);
+  const letter = letters[Math.floor(Math.random() * letters.length)];
+  return `Agro${letter}${num}!`;
+}
+
 type PartnerProfile = {
   id: number;
   name: string;
@@ -251,7 +258,7 @@ export default function PartnerKabinetPage() {
   const [regOrganization, setRegOrganization] = useState("");
   const [regLogin, setRegLogin] = useState("");
   const [regLoginIsManual, setRegLoginIsManual] = useState(false);
-  const [regPassword, setRegPassword] = useState("");
+  const [regPassword, setRegPassword] = useState(generateDefaultPassword);
   const [regConfirmPassword, setRegConfirmPassword] = useState("");
   const [regShowPassword, setRegShowPassword] = useState(false);
   const suggestTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -467,11 +474,11 @@ export default function PartnerKabinetPage() {
   // Ro'yxatdan o'tishda do'kon yoki hamkor nomiga qarab unikal login tavsiya qilish
   useEffect(() => {
     if (regLoginIsManual) return;
-    const target = regOrganization.trim() || regName.trim();
-    if (!target || target.length < 2) return;
+    const combined = [regOrganization.trim(), regName.trim()].filter(Boolean).join(" ");
+    if (!combined || combined.length < 2) return;
 
     // Real-vaqtda darhol transliteratsiya qilib beramiz
-    const localSlug = transliterateToLogin(target);
+    const localSlug = transliterateToLogin(combined);
     if (localSlug) {
       setRegLogin(localSlug);
     }
@@ -479,7 +486,9 @@ export default function PartnerKabinetPage() {
     if (suggestTimerRef.current) clearTimeout(suggestTimerRef.current);
     suggestTimerRef.current = setTimeout(async () => {
       try {
-        const res = await apiFetch(`/api/bot/partner/suggest-login?name=${encodeURIComponent(target)}`);
+        const res = await apiFetch(
+          `/api/bot/partner/suggest-login?name=${encodeURIComponent(regName.trim())}&org=${encodeURIComponent(regOrganization.trim())}`
+        );
         const data = await res.json();
         if (data?.ok && data.login) {
           setRegLogin(data.login);
@@ -2913,7 +2922,31 @@ export default function PartnerKabinetPage() {
                       <div>
                         <div className="flex items-center justify-between mb-1">
                           <label className="font-bold text-zinc-800">Maxfiy parol: *</label>
-                          <span className="text-[10px] text-zinc-500 font-semibold">Kamida 8 belgi</span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const p = generateDefaultPassword();
+                                setRegPassword(p);
+                                haptic("light");
+                              }}
+                              className="text-[10px] text-zinc-600 hover:text-black font-medium underline"
+                              title="Yangi xavfsiz parol generatsiya qilish"
+                            >
+                              Yangi parol 🎲
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard?.writeText(regPassword).catch(() => {});
+                                alert("Parol nusxalandi: " + regPassword);
+                              }}
+                              className="text-[10px] text-emerald-700 hover:text-emerald-900 font-bold underline"
+                              title="Parolni nusxalash"
+                            >
+                              Nusxalash 📋
+                            </button>
+                          </div>
                         </div>
                         <div className="relative">
                           <input
@@ -2922,17 +2955,18 @@ export default function PartnerKabinetPage() {
                             value={regPassword}
                             onChange={(e) => setRegPassword(e.target.value)}
                             placeholder="Kamida 8 ta belgi (harf+raqam)"
-                            className="w-full rounded-2xl border border-zinc-200 bg-white pl-3.5 pr-9 py-2 text-zinc-900 font-medium text-xs focus:border-black focus:outline-none"
+                            className="w-full rounded-2xl border border-zinc-200 bg-white pl-3.5 pr-9 py-2 text-zinc-900 font-mono font-medium text-xs focus:border-black focus:outline-none"
                           />
                           <button
                             type="button"
                             onClick={() => setRegShowPassword(!regShowPassword)}
                             className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700"
+                            title={regShowPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
                           >
                             {regShowPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                           </button>
                         </div>
-                        <div className="mt-1 flex items-center gap-1.5 text-[10px]">
+                        <div className="mt-1 flex items-center justify-between text-[10px]">
                           {regPassword.length === 0 ? (
                             <span className="text-zinc-400">Harf va raqam qatnashishi shart</span>
                           ) : regPassword.length < 8 || !/(?=.*[a-zA-Z])(?=.*[0-9])/.test(regPassword) ? (
@@ -2941,9 +2975,10 @@ export default function PartnerKabinetPage() {
                             </span>
                           ) : (
                             <span className="text-emerald-600 font-bold">
-                              ✓ Ishonchli va xavfsiz parol
+                              ✓ Avto tayyorlangan ishonchli parol
                             </span>
                           )}
+                          <span className="text-zinc-400 font-mono text-[9px]">Dastlabki parol tayyor</span>
                         </div>
                       </div>
                     </div>
@@ -3450,20 +3485,8 @@ export default function PartnerKabinetPage() {
           )}
         </nav>
 
-        {/* Sidebar pastki qismi: Profil almashuv, Tariflar, Chiqish */}
+        {/* Sidebar pastki qismi: Tariflar, Chiqish */}
         <div className="p-3 border-t border-[#E5E5EA] space-y-1.5 bg-[#FBFBFD]">
-          <button
-            type="button"
-            disabled={roleSwitching}
-            onClick={() => handleSwitchRole(partner?.role === "pharmacy" ? "specialist" : "pharmacy")}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-[11px] font-medium text-[#1D1D1F] bg-white border border-[#E5E5EA] hover:bg-[#F5F5F7] transition disabled:opacity-50"
-            title="Faoliyat rejimini almashtirish"
-          >
-            <span className="truncate">
-              {roleSwitching ? "O'zgartirilmoqda..." : partner?.role === "pharmacy" ? "Mutaxassis rejimi" : "Agro-do‘kon rejimi"}
-            </span>
-            <ChevronRight size={13} className="text-[#86868B] shrink-0" />
-          </button>
 
           <button
             type="button"

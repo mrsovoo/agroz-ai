@@ -19,6 +19,7 @@ import {
   deleteMedicine,
   deleteSpecialist,
   findPhoneOwner,
+  findSpecialistByPhoneOrLogin,
   getSpecialistByTelegramId,
   isSpecialistRole,
   listMedicines,
@@ -574,97 +575,111 @@ async function handleCommand(
   const command = parts[0].split("@")[0];
   const payload = parts.slice(1).join(" ").trim();
 
-  // Web formadan kelgan bir martalik ro'yxatdan o'tish yoki kirish tokeni (/start biz_reg_..., biz_login_..., biz_link_...)
+  // Web formadan kelgan bir martalik ro'yxatdan o'tish yoki kirish tokeni (/start biz_reg_..., biz_login_..., biz_partner_...)
   if (command === "/start" && payload && (payload.startsWith("biz_") || payload.startsWith("reg_"))) {
-    const row = (await db.select().from(otpCodes).where(eq(otpCodes.token, payload)).limit(1))[0];
-    if (row && row.expiresAt.getTime() > Date.now()) {
-      const spec = (await db.select().from(specialists).where(eq(specialists.phone, row.phone)).limit(1))[0];
-      if (spec) {
-        const trialEnd = spec.trialEndsAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-        // Profilni ushbu Telegram akkauntga bog'laymiz
+    let spec: typeof specialists.$inferSelect | null = null;
+    let linkingPhone: string | null = null;
+
+    if (payload.startsWith("biz_partner_")) {
+      const pId = Number(payload.replace("biz_partner_", ""));
+      if (pId > 0) {
+        spec = (await db.select().from(specialists).where(eq(specialists.id, pId)).limit(1))[0] || null;
+        if (spec) linkingPhone = spec.phone;
+      }
+    } else {
+      const row = (await db.select().from(otpCodes).where(eq(otpCodes.token, payload)).limit(1))[0];
+      if (row && row.expiresAt.getTime() > Date.now()) {
+        linkingPhone = row.phone;
+        spec = await findSpecialistByPhoneOrLogin(row.phone);
+        if (row.id) {
+          await db
+            .update(otpCodes)
+            .set({ used: true, telegramId, deliveredAt: new Date() })
+            .where(eq(otpCodes.id, row.id));
+        }
+      }
+    }
+
+    if (spec) {
+      const trialEnd = spec.trialEndsAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      const cleanPhone = normalizePhone(spec.phone) || spec.phone;
+
+      // Profilni ushbu Telegram akkauntga bog'laymiz
+      await db
+        .update(specialists)
+        .set({
+          telegramId,
+          phone: cleanPhone,
+          isActive: true,
+          isApproved: true,
+          botStartedAt: new Date(),
+          botBlocked: false,
+          trialEndsAt: trialEnd,
+        })
+        .where(eq(specialists.id, spec.id));
+
+      // Users jadvalida ham telegramId ni yangilaymiz
+      let user = (await db.select().from(users).where(eq(users.phone, cleanPhone)).limit(1))[0];
+      if (user) {
         await db
-          .update(specialists)
-          .set({
+          .update(users)
+          .set({ telegramId, botStartedAt: new Date(), botBlocked: false })
+          .where(eq(users.id, user.id));
+      } else {
+        const [created] = await db
+          .insert(users)
+          .values({
+            phone: cleanPhone,
+            name: spec.name,
             telegramId,
-            isActive: true,
-            isApproved: true,
             botStartedAt: new Date(),
             botBlocked: false,
-            trialEndsAt: trialEnd,
           })
-          .where(eq(specialists.id, spec.id));
-
-        // Users jadvalida ham telegramId ni yangilaymiz
-        let user = (await db.select().from(users).where(eq(users.phone, row.phone)).limit(1))[0];
-        if (user) {
-          await db
-            .update(users)
-            .set({ telegramId, botStartedAt: new Date(), botBlocked: false })
-            .where(eq(users.id, user.id));
-        } else {
-          const [created] = await db
-            .insert(users)
-            .values({
-              phone: row.phone,
-              name: spec.name,
-              telegramId,
-              botStartedAt: new Date(),
-              botBlocked: false,
-            })
-            .returning();
-          user = created;
-        }
-
-        // Tokenni tasdiqlangan deb belgilaymiz
-        await db
-          .update(otpCodes)
-          .set({
-            used: true,
-            telegramId,
-            deliveredAt: new Date(),
-          })
-          .where(eq(otpCodes.id, row.id));
-
-        // Shaxsiy sessiya tokeni yaratamiz
-        const sessionToken = `biz_${randomBytes(24).toString("hex")}`;
-        if (user) {
-          await db.insert(sessions).values({ id: sessionToken, userId: user.id });
-        }
-
-        const base = partnerMiniappUrl();
-        const appUrl = `${base}?token=${sessionToken}&phone=${encodeURIComponent(spec.phone)}`;
-        const isPharm = spec.role === "pharmacy";
-        const trialDateStr = trialEnd.toLocaleDateString("uz-UZ");
-
-        const welcomeText =
-          `🎉 <b>Assalomu alaykum, ${escapeHtml(spec.name)}!</b>\n\n` +
-          `${isPharm ? "🏪" : "👨‍⚕️"} <b>«${escapeHtml(spec.organization || spec.specialty || spec.name)}»</b> Agroz Business tizimida muvaffaqiyatli tasdiqlandi va Telegram botga ulandi!\n\n` +
-          `🎁 <b>1 Oylik Bepul Sinov:</b> <code>${escapeHtml(trialDateStr)}</code> gacha faol (tugashiga 5 kun qolganda shu bot orqali ogohlantirish yuboriladi).\n` +
-          `🌐 <b>Web manzil:</b> <code>${escapeHtml(base)}</code>\n` +
-          `📱 <b>Login (Telefon):</b> <code>${escapeHtml(spec.phone)}</code>\n\n` +
-          `Shaxsiy kabinetingizni (Telegram Mini App yoki Web brauzerda) ochish uchun pastdagi tugmani bosing:`;
-
-        await sendAuthMessage(chatId, welcomeText, {
-          inline: {
-            inline_keyboard: [
-              [
-                {
-                  text: isPharm ? "🏪 Do'kon kabinetini ochish" : "👨‍⚕️ Mutaxassis kabinetini ochish",
-                  web_app: { url: appUrl },
-                },
-              ],
-              [
-                {
-                  text: "🌐 Web brauzerda ochish",
-                  url: appUrl,
-                },
-              ],
-            ],
-          },
-          replyKeyboard: isPharm ? approvedPharmacyMenuKeyboard() : approvedSpecialistMenuKeyboard(),
-        });
-        return;
+          .returning();
+        user = created;
       }
+
+      // Shaxsiy sessiya tokeni yaratamiz
+      const sessionToken = `biz_${randomBytes(24).toString("hex")}`;
+      if (user) {
+        await db.insert(sessions).values({ id: sessionToken, userId: user.id });
+      }
+
+      const base = partnerMiniappUrl();
+      const appUrl = `${base}?token=${sessionToken}&phone=${encodeURIComponent(spec.phone)}`;
+      const isPharm = spec.role === "pharmacy";
+      const isBoth = spec.role === "both";
+      const trialDateStr = trialEnd.toLocaleDateString("uz-UZ");
+
+      const welcomeText =
+        `🎉 <b>Assalomu alaykum, ${escapeHtml(spec.name)}!</b>\n\n` +
+        `${isBoth ? "✨" : isPharm ? "🏪" : "👨‍⚕️"} <b>«${escapeHtml(spec.organization || spec.specialty || spec.name)}»</b> Agroz Business tizimida muvaffaqiyatli tasdiqlandi va Telegram botga ulandi!\n\n` +
+        `🎁 <b>1 Oylik Bepul Sinov:</b> <code>${escapeHtml(trialDateStr)}</code> gacha faol (tugashiga 5 kun qolganda shu bot orqali ogohlantirish yuboriladi).\n` +
+        `🌐 <b>Web manzil:</b> <code>${escapeHtml(base)}</code>\n` +
+        (spec.login ? `🔑 <b>Login:</b> <code>@${escapeHtml(spec.login)}</code>\n` : "") +
+        `📱 <b>Telefon:</b> <code>${escapeHtml(spec.phone)}</code>\n\n` +
+        `Shaxsiy kabinetingizni (Telegram Mini App yoki Web brauzerda) ochish uchun pastdagi tugmani bosing:`;
+
+      await sendAuthMessage(chatId, welcomeText, {
+        inline: {
+          inline_keyboard: [
+            [
+              {
+                text: isBoth ? "✨ Boshqaruv ERP kabinetini ochish" : isPharm ? "🏪 Do'kon kabinetini ochish" : "👨‍⚕️ Mutaxassis kabinetini ochish",
+                web_app: { url: appUrl },
+              },
+            ],
+            [
+              {
+                text: "🌐 Web brauzerda ochish",
+                url: appUrl,
+              },
+            ],
+          ],
+        },
+        replyKeyboard: isBoth || isPharm ? approvedPharmacyMenuKeyboard() : approvedSpecialistMenuKeyboard(),
+      });
+      return;
     }
   }
 
