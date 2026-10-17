@@ -1652,7 +1652,18 @@ async function getPartnerFromReq(req: any): Promise<typeof specialists.$inferSel
         const u = userRows[0];
         if (u) {
           const conditions = [];
-          if (u.phone) conditions.push(eq(specialists.phone, u.phone));
+          if (u.phone) {
+            const cleanUPhone = normalizePhone(u.phone) || u.phone;
+            const digits = cleanUPhone.replace(/\D/g, "");
+            const last9 = digits.slice(-9);
+            conditions.push(eq(specialists.phone, cleanUPhone));
+            if (digits.length >= 9) {
+              conditions.push(eq(specialists.phone, `+998${last9}`));
+              conditions.push(eq(specialists.phone, `998${last9}`));
+              conditions.push(eq(specialists.phone, last9));
+              conditions.push(sql`replace(replace(${specialists.phone}, '+', ''), ' ', '') LIKE ${'%' + last9}`);
+            }
+          }
           if (u.telegramId) conditions.push(eq(specialists.telegramId, u.telegramId));
           if (conditions.length > 0) {
             const spec = (await db.select().from(specialists).where(and(or(...conditions), eq(specialists.isActive, true))).limit(1))[0];
@@ -2372,6 +2383,13 @@ router.post("/partner/register-intent", async (req, res) => {
 
     // 1. specialists jadvalida mavjudligini tekshiramiz/yaratamiz
     let spec = (await db.select().from(specialists).where(eq(specialists.phone, cleanPhone)).limit(1))[0];
+    if (spec && spec.passwordHash) {
+      return res.status(400).json({
+        ok: false,
+        alreadyRegistered: true,
+        error: `Ushbu telefon raqami (${cleanPhone}) bilan allaqachon ro'yxatdan o'tilgan. Tizimga kirish uchun «Kirish» tugmasini bosing yoki yangi biznes ochish uchun boshqa telefon raqam kiriting.`,
+      });
+    }
 
     // Login yaratish yoki tekshirish
     let finalLogin = String(req.body?.login || "").trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
@@ -2741,7 +2759,7 @@ router.post("/partner/init", async (req, res) => {
 router.get("/partner/orders", requireTelegramAuth("business"), requireRole(['specialist', 'pharmacy']), async (req: any, res: any) => {
   try {
     const spec = await getPartnerFromReq(req);
-    if (!spec || spec.role !== "pharmacy") {
+    if (!spec || (spec.role !== "pharmacy" && spec.role !== "both")) {
       return res.status(403).json({ ok: false, error: "Faqat agro-do'kon egalari uchun" });
     }
 
@@ -2793,7 +2811,7 @@ router.get("/partner/orders", requireTelegramAuth("business"), requireRole(['spe
 router.get("/partner/medicines", requireTelegramAuth("business"), requireRole(['specialist', 'pharmacy']), async (req: any, res: any) => {
   try {
     const spec = await getPartnerFromReq(req);
-    if (!spec || spec.role !== "pharmacy") {
+    if (!spec || (spec.role !== "pharmacy" && spec.role !== "both")) {
       return res.status(403).json({ ok: false, error: "Faqat agro-do'kon egalari uchun" });
     }
 
@@ -2814,7 +2832,7 @@ router.get("/partner/medicines", requireTelegramAuth("business"), requireRole(['
 router.post("/partner/medicines", requireTelegramAuth("business"), requireRole(['specialist', 'pharmacy']), async (req: any, res: any) => {
   try {
     const spec = await getPartnerFromReq(req);
-    if (!spec || spec.role !== "pharmacy") {
+    if (!spec || (spec.role !== "pharmacy" && spec.role !== "both")) {
       return res.status(403).json({ ok: false, error: "Faqat dorixona rahbarlari dori qo'sha oladi" });
     }
 
@@ -2945,7 +2963,7 @@ router.post("/partner/orders/:id/action", requireTelegramAuth("business"), requi
 router.get("/partner/calls", requireTelegramAuth("business"), requireRole(['specialist', 'pharmacy']), async (req: any, res: any) => {
   try {
     const spec = await getPartnerFromReq(req);
-    if (!spec) return res.status(403).json({ ok: false, error: "Mutaxassis topilmadi" });
+    if (!spec || (spec.role !== "specialist" && spec.role !== "both")) return res.status(403).json({ ok: false, error: "Mutaxassis topilmadi" });
 
     const rows = await db
       .select()

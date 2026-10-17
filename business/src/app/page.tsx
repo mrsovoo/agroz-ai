@@ -3014,10 +3014,13 @@ export default function PartnerKabinetPage() {
                   <button
                     type="button"
                     onClick={() => {
+                      const nextToken = regSuccess?.sessionToken;
                       setShowRegisterModal(false);
                       setRegSuccess(null);
-                      if (regSuccess.sessionToken) {
-                        loadData(initData, regSuccess.sessionToken);
+                      if (nextToken) {
+                        setWebToken(nextToken);
+                        localStorage.setItem("agroz_business_token", nextToken);
+                        loadData("", nextToken);
                       }
                     }}
                     className="w-full rounded-2xl bg-[#191B1F] hover:bg-black text-white text-xs font-bold py-3 transition shadow-sm"

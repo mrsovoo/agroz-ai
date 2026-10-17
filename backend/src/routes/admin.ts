@@ -215,11 +215,11 @@ router.get("/stats", requireAdmin, async (req, res) => {
         db
           .select({ count: sql<number>`count(*)::int` })
           .from(specialists)
-          .where(eq(specialists.role, "specialist")),
+          .where(or(eq(specialists.role, "specialist"), eq(specialists.role, "both"))),
         db
           .select({ count: sql<number>`count(*)::int` })
           .from(specialists)
-          .where(eq(specialists.role, "pharmacy")),
+          .where(or(eq(specialists.role, "pharmacy"), eq(specialists.role, "both"))),
         db.select({ count: sql<number>`count(*)::int` }).from(specialistMedicines),
         db.select({ count: sql<number>`count(*)::int` }).from(orders),
         db
