@@ -2308,11 +2308,11 @@ export default function PartnerKabinetPage() {
         </header>
 
         {/* Markaziy Kirish Kartochkasi (Apple-style minimalist auth) */}
-        <main className="w-full max-w-md mx-auto my-auto">
-          <div className="rounded-[28px] border border-[#E5E5EA] bg-white p-6 sm:p-8 shadow-xl shadow-black/5 space-y-6">
+        <main className="w-full max-w-[420px] mx-auto my-auto">
+          <div className="rounded-3xl border border-zinc-200/80 bg-white p-6 sm:p-8 shadow-sm space-y-6">
             {/* Sarlavha va Tavsif */}
             <div className="text-center space-y-1">
-              <h1 className="text-xl sm:text-2xl font-black text-[#191B1F] tracking-tight">
+              <h1 className="text-xl font-bold text-zinc-900 tracking-tight">
                 Agroz Business
               </h1>
               <p className="text-xs text-zinc-500">
@@ -2322,28 +2322,25 @@ export default function PartnerKabinetPage() {
 
             {/* Xatolik xabari */}
             {loginError && (
-              <div className="rounded-2xl bg-red-50 p-3.5 text-xs font-semibold text-red-700 border border-red-200 flex items-start gap-2">
-                <AlertCircle size={16} className="shrink-0 mt-0.5" />
+              <div className="rounded-xl bg-red-50 p-3 text-xs font-medium text-red-700 border border-red-200 flex items-start gap-2">
+                <AlertCircle size={15} className="shrink-0 mt-0.5" />
                 <span>{loginError}</span>
               </div>
             )}
 
             {/* Eslab qolingan qurilma / hisob kartochkasi */}
             {rememberedPartner && (
-              <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50/90 to-teal-50/70 p-4 shadow-xs space-y-3">
-                <div className="flex items-center justify-between">
+              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3.5 space-y-3">
+                <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-bold text-base shadow-xs shrink-0">
-                      {rememberedPartner.role === "specialist" ? "👨‍🌾" : rememberedPartner.role === "both" ? "🌟" : "🏪"}
+                    <div className="w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center font-bold text-base shrink-0">
+                      {rememberedPartner.role === "specialist" ? "👨‍🌾" : rememberedPartner.role === "both" ? "✨" : "🏪"}
                     </div>
                     <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                        <p className="text-[10px] font-black uppercase tracking-wider text-emerald-800">
-                          Ushbu qurilmada saqlangan
-                        </p>
-                      </div>
-                      <h3 className="text-xs sm:text-sm font-black text-zinc-900 truncate">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                        Saqlangan hisob
+                      </p>
+                      <h3 className="text-xs sm:text-sm font-bold text-zinc-900 truncate">
                         {rememberedPartner.organization || rememberedPartner.name}
                       </h3>
                       <p className="text-[11px] font-mono text-zinc-500 truncate">
@@ -2363,54 +2360,52 @@ export default function PartnerKabinetPage() {
                         localStorage.removeItem("agroz_device_remembered");
                       } catch {}
                     }}
-                    className="text-[11px] font-bold text-zinc-500 hover:text-red-600 transition px-2.5 py-1 rounded-lg hover:bg-white/80 shrink-0"
+                    className="text-xs text-zinc-400 hover:text-zinc-700 transition p-1.5 rounded-lg hover:bg-zinc-200/60 shrink-0"
                     title="Boshqa hisobga o'tish"
                   >
-                    Boshqa hisob
+                    <X size={16} />
                   </button>
                 </div>
 
-                <div className="pt-0.5">
-                  <button
-                    type="button"
-                    disabled={loginLoading}
-                    onClick={async () => {
-                      if (rememberedPartner.token) {
-                        setLoginLoading(true);
-                        setWebToken(rememberedPartner.token);
-                        localStorage.setItem("agroz_business_token", rememberedPartner.token);
-                        await loadData("", rememberedPartner.token);
-                        setLoginLoading(false);
-                      } else {
-                        setLoginPhone(rememberedPartner.login || rememberedPartner.phone);
-                        setAuthTab("password");
-                        setTimeout(() => {
-                          const input = document.getElementById("login-password-input") as HTMLInputElement;
-                          if (input) input.focus();
-                        }, 50);
-                      }
-                    }}
-                    className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white text-xs font-bold shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition cursor-pointer"
-                  >
-                    <span>⚡ Shunchaki kirish</span>
-                    <ArrowRight size={14} />
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  disabled={loginLoading}
+                  onClick={async () => {
+                    if (rememberedPartner.token) {
+                      setLoginLoading(true);
+                      setWebToken(rememberedPartner.token);
+                      localStorage.setItem("agroz_business_token", rememberedPartner.token);
+                      await loadData("", rememberedPartner.token);
+                      setLoginLoading(false);
+                    } else {
+                      setLoginPhone(rememberedPartner.login || rememberedPartner.phone);
+                      setAuthTab("password");
+                      setTimeout(() => {
+                        const input = document.getElementById("login-password-input") as HTMLInputElement;
+                        if (input) input.focus();
+                      }, 50);
+                    }
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl bg-zinc-900 hover:bg-black active:scale-[0.99] text-white text-xs font-semibold flex items-center justify-center gap-2 transition cursor-pointer"
+                >
+                  <span>Kabinetga kirish</span>
+                  <ArrowRight size={14} />
+                </button>
               </div>
             )}
 
             {/* Kirish usullari tablari: Telegram orqali / Parol bilan */}
-            <div className="grid grid-cols-2 p-1 rounded-2xl bg-zinc-100 text-xs font-bold text-zinc-600">
+            <div className="grid grid-cols-2 p-1 rounded-xl bg-zinc-100 text-xs font-semibold text-zinc-500">
               <button
                 type="button"
                 onClick={() => {
                   setAuthTab("otp");
                   setLoginError(null);
                 }}
-                className={`py-2 rounded-xl transition-all ${
+                className={`py-2 rounded-lg transition-all ${
                   authTab === "otp"
-                    ? "bg-white text-black shadow-xs font-extrabold"
-                    : "hover:text-black"
+                    ? "bg-white text-zinc-900 shadow-xs font-bold"
+                    : "hover:text-zinc-800"
                 }`}
               >
                 Telegram orqali
@@ -2421,10 +2416,10 @@ export default function PartnerKabinetPage() {
                   setAuthTab("password");
                   setLoginError(null);
                 }}
-                className={`py-2 rounded-xl transition-all ${
+                className={`py-2 rounded-lg transition-all ${
                   authTab === "password"
-                    ? "bg-white text-black shadow-xs font-extrabold"
-                    : "hover:text-black"
+                    ? "bg-white text-zinc-900 shadow-xs font-bold"
+                    : "hover:text-zinc-800"
                 }`}
               >
                 Parol bilan
@@ -2443,8 +2438,8 @@ export default function PartnerKabinetPage() {
                     className="space-y-4"
                   >
                     <div>
-                      <label className="block text-xs font-bold text-zinc-700 mb-1.5">
-                        Telefon raqamingiz:
+                      <label className="block text-xs font-medium text-zinc-700 mb-1.5">
+                        Telefon raqamingiz
                       </label>
                       <input
                         type="tel"
@@ -2455,27 +2450,27 @@ export default function PartnerKabinetPage() {
                         }}
                         placeholder="+998 90 123 45 67"
                         required
-                        className="w-full rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-3 text-sm font-mono font-bold text-zinc-900 focus:border-black focus:bg-white focus:outline-none transition"
+                        className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 px-3.5 py-2.5 text-sm font-mono font-medium text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:bg-white focus:outline-none transition"
                       />
-                      <p className="text-[11px] text-zinc-400 mt-1.5 leading-relaxed">
-                        Raqamingiz kiritilgach, <b>@{botUsername}</b> Telegram botingizga tasdiqlash tugmasi va kod yuboriladi.
+                      <p className="text-[11px] text-zinc-400 mt-1.5">
+                        Tasdiqlash kodi <b>@{botUsername}</b> Telegram botiga yuboriladi.
                       </p>
                     </div>
 
                     <button
                       type="submit"
                       disabled={otpLoading || loginPhone.replace(/\D/g, "").length < 9}
-                      className="w-full rounded-2xl bg-[#191B1F] hover:bg-black text-white text-sm font-bold py-3.5 transition-all shadow-md active:scale-98 disabled:opacity-50 flex items-center justify-center gap-2"
+                      className="w-full rounded-xl bg-zinc-900 hover:bg-black text-white text-xs font-semibold py-3 transition active:scale-[0.99] disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                     >
                       {otpLoading ? (
                         <>
-                          <RefreshCw size={16} className="animate-spin" />
-                          <span>Telegramga so‘rov yuborilmoqda...</span>
+                          <RefreshCw size={14} className="animate-spin" />
+                          <span>Yuborilmoqda...</span>
                         </>
                       ) : (
                         <>
-                          <Send size={15} />
-                          <span>Telegram orqali tasdiqlash</span>
+                          <Send size={14} />
+                          <span>Telegram orqali kirish</span>
                         </>
                       )}
                     </button>
@@ -2483,25 +2478,25 @@ export default function PartnerKabinetPage() {
                 ) : (
                   <form onSubmit={handleVerifyTelegramOtp} className="space-y-4">
                     {/* Jonli polling va Telegram tugmasi bloki */}
-                    <div className="rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 p-4 space-y-2.5">
-                      <div className="flex items-center gap-2 text-blue-900 font-bold text-xs">
-                        <span className="relative flex h-2.5 w-2.5">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-600"></span>
+                    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 space-y-3">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-zinc-900">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
                         </span>
-                        <span>Telegram botingizga tasdiqlash yuborildi</span>
+                        <span>Botga tasdiqlash so‘rovi yuborildi</span>
                       </div>
-                      <p className="text-xs text-blue-800 leading-relaxed">
-                        Telegramdagi <b>@{botUsername}</b> botida <b>«✅ Kabinetga kirishni tasdiqlash»</b> tugmasini bossangiz, bu oyna avtomatik ochiladi.
+                      <p className="text-xs text-zinc-600 leading-relaxed">
+                        Telegramdagi <b>@{botUsername}</b> botida tasdiqlash tugmasini bossangiz, sahifa avtomatik ochiladi.
                       </p>
                       {botStartUrl && (
                         <a
                           href={botStartUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center justify-center gap-2 w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 text-xs shadow-xs transition"
+                          className="flex items-center justify-center gap-2 w-full rounded-xl bg-[#229ED9] hover:bg-[#1E88C7] text-white font-medium py-2.5 text-xs transition"
                         >
-                          <Send size={14} />
+                          <Send size={13} />
                           <span>Telegram botda ochish</span>
                           <ExternalLink size={12} />
                         </a>
@@ -2510,14 +2505,14 @@ export default function PartnerKabinetPage() {
 
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-xs font-bold text-zinc-700">Yoki botdagi 6 xonali kodni yozing:</label>
+                        <label className="text-xs font-medium text-zinc-700">Yoki 6 xonali kodni kiriting:</label>
                         <button
                           type="button"
                           onClick={() => {
                             setOtpSent(false);
                             setOtpCode("");
                           }}
-                          className="text-[11px] font-semibold text-zinc-500 hover:text-black transition"
+                          className="text-[11px] text-zinc-400 hover:text-zinc-800 transition"
                         >
                           Raqamni o‘zgartirish
                         </button>
@@ -2527,13 +2522,13 @@ export default function PartnerKabinetPage() {
                         maxLength={6}
                         value={otpCode}
                         onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
-                        placeholder="123456"
+                        placeholder="000 000"
                         autoFocus
-                        className="w-full rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-3 text-center text-lg font-mono font-bold tracking-widest text-zinc-900 focus:border-black focus:bg-white focus:outline-none transition"
+                        className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 px-4 py-2.5 text-center text-lg font-mono font-bold tracking-widest text-zinc-900 placeholder:text-zinc-300 focus:border-zinc-900 focus:bg-white focus:outline-none transition"
                       />
                     </div>
 
-                    <div className="flex items-center justify-between text-xs text-zinc-500">
+                    <div className="flex items-center justify-between text-xs text-zinc-400">
                       <span>Kod kelmadimi?</span>
                       {otpCountdown > 0 ? (
                         <span className="font-mono text-zinc-400">{otpCountdown} soniya</span>
@@ -2542,7 +2537,7 @@ export default function PartnerKabinetPage() {
                           type="button"
                           onClick={handleRequestTelegramOtp}
                           disabled={otpLoading}
-                          className="font-bold text-black hover:underline"
+                          className="font-medium text-zinc-900 hover:underline"
                         >
                           Qayta yuborish
                         </button>
@@ -2552,11 +2547,11 @@ export default function PartnerKabinetPage() {
                     <button
                       type="submit"
                       disabled={loginLoading || otpCode.length < 4}
-                      className="w-full rounded-2xl bg-[#191B1F] hover:bg-black text-white text-sm font-bold py-3.5 transition-all shadow-md active:scale-98 disabled:opacity-50 flex items-center justify-center gap-2"
+                      className="w-full rounded-xl bg-zinc-900 hover:bg-black text-white text-xs font-semibold py-3 transition active:scale-[0.99] disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                     >
                       {loginLoading ? (
                         <>
-                          <RefreshCw size={16} className="animate-spin" />
+                          <RefreshCw size={14} className="animate-spin" />
                           <span>Tasdiqlanmoqda...</span>
                         </>
                       ) : (
@@ -2573,20 +2568,20 @@ export default function PartnerKabinetPage() {
               <form onSubmit={handlePasswordLogin} className="space-y-4">
                 {rememberedPartner ? (
                   <div>
-                    <label className="block text-xs font-bold text-zinc-700 mb-1.5">
-                      Kirilayotgan hisob:
+                    <label className="block text-xs font-medium text-zinc-700 mb-1.5">
+                      Kirilayotgan hisob
                     </label>
-                    <div className="w-full rounded-2xl border border-zinc-200 bg-zinc-100/80 px-4 py-2.5 text-xs font-mono font-bold text-zinc-800 flex items-center justify-between">
+                    <div className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-xs font-mono font-semibold text-zinc-800 flex items-center justify-between">
                       <span>@{rememberedPartner.login || rememberedPartner.phone}</span>
-                      <span className="text-[11px] font-sans font-semibold text-zinc-500">
+                      <span className="text-[11px] font-sans font-normal text-zinc-500">
                         {rememberedPartner.organization || rememberedPartner.name}
                       </span>
                     </div>
                   </div>
                 ) : (
                   <div>
-                    <label className="block text-xs font-bold text-zinc-700 mb-1.5">
-                      Telefon raqam yoki Login:
+                    <label className="block text-xs font-medium text-zinc-700 mb-1.5">
+                      Telefon raqam yoki Login
                     </label>
                     <input
                       type="text"
@@ -2603,14 +2598,14 @@ export default function PartnerKabinetPage() {
                         if (!loginPhone) setLoginPhone("+998 ");
                       }}
                       placeholder="+998 90 123 45 67 yoki login"
-                      className="w-full rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-3 text-sm font-medium text-zinc-900 focus:border-black focus:bg-white focus:outline-none transition"
+                      className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 px-3.5 py-2.5 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:bg-white focus:outline-none transition"
                     />
                   </div>
                 )}
 
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-bold text-zinc-700">Maxfiy Parol:</label>
+                    <label className="text-xs font-medium text-zinc-700">Parol</label>
                     <button
                       type="button"
                       onClick={() => {
@@ -2620,9 +2615,9 @@ export default function PartnerKabinetPage() {
                         setResetError(null);
                         setResetSuccess(null);
                       }}
-                      className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 transition"
+                      className="text-[11px] text-zinc-500 hover:text-zinc-900 transition"
                     >
-                      Parolni yangilash
+                      Parolni unutdingizmi?
                     </button>
                   </div>
                   <div className="relative">
@@ -2631,14 +2626,14 @@ export default function PartnerKabinetPage() {
                       type={showPassword ? "text" : "password"}
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
-                      placeholder="Kamida 8 ta belgi"
+                      placeholder="Parolingizni kiriting"
                       autoFocus={Boolean(rememberedPartner)}
-                      className="w-full rounded-2xl border border-zinc-200 bg-zinc-50/70 pl-4 pr-11 py-3 text-sm font-medium text-zinc-900 focus:border-black focus:bg-white focus:outline-none transition"
+                      className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 pl-3.5 pr-10 py-2.5 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:bg-white focus:outline-none transition"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 transition"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 transition"
                       title={showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
                     >
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -2646,26 +2641,26 @@ export default function PartnerKabinetPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-1">
+                <div className="flex items-center justify-between pt-0.5">
                   <label className="flex items-center gap-2 cursor-pointer select-none">
                     <input
                       type="checkbox"
                       checked={rememberMe}
                       onChange={(e) => setRememberMe(e.target.checked)}
-                      className="w-4 h-4 rounded-md border-zinc-300 text-black focus:ring-black accent-black"
+                      className="w-4 h-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900 accent-zinc-900"
                     />
-                    <span className="text-xs font-medium text-zinc-600">Devaysni eslab qolish</span>
+                    <span className="text-xs text-zinc-600">Qurilmani eslab qolish</span>
                   </label>
                 </div>
 
                 <button
                   type="submit"
                   disabled={loginLoading || !loginPassword.trim()}
-                  className="w-full rounded-2xl bg-[#191B1F] hover:bg-black text-white text-sm font-bold py-3.5 transition-all shadow-md active:scale-98 disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full rounded-xl bg-zinc-900 hover:bg-black text-white text-xs font-semibold py-3 transition active:scale-[0.99] disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {loginLoading ? (
                     <>
-                      <RefreshCw size={16} className="animate-spin" />
+                      <RefreshCw size={14} className="animate-spin" />
                       <span>Tekshirilmoqda...</span>
                     </>
                   ) : (
@@ -2676,21 +2671,21 @@ export default function PartnerKabinetPage() {
             )}
 
             {/* Pastki: Yangi Hamkor Ro'yxatdan O'tish & Shartnoma */}
-            <div className="pt-4 border-t border-zinc-100 space-y-2.5 text-center">
+            <div className="pt-2 border-t border-zinc-100 space-y-2 text-center">
               <button
                 type="button"
                 onClick={() => setShowRegisterModal(true)}
-                className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 text-zinc-900 text-xs font-bold py-3 transition flex items-center justify-center gap-1.5 active:scale-98"
+                className="w-full rounded-xl border border-zinc-200/80 bg-zinc-50 hover:bg-zinc-100 text-zinc-900 text-xs font-semibold py-2.5 transition flex items-center justify-center gap-1.5 active:scale-[0.99] cursor-pointer"
               >
                 <span>Yangi hamkor sifatida ro‘yxatdan o‘tish</span>
-                <ArrowRight size={14} />
+                <ArrowRight size={13} />
               </button>
 
-              <div className="flex items-center justify-center gap-3 text-[11px] text-zinc-400">
+              <div className="flex items-center justify-center gap-3 text-[11px] text-zinc-400 pt-1">
                 <button
                   type="button"
                   onClick={() => setShowContractModal(true)}
-                  className="hover:text-zinc-700 transition"
+                  className="hover:text-zinc-600 transition"
                 >
                   Shartnoma va oferta
                 </button>
@@ -2699,9 +2694,9 @@ export default function PartnerKabinetPage() {
                   href="https://t.me/agroz_support"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-zinc-700 transition"
+                  className="hover:text-zinc-600 transition"
                 >
-                  Yordam: @agroz_support
+                  Qo‘llab-quvvatlash
                 </a>
               </div>
             </div>
@@ -3315,54 +3310,41 @@ export default function PartnerKabinetPage() {
               ) : (
                 /* Telegram orqali tasdiqlash va 8 xonali ID kodni kiritish bosqichi */
                 <div className="py-2 text-center space-y-4">
-                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 shadow-xs">
-                    <Send size={28} />
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-900 border border-zinc-200 shadow-xs">
+                    <Send size={22} />
                   </div>
 
                   <div>
-                    <span className="text-[10px] font-bold tracking-wider text-blue-700 uppercase bg-blue-50 border border-blue-200 px-3 py-1 rounded-full">
-                      Oxirgi bosqich
-                    </span>
-                    <h3 className="text-lg font-black text-zinc-900 mt-2">
-                      Telegram orqali tasdiqlang va biznesingizni boshqaring
+                    <h3 className="text-base font-bold text-zinc-900">
+                      Telegram orqali tasdiqlang
                     </h3>
-                    <p className="text-xs text-zinc-600 mt-1 max-w-sm mx-auto leading-relaxed">
-                      Hurmatli <b>{regSuccess.name}</b>, xavfsizlik va biznesingizni to‘liq boshqarish uchun arizada ko‘rsatilgan telefon raqamingizni (<b>{regSuccess.phone}</b>) Telegram botimizda tasdiqlashingiz lozim.
+                    <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto leading-relaxed">
+                      Hurmatli <b>{regSuccess.name}</b>, kabinetni ochish uchun <b>{regSuccess.phone}</b> raqamingizni Telegram botda tasdiqlang.
                     </p>
                   </div>
 
                   {/* 1. Telegram bot tugmasi */}
-                  <div className="rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50/60 border border-blue-200 p-4 text-left space-y-3 shadow-xs">
-                    <div className="flex items-start gap-2.5">
-                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white font-mono font-bold text-xs">
-                        1
-                      </div>
-                      <div className="text-xs text-zinc-800 leading-snug">
-                        Pastdagi havolani bosib <b>@{regSuccess.botUsername}</b> botimizga kiring va <b>«Start»</b> tugmasini bosing:
-                      </div>
+                  <div className="rounded-2xl bg-zinc-50 border border-zinc-200/80 p-4 text-left space-y-2.5">
+                    <div className="text-xs text-zinc-700 leading-snug">
+                      1. Havolani bosib <b>@{regSuccess.botUsername}</b> botimizga kiring va <b>«Start»</b> tugmasini bosing:
                     </div>
 
                     <a
                       href={regSuccess.startUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 w-full rounded-2xl bg-[#0088cc] hover:bg-[#0077b5] text-white font-bold py-3 text-xs shadow-sm transition active:scale-98"
+                      className="flex items-center justify-center gap-2 w-full rounded-xl bg-[#229ED9] hover:bg-[#1E88C7] text-white font-medium py-2.5 text-xs transition active:scale-[0.99]"
                     >
-                      <Send size={15} />
-                      <span>Telegram Bot orqali tasdiqlash (@{regSuccess.botUsername})</span>
-                      <ExternalLink size={13} />
+                      <Send size={14} />
+                      <span>Telegram Botda ochish (@{regSuccess.botUsername})</span>
+                      <ExternalLink size={12} />
                     </a>
                   </div>
 
                   {/* 2. 8 xonali ID kod kiritish */}
-                  <div className="rounded-2xl bg-zinc-50 border border-zinc-200 p-4 text-left space-y-3">
-                    <div className="flex items-start gap-2.5">
-                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-white font-mono font-bold text-xs">
-                        2
-                      </div>
-                      <div className="text-xs text-zinc-800 leading-snug">
-                        Bot raqamingizni tekshirib, sizga yuborgan <b>bir martalik 8 xonali tasdiqlash ID kodini</b> bu yerga kiriting:
-                      </div>
+                  <div className="rounded-2xl bg-zinc-50 border border-zinc-200/80 p-4 text-left space-y-2.5">
+                    <div className="text-xs text-zinc-700 leading-snug">
+                      2. Bot taqdim etgan <b>8 xonali tasdiqlash kodi</b>:
                     </div>
 
                     <div className="space-y-1.5">
@@ -3375,27 +3357,27 @@ export default function PartnerKabinetPage() {
                           setRegVerifyCode(e.target.value.replace(/\D/g, "").slice(0, 8));
                           setRegVerifyError(null);
                         }}
-                        placeholder="Masalan: 12345678"
-                        className={`w-full text-center tracking-[0.3em] font-mono text-lg font-black py-2.5 rounded-xl border transition ${
+                        placeholder="12345678"
+                        className={`w-full text-center tracking-[0.25em] font-mono text-base font-bold py-2.5 rounded-xl border transition ${
                           regVerifyCode.length === 8
-                            ? "border-emerald-500 bg-emerald-50/40 text-emerald-900 ring-2 ring-emerald-500/20"
-                            : "border-zinc-300 bg-white text-zinc-900 focus:border-black focus:outline-none"
+                            ? "border-zinc-900 bg-white text-zinc-900 ring-2 ring-zinc-900/10"
+                            : "border-zinc-300 bg-white text-zinc-900 focus:border-zinc-900 focus:outline-none"
                         }`}
                       />
                       {regVerifyCode.length === 8 ? (
-                        <p className="text-[10px] text-emerald-700 font-bold text-center flex items-center justify-center gap-1">
-                          <span>✅ 8 xonali ID kod aniqlandi! Kabinet ishga tushirilmoqda...</span>
+                        <p className="text-[11px] text-zinc-700 font-semibold text-center flex items-center justify-center gap-1">
+                          <span>Tasdiqlash kodi kiritildi. Kabinet ochilmoqda...</span>
                         </p>
                       ) : (
-                        <p className="text-[10px] text-zinc-500 text-center">
-                          Botda «Tasdiqlash» tugmasini bossangiz kod avtomatik kiritiladi va kabinet darhol ochiladi.
+                        <p className="text-[11px] text-zinc-400 text-center">
+                          Botda «Tasdiqlash» tugmasi bosilganda kod avtomatik to‘ldiriladi.
                         </p>
                       )}
                     </div>
 
                     {regVerifyError && (
-                      <div className="rounded-xl bg-amber-50 border border-amber-200 p-2.5 text-xs text-amber-900 leading-relaxed font-medium">
-                        ⚠️ {regVerifyError}
+                      <div className="rounded-xl bg-red-50 border border-red-200 p-2.5 text-xs text-red-700 font-medium">
+                        {regVerifyError}
                       </div>
                     )}
 
@@ -3403,7 +3385,7 @@ export default function PartnerKabinetPage() {
                       type="button"
                       disabled={regVerifying || regVerifyCode.length !== 8}
                       onClick={handleVerifyRegistrationCode}
-                      className="w-full rounded-xl bg-[#191B1F] hover:bg-black text-white text-xs font-bold py-3 transition shadow-xs disabled:opacity-50 flex items-center justify-center gap-2"
+                      className="w-full rounded-xl bg-zinc-900 hover:bg-black text-white text-xs font-semibold py-2.5 transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                     >
                       {regVerifying ? (
                         <>
@@ -3416,7 +3398,7 @@ export default function PartnerKabinetPage() {
                     </button>
                   </div>
 
-                  <div className="flex items-center justify-center gap-2 text-[11px] text-zinc-400">
+                  <div className="flex items-center justify-center gap-2 text-[11px] text-zinc-400 pt-1">
                     <RefreshCw size={12} className="animate-spin text-zinc-400" />
                     <span>Telegramdan tasdiqlash avtomatik kutilmoqda...</span>
                   </div>
