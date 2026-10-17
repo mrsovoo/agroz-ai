@@ -79,21 +79,26 @@ export async function ensureBiznesGoSchema(): Promise<void> {
       id serial PRIMARY KEY NOT NULL,
       merchant_id integer NOT NULL REFERENCES biznesgo_merchants(id) ON DELETE CASCADE,
       name varchar(160) NOT NULL,
-      phone varchar(32) NOT NULL,
+      phone varchar(32),
       region varchar(100),
       district varchar(100),
       address text,
+      note text,
       notes text,
+      is_archived boolean DEFAULT false NOT NULL,
       created_at timestamp DEFAULT now() NOT NULL,
       updated_at timestamp DEFAULT now() NOT NULL
     );
+    ALTER TABLE biznesgo_customers ALTER COLUMN phone DROP NOT NULL;
+    ALTER TABLE biznesgo_customers ADD COLUMN IF NOT EXISTS note text;
+    ALTER TABLE biznesgo_customers ADD COLUMN IF NOT EXISTS is_archived boolean DEFAULT false NOT NULL;
     CREATE INDEX IF NOT EXISTS biznesgo_customers_merchant_idx ON biznesgo_customers (merchant_id);
 
     CREATE TABLE IF NOT EXISTS biznesgo_debts (
       id serial PRIMARY KEY NOT NULL,
       merchant_id integer NOT NULL REFERENCES biznesgo_merchants(id) ON DELETE CASCADE,
       customer_id integer REFERENCES biznesgo_customers(id) ON DELETE SET NULL,
-      customer_name varchar(160) NOT NULL,
+      customer_name varchar(160),
       customer_phone varchar(32),
       description text,
       total_amount integer DEFAULT 0 NOT NULL,
@@ -103,17 +108,23 @@ export async function ensureBiznesGoSchema(): Promise<void> {
       created_at timestamp DEFAULT now() NOT NULL,
       updated_at timestamp DEFAULT now() NOT NULL
     );
+    ALTER TABLE biznesgo_debts ALTER COLUMN customer_name DROP NOT NULL;
     CREATE INDEX IF NOT EXISTS biznesgo_debts_merchant_idx ON biznesgo_debts (merchant_id, status);
+    CREATE INDEX IF NOT EXISTS biznesgo_debts_merchant_due_idx ON biznesgo_debts (merchant_id, due_date);
+    CREATE INDEX IF NOT EXISTS biznesgo_debts_customer_idx ON biznesgo_debts (merchant_id, customer_id);
 
     CREATE TABLE IF NOT EXISTS biznesgo_debt_payments (
       id serial PRIMARY KEY NOT NULL,
       debt_id integer NOT NULL REFERENCES biznesgo_debts(id) ON DELETE CASCADE,
+      merchant_id integer REFERENCES biznesgo_merchants(id) ON DELETE CASCADE,
       amount integer DEFAULT 0 NOT NULL,
       payment_method varchar(32) DEFAULT 'cash' NOT NULL,
       note text,
       created_at timestamp DEFAULT now() NOT NULL
     );
+    ALTER TABLE biznesgo_debt_payments ADD COLUMN IF NOT EXISTS merchant_id integer REFERENCES biznesgo_merchants(id) ON DELETE CASCADE;
     CREATE INDEX IF NOT EXISTS biznesgo_debt_payments_debt_idx ON biznesgo_debt_payments (debt_id);
+    CREATE INDEX IF NOT EXISTS biznesgo_debt_payments_merchant_idx ON biznesgo_debt_payments (merchant_id);
 
     CREATE TABLE IF NOT EXISTS biznesgo_pos_sales (
       id serial PRIMARY KEY NOT NULL,

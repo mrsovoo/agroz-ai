@@ -611,11 +611,13 @@ export const biznesgoCustomers = pgTable("biznesgo_customers", {
     .references(() => biznesgoMerchants.id, { onDelete: "cascade" })
     .notNull(),
   name: varchar("name", { length: 160 }).notNull(),
-  phone: varchar("phone", { length: 32 }).notNull(),
+  phone: varchar("phone", { length: 32 }),
   region: varchar("region", { length: 100 }),
   district: varchar("district", { length: 100 }),
   address: text("address"),
+  note: text("note"),
   notes: text("notes"),
+  isArchived: boolean("is_archived").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -631,7 +633,7 @@ export const biznesgoDebts = pgTable("biznesgo_debts", {
   customerId: integer("customer_id").references(() => biznesgoCustomers.id, {
     onDelete: "set null",
   }),
-  customerName: varchar("customer_name", { length: 160 }).notNull(),
+  customerName: varchar("customer_name", { length: 160 }),
   customerPhone: varchar("customer_phone", { length: 32 }),
   description: text("description"),
   totalAmount: integer("total_amount").default(0).notNull(),
@@ -650,6 +652,9 @@ export const biznesgoDebtPayments = pgTable("biznesgo_debt_payments", {
   debtId: integer("debt_id")
     .references(() => biznesgoDebts.id, { onDelete: "cascade" })
     .notNull(),
+  merchantId: integer("merchant_id").references(() => biznesgoMerchants.id, {
+    onDelete: "cascade",
+  }),
   amount: integer("amount").default(0).notNull(),
   paymentMethod: varchar("payment_method", { length: 32 }).default("cash").notNull(),
   note: text("note"),

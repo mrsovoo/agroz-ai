@@ -27,9 +27,13 @@ import {
   Send,
   ExternalLink,
   Package,
+  HandCoins,
+  Users,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api-config";
 import ProductsCatalogSection from "@/components/ProductsCatalogSection";
+import DebtsSection from "@/components/DebtsSection";
+import CustomersSection from "@/components/CustomersSection";
 
 export type MerchantType =
   | "agro_shop"
@@ -164,13 +168,29 @@ export default function BiznesGoPage() {
   const [profileErrorMsg, setProfileErrorMsg] = useState<string | null>(null);
 
   // Dashboard bo'limlari va Telegram BackButton boshqaruvi
-  const [activeTab, setActiveTab] = useState<"products" | "profile">("products");
+  const [activeTab, setActiveTab] = useState<"products" | "debts" | "customers" | "profile">("products");
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const closeProductModalRef = useRef<(() => void) | null>(null);
+
+  const [isDebtModalOpen, setIsDebtModalOpen] = useState(false);
+  const closeDebtModalRef = useRef<(() => void) | null>(null);
+
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const closeCustomerModalRef = useRef<(() => void) | null>(null);
 
   const handleProductModalStateChange = useCallback((isOpen: boolean, closeFn: () => void) => {
     setIsProductModalOpen(isOpen);
     closeProductModalRef.current = closeFn;
+  }, []);
+
+  const handleDebtModalStateChange = useCallback((isOpen: boolean, closeFn: () => void) => {
+    setIsDebtModalOpen(isOpen);
+    closeDebtModalRef.current = closeFn;
+  }, []);
+
+  const handleCustomerModalStateChange = useCallback((isOpen: boolean, closeFn: () => void) => {
+    setIsCustomerModalOpen(isOpen);
+    closeCustomerModalRef.current = closeFn;
   }, []);
 
   useEffect(() => {
@@ -181,14 +201,22 @@ export default function BiznesGoPage() {
 
     const shouldShowBack =
       viewState === "dashboard" &&
-      (isProductModalOpen || isEditingProfile || activeTab === "profile");
+      (isProductModalOpen ||
+        isDebtModalOpen ||
+        isCustomerModalOpen ||
+        isEditingProfile ||
+        activeTab !== "products");
 
     const handleBackClick = () => {
       if (isProductModalOpen && closeProductModalRef.current) {
         closeProductModalRef.current();
+      } else if (isDebtModalOpen && closeDebtModalRef.current) {
+        closeDebtModalRef.current();
+      } else if (isCustomerModalOpen && closeCustomerModalRef.current) {
+        closeCustomerModalRef.current();
       } else if (isEditingProfile) {
         setIsEditingProfile(false);
-      } else if (activeTab === "profile") {
+      } else if (activeTab !== "products") {
         setActiveTab("products");
       }
     };
@@ -203,7 +231,14 @@ export default function BiznesGoPage() {
     return () => {
       backBtn.offClick?.(handleBackClick);
     };
-  }, [viewState, isProductModalOpen, isEditingProfile, activeTab]);
+  }, [
+    viewState,
+    isProductModalOpen,
+    isDebtModalOpen,
+    isCustomerModalOpen,
+    isEditingProfile,
+    activeTab,
+  ]);
 
   // Dastlabki yuklanish: Telegram initData yoki saqlangan sessiyani tekshirish
   useEffect(() => {
@@ -874,32 +909,58 @@ export default function BiznesGoPage() {
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6 space-y-5">
-        {/* Bo'limlar tab navigatsiyasi: Mahsulotlar va Ombor | Do'kon profili */}
-        <div className="grid grid-cols-2 gap-2 p-1.5 rounded-2xl bg-zinc-200/70">
+        {/* Bo'limlar tab navigatsiyasi: Mahsulotlar | Qarz daftari | Mijozlar | Profil */}
+        <div className="grid grid-cols-4 gap-1.5 p-1.5 rounded-2xl bg-zinc-200/70">
           <button
             type="button"
             onClick={() => setActiveTab("products")}
-            className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-black transition ${
+            className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2 px-1.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-black transition ${
               activeTab === "products"
                 ? "bg-white text-emerald-700 shadow-xs"
                 : "text-zinc-600 hover:text-zinc-900"
             }`}
           >
-            <Package size={16} />
-            <span>Mahsulotlar va Ombor</span>
+            <Package size={15} />
+            <span className="truncate">Mahsulotlar</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("debts")}
+            className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2 px-1.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-black transition ${
+              activeTab === "debts"
+                ? "bg-white text-red-600 shadow-xs"
+                : "text-zinc-600 hover:text-zinc-900"
+            }`}
+          >
+            <HandCoins size={15} />
+            <span className="truncate">Qarz daftari</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("customers")}
+            className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2 px-1.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-black transition ${
+              activeTab === "customers"
+                ? "bg-white text-blue-700 shadow-xs"
+                : "text-zinc-600 hover:text-zinc-900"
+            }`}
+          >
+            <Users size={15} />
+            <span className="truncate">Mijozlar</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab("profile")}
-            className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-black transition ${
+            className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2 px-1.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-black transition ${
               activeTab === "profile"
                 ? "bg-white text-emerald-700 shadow-xs"
                 : "text-zinc-600 hover:text-zinc-900"
             }`}
           >
-            <Store size={16} />
-            <span>Do‘kon profili</span>
+            <Store size={15} />
+            <span className="truncate">Do‘kon</span>
           </button>
         </div>
 
@@ -911,12 +972,30 @@ export default function BiznesGoPage() {
           </div>
         )}
 
-        {activeTab === "products" ? (
+        {activeTab === "products" && (
           <ProductsCatalogSection
             initDataString={initDataString}
             onModalStateChange={handleProductModalStateChange}
           />
-        ) : (
+        )}
+
+        {activeTab === "debts" && (
+          <DebtsSection
+            initDataString={initDataString}
+            onModalStateChange={handleDebtModalStateChange}
+            onNavigateToCustomers={() => setActiveTab("customers")}
+          />
+        )}
+
+        {activeTab === "customers" && (
+          <CustomersSection
+            initDataString={initDataString}
+            onModalStateChange={handleCustomerModalStateChange}
+            onNavigateToDebts={() => setActiveTab("debts")}
+          />
+        )}
+
+        {activeTab === "profile" && (
           <>
             {/* Sotuvchi Profil Kartochkasi */}
             <div className="bg-white border border-zinc-200 rounded-3xl p-6 shadow-2xs space-y-6">
