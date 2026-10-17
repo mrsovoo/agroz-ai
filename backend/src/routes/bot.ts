@@ -2718,11 +2718,13 @@ router.get("/partner/check-registration", async (req, res) => {
       return res.json({
         ok: true,
         verified: true,
+        code: row.code,
         sessionToken,
         phone: row.phone,
         partnerId: spec?.id,
         name: spec?.name,
         organization: spec?.organization,
+        role: spec?.role,
         login: spec?.login,
         isTelegramLinked: Boolean(spec?.telegramId && spec.telegramId > 0),
       });
@@ -2731,6 +2733,7 @@ router.get("/partner/check-registration", async (req, res) => {
     return res.json({
       ok: true,
       verified: false,
+      code: row.telegramId ? row.code : undefined,
       telegramLinked: Boolean(row.telegramId),
     });
   } catch (err: any) {

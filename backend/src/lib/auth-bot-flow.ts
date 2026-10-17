@@ -570,6 +570,41 @@ async function handleMenuButton(
   }
 }
 
+async function sendBizRegConfirmationPrompt(
+  chatId: number,
+  telegramId: number,
+  row: typeof otpCodes.$inferSelect,
+  spec: typeof specialists.$inferSelect
+): Promise<void> {
+  await db.update(otpCodes).set({ telegramId, deliveredAt: new Date() }).where(eq(otpCodes.id, row.id));
+
+  const roleText =
+    spec.role === "specialist"
+      ? "👨‍🌾 Mutaxassis (Agronom / Veterinar)"
+      : spec.role === "both"
+      ? "🌟 Universal (Ham do‘kon, ham mutaxassis)"
+      : "🏪 Agro-Do‘kon";
+
+  const text =
+    `👋 <b>Assalomu alaykum, ${escapeHtml(spec.name)}!</b>\n\n` +
+    `📋 <b>Agroz Business arizangiz ma'lumotlari:</b>\n` +
+    `🏪 Tashkilot / Do'kon: <b>${escapeHtml(spec.organization || spec.name)}</b>\n` +
+    `💼 Faoliyat yo'nalishi: <b>${roleText}</b>\n` +
+    `📱 Telefon raqam: <b>${escapeHtml(spec.phone)}</b>\n` +
+    `👤 Login: <b>@${escapeHtml(spec.login || spec.phone)}</b>\n` +
+    `⏳ Sinov davri: <b>1 oylik bepul (0 so'm)</b>\n\n` +
+    `Biznes profilingizni tasdiqlash va kabinetni ochish uchun quyidagi tugmani bosing:`;
+
+  await sendAuthMessage(chatId, text, {
+    inline: {
+      inline_keyboard: [
+        [{ text: "✅ Tasdiqlash va Kabinetni ochish", callback_data: `confirm_biz_reg:${row.id}` }],
+        [{ text: "🔢 Tasdiqlash ID kodini olish", callback_data: `get_biz_reg_id:${row.id}` }],
+      ],
+    },
+  });
+}
+
 async function handleCommand(
   chatId: number,
   telegramId: number,
@@ -649,17 +684,8 @@ async function handleCommand(
         return;
       }
 
-      // Raqamlar mos keldi! 8 xonali ID kodni chiqaramiz
-      await db.update(otpCodes).set({ telegramId, deliveredAt: new Date() }).where(eq(otpCodes.id, row.id));
-
-      await sendAuthMessage(
-        chatId,
-        `✅ <b>Telefon raqamingiz muvaffaqiyatli tasdiqlandi!</b>\n\n` +
-        `Hurmatli <b>${escapeHtml(spec.name)}</b>, Agroz Business hisobingizni brauzerda ochish uchun bir martalik 8 xonali tasdiqlash ID kodingiz:\n\n` +
-        `🔑 <code>${row.code}</code>\n\n` +
-        `Ushbu 8 xonali ID kodni brauzerdagi ro'yxatdan o'tish oynasiga kiriting va «Tasdiqlash va Kabinetni ochish» tugmasini bosing.\n\n` +
-        `<i>Eslatma: Ushbu kod faqat bir marta ishlatiladi va profilingiz xavfsizligini ta'minlaydi.</i>`
-      );
+      // Raqamlar mos keldi! Ma'lumotlarni tanib olib tasdiqlash tugmalarini chiqaramiz
+      await sendBizRegConfirmationPrompt(chatId, telegramId, row, spec);
       return;
     }
 
@@ -1073,6 +1099,110 @@ async function handleIndependentCallback(
   data: string,
   query: NonNullable<AuthBotUpdate["callback_query"]>,
 ): Promise<boolean> {
+  // 0. Biznes ro'yxatdan o'tishni tasdiqlash va kabinetni ochish (confirm_biz_reg:<id>)
+  if (data.startsWith("confirm_biz_reg:")) {
+    const otpId = Number(data.replace("confirm_biz_reg:", ""));
+    const row = (await db.select().from(otpCodes).where(eq(otpCodes.id, otpId)).limit(1))[0];
+    if (!row || row.expiresAt.getTime() <= Date.now()) {
+      await answerCallbackQuery(query.id, "Ariza muddati o'tgan yoki topilmadi.");
+      return true;
+    }
+
+    const spec = await findSpecialistByPhoneOrLogin(row.phone);
+    if (!spec) {
+      await answerCallbackQuery(query.id, "Hamkor profili topilmadi.");
+      return true;
+    }
+
+    await answerCallbackQuery(query.id, "✅ Kabinetingiz faollashtirilmoqda...");
+
+    const trialEnd = spec.trialEndsAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const cleanPhone = normalizePhone(spec.phone) || spec.phone;
+
+    // Hamkorni faollashtiramiz
+    await db
+      .update(specialists)
+      .set({
+        telegramId,
+        phone: cleanPhone,
+        isActive: true,
+        isApproved: true,
+        botStartedAt: new Date(),
+        botBlocked: false,
+        trialEndsAt: trialEnd,
+      })
+      .where(eq(specialists.id, spec.id));
+
+    let user = (await db.select().from(users).where(eq(users.phone, cleanPhone)).limit(1))[0];
+    if (user) {
+      await db.update(users).set({ telegramId, botStartedAt: new Date(), botBlocked: false }).where(eq(users.id, user.id));
+    } else {
+      const [created] = await db
+        .insert(users)
+        .values({ phone: cleanPhone, name: spec.name, telegramId, botStartedAt: new Date(), botBlocked: false })
+        .returning();
+      user = created;
+    }
+
+    // Sessiya yaratamiz
+    const sessionToken = `biz_${randomBytes(24).toString("hex")}`;
+    if (user) {
+      await db.insert(sessions).values({ id: sessionToken, userId: user.id });
+    }
+    try {
+      const { partnerTokenToSpecId } = await import("@/routes/bot");
+      partnerTokenToSpecId.set(sessionToken, spec.id);
+    } catch {}
+
+    // Otp kodni ishlatildi deb belgilaymiz
+    await db.update(otpCodes).set({ used: true, deliveredAt: new Date(), telegramId }).where(eq(otpCodes.id, row.id));
+
+    const businessBaseUrl = (process.env.BUSINESS_WEB_URL || "https://biznesgo.vercel.app").replace(/\/+$/, "");
+    const appUrl = `${businessBaseUrl}?token=${sessionToken}&phone=${encodeURIComponent(spec.phone)}`;
+
+    await sendAuthMessage(
+      chatId,
+      `🎉 <b>Arizangiz muvaffaqiyatli tasdiqlandi!</b>\n\n` +
+      `Hurmatli <b>${escapeHtml(spec.name)}</b>, <b>«${escapeHtml(spec.organization || spec.name)}»</b> biznes boshqaruv paneli ishga tushirildi!\n\n` +
+      `Brauzeringiz avtomatik tarzda kabinetni ochadi yoki quyidagi tugma orqali to'g'ridan-to'g'ri kiring:`,
+      {
+        inline: {
+          inline_keyboard: [
+            [{ text: "🚀 Biznes Kabinetni ochish", web_app: { url: appUrl } }],
+            [{ text: "🌐 Web brauzerda ochish", url: appUrl }],
+          ],
+        },
+      }
+    );
+    return true;
+  }
+
+  // 0.1 Bir martalik 8 xonali ID kodini ko'rsatish (get_biz_reg_id:<id>)
+  if (data.startsWith("get_biz_reg_id:")) {
+    const otpId = Number(data.replace("get_biz_reg_id:", ""));
+    const row = (await db.select().from(otpCodes).where(eq(otpCodes.id, otpId)).limit(1))[0];
+    if (!row || row.expiresAt.getTime() <= Date.now()) {
+      await answerCallbackQuery(query.id, "Ariza muddati o'tgan yoki topilmadi.");
+      return true;
+    }
+
+    await answerCallbackQuery(query.id, "Sizning tasdiqlash ID kodingiz");
+    await sendAuthMessage(
+      chatId,
+      `🔑 <b>Sizning bir martalik 8 xonali tasdiqlash ID kodingiz:</b>\n\n` +
+      `<code>${row.code}</code>\n\n` +
+      `Ushbu 8 xonali ID kodni brauzerdagi oynaga kiriting va «Tasdiqlash va Kabinetni ochish» tugmasini bosing yoki to'g'ridan-to'g'ri pastdagi «Tasdiqlash» tugmasini bosing:`,
+      {
+        inline: {
+          inline_keyboard: [
+            [{ text: "✅ Tasdiqlash va Kabinetni ochish", callback_data: `confirm_biz_reg:${row.id}` }],
+          ],
+        },
+      }
+    );
+    return true;
+  }
+
   // 1. Chaqiruvlar (sc:accept:, sc:done:, sc:reject:)
   if (data.startsWith("sc:")) {
     await answerCallbackQuery(query.id);
@@ -3645,15 +3775,8 @@ async function handleContact(
 
     // Raqamlar to'g'ri keldi!
     if (row && spec) {
-      await db.update(otpCodes).set({ telegramId, deliveredAt: new Date() }).where(eq(otpCodes.id, row.id));
-      await clearReplyKeyboard(
-        chatId,
-        `✅ <b>Telefon raqamingiz muvaffaqiyatli tasdiqlandi!</b>\n\n` +
-        `Hurmatli <b>${escapeHtml(spec.name)}</b>, Agroz Business hisobingizni brauzerda ochish uchun bir martalik 8 xonali tasdiqlash ID kodingiz:\n\n` +
-        `🔑 <code>${row.code}</code>\n\n` +
-        `Ushbu 8 xonali ID kodni brauzerdagi ro'yxatdan o'tish oynasiga kiriting va «Tasdiqlash va Kabinetni ochish» tugmasini bosing.\n\n` +
-        `<i>Eslatma: Ushbu kod faqat bir marta ishlatiladi va profilingiz xavfsizligini ta'minlaydi.</i>`
-      );
+      await clearReplyKeyboard(chatId, "✅ Telefon raqamingiz muvaffaqiyatli qabul qilindi!");
+      await sendBizRegConfirmationPrompt(chatId, telegramId, row, spec);
     }
     await clearState(telegramId);
     return;

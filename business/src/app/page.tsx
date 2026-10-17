@@ -554,10 +554,22 @@ export default function PartnerKabinetPage() {
       try {
         const res = await apiFetch(`/api/bot/partner/check-registration?token=${encodeURIComponent(regSuccess.token)}`);
         const data = await res.json();
+
+        // 1. Agar botda telefon tasdiqlanib 8 xonali ID berilgan bo'lsa, kodni avtomatik kiritish
+        if (data?.ok && data.code && !regVerifyCode) {
+          setRegVerifyCode(data.code);
+        }
+
+        // 2. Agar botda "Tasdiqlash va Kabinetni ochish" tugmasi bosilgan bo'lsa
         if (data?.ok && data.verified && data.sessionToken) {
           if (regPollTimerRef.current) clearInterval(regPollTimerRef.current);
+          if (data.code) {
+            setRegVerifyCode(data.code);
+          }
           setWebToken(data.sessionToken);
           localStorage.setItem("agroz_business_token", data.sessionToken);
+          localStorage.setItem("agroz_device_remembered", "true");
+          setIsDeviceRemembered(true);
           try {
             localStorage.setItem(
               "agroz_remembered_partner",
@@ -567,15 +579,20 @@ export default function PartnerKabinetPage() {
                 organization: data.organization,
                 role: data.role || regSuccess.role,
                 phone: data.phone || regSuccess.phone,
+                token: data.sessionToken,
               })
             );
           } catch {}
-          setShowRegisterModal(false);
-          setRegSuccess(null);
-          await loadData("", data.sessionToken);
+
+          // ID kod avtomatik kiritilganini foydalanuvchiga 600ms ko'rsatib, so'ngra kabinetni ochamiz
+          setTimeout(async () => {
+            setShowRegisterModal(false);
+            setRegSuccess(null);
+            await loadData("", data.sessionToken);
+          }, 600);
         }
       } catch {}
-    }, 2500);
+    }, 2000);
 
     return () => {
       if (regPollTimerRef.current) clearInterval(regPollTimerRef.current);
@@ -3359,11 +3376,21 @@ export default function PartnerKabinetPage() {
                           setRegVerifyError(null);
                         }}
                         placeholder="Masalan: 12345678"
-                        className="w-full text-center tracking-[0.3em] font-mono text-lg font-black py-2.5 rounded-xl border border-zinc-300 bg-white text-zinc-900 focus:border-black focus:outline-none"
+                        className={`w-full text-center tracking-[0.3em] font-mono text-lg font-black py-2.5 rounded-xl border transition ${
+                          regVerifyCode.length === 8
+                            ? "border-emerald-500 bg-emerald-50/40 text-emerald-900 ring-2 ring-emerald-500/20"
+                            : "border-zinc-300 bg-white text-zinc-900 focus:border-black focus:outline-none"
+                        }`}
                       />
-                      <p className="text-[10px] text-zinc-500 text-center">
-                        Telegram profilingiz raqami arizadagi <b>{regSuccess.phone}</b> raqami bilan bir xil bo‘lishi shart.
-                      </p>
+                      {regVerifyCode.length === 8 ? (
+                        <p className="text-[10px] text-emerald-700 font-bold text-center flex items-center justify-center gap-1">
+                          <span>✅ 8 xonali ID kod aniqlandi! Kabinet ishga tushirilmoqda...</span>
+                        </p>
+                      ) : (
+                        <p className="text-[10px] text-zinc-500 text-center">
+                          Botda «Tasdiqlash» tugmasini bossangiz kod avtomatik kiritiladi va kabinet darhol ochiladi.
+                        </p>
+                      )}
                     </div>
 
                     {regVerifyError && (
