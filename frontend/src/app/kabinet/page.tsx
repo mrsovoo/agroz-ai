@@ -286,7 +286,6 @@ export default function PartnerKabinetPage() {
     trialEndsAt: string;
   } | null>(null);
   const [regNotice, setRegNotice] = useState<string | null>(null);
-  const [roleSwitching, setRoleSwitching] = useState(false);
 
   // Rasmiy xizmat ko'rsatish shartnomasi modali
   const [showContractModal, setShowContractModal] = useState(false);
@@ -1171,31 +1170,6 @@ export default function PartnerKabinetPage() {
     setOtpCode("");
   }
 
-  // Hamkor faoliyat rolini o'zgartirish (Do'kon, Mutaxassis yoki Ikkalasi)
-  async function handleSwitchRole(nextRole: "pharmacy" | "specialist" | "both") {
-    if (!partner || roleSwitching) return;
-    setRoleSwitching(true);
-    try {
-      const headers = getHeaders();
-      const res = await apiFetch(`/api/bot/partner/profile`, {
-        method: "PATCH",
-        headers,
-        body: JSON.stringify({ role: nextRole }),
-      });
-      const data = await res.json();
-      if (data?.ok && data.partner) {
-        setPartner((prev) => (prev ? { ...prev, role: data.partner.role } : null));
-        setActiveTab("dashboard");
-        await loadData(initData, webToken);
-      } else {
-        alert(data?.error || "Rolni o'zgartirishda xatolik yuz berdi");
-      }
-    } catch {
-      alert("Server bilan aloqa uzildi");
-    } finally {
-      setRoleSwitching(false);
-    }
-  }
 
   // Bandlik holatini almashtirish (1-tap toggle)
   async function toggleBusy() {
@@ -4663,80 +4637,7 @@ export default function PartnerKabinetPage() {
                 )}
               </div>
 
-              {/* Faoliyat turi va Boshqaruv panelini tanlash (Agro-do'kon / Mutaxassis / Universal) */}
-              <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-xs space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-bold text-zinc-900">Faoliyat turi va Kabinet rejimi</h4>
-                    <p className="text-xs text-zinc-500">Istalgan payt boshqaruv rejimini almashtirishingiz mumkin</p>
-                  </div>
-                  <span className="text-[11px] font-mono font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
-                    {partner.role === "both" ? "Universal" : partner.role === "pharmacy" ? "Agro-do‘kon" : "Mutaxassis"}
-                  </span>
-                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <button
-                    type="button"
-                    disabled={roleSwitching || partner.role === "pharmacy"}
-                    onClick={() => handleSwitchRole("pharmacy")}
-                    className={`flex flex-col items-start p-4 rounded-2xl border text-left transition ${
-                      partner.role === "pharmacy"
-                        ? "border-zinc-900 bg-zinc-900 text-white shadow-xs"
-                        : "border-zinc-200 bg-zinc-50 hover:bg-zinc-100 text-zinc-800"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between w-full mb-2">
-                      <Store size={20} className={partner.role === "pharmacy" ? "text-emerald-400" : "text-zinc-700"} />
-                      {partner.role === "pharmacy" && <CheckCircle2 size={16} className="text-emerald-400" />}
-                    </div>
-                    <span className="text-xs font-bold">Agro-Do‘kon</span>
-                    <span className={`text-[10px] mt-1 leading-snug ${partner.role === "pharmacy" ? "text-zinc-300" : "text-zinc-500"}`}>
-                      Mahsulotlar ombori, sotuvlar, kassa va qarz daftari
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={roleSwitching || partner.role === "specialist"}
-                    onClick={() => handleSwitchRole("specialist")}
-                    className={`flex flex-col items-start p-4 rounded-2xl border text-left transition ${
-                      partner.role === "specialist"
-                        ? "border-zinc-900 bg-zinc-900 text-white shadow-xs"
-                        : "border-zinc-200 bg-zinc-50 hover:bg-zinc-100 text-zinc-800"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between w-full mb-2">
-                      <UserCheck size={20} className={partner.role === "specialist" ? "text-emerald-400" : "text-zinc-700"} />
-                      {partner.role === "specialist" && <CheckCircle2 size={16} className="text-emerald-400" />}
-                    </div>
-                    <span className="text-xs font-bold">Mutaxassis</span>
-                    <span className={`text-[10px] mt-1 leading-snug ${partner.role === "specialist" ? "text-zinc-300" : "text-zinc-500"}`}>
-                      Agronom / Veterinar, fermerlar chaqiruvlari va ko‘riklar
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={roleSwitching || partner.role === "both"}
-                    onClick={() => handleSwitchRole("both")}
-                    className={`flex flex-col items-start p-4 rounded-2xl border text-left transition ${
-                      partner.role === "both"
-                        ? "border-emerald-700 bg-gradient-to-br from-emerald-800 to-teal-900 text-white shadow-xs"
-                        : "border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100/60 text-emerald-950"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between w-full mb-2">
-                      <Sparkles size={20} className={partner.role === "both" ? "text-emerald-300" : "text-emerald-700"} />
-                      {partner.role === "both" && <CheckCircle2 size={16} className="text-emerald-300" />}
-                    </div>
-                    <span className="text-xs font-bold">Universal (Ikkalasi)</span>
-                    <span className={`text-[10px] mt-1 leading-snug ${partner.role === "both" ? "text-emerald-200" : "text-emerald-800"}`}>
-                      Ham do‘kon mahsulotlari, ham mutaxassislik xizmatlari
-                    </span>
-                  </button>
-                </div>
-              </div>
 
               {/* O'RQ-547 Qonuniy Himoya Guvohnomasi */}
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 shadow-xs space-y-2.5">
