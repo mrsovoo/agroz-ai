@@ -302,7 +302,7 @@ export function webAppUrl(): string {
 }
 
 export function partnerMiniappUrl(): string {
-  const raw = process.env.PARTNER_MINIAPP_URL || `${webAppUrl()}/kabinet`;
+  const raw = process.env.PARTNER_MINIAPP_URL || process.env.BUSINESS_WEB_URL || "https://biznesgo.vercel.app";
   return raw.replace(/\/+$/, "");
 }
 

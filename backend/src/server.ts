@@ -60,6 +60,7 @@ const defaultAllowedOrigins = [
   "https://www.agroz.uz",
   "https://admin.agroz.uz",
   "https://business.agroz.uz",
+  "https://biznesgo.vercel.app",
 ];
 
 const envOrigins = [

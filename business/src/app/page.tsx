@@ -113,6 +113,28 @@ function formatUzbekPhone(val: string): string {
   return res;
 }
 
+function transliterateToLogin(text: string): string {
+  const map: Record<string, string> = {
+    а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "yo", ж: "j",
+    з: "z", и: "i", й: "y", к: "k", л: "l", м: "m", н: "n", о: "o",
+    п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f", х: "x", ц: "ts",
+    ч: "ch", ш: "sh", щ: "sh", ъ: "", ы: "y", ь: "", э: "e", ю: "yu",
+    я: "ya", ў: "o", ғ: "g", ҳ: "h", қ: "q",
+    "o'": "o", "o`": "o", "oʻ": "o", "oʼ": "o",
+    "g'": "g", "g`": "g", "gʻ": "g", "gʼ": "g",
+  };
+  let res = (text || "").toLowerCase();
+  for (const [k, v] of Object.entries(map)) {
+    res = res.replaceAll(k, v);
+  }
+  return res
+    .replace(/['`ʻʼ]/g, "")
+    .replace(/[^a-z0-9]/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_|_$/g, "")
+    .slice(0, 24);
+}
+
 type PartnerProfile = {
   id: number;
   name: string;
@@ -256,6 +278,8 @@ export default function PartnerKabinetPage() {
     login?: string;
     trialEndsAt: string;
   } | null>(null);
+  const [regNotice, setRegNotice] = useState<string | null>(null);
+  const [roleSwitching, setRoleSwitching] = useState(false);
 
   // Rasmiy xizmat ko'rsatish shartnomasi modali
   const [showContractModal, setShowContractModal] = useState(false);
@@ -306,8 +330,8 @@ export default function PartnerKabinetPage() {
   // Hamkor profili
   const [partner, setPartner] = useState<PartnerProfile | null>(null);
 
-  // Tablar: Mutaxassis uchun "calls" | "profile". Agro-do'kon uchun "orders" | "medicines" | "profile"
-  const [activeTab, setActiveTab] = useState<string>("calls");
+  // Tablar: Default "dashboard"
+  const [activeTab, setActiveTab] = useState<string>("dashboard");
 
   // Ro'yxatlar
   const [orders, setOrders] = useState<PartnerOrder[]>([]);
@@ -439,6 +463,13 @@ export default function PartnerKabinetPage() {
     if (regLoginIsManual) return;
     const target = regOrganization.trim() || regName.trim();
     if (!target || target.length < 2) return;
+
+    // Real-vaqtda darhol transliteratsiya qilib beramiz
+    const localSlug = transliterateToLogin(target);
+    if (localSlug) {
+      setRegLogin(localSlug);
+    }
+
     if (suggestTimerRef.current) clearTimeout(suggestTimerRef.current);
     suggestTimerRef.current = setTimeout(async () => {
       try {
@@ -726,8 +757,21 @@ export default function PartnerKabinetPage() {
         }, 2500);
       } else {
         if (data?.notRegistered) {
-          setRegPhone(cleanPhone.startsWith("+") ? cleanPhone : "+" + cleanPhone);
-          setLoginError(data.error || "Ushbu raqam bilan ro'yxatdan o'tgan hamkor topilmadi");
+          setShowLoginModal(false);
+          setShowRegisterModal(true);
+          const ph = data.phone || cleanPhone;
+          const formatted = ph.startsWith("+") ? ph : "+" + ph;
+          setRegPhone(formatted);
+          if (data.userName) {
+            setRegName(data.userName);
+            const translit = transliterateToLogin(data.userName);
+            if (translit) setRegLogin(translit);
+          }
+          setRegNotice(
+            data.isExistingUser
+              ? `Xush kelibsiz! Siz tizimda mavjudsiz. Biznes kabinetingizni faollashtirish uchun 1 daqiqada ariza topshiring!`
+              : (data.error || "Ushbu raqam bilan biznes profil topilmadi. 1 daqiqada ro'yxatdan o'ting!")
+          );
         } else {
           setLoginError(data?.error || "Kodni yuborishda xatolik yuz berdi");
         }
@@ -840,7 +884,25 @@ export default function PartnerKabinetPage() {
         setShowLoginModal(false);
         return;
       } else {
-        setLoginError(data?.error || "Login yoki parol noto‘g‘ri kiritildi");
+        if (data?.notRegistered) {
+          setShowLoginModal(false);
+          setShowRegisterModal(true);
+          const ph = data.phone || (digits.length >= 9 ? "+" + digits : targetPhone);
+          const formatted = ph.startsWith("+") ? ph : "+" + ph;
+          setRegPhone(formatted);
+          if (data.userName) {
+            setRegName(data.userName);
+            const translit = transliterateToLogin(data.userName);
+            if (translit) setRegLogin(translit);
+          }
+          setRegNotice(
+            data.isExistingUser
+              ? `Xush kelibsiz! Siz tizimda mavjudsiz. Biznes kabinetingizni faollashtirish uchun 1 daqiqada ariza topshiring!`
+              : (data.error || "Biznes profilingiz topilmadi. Ro'yxatdan o'tish orqali biznes kabinetingizni faollashtiring!")
+          );
+        } else {
+          setLoginError(data?.error || "Login yoki parol noto‘g‘ri kiritildi");
+        }
       }
     } catch {
       setLoginError("Server bilan aloqa uzildi. Internetni tekshiring.");
@@ -1092,6 +1154,32 @@ export default function PartnerKabinetPage() {
     setCalls([]);
     setOtpSent(false);
     setOtpCode("");
+  }
+
+  // Hamkor faoliyat rolini o'zgartirish (Do'kon, Mutaxassis yoki Ikkalasi)
+  async function handleSwitchRole(nextRole: "pharmacy" | "specialist" | "both") {
+    if (!partner || roleSwitching) return;
+    setRoleSwitching(true);
+    try {
+      const headers = getHeaders();
+      const res = await apiFetch(`/api/bot/partner/profile`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({ role: nextRole }),
+      });
+      const data = await res.json();
+      if (data?.ok && data.partner) {
+        setPartner((prev) => (prev ? { ...prev, role: data.partner.role } : null));
+        setActiveTab("dashboard");
+        await loadData(initData, webToken);
+      } else {
+        alert(data?.error || "Rolni o'zgartirishda xatolik yuz berdi");
+      }
+    } catch {
+      alert("Server bilan aloqa uzildi");
+    } finally {
+      setRoleSwitching(false);
+    }
   }
 
   // Bandlik holatini almashtirish (1-tap toggle)
@@ -2622,6 +2710,13 @@ export default function PartnerKabinetPage() {
                   </div>
 
                   <form onSubmit={handleRegisterSubmit} className="space-y-4 pt-2 text-xs">
+                    {regNotice && (
+                      <div className="rounded-2xl bg-amber-50 border border-amber-200 p-3 text-amber-900 flex items-start gap-2.5">
+                        <span className="text-base leading-none">💡</span>
+                        <p className="text-xs font-semibold leading-relaxed">{regNotice}</p>
+                      </div>
+                    )}
+
                     {/* Yo'nalish tanlash: Agro-do'kon, Mutaxassis yoki Ikkalasi */}
                     <div>
                       <label className="block font-bold text-zinc-700 mb-1.5">Faoliyat yo‘nalishi: *</label>
@@ -2804,7 +2899,9 @@ export default function PartnerKabinetPage() {
                             className="w-full rounded-2xl border border-zinc-200 bg-white pl-8 pr-3.5 py-2 text-zinc-900 font-mono font-bold text-xs focus:border-black focus:outline-none"
                           />
                         </div>
-                        <p className="text-[10px] text-zinc-400 mt-1">Ushbu login orqali istalgan qurilmadan tezkor kirasiz.</p>
+                        <p className="text-[10px] text-zinc-500 mt-1">
+                          Do‘kon havolangiz: <span className="font-mono text-emerald-700 font-semibold">biznesgo.vercel.app/@{regLogin || "login"}</span>
+                        </p>
                       </div>
 
                       <div>
@@ -2985,9 +3082,14 @@ export default function PartnerKabinetPage() {
                       Sinov muddati: <b>{new Date(regSuccess.trialEndsAt).toLocaleDateString("uz-UZ")}</b> gacha.
                     </p>
                     {regSuccess.login && (
-                      <div className="mt-2.5 inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-zinc-100 border border-zinc-200 text-xs font-mono font-bold text-zinc-800">
-                        <span>Kirish loginingiz:</span>
-                        <span className="text-emerald-700">@{regSuccess.login}</span>
+                      <div className="mt-3 flex flex-col items-center gap-1.5">
+                        <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-zinc-100 border border-zinc-200 text-xs font-mono font-bold text-zinc-800">
+                          <span>Kirish loginingiz:</span>
+                          <span className="text-emerald-700 font-extrabold">@{regSuccess.login}</span>
+                        </div>
+                        <div className="text-[11px] text-zinc-600 font-mono bg-zinc-50 border border-zinc-200/80 px-3 py-1 rounded-xl">
+                          Do‘kon havolasi: <span className="text-emerald-700 font-bold">biznesgo.vercel.app/@{regSuccess.login}</span>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -3346,12 +3448,13 @@ export default function PartnerKabinetPage() {
         <div className="p-3 border-t border-[#E5E5EA] space-y-1.5 bg-[#FBFBFD]">
           <button
             type="button"
-            onClick={() => handleWebLogin(undefined, isPharmacy ? "specialist" : "pharmacy")}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-[11px] font-medium text-[#1D1D1F] bg-white border border-[#E5E5EA] hover:bg-[#F5F5F7] transition"
-            title="Boshqa profilga o'tish"
+            disabled={roleSwitching}
+            onClick={() => handleSwitchRole(partner?.role === "pharmacy" ? "specialist" : "pharmacy")}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-[11px] font-medium text-[#1D1D1F] bg-white border border-[#E5E5EA] hover:bg-[#F5F5F7] transition disabled:opacity-50"
+            title="Faoliyat rejimini almashtirish"
           >
             <span className="truncate">
-              {isPharmacy ? "Mutaxassis rejimi" : "Agro-do‘kon rejimi"}
+              {roleSwitching ? "O'zgartirilmoqda..." : partner?.role === "pharmacy" ? "Mutaxassis rejimi" : "Agro-do‘kon rejimi"}
             </span>
             <ChevronRight size={13} className="text-[#86868B] shrink-0" />
           </button>
@@ -4529,6 +4632,81 @@ export default function PartnerKabinetPage() {
                     <p className="text-xs text-zinc-800 leading-relaxed font-sans">{partner.bio}</p>
                   </div>
                 )}
+              </div>
+
+              {/* Faoliyat turi va Boshqaruv panelini tanlash (Agro-do'kon / Mutaxassis / Universal) */}
+              <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-xs space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-bold text-zinc-900">Faoliyat turi va Kabinet rejimi</h4>
+                    <p className="text-xs text-zinc-500">Istalgan payt boshqaruv rejimini almashtirishingiz mumkin</p>
+                  </div>
+                  <span className="text-[11px] font-mono font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                    {partner.role === "both" ? "Universal" : partner.role === "pharmacy" ? "Agro-do‘kon" : "Mutaxassis"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    disabled={roleSwitching || partner.role === "pharmacy"}
+                    onClick={() => handleSwitchRole("pharmacy")}
+                    className={`flex flex-col items-start p-4 rounded-2xl border text-left transition ${
+                      partner.role === "pharmacy"
+                        ? "border-zinc-900 bg-zinc-900 text-white shadow-xs"
+                        : "border-zinc-200 bg-zinc-50 hover:bg-zinc-100 text-zinc-800"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-2">
+                      <Store size={20} className={partner.role === "pharmacy" ? "text-emerald-400" : "text-zinc-700"} />
+                      {partner.role === "pharmacy" && <CheckCircle2 size={16} className="text-emerald-400" />}
+                    </div>
+                    <span className="text-xs font-bold">Agro-Do‘kon</span>
+                    <span className={`text-[10px] mt-1 leading-snug ${partner.role === "pharmacy" ? "text-zinc-300" : "text-zinc-500"}`}>
+                      Mahsulotlar ombori, sotuvlar, kassa va qarz daftari
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={roleSwitching || partner.role === "specialist"}
+                    onClick={() => handleSwitchRole("specialist")}
+                    className={`flex flex-col items-start p-4 rounded-2xl border text-left transition ${
+                      partner.role === "specialist"
+                        ? "border-zinc-900 bg-zinc-900 text-white shadow-xs"
+                        : "border-zinc-200 bg-zinc-50 hover:bg-zinc-100 text-zinc-800"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-2">
+                      <UserCheck size={20} className={partner.role === "specialist" ? "text-emerald-400" : "text-zinc-700"} />
+                      {partner.role === "specialist" && <CheckCircle2 size={16} className="text-emerald-400" />}
+                    </div>
+                    <span className="text-xs font-bold">Mutaxassis</span>
+                    <span className={`text-[10px] mt-1 leading-snug ${partner.role === "specialist" ? "text-zinc-300" : "text-zinc-500"}`}>
+                      Agronom / Veterinar, fermerlar chaqiruvlari va ko‘riklar
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={roleSwitching || partner.role === "both"}
+                    onClick={() => handleSwitchRole("both")}
+                    className={`flex flex-col items-start p-4 rounded-2xl border text-left transition ${
+                      partner.role === "both"
+                        ? "border-emerald-700 bg-gradient-to-br from-emerald-800 to-teal-900 text-white shadow-xs"
+                        : "border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100/60 text-emerald-950"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-2">
+                      <Sparkles size={20} className={partner.role === "both" ? "text-emerald-300" : "text-emerald-700"} />
+                      {partner.role === "both" && <CheckCircle2 size={16} className="text-emerald-300" />}
+                    </div>
+                    <span className="text-xs font-bold">Universal (Ikkalasi)</span>
+                    <span className={`text-[10px] mt-1 leading-snug ${partner.role === "both" ? "text-emerald-200" : "text-emerald-800"}`}>
+                      Ham do‘kon mahsulotlari, ham mutaxassislik xizmatlari
+                    </span>
+                  </button>
+                </div>
               </div>
 
               {/* O'RQ-547 Qonuniy Himoya Guvohnomasi */}

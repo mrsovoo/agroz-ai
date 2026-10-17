@@ -1743,17 +1743,34 @@ async function findSpecialistByPhoneOrLogin(query: string) {
   )[0] || null;
 }
 
+function transliterateUzbek(text: string): string {
+  const map: Record<string, string> = {
+    а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "yo", ж: "j",
+    з: "z", и: "i", й: "y", к: "k", л: "l", м: "m", н: "n", о: "o",
+    п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f", х: "x", ц: "ts",
+    ч: "ch", ш: "sh", щ: "sh", ъ: "", ы: "y", ь: "", э: "e", ю: "yu",
+    я: "ya", ў: "o", ғ: "g", ҳ: "h", қ: "q",
+    "o'": "o", "o`": "o", "oʻ": "o", "oʼ": "o",
+    "g'": "g", "g`": "g", "gʻ": "g", "gʼ": "g",
+  };
+  let res = (text || "").toLowerCase();
+  for (const [k, v] of Object.entries(map)) {
+    res = res.replaceAll(k, v);
+  }
+  return res;
+}
+
 // Yordamchi: Do'kon yoki mutaxassis nomidan kelib chiqib takrorlanmas login yaratish
 async function generateUniquePartnerLogin(nameOrOrg: string): Promise<string> {
-  let base = (nameOrOrg || "")
-    .toLowerCase()
+  const transliterated = transliterateUzbek(nameOrOrg || "");
+  let base = transliterated
     .replace(/['`ʻʼ]/g, "")
     .replace(/[^a-z0-9]/g, "_")
     .replace(/_+/g, "_")
     .replace(/^_|_$/g, "");
 
   if (!base || base.length < 3) {
-    base = "partner";
+    base = "agro_dokon";
   }
   base = base.slice(0, 24);
 
@@ -1796,10 +1813,32 @@ router.post("/partner/request-login-otp", async (req, res) => {
     const spec = await findSpecialistByPhoneOrLogin(rawTarget);
 
     if (!spec) {
+      const digits = rawTarget.replace(/\D/g, "");
+      const last9 = digits.slice(-9);
+      let existingUser: { name: string | null; phone: string | null } | null = null;
+      if (digits.length >= 9) {
+        const uRows = await db
+          .select({ name: users.name, phone: users.phone })
+          .from(users)
+          .where(
+            or(
+              eq(users.phone, `+998${last9}`),
+              eq(users.phone, `998${last9}`),
+              eq(users.phone, last9)
+            )
+          )
+          .limit(1);
+        if (uRows.length > 0) existingUser = uRows[0];
+      }
       return res.status(404).json({
         ok: false,
         notRegistered: true,
-        error: "Ushbu telefon raqam bilan ro'yxatdan o'tgan agro-do'kon yoki mutaxassis topilmadi. Yangi hamkor sifatida ro'yxatdan o'ting.",
+        isExistingUser: Boolean(existingUser),
+        userName: existingUser?.name || null,
+        phone: rawTarget.startsWith("+") ? rawTarget : `+998${last9}`,
+        error: existingUser
+          ? `Siz AgrozGO tizimida foydalanuvchi (${existingUser.name || "mijoz"}) sifatida ro'yxatdan o'tgansiz, ammo biznes profil ochilmagan. Hozir 1 daqiqada bepul biznes profilingizni faollashtiring!`
+          : "Ushbu telefon raqam yoki login bilan ro'yxatdan o'tgan hamkor topilmadi. Yangi hamkor sifatida ro'yxatdan o'ting.",
       });
     }
 
@@ -2505,7 +2544,8 @@ router.post("/partner/register-intent", async (req, res) => {
     const botUser = (await partnerBotUsername()) || "agroz_auth_bot";
     const cleanBotUser = botUser.replace(/^@/, "");
     const startUrl = `https://t.me/${cleanBotUser}?start=${regToken}`;
-    const webCabinetUrl = `/business?token=${sessionToken}&phone=${encodeURIComponent(cleanPhone)}`;
+    const businessBaseUrl = (process.env.BUSINESS_WEB_URL || "https://biznesgo.vercel.app").replace(/\/+$/, "");
+    const webCabinetUrl = `${businessBaseUrl}?token=${sessionToken}&phone=${encodeURIComponent(cleanPhone)}`;
 
     return res.json({
       ok: true,
@@ -2514,6 +2554,7 @@ router.post("/partner/register-intent", async (req, res) => {
       botUsername: cleanBotUser,
       startUrl,
       webCabinetUrl,
+      domain: "biznesgo.vercel.app",
       phone: cleanPhone,
       organization: cleanOrg || cleanName,
       name: cleanName,
@@ -2752,6 +2793,69 @@ router.post("/partner/init", async (req, res) => {
   } catch (err: any) {
     console.error("[partner:init error]:", err);
     res.status(500).json({ ok: false, error: "Server xatosi" });
+  }
+});
+
+// PATCH /api/bot/partner/profile (Profil ma'lumotlarini yoki faoliyat rolini yangilash)
+router.patch("/partner/profile", async (req, res) => {
+  try {
+    const spec = await getPartnerFromReq(req);
+    if (!spec) {
+      return res.status(401).json({ ok: false, error: "Avtorizatsiya talab qilinadi" });
+    }
+
+    const { role, organization, specialty, name, workHours, address, bio } = req.body || {};
+    const updateData: Record<string, any> = { updatedAt: new Date() };
+
+    if (role === "pharmacy" || role === "specialist" || role === "both") {
+      updateData.role = role;
+    }
+    if (organization !== undefined) {
+      updateData.organization = cleanText(organization, 200);
+    }
+    if (name !== undefined) {
+      const cleanN = cleanText(name, 120);
+      if (cleanN) updateData.name = cleanN;
+    }
+    if (specialty !== undefined) {
+      updateData.specialty = cleanText(specialty, 160);
+    }
+    if (workHours !== undefined) {
+      updateData.workHours = cleanText(workHours, 60);
+    }
+    if (address !== undefined) {
+      updateData.address = cleanText(address, 500);
+    }
+    if (bio !== undefined) {
+      updateData.bio = cleanText(bio, 500);
+    }
+
+    await db.update(specialists).set(updateData).where(eq(specialists.id, spec.id));
+    const [updated] = await db.select().from(specialists).where(eq(specialists.id, spec.id)).limit(1);
+
+    return res.json({
+      ok: true,
+      partner: {
+        id: updated.id,
+        name: updated.name,
+        login: updated.login,
+        role: updated.role,
+        organization: updated.organization,
+        specialty: updated.specialty,
+        phone: updated.phone,
+        address: updated.address,
+        workHours: updated.workHours,
+        experienceYears: updated.experienceYears,
+        bio: updated.bio,
+        education: updated.education,
+        helpsWith: updated.helpsWith,
+        isBusy: updated.isBusy,
+        isApproved: updated.isApproved,
+      },
+    });
+  } catch (err: any) {
+    console.error("[partner:profile update error]:", err);
+    res.status(500).json({ ok: false, error: "Profilni yangilab bo'lmadi" });
   }
 });
 
