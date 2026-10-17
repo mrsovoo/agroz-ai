@@ -29,11 +29,13 @@ import {
   Package,
   HandCoins,
   Users,
+  ShoppingCart,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api-config";
 import ProductsCatalogSection from "@/components/ProductsCatalogSection";
 import DebtsSection from "@/components/DebtsSection";
 import CustomersSection from "@/components/CustomersSection";
+import PosSection from "@/components/PosSection";
 
 export type MerchantType =
   | "agro_shop"
@@ -168,7 +170,10 @@ export default function BiznesGoPage() {
   const [profileErrorMsg, setProfileErrorMsg] = useState<string | null>(null);
 
   // Dashboard bo'limlari va Telegram BackButton boshqaruvi
-  const [activeTab, setActiveTab] = useState<"products" | "debts" | "customers" | "profile">("products");
+  const [activeTab, setActiveTab] = useState<"pos" | "products" | "debts" | "customers" | "profile">("pos");
+  const [isPosModalOpen, setIsPosModalOpen] = useState(false);
+  const closePosModalRef = useRef<(() => void) | null>(null);
+
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const closeProductModalRef = useRef<(() => void) | null>(null);
 
@@ -177,6 +182,11 @@ export default function BiznesGoPage() {
 
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const closeCustomerModalRef = useRef<(() => void) | null>(null);
+
+  const handlePosModalStateChange = useCallback((isOpen: boolean, closeFn: () => void) => {
+    setIsPosModalOpen(isOpen);
+    closePosModalRef.current = closeFn;
+  }, []);
 
   const handleProductModalStateChange = useCallback((isOpen: boolean, closeFn: () => void) => {
     setIsProductModalOpen(isOpen);
@@ -201,14 +211,17 @@ export default function BiznesGoPage() {
 
     const shouldShowBack =
       viewState === "dashboard" &&
-      (isProductModalOpen ||
+      (isPosModalOpen ||
+        isProductModalOpen ||
         isDebtModalOpen ||
         isCustomerModalOpen ||
         isEditingProfile ||
-        activeTab !== "products");
+        activeTab !== "pos");
 
     const handleBackClick = () => {
-      if (isProductModalOpen && closeProductModalRef.current) {
+      if (isPosModalOpen && closePosModalRef.current) {
+        closePosModalRef.current();
+      } else if (isProductModalOpen && closeProductModalRef.current) {
         closeProductModalRef.current();
       } else if (isDebtModalOpen && closeDebtModalRef.current) {
         closeDebtModalRef.current();
@@ -216,8 +229,8 @@ export default function BiznesGoPage() {
         closeCustomerModalRef.current();
       } else if (isEditingProfile) {
         setIsEditingProfile(false);
-      } else if (activeTab !== "products") {
-        setActiveTab("products");
+      } else if (activeTab !== "pos") {
+        setActiveTab("pos");
       }
     };
 
@@ -233,6 +246,7 @@ export default function BiznesGoPage() {
     };
   }, [
     viewState,
+    isPosModalOpen,
     isProductModalOpen,
     isDebtModalOpen,
     isCustomerModalOpen,
@@ -909,12 +923,25 @@ export default function BiznesGoPage() {
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6 space-y-5">
-        {/* Bo'limlar tab navigatsiyasi: Mahsulotlar | Qarz daftari | Mijozlar | Profil */}
-        <div className="grid grid-cols-4 gap-1.5 p-1.5 rounded-2xl bg-zinc-200/70">
+        {/* Bo'limlar tab navigatsiyasi: Kassa | Mahsulotlar | Qarz daftari | Mijozlar | Profil */}
+        <div className="grid grid-cols-5 gap-1 p-1 sm:p-1.5 rounded-2xl bg-zinc-200/70">
+          <button
+            type="button"
+            onClick={() => setActiveTab("pos")}
+            className={`flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 py-2 px-1 sm:px-2.5 rounded-xl text-[10px] sm:text-xs font-black transition ${
+              activeTab === "pos"
+                ? "bg-white text-emerald-700 shadow-xs"
+                : "text-zinc-600 hover:text-zinc-900"
+            }`}
+          >
+            <ShoppingCart size={15} />
+            <span className="truncate">Kassa</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setActiveTab("products")}
-            className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2 px-1.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-black transition ${
+            className={`flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 py-2 px-1 sm:px-2.5 rounded-xl text-[10px] sm:text-xs font-black transition ${
               activeTab === "products"
                 ? "bg-white text-emerald-700 shadow-xs"
                 : "text-zinc-600 hover:text-zinc-900"
@@ -927,20 +954,20 @@ export default function BiznesGoPage() {
           <button
             type="button"
             onClick={() => setActiveTab("debts")}
-            className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2 px-1.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-black transition ${
+            className={`flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 py-2 px-1 sm:px-2.5 rounded-xl text-[10px] sm:text-xs font-black transition ${
               activeTab === "debts"
                 ? "bg-white text-red-600 shadow-xs"
                 : "text-zinc-600 hover:text-zinc-900"
             }`}
           >
             <HandCoins size={15} />
-            <span className="truncate">Qarz daftari</span>
+            <span className="truncate">Qarz</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab("customers")}
-            className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2 px-1.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-black transition ${
+            className={`flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 py-2 px-1 sm:px-2.5 rounded-xl text-[10px] sm:text-xs font-black transition ${
               activeTab === "customers"
                 ? "bg-white text-blue-700 shadow-xs"
                 : "text-zinc-600 hover:text-zinc-900"
@@ -953,7 +980,7 @@ export default function BiznesGoPage() {
           <button
             type="button"
             onClick={() => setActiveTab("profile")}
-            className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2 px-1.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-black transition ${
+            className={`flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 py-2 px-1 sm:px-2.5 rounded-xl text-[10px] sm:text-xs font-black transition ${
               activeTab === "profile"
                 ? "bg-white text-emerald-700 shadow-xs"
                 : "text-zinc-600 hover:text-zinc-900"
@@ -970,6 +997,14 @@ export default function BiznesGoPage() {
             <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
             <span>{profileSuccessMsg}</span>
           </div>
+        )}
+
+        {activeTab === "pos" && (
+          <PosSection
+            initDataString={initDataString}
+            onModalStateChange={handlePosModalStateChange}
+            onNavigateToDebts={() => setActiveTab("debts")}
+          />
         )}
 
         {activeTab === "products" && (

@@ -1,7 +1,12 @@
 import { Router } from "express";
 import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { db } from "../../db/index.js";
-import { biznesgoCustomers, biznesgoDebts, biznesgoDebtPayments } from "../../db/schema.js";
+import {
+  biznesgoCustomers,
+  biznesgoDebts,
+  biznesgoDebtPayments,
+  biznesgoPosSales,
+} from "../../db/schema.js";
 import { requireBiznesGoMerchant, type BiznesGoRequest } from "./middleware.js";
 import { computeDebtBalance } from "../../lib/partner-erp-logic.js";
 
@@ -268,6 +273,18 @@ router.get("/customers/:id", requireBiznesGoMerchant, async (req: BiznesGoReques
       }
     }
 
+    // Mijozning POS sotuvlarini olish
+    const sales = await db
+      .select()
+      .from(biznesgoPosSales)
+      .where(
+        and(
+          eq(biznesgoPosSales.merchantId, merchant.id),
+          eq(biznesgoPosSales.customerId, customer.id),
+        ),
+      )
+      .orderBy(desc(biznesgoPosSales.createdAt), desc(biznesgoPosSales.id));
+
     return res.json({
       ok: true,
       customer: {
@@ -277,6 +294,8 @@ router.get("/customers/:id", requireBiznesGoMerchant, async (req: BiznesGoReques
         totalDebtsCount: debts.filter((d) => d.status !== "cancelled").length,
         debts,
         payments,
+        sales,
+        posSales: sales,
       },
     });
   } catch (err) {

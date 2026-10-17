@@ -14,3 +14,4 @@ FROM biznesgo_debts bd
 WHERE bdp.debt_id = bd.id AND bdp.merchant_id IS NULL;
 
 CREATE INDEX IF NOT EXISTS biznesgo_debt_payments_merchant_idx ON biznesgo_debt_payments (merchant_id);
+

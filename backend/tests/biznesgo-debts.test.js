@@ -67,3 +67,4 @@ test("BiznesGO Debts — Qaytarish muddati o'tganligini (isOverdue) aniqlash", (
   const isOverdueFuture = futureDate < now;
   assert.equal(isOverdueFuture, false);
 });
+

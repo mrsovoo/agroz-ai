@@ -61,9 +61,21 @@ export interface CustomerDetailPayment {
   createdAt: string;
 }
 
+export interface CustomerDetailSale {
+  id: number;
+  totalAmount: number;
+  discountAmount: number;
+  finalAmount: number;
+  paymentMethod: "cash" | "card" | "credit";
+  status: "completed" | "cancelled";
+  createdAt: string;
+}
+
 export interface CustomerDetailResponse extends BiznesGoCustomer {
   debts: CustomerDetailDebt[];
   payments: CustomerDetailPayment[];
+  sales?: CustomerDetailSale[];
+  posSales?: CustomerDetailSale[];
 }
 
 interface CustomersSectionProps {
@@ -842,9 +854,56 @@ export default function CustomersSection({
                 </div>
               )}
             </div>
+
+            {/* POS Savdo tarixi */}
+              <div className="space-y-3 pt-2 border-t border-zinc-100">
+                <div className="text-xs font-black text-zinc-900">
+                  Kassa sotuvlari tarixi ({viewingCustomer.posSales?.length || viewingCustomer.sales?.length || 0})
+                </div>
+
+                {(!viewingCustomer.posSales || viewingCustomer.posSales.length === 0) &&
+                (!viewingCustomer.sales || viewingCustomer.sales.length === 0) ? (
+                  <div className="p-4 rounded-2xl bg-zinc-50 text-center text-xs text-zinc-500">
+                    Ushbu mijozga kassa orqali sotuv amalga oshirilmagan
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {(viewingCustomer.posSales || viewingCustomer.sales || []).map((s) => (
+                      <div
+                        key={s.id}
+                        className="p-2.5 rounded-xl bg-zinc-50 border border-zinc-200/70 flex items-center justify-between text-xs"
+                      >
+                        <div>
+                          <div className="font-bold text-zinc-900">
+                            Sotuv #{s.id} — {money(s.finalAmount)} so‘m
+                          </div>
+                          <div className="text-[10px] text-zinc-400 mt-0.5">
+                            {new Date(s.createdAt).toLocaleString()} • To‘lov:{" "}
+                            {s.paymentMethod === "cash"
+                              ? "Naqd pul"
+                              : s.paymentMethod === "card"
+                              ? "Karta"
+                              : "Nasiya"}
+                          </div>
+                        </div>
+
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            s.status === "completed"
+                              ? "bg-emerald-50 text-emerald-700"
+                              : "bg-zinc-200 text-zinc-600"
+                          }`}
+                        >
+                          {s.status === "completed" ? "Bajarildi" : "Bekor qilingan"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* MODAL 3: Mijozga tezkor yangi qarz yozish */}
       {addingDebtCustomer && (
@@ -958,3 +1017,4 @@ export default function CustomersSection({
     </div>
   );
 }
+

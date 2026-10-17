@@ -676,9 +676,15 @@ export const biznesgoPosSales = pgTable("biznesgo_pos_sales", {
   customerPhone: varchar("customer_phone", { length: 32 }),
   totalAmount: integer("total_amount").default(0).notNull(),
   discount: integer("discount").default(0).notNull(),
+  discountAmount: integer("discount_amount").default(0).notNull(),
+  finalAmount: integer("final_amount").default(0).notNull(),
   paymentType: varchar("payment_type", { length: 32 }).default("cash").notNull(), // cash | card | credit
+  paymentMethod: varchar("payment_method", { length: 32 }).default("cash").notNull(), // cash | card | credit
   status: varchar("status", { length: 32 }).default("completed").notNull(), // completed | cancelled
+  debtId: integer("debt_id").references(() => biznesgoDebts.id, { onDelete: "set null" }),
+  note: text("note"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 /**
@@ -689,10 +695,14 @@ export const biznesgoPosSaleItems = pgTable("biznesgo_pos_sale_items", {
   saleId: integer("sale_id")
     .references(() => biznesgoPosSales.id, { onDelete: "cascade" })
     .notNull(),
+  merchantId: integer("merchant_id").references(() => biznesgoMerchants.id, {
+    onDelete: "cascade",
+  }),
   productId: integer("product_id").references(() => biznesgoProducts.id, {
     onDelete: "set null",
   }),
   productName: varchar("product_name", { length: 200 }).notNull(),
+  unit: varchar("unit", { length: 40 }).default("dona").notNull(),
   quantity: integer("quantity").default(1).notNull(),
   unitPrice: integer("unit_price").default(0).notNull(),
   totalAmount: integer("total_amount").default(0).notNull(),
