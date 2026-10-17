@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Store,
   Building2,
@@ -26,8 +26,10 @@ import {
   RefreshCw,
   Send,
   ExternalLink,
+  Package,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api-config";
+import ProductsCatalogSection from "@/components/ProductsCatalogSection";
 
 export type MerchantType =
   | "agro_shop"
@@ -160,6 +162,48 @@ export default function BiznesGoPage() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileSuccessMsg, setProfileSuccessMsg] = useState<string | null>(null);
   const [profileErrorMsg, setProfileErrorMsg] = useState<string | null>(null);
+
+  // Dashboard bo'limlari va Telegram BackButton boshqaruvi
+  const [activeTab, setActiveTab] = useState<"products" | "profile">("products");
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const closeProductModalRef = useRef<(() => void) | null>(null);
+
+  const handleProductModalStateChange = useCallback((isOpen: boolean, closeFn: () => void) => {
+    setIsProductModalOpen(isOpen);
+    closeProductModalRef.current = closeFn;
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const tg = (window as any).Telegram?.WebApp;
+    const backBtn = tg?.BackButton;
+    if (!backBtn) return;
+
+    const shouldShowBack =
+      viewState === "dashboard" &&
+      (isProductModalOpen || isEditingProfile || activeTab === "profile");
+
+    const handleBackClick = () => {
+      if (isProductModalOpen && closeProductModalRef.current) {
+        closeProductModalRef.current();
+      } else if (isEditingProfile) {
+        setIsEditingProfile(false);
+      } else if (activeTab === "profile") {
+        setActiveTab("products");
+      }
+    };
+
+    if (shouldShowBack) {
+      backBtn.show?.();
+      backBtn.onClick?.(handleBackClick);
+    } else {
+      backBtn.hide?.();
+    }
+
+    return () => {
+      backBtn.offClick?.(handleBackClick);
+    };
+  }, [viewState, isProductModalOpen, isEditingProfile, activeTab]);
 
   // Dastlabki yuklanish: Telegram initData yoki saqlangan sessiyani tekshirish
   useEffect(() => {
@@ -829,7 +873,36 @@ export default function BiznesGoPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6 space-y-5">
+        {/* Bo'limlar tab navigatsiyasi: Mahsulotlar va Ombor | Do'kon profili */}
+        <div className="grid grid-cols-2 gap-2 p-1.5 rounded-2xl bg-zinc-200/70">
+          <button
+            type="button"
+            onClick={() => setActiveTab("products")}
+            className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-black transition ${
+              activeTab === "products"
+                ? "bg-white text-emerald-700 shadow-xs"
+                : "text-zinc-600 hover:text-zinc-900"
+            }`}
+          >
+            <Package size={16} />
+            <span>Mahsulotlar va Ombor</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("profile")}
+            className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-black transition ${
+              activeTab === "profile"
+                ? "bg-white text-emerald-700 shadow-xs"
+                : "text-zinc-600 hover:text-zinc-900"
+            }`}
+          >
+            <Store size={16} />
+            <span>Do‘kon profili</span>
+          </button>
+        </div>
+
         {/* Success message */}
         {profileSuccessMsg && (
           <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center gap-2 text-xs font-bold text-emerald-800">
@@ -838,137 +911,126 @@ export default function BiznesGoPage() {
           </div>
         )}
 
-        {/* 2-Bosqich: Xavfsiz poydevor axborot kartochkasi */}
-        <div className="p-4 sm:p-5 rounded-3xl bg-linear-to-r from-emerald-600 to-teal-700 text-white shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/20 text-[10px] font-bold uppercase tracking-wider">
-              2-Bosqich • Poydevor
-            </div>
-            <h2 className="text-base sm:text-lg font-black">
-              BiznesGO xavfsiz avtorizatsiya va profil tizimi
-            </h2>
-            <p className="text-xs text-emerald-100 max-w-xl">
-              Sotuvchi profilingiz Telegram HMAC-SHA256 imzosi orqali himoyalangan. Keyingi bosqichlarda mahsulot katalogi, ombor qoldig‘i va kassa tizimi ulanadi.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="h-10 w-10 rounded-2xl bg-white/10 flex items-center justify-center">
-              <ShieldCheck size={24} />
-            </div>
-          </div>
-        </div>
+        {activeTab === "products" ? (
+          <ProductsCatalogSection
+            initDataString={initDataString}
+            onModalStateChange={handleProductModalStateChange}
+          />
+        ) : (
+          <>
+            {/* Sotuvchi Profil Kartochkasi */}
+            <div className="bg-white border border-zinc-200 rounded-3xl p-6 shadow-2xs space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-zinc-100 gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-2xl bg-zinc-100 text-zinc-700 flex items-center justify-center">
+                    <MetaIcon size={24} className="text-emerald-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-zinc-900">
+                      {merchant?.organizationName}
+                    </h3>
+                    <div className="text-xs text-zinc-500 flex items-center gap-2 mt-0.5">
+                      <span>{meta.label}</span>
+                      <span>•</span>
+                      <span>Mas‘ul: {merchant?.name}</span>
+                    </div>
+                  </div>
+                </div>
 
-        {/* Sotuvchi Profil Kartochkasi */}
-        <div className="bg-white border border-zinc-200 rounded-3xl p-6 shadow-2xs space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-zinc-100 gap-3">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-2xl bg-zinc-100 text-zinc-700 flex items-center justify-center">
-                <MetaIcon size={24} className="text-emerald-600" />
+                <button
+                  type="button"
+                  onClick={openEditProfile}
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold transition self-start sm:self-auto"
+                >
+                  <Edit3 size={14} />
+                  <span>Ma‘lumotlarni o‘zgartirish</span>
+                </button>
               </div>
-              <div>
-                <h3 className="text-base font-black text-zinc-900">
-                  {merchant?.organizationName}
-                </h3>
-                <div className="text-xs text-zinc-500 flex items-center gap-2 mt-0.5">
-                  <span>{meta.label}</span>
-                  <span>•</span>
-                  <span>Mas‘ul: {merchant?.name}</span>
+
+              {/* Ma'lumotlar to'ri */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-100 space-y-1">
+                  <div className="text-[11px] font-semibold text-zinc-400 flex items-center gap-1.5">
+                    <Phone size={13} />
+                    <span>Telefon raqami</span>
+                  </div>
+                  <div className="text-xs font-bold text-zinc-800">
+                    {merchant?.phone ? formatPhoneDisplay(merchant.phone) : "Kiritilmagan"}
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-100 space-y-1">
+                  <div className="text-[11px] font-semibold text-zinc-400 flex items-center gap-1.5">
+                    <MapPin size={13} />
+                    <span>Hudud (Viloyat / Tuman)</span>
+                  </div>
+                  <div className="text-xs font-bold text-zinc-800">
+                    {merchant?.region || "O'zbekiston"}
+                    {merchant?.district ? `, ${merchant.district}` : ""}
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-100 space-y-1">
+                  <div className="text-[11px] font-semibold text-zinc-400 flex items-center gap-1.5">
+                    <Clock size={13} />
+                    <span>Ish vaqti</span>
+                  </div>
+                  <div className="text-xs font-bold text-zinc-800">
+                    {merchant?.workingHours || "08:00 - 18:00"}
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-100 space-y-1 sm:col-span-2">
+                  <div className="text-[11px] font-semibold text-zinc-400 flex items-center gap-1.5">
+                    <Building2 size={13} />
+                    <span>Aniq manzil yoki mo‘ljal</span>
+                  </div>
+                  <div className="text-xs font-bold text-zinc-800">
+                    {merchant?.address || "Kiritilmagan"}
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-100 space-y-1">
+                  <div className="text-[11px] font-semibold text-zinc-400 flex items-center gap-1.5">
+                    <Truck size={13} />
+                    <span>Yetkazib berish</span>
+                  </div>
+                  <div className="text-xs font-bold text-zinc-800">
+                    {merchant?.deliveryAvailable ? (
+                      <span className="text-emerald-700 font-bold">Mavjud (Bor)</span>
+                    ) : (
+                      <span className="text-zinc-500">Mavjud emas</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={openEditProfile}
-              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold transition self-start sm:self-auto"
-            >
-              <Edit3 size={14} />
-              <span>Ma‘lumotlarni o‘zgartirish</span>
-            </button>
-          </div>
-
-          {/* Ma'lumotlar to'ri */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-100 space-y-1">
-              <div className="text-[11px] font-semibold text-zinc-400 flex items-center gap-1.5">
-                <Phone size={13} />
-                <span>Telefon raqami</span>
+            {/* Xavfsizlik va Sessiya holati */}
+            <div className="bg-white border border-zinc-200 rounded-3xl p-6 shadow-2xs space-y-3">
+              <div className="flex items-center gap-2 text-xs font-black text-zinc-900">
+                <ShieldCheck size={16} className="text-emerald-600" />
+                <span>Xavfsizlik va Telegram autentifikatsiyasi</span>
               </div>
-              <div className="text-xs font-bold text-zinc-800">
-                {merchant?.phone ? formatPhoneDisplay(merchant.phone) : "Kiritilmagan"}
-              </div>
-            </div>
-
-            <div className="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-100 space-y-1">
-              <div className="text-[11px] font-semibold text-zinc-400 flex items-center gap-1.5">
-                <MapPin size={13} />
-                <span>Hudud (Viloyat / Tuman)</span>
-              </div>
-              <div className="text-xs font-bold text-zinc-800">
-                {merchant?.region || "O'zbekiston"}
-                {merchant?.district ? `, ${merchant.district}` : ""}
+              <div className="text-xs text-zinc-600 leading-relaxed space-y-1.5">
+                <div className="flex items-center justify-between py-1 border-b border-zinc-100">
+                  <span className="text-zinc-500">Telegram hisob:</span>
+                  <span className="font-bold text-zinc-800">
+                    {merchant?.telegramId ? `ID: ${merchant.telegramId} (Tasdiqlangan)` : "Lokal sinov hisobi"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between py-1 border-b border-zinc-100">
+                  <span className="text-zinc-500">Sessiya holati:</span>
+                  <span className="font-bold text-emerald-700">30 kunlik himoyalangan token faol</span>
+                </div>
+                <div className="flex items-center justify-between py-1">
+                  <span className="text-zinc-500">Ruxsat darajasi:</span>
+                  <span className="font-bold text-zinc-800">Faqat o‘z do‘kon va mahsulotlarini boshqarish</span>
+                </div>
               </div>
             </div>
-
-            <div className="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-100 space-y-1">
-              <div className="text-[11px] font-semibold text-zinc-400 flex items-center gap-1.5">
-                <Clock size={13} />
-                <span>Ish vaqti</span>
-              </div>
-              <div className="text-xs font-bold text-zinc-800">
-                {merchant?.workingHours || "08:00 - 18:00"}
-              </div>
-            </div>
-
-            <div className="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-100 space-y-1 sm:col-span-2">
-              <div className="text-[11px] font-semibold text-zinc-400 flex items-center gap-1.5">
-                <Building2 size={13} />
-                <span>Aniq manzil yoki mo‘ljal</span>
-              </div>
-              <div className="text-xs font-bold text-zinc-800">
-                {merchant?.address || "Kiritilmagan"}
-              </div>
-            </div>
-
-            <div className="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-100 space-y-1">
-              <div className="text-[11px] font-semibold text-zinc-400 flex items-center gap-1.5">
-                <Truck size={13} />
-                <span>Yetkazib berish</span>
-              </div>
-              <div className="text-xs font-bold text-zinc-800">
-                {merchant?.deliveryAvailable ? (
-                  <span className="text-emerald-700 font-bold">Mavjud (Bor)</span>
-                ) : (
-                  <span className="text-zinc-500">Mavjud emas</span>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Xavfsizlik va Sessiya holati */}
-        <div className="bg-white border border-zinc-200 rounded-3xl p-6 shadow-2xs space-y-3">
-          <div className="flex items-center gap-2 text-xs font-black text-zinc-900">
-            <ShieldCheck size={16} className="text-emerald-600" />
-            <span>Xavfsizlik va Telegram autentifikatsiyasi</span>
-          </div>
-          <div className="text-xs text-zinc-600 leading-relaxed space-y-1.5">
-            <div className="flex items-center justify-between py-1 border-b border-zinc-100">
-              <span className="text-zinc-500">Telegram hisob:</span>
-              <span className="font-bold text-zinc-800">
-                {merchant?.telegramId ? `ID: ${merchant.telegramId} (Tasdiqlangan)` : "Lokal sinov hisobi"}
-              </span>
-            </div>
-            <div className="flex items-center justify-between py-1 border-b border-zinc-100">
-              <span className="text-zinc-500">Sessiya holati:</span>
-              <span className="font-bold text-emerald-700">30 kunlik himoyalangan token faol</span>
-            </div>
-            <div className="flex items-center justify-between py-1">
-              <span className="text-zinc-500">Ruxsat darajasi:</span>
-              <span className="font-bold text-zinc-800">Faqat o‘z biznes profilini boshqarish</span>
-            </div>
-          </div>
-        </div>
+          </>
+        )}
       </main>
 
       {/* Profil tahrirlash Modal oynasi */}

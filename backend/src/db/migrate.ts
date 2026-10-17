@@ -56,20 +56,24 @@ export async function ensureBiznesGoSchema(): Promise<void> {
       id serial PRIMARY KEY NOT NULL,
       merchant_id integer NOT NULL REFERENCES biznesgo_merchants(id) ON DELETE CASCADE,
       name varchar(200) NOT NULL,
-      category varchar(100),
-      unit varchar(40) DEFAULT 'dona' NOT NULL,
-      price integer DEFAULT 0 NOT NULL,
-      cost_price integer DEFAULT 0,
-      stock_quantity integer DEFAULT 0 NOT NULL,
-      min_stock_level integer DEFAULT 5,
-      barcode varchar(64),
+      category varchar(64) DEFAULT 'general' NOT NULL,
       description text,
+      price integer DEFAULT 0 NOT NULL,
+      unit varchar(40) DEFAULT 'dona' NOT NULL,
+      stock integer DEFAULT 0 NOT NULL,
+      min_stock integer DEFAULT 5 NOT NULL,
       image_url text,
-      is_active boolean DEFAULT true NOT NULL,
+      status varchar(32) DEFAULT 'active' NOT NULL,
       created_at timestamp DEFAULT now() NOT NULL,
       updated_at timestamp DEFAULT now() NOT NULL
     );
+    ALTER TABLE biznesgo_products ADD COLUMN IF NOT EXISTS stock integer DEFAULT 0 NOT NULL;
+    ALTER TABLE biznesgo_products ADD COLUMN IF NOT EXISTS min_stock integer DEFAULT 5 NOT NULL;
+    ALTER TABLE biznesgo_products ADD COLUMN IF NOT EXISTS status varchar(32) DEFAULT 'active' NOT NULL;
+    ALTER TABLE biznesgo_products ALTER COLUMN category SET DEFAULT 'general';
     CREATE INDEX IF NOT EXISTS biznesgo_products_merchant_idx ON biznesgo_products (merchant_id);
+    CREATE INDEX IF NOT EXISTS biznesgo_products_merchant_status_idx ON biznesgo_products (merchant_id, status);
+    CREATE INDEX IF NOT EXISTS biznesgo_products_merchant_category_idx ON biznesgo_products (merchant_id, category);
 
     CREATE TABLE IF NOT EXISTS biznesgo_customers (
       id serial PRIMARY KEY NOT NULL,
@@ -215,6 +219,47 @@ export async function ensureBiznesGoSchema(): Promise<void> {
           END;
       `);
 
+      // Eski ustunlar (stock_quantity, min_stock_level) mavjud bo'lsa, yangi stock, min_stock, status ustunlariga ko'chirish
+      await db.execute(sql`
+        DO $$
+        BEGIN
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'biznesgo_products' AND column_name = 'stock_quantity'
+          ) THEN
+            ALTER TABLE biznesgo_products ALTER COLUMN stock_quantity SET DEFAULT 0;
+            ALTER TABLE biznesgo_products ALTER COLUMN stock_quantity DROP NOT NULL;
+            UPDATE biznesgo_products
+            SET stock = COALESCE(stock_quantity, 0)
+            WHERE stock = 0 AND COALESCE(stock_quantity, 0) > 0;
+          END IF;
+
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'biznesgo_products' AND column_name = 'min_stock_level'
+          ) THEN
+            UPDATE biznesgo_products
+            SET min_stock = COALESCE(min_stock_level, 5)
+            WHERE min_stock IS NULL;
+          END IF;
+        END $$;
+
+        UPDATE biznesgo_products
+        SET category = CASE
+          WHEN category = 'crop' THEN 'agro_chemicals'
+          WHEN category = 'animal' THEN 'veterinary_products'
+          WHEN category IS NULL OR category = '' THEN 'general'
+          ELSE category
+        END;
+
+        UPDATE biznesgo_products
+        SET status = CASE
+          WHEN status = 'archived' THEN 'archived'
+          WHEN stock <= 0 THEN 'out_of_stock'
+          ELSE 'active'
+        END;
+      `);
+
       // specialist_medicines jadvalidan dorilarni biznesgo_products jadvaliga ko'chirish (agar hali ko'chirilmagan bo'lsa)
       await db.execute(sql`
         INSERT INTO biznesgo_products (
@@ -223,23 +268,32 @@ export async function ensureBiznesGoSchema(): Promise<void> {
           category,
           unit,
           price,
-          stock_quantity,
+          stock,
+          min_stock,
           description,
           image_url,
-          is_active,
+          status,
           created_at,
           updated_at
         )
         SELECT
           bm.id,
           sm.name,
-          COALESCE(sm.type, 'general'),
-          COALESCE(sm.stock_unit, 'dona'),
+          CASE
+            WHEN sm.type = 'crop' THEN 'agro_chemicals'
+            WHEN sm.type = 'animal' THEN 'veterinary_products'
+            ELSE 'general'
+          END,
+          COALESCE(NULLIF(sm.stock_unit, ''), 'dona'),
           COALESCE(sm.price, 0),
           COALESCE(sm.stock, 10),
+          5,
           sm.usage,
-          sm.photo_data,
-          CASE WHEN sm.status = 'yoq' THEN false ELSE true END,
+          CASE WHEN length(COALESCE(sm.photo_data, '')) <= 300000 THEN sm.photo_data ELSE NULL END,
+          CASE
+            WHEN sm.status = 'yoq' OR COALESCE(sm.stock, 10) <= 0 THEN 'out_of_stock'
+            ELSE 'active'
+          END,
           COALESCE(sm.created_at, now()),
           COALESCE(sm.updated_at, now())
         FROM specialist_medicines sm

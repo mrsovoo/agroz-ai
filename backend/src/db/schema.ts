@@ -546,8 +546,43 @@ export const biznesgoSessions = pgTable("biznesgo_sessions", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const BIZNESGO_PRODUCT_CATEGORIES = [
+  "agro_chemicals",
+  "veterinary_products",
+  "feed",
+  "seeds_seedlings",
+  "equipment",
+  "general",
+] as const;
+
+export type BiznesGoProductCategory = (typeof BIZNESGO_PRODUCT_CATEGORIES)[number];
+
+export const BIZNESGO_PRODUCT_UNITS = [
+  "dona",
+  "kg",
+  "litr",
+  "gr",
+  "ml",
+  "flakon",
+  "qop",
+  "tonna",
+  "pachka",
+  "metr",
+  "rulon",
+] as const;
+
+export type BiznesGoProductUnit = (typeof BIZNESGO_PRODUCT_UNITS)[number];
+
+export const BIZNESGO_PRODUCT_STATUSES = [
+  "active",
+  "out_of_stock",
+  "archived",
+] as const;
+
+export type BiznesGoProductStatus = (typeof BIZNESGO_PRODUCT_STATUSES)[number];
+
 /**
- * BiznesGO — Mahsulotlar katalogi (biznesgo_products).
+ * BiznesGO — Mahsulotlar katalogi va ombor qoldig'i (biznesgo_products).
  */
 export const biznesgoProducts = pgTable("biznesgo_products", {
   id: serial("id").primaryKey(),
@@ -555,16 +590,14 @@ export const biznesgoProducts = pgTable("biznesgo_products", {
     .references(() => biznesgoMerchants.id, { onDelete: "cascade" })
     .notNull(),
   name: varchar("name", { length: 200 }).notNull(),
-  category: varchar("category", { length: 100 }),
-  unit: varchar("unit", { length: 40 }).default("dona").notNull(),
-  price: integer("price").default(0).notNull(),
-  costPrice: integer("cost_price").default(0),
-  stockQuantity: integer("stock_quantity").default(0).notNull(),
-  minStockLevel: integer("min_stock_level").default(5),
-  barcode: varchar("barcode", { length: 64 }),
+  category: varchar("category", { length: 64 }).default("general").notNull(),
   description: text("description"),
+  price: integer("price").default(0).notNull(),
+  unit: varchar("unit", { length: 40 }).default("dona").notNull(),
+  stock: integer("stock").default(0).notNull(),
+  minStock: integer("min_stock").default(5).notNull(),
   imageUrl: text("image_url"),
-  isActive: boolean("is_active").default(true).notNull(),
+  status: varchar("status", { length: 32 }).default("active").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

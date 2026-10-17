@@ -33,7 +33,7 @@ test('hashSessionToken hashes token with sha256 hex format', () => {
   assert.strictEqual(hashSessionToken(rawToken).length, 64);
 });
 
-test('getBiznesGoBotToken reads BIZNESGO_BOT_TOKEN with TELEGRAM_AUTH_BOT_TOKEN fallback', () => {
+test('getBiznesGoBotToken reads BIZNESGO_BOT_TOKEN from environment', () => {
   const origBiznesToken = process.env.BIZNESGO_BOT_TOKEN;
   const origAuthToken = process.env.TELEGRAM_AUTH_BOT_TOKEN;
 
@@ -48,8 +48,10 @@ test('getBiznesGoBotToken reads BIZNESGO_BOT_TOKEN with TELEGRAM_AUTH_BOT_TOKEN 
     delete process.env.TELEGRAM_AUTH_BOT_TOKEN;
     assert.strictEqual(getBiznesGoBotToken(), '');
   } finally {
-    process.env.BIZNESGO_BOT_TOKEN = origBiznesToken;
-    process.env.TELEGRAM_AUTH_BOT_TOKEN = origAuthToken;
+    if (origBiznesToken !== undefined) process.env.BIZNESGO_BOT_TOKEN = origBiznesToken;
+    else delete process.env.BIZNESGO_BOT_TOKEN;
+    if (origAuthToken !== undefined) process.env.TELEGRAM_AUTH_BOT_TOKEN = origAuthToken;
+    else delete process.env.TELEGRAM_AUTH_BOT_TOKEN;
   }
 });
 

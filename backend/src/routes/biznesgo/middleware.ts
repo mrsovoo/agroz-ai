@@ -1,8 +1,11 @@
 import { Request, Response, NextFunction } from "express";
-import { eq } from "drizzle-orm";
 import { db } from "../../db/index.js";
 import { biznesgoMerchants } from "../../db/schema.js";
-import { verifyBiznesGoInitData, verifyBiznesGoSession } from "../../lib/biznesgo-auth.js";
+import {
+  findOrSyncMerchantByTelegramId,
+  verifyBiznesGoInitData,
+  verifyBiznesGoSession,
+} from "../../lib/biznesgo-auth.js";
 
 export interface BiznesGoRequest extends Request {
   merchant?: typeof biznesgoMerchants.$inferSelect;
@@ -56,11 +59,7 @@ export async function requireBiznesGoMerchant(
       const verifiedUser = verifyBiznesGoInitData(initData);
       if (verifiedUser) {
         req.telegramUser = verifiedUser;
-        const [merchant] = await db
-          .select()
-          .from(biznesgoMerchants)
-          .where(eq(biznesgoMerchants.telegramId, verifiedUser.id))
-          .limit(1);
+        const merchant = await findOrSyncMerchantByTelegramId(verifiedUser.id);
 
         if (merchant) {
           if (merchant.status === "blocked") {
