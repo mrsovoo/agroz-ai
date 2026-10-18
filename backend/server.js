@@ -31,15 +31,11 @@ app.use((_req, res, next) => {
   next();
 });
 
-const devOrigin = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 app.use(
   '/api',
   cors({
-    origin(origin, cb) {
-      if (!origin) return cb(null, true); // same-origin / server-to-server
-      if (config.corsOrigins.includes(origin) || (!config.isProd && devOrigin.test(origin))) return cb(null, true);
-      return cb(null, false);
-    },
+    origin: true,
+    credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Telegram-Init-Data', 'X-Bridge-Key'],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     maxAge: 600,
@@ -47,13 +43,8 @@ app.use(
 );
 app.use(express.json({ limit: '200kb' }));
 
-app.get('/healthz', async (_req, res) => {
-  try {
-    await pool.query('SELECT 1');
-    res.json({ ok: true });
-  } catch {
-    res.status(503).json({ ok: false });
-  }
+app.get('/healthz', (_req, res) => {
+  res.status(200).json({ ok: true, uptime: process.uptime() });
 });
 
 app.use('/api/biznesgo', require('./routes/biznesgo'));
