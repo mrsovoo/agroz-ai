@@ -22,8 +22,10 @@ import {
   Clock, 
   RotateCcw, 
   Sparkles,
-  Smartphone,
-  Laptop
+  TrendingUp,
+  ReceiptText,
+  Zap,
+  Layers
 } from 'lucide-react';
 
 interface AuthViewProps {
@@ -66,7 +68,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
 
   const [loading, setLoading] = useState(false);
 
-  // Ro'yxatdan o'tish formasi holatlari
+  // Ro'yxatdan o'tish / Onboarding formasi holati
   const [isOnboardingForm, setIsOnboardingForm] = useState(isTgOnboarding);
   const [phone, setPhone] = useState('');
   const [fullName, setFullName] = useState(telegramOnboarding?.first_name || '');
@@ -74,8 +76,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
   const [address, setAddress] = useState('');
   const [businessType, setBusinessType] = useState<BusinessType>('agro_vet');
 
-  // OTP oqimi holatlari (Noutbuk / Web orqali ulanish)
-  const [showWebOtp, setShowWebOtp] = useState(false);
+  // OTP oqimi holatlari
   const [otpStep, setOtpStep] = useState<'phone' | 'code'>('phone');
   const [otpCode, setOtpCode] = useState('');
   const [otpTimer, setOtpTimer] = useState(300); // 5 daqiqa
@@ -91,7 +92,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
       if (codeFromUrl) {
         setOtpCode(codeFromUrl);
         setOtpStep('code');
-        setShowWebOtp(true);
       }
     }
   }, []);
@@ -108,7 +108,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
   }, [otpStep, otpTimer]);
 
   // Seamless Telegram Auto-Login (Polling)
-  // Foydalanuvchi Telegram botda START bosganida avtomatik sezadi va kodsiz tizimga kiritadi
+  // Foydalanuvchi Telegram botda START bosganida avtomatik sezadi va kodsiz kiradi
   useEffect(() => {
     let pollInterval: any = null;
     let isChecking = false;
@@ -132,9 +132,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
               tg.hapticImpact('heavy');
               onSuccess();
             } else if (!res.registered) {
-              addToast('Telegram orqali tasdiqlandi! Endi do‘kon ma’lumotlarini kiriting.', 'success');
+              addToast('Telegram orqali tasdiqlandi! Do‘koningizni oching.', 'success');
               setIsOnboardingForm(true);
-              setShowWebOtp(false);
             }
           }
         } catch {
@@ -272,286 +271,328 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-6 px-4 sm:px-6 lg:px-8">
-      {/* Brand Header */}
-      <div className="sm:mx-auto sm:w-full sm:max-w-lg text-center mb-4">
-        <div className="inline-flex justify-center items-center gap-2 mb-3">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-sky-600 flex items-center justify-center text-white shadow-xl shadow-emerald-500/25">
-            <Store className="w-8 h-8" />
-          </div>
-        </div>
-        <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
-          Biznes<span className="text-emerald-600">GO</span> <span className="text-sky-600 text-2xl font-bold">B2B</span>
-        </h1>
-        <p className="mt-2 text-sm text-slate-600 max-w-md mx-auto font-medium">
-          Agro, Vet, Yem, Urug‘ va Ulgurji savdo do‘konlari uchun yagona aqlli boshqaruv tizimi
-        </p>
-      </div>
-
-      <div className="sm:mx-auto sm:w-full sm:max-w-lg">
-        <div className="bg-white py-6 px-5 sm:px-8 shadow-xl shadow-slate-200/60 rounded-3xl border border-slate-100">
+    <div className="min-h-screen bg-slate-900 flex flex-col justify-center">
+      <div className="w-full min-h-screen flex flex-col lg:flex-row">
+        
+        {/* ======================================================== */}
+        {/* CHAP TARAF: LOYIHA HAQIDA ZO'R VIZUAL TAQDIMOT           */}
+        {/* ======================================================== */}
+        <div className="lg:w-7/12 bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 p-6 sm:p-10 lg:p-16 flex flex-col justify-between relative overflow-hidden text-white border-b lg:border-b-0 lg:border-r border-slate-800">
           
-          {/* ======================================================== */}
-          {/* 1. ONBOARDING / RO'YXATDAN O'TISH FORMASI               */}
-          {/* ======================================================== */}
-          {isOnboardingForm ? (
-            <form onSubmit={handleOnboardSubmit} className="space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-                {!isTgOnboarding && (
-                  <button
-                    type="button"
-                    onClick={() => setIsOnboardingForm(false)}
-                    className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                  </button>
-                )}
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">Yangi do‘kon ochish</h3>
-                  <p className="text-xs text-slate-500">Do‘koningiz ma’lumotlarini kiriting va savdoni boshlang</p>
-                </div>
-              </div>
+          {/* Ambient orbs */}
+          <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
 
+          {/* Top Brand Logo */}
+          <div className="relative z-10">
+            <div className="inline-flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white shadow-lg shadow-emerald-500/30">
+                <Store className="w-7 h-7" />
+              </div>
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  Biznes yo‘nalishini tanlang *
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {BUSINESS_TYPE_OPTIONS.map((opt) => {
-                    const Icon = opt.icon;
-                    const isSelected = businessType === opt.id;
-                    return (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        onClick={() => {
-                          setBusinessType(opt.id);
-                          tg.hapticImpact('light');
-                        }}
-                        className={`cursor-pointer rounded-xl border p-2.5 flex items-center gap-2 transition-all text-left ${
-                          isSelected
-                            ? 'border-emerald-600 bg-emerald-50 text-emerald-950 ring-2 ring-emerald-500/20 font-bold shadow-xs'
-                            : 'border-slate-200 hover:border-slate-300 bg-white text-slate-700 font-medium'
-                        }`}
-                      >
-                        <div className={`p-1.5 rounded-lg shrink-0 ${isSelected ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
-                          <Icon className="w-4 h-4" />
-                        </div>
-                        <span className="text-sm font-semibold truncate flex-1">
-                          {opt.title}
-                        </span>
-                        {isSelected && (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+                <span className="text-2xl font-black tracking-tight block leading-none">
+                  Biznes<span className="text-emerald-400">GO</span>
+                </span>
+                <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-400">
+                  B2B Boshqaruv Tizimi
+                </span>
               </div>
+            </div>
+          </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Do‘kon yoki Korxona nomi *
-                </label>
-                <div className="relative rounded-xl shadow-xs">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    <Store className="w-4 h-4" />
+          {/* Center: Main Project Pitch & Visual Cards */}
+          <div className="relative z-10 my-8 lg:my-auto max-w-xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-semibold mb-5">
+              <Sparkles className="w-4 h-4 text-emerald-400" />
+              <span>Agro, Vet va Ulgurji Savdo Uchun Maxsus</span>
+            </div>
+
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight mb-4 text-white">
+              Do‘koningizni noutbuk va telefonda yagona tizimda boshqaring.
+            </h1>
+
+            <p className="text-sm sm:text-base text-slate-300 leading-relaxed mb-8">
+              Kassa savdolari, tovarlar qoldig‘i, qarz daftari va tushumlar hisoboti — ortiqcha qog‘ozbozliksiz, xavfsiz va aniq nazoratda.
+            </p>
+
+            {/* Feature Highlights Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60 backdrop-blur-sm">
+                <div className="flex items-center gap-2.5 text-emerald-400 font-bold text-sm mb-1.5">
+                  <div className="p-1.5 rounded-xl bg-emerald-500/20 text-emerald-400">
+                    <Zap className="w-4 h-4" />
                   </div>
-                  <input
-                    type="text"
-                    required
-                    value={storeName}
-                    onChange={(e) => setStoreName(e.target.value)}
-                    placeholder="Masalan: AgroHimoya Samarqand"
-                    className="block w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-900"
-                  />
+                  <span>Tezkor Kassa</span>
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Mas'ul shaxs (Ism Familiya) *
-                </label>
-                <div className="relative rounded-xl shadow-xs">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    <User className="w-4 h-4" />
-                  </div>
-                  <input
-                    type="text"
-                    required
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Masalan: Sardor Aliyev"
-                    className="block w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-900"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Telefon raqami *
-                </label>
-                <div className="relative rounded-xl shadow-xs">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    <Phone className="w-4 h-4" />
-                  </div>
-                  <input
-                    type="tel"
-                    required
-                    value={phone}
-                    onChange={(e) => setPhone(formatUzbekPhone(e.target.value))}
-                    placeholder="+998 90 123 45 67"
-                    className="block w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-900"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Manzil (ixtiyoriy)
-                </label>
-                <div className="relative rounded-xl shadow-xs">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    <MapPin className="w-4 h-4" />
-                  </div>
-                  <input
-                    type="text"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Shahar, tuman, bozor yoki ko‘cha"
-                    className="block w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-900"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full mt-3 flex items-center justify-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-lg shadow-emerald-600/20 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 transition-all cursor-pointer"
-              >
-                {loading ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <span>Do‘konni Yaratish va Ishni Boshlash</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-            </form>
-          ) : (
-            /* ======================================================== */
-            /* 2. ASOSIY WEB VIEW: LOYIHA HAQIDA VA 1-QADAM BOT          */
-            /* ======================================================== */
-            <div className="space-y-6">
-              
-              {/* Device Experience Explanation Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* 1. Mobile & Telegram */}
-                <div className="p-3.5 rounded-2xl bg-gradient-to-br from-sky-50 to-blue-50/50 border border-sky-100 flex flex-col justify-between">
-                  <div className="flex items-center gap-2 text-sky-900 font-bold text-xs mb-1.5">
-                    <div className="p-1 rounded-lg bg-sky-500 text-white shadow-xs">
-                      <Smartphone className="w-3.5 h-3.5" />
-                    </div>
-                    <span>Telefon orqali (Mobil)</span>
-                  </div>
-                  <p className="text-[11px] text-slate-600 leading-relaxed">
-                    Telegram bot orqali doimo cho‘ntagingizda: tezkor savdo, kassa cheklari va qarz daftari nazorati.
-                  </p>
-                </div>
-
-                {/* 2. Laptop & Desktop */}
-                <div className="p-3.5 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50/50 border border-emerald-100 flex flex-col justify-between">
-                  <div className="flex items-center gap-2 text-emerald-950 font-bold text-xs mb-1.5">
-                    <div className="p-1 rounded-lg bg-emerald-600 text-white shadow-xs">
-                      <Laptop className="w-3.5 h-3.5" />
-                    </div>
-                    <span>Noutbuk / Kompyuter</span>
-                  </div>
-                  <p className="text-[11px] text-slate-600 leading-relaxed">
-                    Katta ekranda ombor qoldiqlari, tovarlarni ommaviy kiritish va batafsil moliyaviy hisobotlar.
-                  </p>
-                </div>
-              </div>
-
-              {/* 1-QADAM: BIZNESNI TASDIQLASH (Asosiy Tugma) */}
-              <div className="p-5 rounded-3xl bg-slate-900 text-white text-center shadow-lg relative overflow-hidden">
-                <div className="absolute -top-10 -right-10 w-32 h-32 bg-sky-500/10 rounded-full blur-2xl pointer-events-none" />
-                <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
-
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-500/20 text-sky-300 text-xs font-bold mb-3 border border-sky-400/30">
-                  <Sparkles className="w-3.5 h-3.5 text-sky-400" />
-                  <span>1-QADAM: BIZNESNI TASDIQLASH</span>
-                </div>
-
-                <p className="text-xs text-slate-300 leading-relaxed max-w-sm mx-auto mb-4">
-                  Do‘koningizni faollashtirish va xavfsiz boshqarish uchun rasmiy Telegram botimizga ulaning.
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Shtrix-kod yoki qidiruv orqali 1 soniyada savdo qiling va xaridorga chek bering.
                 </p>
-
-                {/* Grand CTA Button */}
-                <a
-                  href="https://t.me/biznesgo_bot?start=launch"
-                  className="w-full py-3.5 px-5 rounded-2xl shadow-xl shadow-sky-500/30 bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 text-white font-extrabold text-sm sm:text-base flex items-center justify-center gap-2.5 transition transform active:scale-[0.98] cursor-pointer"
-                >
-                  <Bot className="w-5 h-5 text-white shrink-0" />
-                  <span>Biznesni Tasdiqlash va Botga O‘tish</span>
-                  <ExternalLink className="w-4 h-4 text-white/80 shrink-0" />
-                </a>
-
-                <div className="mt-3 flex items-center justify-center gap-2 text-[11px] text-slate-400">
-                  <span>Bot manzili:</span>
-                  <strong className="text-sky-300 font-mono">@biznesgo_bot</strong>
-                </div>
               </div>
 
-              {/* Quick Feature Checklist */}
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-[11px] font-semibold text-slate-700 flex flex-col items-center gap-1">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span>Parolsiz kirish</span>
+              <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60 backdrop-blur-sm">
+                <div className="flex items-center gap-2.5 text-sky-400 font-bold text-sm mb-1.5">
+                  <div className="p-1.5 rounded-xl bg-sky-500/20 text-sky-400">
+                    <Layers className="w-4 h-4" />
+                  </div>
+                  <span>Ombor & Qoldiqlar</span>
                 </div>
-                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-[11px] font-semibold text-slate-700 flex flex-col items-center gap-1">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span>Kassa & Qarz</span>
-                </div>
-                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-[11px] font-semibold text-slate-700 flex flex-col items-center gap-1">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span>Doimiy sinxron</span>
-                </div>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Dorixona, yem, urug‘ va texnika mahsulotlari sonini real vaqt rejimida kuzatib boring.
+                </p>
               </div>
 
-              {/* Web Login via Phone Section (For Laptop / Desktop Browser) */}
-              <div className="pt-4 border-t border-slate-100">
-                {!showWebOtp ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowWebOtp(true)}
-                    className="w-full py-2.5 px-4 rounded-xl border border-slate-200 hover:border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:text-slate-900 transition flex items-center justify-center gap-2"
-                  >
-                    <Laptop className="w-4 h-4 text-slate-500" />
-                    <span>Noutbuk / Kompyuter brauzerida ochish →</span>
-                  </button>
-                ) : (
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-4">
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-                      <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
-                        <Laptop className="w-4 h-4 text-emerald-600" />
-                        <span>Noutbukda brauzer orqali ulanish</span>
-                      </div>
+              <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60 backdrop-blur-sm">
+                <div className="flex items-center gap-2.5 text-amber-400 font-bold text-sm mb-1.5">
+                  <div className="p-1.5 rounded-xl bg-amber-500/20 text-amber-400">
+                    <ReceiptText className="w-4 h-4" />
+                  </div>
+                  <span>Qarz Daftari</span>
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Nasiya savdolar, to‘lov muddatlari va qarzdorlar ro‘yxati har doim qo‘l ostingizda.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60 backdrop-blur-sm">
+                <div className="flex items-center gap-2.5 text-teal-400 font-bold text-sm mb-1.5">
+                  <div className="p-1.5 rounded-xl bg-teal-500/20 text-teal-400">
+                    <TrendingUp className="w-4 h-4" />
+                  </div>
+                  <span>Real-Vaqt Hisobotlar</span>
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Kunlik, oylik tushumlar, sof foyda va eng ko‘p sotilgan tovarlar tahlili.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Security & Tech Note */}
+          <div className="relative z-10 pt-6 border-t border-slate-800/80 flex flex-wrap items-center gap-4 text-xs text-slate-400">
+            <div className="flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span>Bulutli Neon PostgreSQL</span>
+            </div>
+            <span>•</span>
+            <div className="flex items-center gap-1.5">
+              <Bot className="w-4 h-4 text-sky-400" />
+              <span>Telegram Bot Tezkor Sinxron</span>
+            </div>
+            <span>•</span>
+            <span>100% Ma’lumotlar xavfsizligi</span>
+          </div>
+
+        </div>
+
+        {/* ======================================================== */}
+        {/* O'NG TARAF: KIRISH PANELI                                */}
+        {/* ======================================================== */}
+        <div className="lg:w-5/12 bg-slate-50 flex items-center justify-center p-6 sm:p-10 lg:p-12">
+          <div className="w-full max-w-md">
+            
+            <div className="bg-white py-8 px-6 sm:px-8 shadow-2xl shadow-slate-200/80 rounded-3xl border border-slate-100">
+              
+              {/* ======================================================== */}
+              {/* 1. ONBOARDING / RO'YXATDAN O'TISH FORMASI               */}
+              {/* ======================================================== */}
+              {isOnboardingForm ? (
+                <form onSubmit={handleOnboardSubmit} className="space-y-4">
+                  <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+                    {!isTgOnboarding && (
                       <button
                         type="button"
-                        onClick={() => setShowWebOtp(false)}
-                        className="text-[11px] text-slate-400 hover:text-slate-600 font-medium"
+                        onClick={() => setIsOnboardingForm(false)}
+                        className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
                       >
-                        Yopish
+                        <ArrowLeft className="w-4 h-4" />
                       </button>
+                    )}
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-900">Yangi do‘kon ochish</h3>
+                      <p className="text-xs text-slate-500">Do‘koningiz ma’lumotlarini kiriting va savdoni boshlang</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                      Biznes yo‘nalishini tanlang *
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {BUSINESS_TYPE_OPTIONS.map((opt) => {
+                        const Icon = opt.icon;
+                        const isSelected = businessType === opt.id;
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => {
+                              setBusinessType(opt.id);
+                              tg.hapticImpact('light');
+                            }}
+                            className={`cursor-pointer rounded-xl border p-2.5 flex items-center gap-2 transition-all text-left ${
+                              isSelected
+                                ? 'border-emerald-600 bg-emerald-50 text-emerald-950 ring-2 ring-emerald-500/20 font-bold shadow-xs'
+                                : 'border-slate-200 hover:border-slate-300 bg-white text-slate-700 font-medium'
+                            }`}
+                          >
+                            <div className={`p-1.5 rounded-lg shrink-0 ${isSelected ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                              <Icon className="w-4 h-4" />
+                            </div>
+                            <span className="text-sm font-semibold truncate flex-1">
+                              {opt.title}
+                            </span>
+                            {isSelected && (
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      Do‘kon yoki Korxona nomi *
+                    </label>
+                    <div className="relative rounded-xl shadow-xs">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                        <Store className="w-4 h-4" />
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        value={storeName}
+                        onChange={(e) => setStoreName(e.target.value)}
+                        placeholder="Masalan: AgroHimoya Samarqand"
+                        className="block w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-900"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      Mas'ul shaxs (Ism Familiya) *
+                    </label>
+                    <div className="relative rounded-xl shadow-xs">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                        <User className="w-4 h-4" />
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="Masalan: Sardor Aliyev"
+                        className="block w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-900"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      Telefon raqami *
+                    </label>
+                    <div className="relative rounded-xl shadow-xs">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                        <Phone className="w-4 h-4" />
+                      </div>
+                      <input
+                        type="tel"
+                        required
+                        value={phone}
+                        onChange={(e) => setPhone(formatUzbekPhone(e.target.value))}
+                        placeholder="+998 90 123 45 67"
+                        className="block w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-900"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      Manzil (ixtiyoriy)
+                    </label>
+                    <div className="relative rounded-xl shadow-xs">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                        <MapPin className="w-4 h-4" />
+                      </div>
+                      <input
+                        type="text"
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        placeholder="Shahar, tuman, bozor yoki ko‘cha"
+                        className="block w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-900"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full mt-3 flex items-center justify-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-lg shadow-emerald-600/20 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 transition-all cursor-pointer"
+                  >
+                    {loading ? (
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <span>Do‘konni Yaratish va Boshlash</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                </form>
+              ) : (
+                /* ======================================================== */
+                /* 2. KIRISH: BIZNESNI TASDIQLASH VA NOUTBUKDA ISHLASH       */
+                /* ======================================================== */
+                <div className="space-y-6">
+                  
+                  <div>
+                    <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+                      Tizimga Kirish
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Do‘koningizni boshqarish uchun bot orqali tasdiqlang yoki telefoningizni kiriting
+                    </p>
+                  </div>
+
+                  {/* 1-QADAM: BIZNESNI TASDIQLASH (Asosiy Telegram Button) */}
+                  <div className="space-y-2.5">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                      <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-[11px] font-black">1</span>
+                      <span>Tezkor kirish (Tavsiya etiladi):</span>
                     </div>
 
+                    <a
+                      href="https://t.me/biznesgo_bot?start=launch"
+                      className="w-full py-4 px-5 rounded-2xl shadow-xl shadow-sky-500/25 bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 text-white font-extrabold text-sm sm:text-base flex items-center justify-center gap-3 transition transform active:scale-[0.98] cursor-pointer"
+                    >
+                      <Bot className="w-6 h-6 text-white shrink-0" />
+                      <span>Telegram orqali tasdiqlash</span>
+                      <ExternalLink className="w-4 h-4 text-white/80 shrink-0" />
+                    </a>
+
+                    <p className="text-[11px] text-slate-500 leading-tight">
+                      👉 <strong>@biznesgo_bot</strong> da <code>/start</code> bosing. Do‘koningiz avtomatik ochiladi.
+                    </p>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="relative my-2">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-slate-200" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase font-bold text-slate-400">
+                      <span className="bg-white px-3 text-[10px]">yoki telefon raqami bilan</span>
+                    </div>
+                  </div>
+
+                  {/* Telefon orqali kirish (Noutbukda brauzerda ishlovchilar uchun) */}
+                  <div className="space-y-3">
                     {otpStep === 'phone' ? (
                       <form onSubmit={handleSendOtp} className="space-y-3">
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                            Telefon raqamingiz
+                          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                            Telefon raqami *
                           </label>
                           <div className="relative rounded-xl shadow-xs">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -563,32 +604,31 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                               value={phone}
                               onChange={(e) => setPhone(formatUzbekPhone(e.target.value))}
                               placeholder="+998 90 123 45 67"
-                              className="block w-full pl-9 pr-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white font-medium text-slate-900"
+                              className="block w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-900 bg-white"
                             />
                           </div>
-                          <p className="mt-1 text-[10px] text-slate-500">
-                            Raqamni kiriting — tasdiqlash kodi rasmiy botingizga boradi.
+                          <p className="mt-1 text-[11px] text-slate-400">
+                            Raqamni kiriting — tasdiqlash kodi rasmiy Telegram botingizga yuboriladi
                           </p>
                         </div>
 
                         <button
                           type="submit"
                           disabled={loading}
-                          className="w-full py-2.5 px-4 rounded-xl shadow-xs text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition flex items-center justify-center gap-2 cursor-pointer"
+                          className="w-full py-3 px-4 rounded-xl shadow-md shadow-emerald-600/20 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition flex items-center justify-center gap-2 cursor-pointer"
                         >
                           {loading ? (
                             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                           ) : (
                             <>
-                              <Bot className="w-4 h-4" />
                               <span>Tasdiqlash kodini olish</span>
-                              <ArrowRight className="w-3.5 h-3.5" />
+                              <ArrowRight className="w-4 h-4" />
                             </>
                           )}
                         </button>
                       </form>
                     ) : (
-                      <form onSubmit={handleVerifyOtp} className="space-y-3">
+                      <form onSubmit={handleVerifyOtp} className="space-y-3.5">
                         {deliveredViaTelegram ? (
                           <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 flex items-start gap-2">
                             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
@@ -620,9 +660,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                         )}
 
                         {/* Auto-detect info */}
-                        <div className="p-2.5 rounded-xl bg-white border border-slate-200 flex items-center justify-center gap-2 text-[11px] text-slate-600">
+                        <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center gap-2 text-[11px] text-slate-600">
                           <div className="w-3 h-3 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin shrink-0" />
-                          <span>Botda tasdiqlansa, bu sahifa <strong>avtomatik ochiladi</strong></span>
+                          <span>Botda tasdiqlansa, ushbu sahifa <strong>avtomatik ochiladi</strong></span>
                         </div>
 
                         <div>
@@ -645,14 +685,14 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                             value={otpCode}
                             onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
                             placeholder="• • • • • •"
-                            className="block w-full py-2.5 text-center tracking-[0.4em] text-xl font-mono font-bold border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white text-slate-900"
+                            className="block w-full py-2.5 text-center tracking-[0.4em] text-xl font-mono font-bold border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 text-slate-900"
                           />
                         </div>
 
                         <button
                           type="submit"
                           disabled={loading || otpCode.length < 6}
-                          className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                          className="w-full py-3 px-4 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-emerald-600/20"
                         >
                           {loading ? (
                             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -668,7 +708,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                           <button
                             type="button"
                             onClick={() => setOtpStep('phone')}
-                            className="text-slate-500 hover:text-slate-800 flex items-center gap-1 font-medium"
+                            className="text-slate-500 hover:text-slate-800 flex items-center gap-1 font-medium cursor-pointer"
                           >
                             <ArrowLeft className="w-3 h-3" />
                             <span>Raqamni o‘zgartirish</span>
@@ -678,7 +718,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                             type="button"
                             disabled={otpTimer > 0 || loading}
                             onClick={() => handleSendOtp()}
-                            className={`flex items-center gap-1 font-semibold ${
+                            className={`flex items-center gap-1 font-semibold cursor-pointer ${
                               otpTimer > 0
                                 ? 'text-slate-400 cursor-not-allowed'
                                 : 'text-emerald-600 hover:text-emerald-700'
@@ -691,19 +731,21 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                       </form>
                     )}
                   </div>
-                )}
+
+                </div>
+              )}
+
+              {/* Footer Security Badge */}
+              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-center gap-2 text-[11px] text-slate-400">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Xavfsiz B2B Tizim — Neon DB & Bot Sync</span>
               </div>
 
             </div>
-          )}
 
-          {/* Footer Security Badge */}
-          <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-center gap-2 text-[11px] text-slate-400">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Xavfsiz B2B Cloud Tizimi — Neon DB & Telegram Bot Sync</span>
           </div>
-
         </div>
+
       </div>
     </div>
   );
