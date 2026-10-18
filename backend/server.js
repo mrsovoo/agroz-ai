@@ -68,9 +68,15 @@ if (fs.existsSync(config.frontendDir)) {
 app.use(errorHandler);
 
 async function start() {
-  if (process.env.MIGRATE_ON_START !== 'false') await migrate();
-  const server = app.listen(config.port, () => {
-    console.log(`[biznesgo] http://localhost:${config.port}  (env: ${process.env.NODE_ENV || 'development'})`);
+  try {
+    if (process.env.MIGRATE_ON_START !== 'false') await migrate();
+  } catch (mErr) {
+    console.error('[biznesgo] Migratsiya ogohlantirishi:', mErr.message);
+  }
+
+  const host = '0.0.0.0';
+  const server = app.listen(config.port, host, () => {
+    console.log(`[biznesgo] Server ishlamoqda: http://${host}:${config.port} (env: ${process.env.NODE_ENV || 'development'})`);
   });
   const shutdown = () => {
     server.close(() => pool.end().finally(() => process.exit(0)));
