@@ -33,12 +33,42 @@ interface AuthViewProps {
   } | null;
 }
 
-const BUSINESS_TYPE_OPTIONS: { id: BusinessType; title: string; icon: React.ElementType }[] = [
-  { id: 'agro_vet', title: 'Dorixona', icon: Sprout },
-  { id: 'feed', title: 'Yem', icon: Scale },
-  { id: 'warehouse', title: 'Ombor', icon: Building2 },
-  { id: 'seeds', title: 'Urug‘', icon: Wheat },
-  { id: 'machinery', title: 'Texnika', icon: Wrench },
+const BUSINESS_TYPE_OPTIONS: { 
+  id: BusinessType; 
+  title: string; 
+  desc: string; 
+  icon: React.ElementType 
+}[] = [
+  { 
+    id: 'agro_vet', 
+    title: 'Agro-Vet dorixona', 
+    desc: 'O‘g‘itlar, kimyoviy himoya va dori-darmonlar', 
+    icon: Sprout 
+  },
+  { 
+    id: 'feed', 
+    title: 'Yem-ozuqa savdosi', 
+    desc: 'Chorva va parranda yemlari, don va kepak', 
+    icon: Scale 
+  },
+  { 
+    id: 'warehouse', 
+    title: 'Ulgurji ombor', 
+    desc: 'Katta partiyalar, optom savdo va tarqatish', 
+    icon: Building2 
+  },
+  { 
+    id: 'seeds', 
+    title: 'Urug‘ va ko‘chat', 
+    desc: 'Ekin urug‘lari, nihol va ko‘chatlar', 
+    icon: Wheat 
+  },
+  { 
+    id: 'machinery', 
+    title: 'Jihoz va texnika', 
+    desc: 'Uskunalar, purkagich va ehtiyot qismlar', 
+    icon: Wrench 
+  },
 ];
 
 export function formatUzbekPhone(value: string): string {
@@ -337,7 +367,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
                       Biznes yo‘nalishi *
                     </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                    <div className="space-y-2">
                       {BUSINESS_TYPE_OPTIONS.map((opt) => {
                         const Icon = opt.icon;
                         const isSelected = businessType === opt.id;
@@ -349,21 +379,38 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                               setBusinessType(opt.id);
                               tg.hapticImpact('light');
                             }}
-                            className={`cursor-pointer rounded-xl p-3 flex items-center gap-2.5 transition-all text-left ${
+                            className={`w-full cursor-pointer rounded-xl p-2.5 sm:p-3 flex items-center justify-between border transition-all text-left ${
                               isSelected
-                                ? 'border-2 border-emerald-600 bg-emerald-50 text-emerald-950 font-bold shadow-xs'
-                                : 'border border-slate-300 hover:border-slate-400 bg-white text-slate-900 font-semibold'
+                                ? 'border-2 border-emerald-600 bg-emerald-50/70 text-emerald-950 font-bold shadow-xs'
+                                : 'border border-slate-200 hover:border-slate-300 hover:bg-slate-50/80 bg-white text-slate-800'
                             }`}
                           >
-                            <div className={`p-1.5 rounded-lg shrink-0 ${isSelected ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700'}`}>
-                              <Icon className="w-4 h-4" />
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div
+                                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                                  isSelected ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600'
+                                }`}
+                              >
+                                <Icon className="w-5 h-5" />
+                              </div>
+                              <div className="min-w-0">
+                                <div className={`text-sm font-bold leading-tight ${isSelected ? 'text-emerald-950' : 'text-slate-900'}`}>
+                                  {opt.title}
+                                </div>
+                                <div className="text-xs text-slate-500 leading-tight mt-0.5">
+                                  {opt.desc}
+                                </div>
+                              </div>
                             </div>
-                            <span className="text-sm font-bold text-slate-900 whitespace-nowrap">
-                              {opt.title}
-                            </span>
-                            {isSelected && (
-                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 ml-auto" />
-                            )}
+                            <div
+                              className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ml-3 transition-all ${
+                                isSelected
+                                  ? 'border-emerald-600 bg-emerald-600 text-white'
+                                  : 'border-slate-300 bg-white'
+                              }`}
+                            >
+                              {isSelected && <CheckCircle2 className="w-3.5 h-3.5" />}
+                            </div>
                           </button>
                         );
                       })}

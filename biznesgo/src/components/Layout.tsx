@@ -55,11 +55,11 @@ export const Layout: React.FC<LayoutProps> = ({
   const BusinessIcon = getBusinessIcon(merchant?.business_type);
 
   const BUSINESS_TYPE_TITLES: Record<string, string> = {
-    agro_vet: 'Dorixona',
-    feed: 'Yem',
-    warehouse: 'Ombor',
-    seeds: 'Urug‘',
-    machinery: 'Texnika',
+    agro_vet: 'Agro-Vet dorixona',
+    feed: 'Yem-ozuqa savdosi',
+    warehouse: 'Ulgurji ombor',
+    seeds: 'Urug‘ va ko‘chat',
+    machinery: 'Jihoz va texnika',
   };
 
   const businessLabel = merchant?.business_type ? (BUSINESS_TYPE_TITLES[merchant.business_type] || merchant.business_type) : 'Do‘kon';
