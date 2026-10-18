@@ -78,6 +78,32 @@ class ApiClient {
 
   // Auth
   auth = {
+    sendOtp: (phone: string) =>
+      this.request<{
+        ok: boolean;
+        delivered_via_telegram: boolean;
+        bot_name: string | null;
+        phone: string;
+        expires_in_seconds: number;
+        bot_url: string;
+        has_telegram_link: boolean;
+        message: string;
+      }>('/auth/send-otp', {
+        method: 'POST',
+        body: JSON.stringify({ phone }),
+      }),
+    verifyOtp: (payload: {
+      phone: string;
+      code: string;
+      store_name?: string;
+      business_type?: string;
+      full_name?: string;
+      address?: string;
+    }) =>
+      this.request<{ token: string; merchant: Merchant }>('/auth/verify-otp', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
     register: (payload: any) =>
       this.request<{ token: string; merchant: Merchant }>('/auth/register', {
         method: 'POST',

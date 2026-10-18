@@ -68,6 +68,64 @@ async function handleBiznesgoBotUpdate(update) {
   const chatId = message.chat.id;
   const text = message.text || '';
 
+  if (text.startsWith('/start otp_')) {
+    const otpCode = text.replace('/start otp_', '').trim();
+    // 1. otp_codes jadvalidan aktiv kodni topamiz
+    const otpRes = await query(
+      `SELECT id, phone, expires_at, used FROM otp_codes
+        WHERE code = $1 AND used = false AND expires_at > now()
+        ORDER BY id DESC LIMIT 1`,
+      [otpCode]
+    );
+
+    if (otpRes.rows[0]) {
+      const otpRow = otpRes.rows[0];
+      // telegram_id ni otp_codes ga biriktiramiz
+      await query(
+        `UPDATE otp_codes SET telegram_id = $1, delivered_at = now() WHERE id = $2`,
+        [chatId, otpRow.id]
+      );
+
+      // Agar users da shu telefon bo'lsa, unga ham telegram_id ni biriktiramiz (Cross-Platform Sync)
+      const phoneDigits = otpRow.phone.replace(/\D/g, '');
+      await query(
+        `UPDATE users SET telegram_id = $1
+          WHERE regexp_replace(COALESCE(phone,''), '\\D', '', 'g') = $2
+            AND (telegram_id IS NULL OR telegram_id = $1)`,
+        [chatId, phoneDigits]
+      );
+
+      const confirmText =
+        `🔐 <b>Web Kirish Tasdiqlandi!</b>\n\n` +
+        `Sizning tasdiqlash kodingiz: <code>${otpCode}</code>\n\n` +
+        `✅ Brauzerga qaytib ushbu 6-xonali kodni kiriting.\n` +
+        `Ushbu Telegram hisobingiz va Web profilingiz avtomatik sinxronlashtirildi!`;
+
+      const inlineKeyboard = {
+        inline_keyboard: [
+          [
+            {
+              text: "🚀 BiznesGO B2B Ilovasini Ochish",
+              web_app: { url: config.miniAppUrl },
+            },
+          ],
+        ],
+      };
+
+      try {
+        const res = await callTelegramApi(config.biznesgoBotToken, 'sendMessage', {
+          chat_id: chatId,
+          text: confirmText,
+          parse_mode: 'HTML',
+          reply_markup: inlineKeyboard,
+        });
+        return { handled: true, bot: 'biznesgo_bot', otp_confirmed: true, telegram_response: res };
+      } catch (err) {
+        return { handled: false, error: err.message };
+      }
+    }
+  }
+
   if (text.startsWith('/start')) {
     const welcomeText =
       `👋 <b>Xush kelibsiz!</b>\n\n` +

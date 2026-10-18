@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { api } from '../lib/api';
 import { tg } from '../lib/telegram';
@@ -15,8 +15,14 @@ import {
   User, 
   MapPin, 
   ArrowRight,
+  ArrowLeft,
   ShieldCheck,
-  CheckCircle2
+  CheckCircle2,
+  Bot,
+  ExternalLink,
+  Clock,
+  RotateCcw,
+  Sparkles
 } from 'lucide-react';
 
 interface AuthViewProps {
@@ -69,7 +75,10 @@ const BUSINESS_TYPE_OPTIONS: { id: BusinessType; title: string; desc: string; ic
 
 export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboarding }) => {
   const { setMerchant, addToast } = useStore();
-  const [tab, setTab] = useState<'login' | 'register'>('login');
+  const isTgOnboarding = Boolean(telegramOnboarding);
+
+  // Tabs: web foydalanuvchilari uchun standart 'otp' tanlanadi
+  const [tab, setTab] = useState<'otp' | 'login' | 'register'>(isTgOnboarding ? 'register' : 'otp');
   const [loading, setLoading] = useState(false);
 
   // Form states
@@ -80,8 +89,104 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
   const [address, setAddress] = useState('');
   const [businessType, setBusinessType] = useState<BusinessType>('agro_vet');
 
-  const isTgOnboarding = Boolean(telegramOnboarding);
+  // OTP flow states
+  const [otpStep, setOtpStep] = useState<'phone' | 'code'>('phone');
+  const [otpCode, setOtpCode] = useState('');
+  const [otpTimer, setOtpTimer] = useState(300); // 5 daqiqa
+  const [otpBotUrl, setOtpBotUrl] = useState<string | null>(null);
+  const [deliveredViaTelegram, setDeliveredViaTelegram] = useState(false);
+  const [botName, setBotName] = useState<string | null>(null);
 
+  // URL dan kelgan ?otp= parametrini tekshirish
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const codeFromUrl = urlParams.get('otp');
+      if (codeFromUrl) {
+        setOtpCode(codeFromUrl);
+        setTab('otp');
+        setOtpStep('code');
+      }
+    }
+  }, []);
+
+  // OTP timer taymerini hisoblash
+  useEffect(() => {
+    let interval: any = null;
+    if (otpStep === 'code' && otpTimer > 0) {
+      interval = setInterval(() => {
+        setOtpTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [otpStep, otpTimer]);
+
+  const formatTimer = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // 1. OTP kod so'rash
+  const handleSendOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!phone.trim()) {
+      addToast('Telefon raqamingizni kiriting', 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await api.auth.sendOtp(phone.trim());
+      setDeliveredViaTelegram(res.delivered_via_telegram);
+      setBotName(res.bot_name);
+      setOtpBotUrl(res.bot_url);
+      setOtpTimer(res.expires_in_seconds || 300);
+      setOtpStep('code');
+
+      if (res.delivered_via_telegram) {
+        addToast(res.message || 'Tasdiqlash kodi Telegram botingizga yuborildi', 'success');
+      } else {
+        addToast(res.message || 'Telegram bot orqali tasdiqlash havolasi tayyor', 'info');
+      }
+      tg.hapticImpact('light');
+    } catch (err: any) {
+      addToast(err.message || 'OTP kod yuborishda xatolik', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 2. OTP kodni tekshirish
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpCode.trim() || otpCode.trim().length < 6) {
+      addToast('6-xonali tasdiqlash kodini to‘liq kiriting', 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await api.auth.verifyOtp({
+        phone: phone.trim(),
+        code: otpCode.trim(),
+      });
+
+      if (res.token) {
+        api.setToken(res.token);
+      }
+      setMerchant(res.merchant);
+      addToast(`Xush kelibsiz, ${res.merchant.store_name}!`, 'success');
+      tg.hapticImpact('heavy');
+      onSuccess();
+    } catch (err: any) {
+      addToast(err.message || 'Tasdiqlash kodi noto‘g‘ri yoki muddati tugagan', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 3. Standart Login / Register (Fallback)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -187,211 +292,391 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
 
       <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-xl">
         <div className="bg-white py-8 px-6 shadow-xl shadow-slate-200/50 rounded-2xl border border-slate-100 sm:px-10">
+          {/* Navigation Tabs (Web Browser) */}
           {!isTgOnboarding && (
-            <div className="flex rounded-xl bg-slate-100 p-1 mb-6">
+            <div className="flex rounded-xl bg-slate-100 p-1 mb-6 text-xs sm:text-sm">
+              <button
+                type="button"
+                onClick={() => {
+                  setTab('otp');
+                  setOtpStep('phone');
+                }}
+                className={`flex-1 py-2 font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                  tab === 'otp'
+                    ? 'bg-white text-emerald-700 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Bot className="w-4 h-4 text-emerald-600" />
+                <span>Telegram OTP</span>
+                <span className="hidden sm:inline px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-100 text-emerald-800 font-bold">
+                  Tezkor
+                </span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => setTab('login')}
-                className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${
+                className={`flex-1 py-2 font-semibold rounded-lg transition-all ${
                   tab === 'login'
                     ? 'bg-white text-slate-900 shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                Tizimga kirish
+                Parol bilan
               </button>
+
               <button
                 type="button"
                 onClick={() => setTab('register')}
-                className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${
+                className={`flex-1 py-2 font-semibold rounded-lg transition-all ${
                   tab === 'register'
                     ? 'bg-white text-slate-900 shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                Yangi do‘kon ochish
+                Yangi do‘kon
               </button>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {(isTgOnboarding || tab === 'register') && (
-              <>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-                    Biznes yo‘nalishini tanlang *
-                  </label>
-                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                    {BUSINESS_TYPE_OPTIONS.map((opt) => {
-                      const Icon = opt.icon;
-                      const isSelected = businessType === opt.id;
-                      return (
-                        <div
-                          key={opt.id}
-                          onClick={() => {
-                            setBusinessType(opt.id);
-                            tg.hapticImpact('light');
-                          }}
-                          className={`cursor-pointer rounded-xl border p-3 flex flex-col justify-between transition-all ${
-                            isSelected
-                              ? 'border-emerald-600 bg-emerald-50/50 ring-2 ring-emerald-500/20 shadow-sm'
-                              : 'border-slate-200 hover:border-slate-300 bg-white'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="p-2 rounded-lg bg-emerald-100 text-emerald-700">
-                              <Icon className="w-5 h-5" />
-                            </div>
-                            {isSelected && (
-                              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                            )}
-                          </div>
-                          <div className="mt-2">
-                            <h4 className="text-sm font-bold text-slate-900">
-                              {opt.title}
-                            </h4>
-                            <p className="text-xs text-slate-500 line-clamp-2 mt-0.5">
-                              {opt.desc}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <p className="mt-1 text-xs text-slate-500 italic">
-                    ⚠️ Diqqat: Tanlangan biznes turi ro‘yxatdan o‘tgach o‘zgartirilmaydi.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                    Do‘kon yoki Korxona nomi *
-                  </label>
-                  <div className="relative rounded-lg shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                      <Store className="w-5 h-5" />
-                    </div>
-                    <input
-                      type="text"
-                      required
-                      value={storeName}
-                      onChange={(e) => setStoreName(e.target.value)}
-                      placeholder="Masalan: AgroHimoya Samarqand"
-                      className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                    Mas'ul shaxs (Ism Familiya) *
-                  </label>
-                  <div className="relative rounded-lg shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                      <User className="w-5 h-5" />
-                    </div>
-                    <input
-                      type="text"
-                      required
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      placeholder="Masalan: Sardor Aliyev"
-                      className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                    />
-                  </div>
-                </div>
-              </>
-            )}
-
+          {/* 1. TELEGRAM OTP FLOW (Recommended) */}
+          {tab === 'otp' && !isTgOnboarding && (
             <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Telefon raqami *
-              </label>
-              <div className="relative rounded-lg shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                  <Phone className="w-5 h-5" />
-                </div>
-                <input
-                  type="tel"
-                  required
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+998 90 123 45 67"
-                  className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                />
-              </div>
-            </div>
-
-            {!isTgOnboarding && (
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  Parol *
-                </label>
-                <div className="relative rounded-lg shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    <Lock className="w-5 h-5" />
+              {otpStep === 'phone' ? (
+                <form onSubmit={handleSendOtp} className="space-y-4">
+                  <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-100 flex items-start gap-3 text-xs text-emerald-800">
+                    <Sparkles className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="font-semibold block mb-0.5 text-emerald-900">Parolsiz xavfsiz kirish</strong>
+                      Telefon raqamingizni kiriting, tasdiqlash kodi rasmiy <strong>@biznesgo_bot</strong> orqali yetkaziladi.
+                    </div>
                   </div>
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                  />
-                </div>
-              </div>
-            )}
 
-            {(isTgOnboarding || tab === 'register') && (
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  Manzil (ixtiyoriy)
-                </label>
-                <div className="relative rounded-lg shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    <MapPin className="w-5 h-5" />
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                      Telefon raqami *
+                    </label>
+                    <div className="relative rounded-lg shadow-sm">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                        <Phone className="w-5 h-5" />
+                      </div>
+                      <input
+                        type="tel"
+                        required
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="+998 90 123 45 67"
+                        className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                      />
+                    </div>
                   </div>
-                  <input
-                    type="text"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Shahar, tuman, bozor yoki ko‘cha"
-                    className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                  />
-                </div>
-              </div>
-            )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full mt-4 flex items-center justify-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-lg shadow-emerald-600/20 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 transition-all cursor-pointer"
-            >
-              {loading ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full mt-4 flex items-center justify-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-lg shadow-emerald-600/20 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 transition-all cursor-pointer"
+                  >
+                    {loading ? (
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Bot className="w-4 h-4" />
+                        <span>Telegram orqali kod olish</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                </form>
               ) : (
+                <form onSubmit={handleVerifyOtp} className="space-y-4">
+                  {/* Status Banner */}
+                  {deliveredViaTelegram ? (
+                    <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 flex items-start gap-3 text-xs text-emerald-900">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold">Kod yuborildi!</span> Telegram ilovangizdagi{' '}
+                        <strong className="text-emerald-700">@{botName || 'biznesgo_bot'}</strong> xabarlarini tekshiring.
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3.5 rounded-xl bg-sky-50 border border-sky-200 flex items-start gap-3 text-xs text-sky-900">
+                      <Bot className="w-5 h-5 text-sky-600 shrink-0 mt-0.5" />
+                      <div>
+                        Kodni olish uchun quyidagi tugmani bosib Telegram botga o‘ting va <strong>Start</strong> bosing:
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Direct Telegram Bot Link Button */}
+                  {otpBotUrl && (
+                    <a
+                      href={otpBotUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-2.5 px-4 rounded-xl border border-sky-300 bg-sky-50 hover:bg-sky-100 text-sky-800 text-xs font-semibold flex items-center justify-center gap-2 transition"
+                    >
+                      <Bot className="w-4 h-4 text-sky-600" />
+                      <span>Telegram Botda Ochish va Tasdiqlash</span>
+                      <ExternalLink className="w-3.5 h-3.5 text-sky-500" />
+                    </a>
+                  )}
+
+                  {/* 6-digit Code Input */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        6-xonali Tasdiqlash Kodi *
+                      </label>
+                      <div className="flex items-center gap-1 text-xs font-mono font-medium text-slate-500">
+                        <Clock className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>{formatTimer(otpTimer)}</span>
+                      </div>
+                    </div>
+
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      autoFocus
+                      required
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                      placeholder="• • • • • •"
+                      className="block w-full py-3 text-center tracking-[0.5em] text-2xl font-mono font-bold border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-slate-50 text-slate-900"
+                    />
+                    <div className="mt-1 text-center text-[11px] text-slate-400">
+                      Telefon: <strong className="text-slate-700">{phone}</strong>
+                    </div>
+                  </div>
+
+                  {/* Submit Button */}
+                  <button
+                    type="submit"
+                    disabled={loading || otpCode.length < 6}
+                    className="w-full mt-2 flex items-center justify-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-lg shadow-emerald-600/20 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 transition-all cursor-pointer"
+                  >
+                    {loading ? (
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>Kodni Tasdiqlash va Kirish</span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* Secondary Actions: Resend & Change Phone */}
+                  <div className="flex items-center justify-between pt-2 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setOtpStep('phone')}
+                      className="text-slate-500 hover:text-slate-800 flex items-center gap-1 font-medium"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <span>Raqamni o‘zgartirish</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={otpTimer > 0 || loading}
+                      onClick={() => handleSendOtp()}
+                      className={`flex items-center gap-1 font-semibold ${
+                        otpTimer > 0
+                          ? 'text-slate-400 cursor-not-allowed'
+                          : 'text-emerald-600 hover:text-emerald-700'
+                      }`}
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Kodni qayta yuborish</span>
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          )}
+
+          {/* 2. PASSWORD LOGIN / REGISTER FLOW (Fallback) */}
+          {(tab === 'login' || tab === 'register' || isTgOnboarding) && (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {(isTgOnboarding || tab === 'register') && (
                 <>
-                  <span>
-                    {isTgOnboarding
-                      ? 'Do‘konni ochish'
-                      : tab === 'login'
-                      ? 'Kirish'
-                      : 'Ro‘yxatdan o‘tish'}
-                  </span>
-                  <ArrowRight className="w-4 h-4" />
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                      Biznes yo‘nalishini tanlang *
+                    </label>
+                    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                      {BUSINESS_TYPE_OPTIONS.map((opt) => {
+                        const Icon = opt.icon;
+                        const isSelected = businessType === opt.id;
+                        return (
+                          <div
+                            key={opt.id}
+                            onClick={() => {
+                              setBusinessType(opt.id);
+                              tg.hapticImpact('light');
+                            }}
+                            className={`cursor-pointer rounded-xl border p-3 flex flex-col justify-between transition-all ${
+                              isSelected
+                                ? 'border-emerald-600 bg-emerald-50/50 ring-2 ring-emerald-500/20 shadow-sm'
+                                : 'border-slate-200 hover:border-slate-300 bg-white'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="p-2 rounded-lg bg-emerald-100 text-emerald-700">
+                                <Icon className="w-5 h-5" />
+                              </div>
+                              {isSelected && (
+                                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                              )}
+                            </div>
+                            <div className="mt-2">
+                              <h4 className="text-sm font-bold text-slate-900">
+                                {opt.title}
+                              </h4>
+                              <p className="text-xs text-slate-500 line-clamp-2 mt-0.5">
+                                {opt.desc}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500 italic">
+                      ⚠️ Diqqat: Tanlangan biznes turi ro‘yxatdan o‘tgach o‘zgartirilmaydi.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                      Do‘kon yoki Korxona nomi *
+                    </label>
+                    <div className="relative rounded-lg shadow-sm">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                        <Store className="w-5 h-5" />
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        value={storeName}
+                        onChange={(e) => setStoreName(e.target.value)}
+                        placeholder="Masalan: AgroHimoya Samarqand"
+                        className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                      Mas'ul shaxs (Ism Familiya) *
+                    </label>
+                    <div className="relative rounded-lg shadow-sm">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                        <User className="w-5 h-5" />
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="Masalan: Sardor Aliyev"
+                        className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
                 </>
               )}
-            </button>
-          </form>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Telefon raqami *
+                </label>
+                <div className="relative rounded-lg shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <Phone className="w-5 h-5" />
+                  </div>
+                  <input
+                    type="tel"
+                    required
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+998 90 123 45 67"
+                    className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              {!isTgOnboarding && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                    Parol *
+                  </label>
+                  <div className="relative rounded-lg shadow-sm">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                      <Lock className="w-5 h-5" />
+                    </div>
+                    <input
+                      type="password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {(isTgOnboarding || tab === 'register') && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                    Manzil (ixtiyoriy)
+                  </label>
+                  <div className="relative rounded-lg shadow-sm">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                      <MapPin className="w-5 h-5" />
+                    </div>
+                    <input
+                      type="text"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="Shahar, tuman, bozor yoki ko‘cha"
+                      className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full mt-4 flex items-center justify-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-lg shadow-emerald-600/20 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 transition-all cursor-pointer"
+              >
+                {loading ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <span>
+                      {isTgOnboarding
+                        ? 'Do‘konni ochish'
+                        : tab === 'login'
+                        ? 'Kirish'
+                        : 'Ro‘yxatdan o‘tish'}
+                    </span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </form>
+          )}
 
           <div className="mt-6 pt-6 border-t border-slate-100 flex items-center justify-center gap-2 text-xs text-slate-500">
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span>Xavfsiz B2B Cloud Tizimi — Neon PostgreSQL</span>
+            <span>Xavfsiz B2B Cloud Tizimi — Neon PostgreSQL & Telegram Bot Sync</span>
           </div>
         </div>
       </div>
     </div>
   );
 };
-

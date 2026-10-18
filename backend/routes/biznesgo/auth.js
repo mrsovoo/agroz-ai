@@ -8,6 +8,8 @@
  *   PUT  /auth/password            — parol o'rnatish / o'zgartirish (Telegram orqali kirganlar Web uchun)
  */
 const express = require('express');
+const crypto = require('crypto');
+const config = require('../../config');
 const { query, withTransaction } = require('../../db/pool');
 const { HttpError, asyncHandler } = require('../../lib/errors');
 const v = require('../../lib/validate');
@@ -15,12 +17,16 @@ const { hashPassword, verifyPassword, issueToken, verifyTelegramInitData } = req
 const { BUSINESS_TYPE_KEYS } = require('../../lib/businessTypes');
 const { authenticate, requireMerchant } = require('../../middleware/auth');
 const { rateLimit } = require('../../middleware/rateLimit');
+const { callTelegramApi } = require('../../services/telegramBot');
 
 const router = express.Router();
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, keyPrefix: 'auth' });
 
 const MERCHANT_COLUMNS = `id, user_id, store_name, phone, business_type, address, lat, lng,
   delivery_available, is_active, created_at, (password_hash IS NOT NULL) AS has_password`;
+
+const JOINED_MERCHANT_COLUMNS = `m.id, m.user_id, m.store_name, m.phone, m.business_type, m.address, m.lat, m.lng,
+  m.delivery_available, m.is_active, m.created_at, (m.password_hash IS NOT NULL) AS has_password`;
 
 /** Do'kon ma'lumotlarini validatsiya qilish (register uchun umumiy). */
 function parseStore(body) {
@@ -61,6 +67,267 @@ function sessionResponse(merchant, via) {
   const { token, expiresAt } = issueToken({ userId: merchant.user_id, merchantId: merchant.id, via });
   return { token, expires_at: expiresAt, merchant };
 }
+
+// ---------------------------------------------------------------------------
+// WEB & TELEGRAM OTP AUTHENTICATION
+// ---------------------------------------------------------------------------
+
+/**
+ * POST /api/biznesgo/auth/send-otp
+ * Foydalanuvchi telefon raqamini kiritganda 6-xonali OTP kod generatsiya qilish
+ * va Telegram bot orqali yuborish yoki Direct Confirmation Link qaytarish
+ */
+router.post(
+  '/send-otp',
+  authLimiter,
+  asyncHandler(async (req, res) => {
+    const phone = v.phone(req.body.phone, 'phone', { required: true });
+    const phoneDigits = phone.replace(/\D/g, '');
+
+    // 1. 6-xonali xavfsiz OTP kod generatsiya qilish
+    const code = crypto.randomInt(100000, 1000000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 daqiqa
+
+    // 2. Ushbu telefon raqamiga bog'langan Telegram foydalanuvchisini qidirish
+    const [userRes, merchantRes, specRes] = await Promise.all([
+      query(
+        `SELECT id, name, telegram_id FROM users
+          WHERE regexp_replace(COALESCE(phone,''), '\\D', '', 'g') = $1
+            AND telegram_id IS NOT NULL
+          ORDER BY id LIMIT 1`,
+        [phoneDigits]
+      ),
+      query(
+        `SELECT m.id, m.store_name, u.telegram_id
+           FROM merchants m
+           JOIN users u ON u.id = m.user_id
+          WHERE regexp_replace(COALESCE(m.phone,''), '\\D', '', 'g') = $1
+            AND u.telegram_id IS NOT NULL
+          ORDER BY m.id LIMIT 1`,
+        [phoneDigits]
+      ),
+      query(
+        `SELECT id, name, telegram_id FROM specialists
+          WHERE regexp_replace(COALESCE(phone,''), '\\D', '', 'g') = $1
+            AND telegram_id IS NOT NULL
+          ORDER BY id LIMIT 1`,
+        [phoneDigits]
+      ),
+    ]);
+
+    const targetTgId =
+      merchantRes.rows[0]?.telegram_id ||
+      userRes.rows[0]?.telegram_id ||
+      specRes.rows[0]?.telegram_id ||
+      null;
+
+    // 3. Avvalgi foydalanilmagan kodlarni bekor qilish va yangi kodni saqlash
+    await query(
+      `UPDATE otp_codes SET used = true
+        WHERE regexp_replace(COALESCE(phone,''), '\\D', '', 'g') = $1 AND used = false`,
+      [phoneDigits]
+    );
+
+    const insOtp = await query(
+      `INSERT INTO otp_codes (phone, code, used, attempts, telegram_id, expires_at, created_at)
+       VALUES ($1, $2, false, 0, $3, $4, now())
+       RETURNING id, phone, code, expires_at`,
+      [phone, code, targetTgId ? Number(targetTgId) : null, expiresAt]
+    );
+
+    let deliveredViaTelegram = false;
+    let botName = null;
+
+    // 4. Agar telegram_id topilsa, bot orqali darhol xabar yuborish
+    if (targetTgId) {
+      const text =
+        `🔐 <b>BiznesGO Web Kirish Kodingiz</b>:\n\n` +
+        `<code>${code}</code>\n\n` +
+        `⏳ Ushbu kod <b>5 daqiqa</b> davomida amal qiladi.\n` +
+        `<i>Agar bu so‘rovni siz yubormagan bo‘lsangiz, xabarga e’tibor bermang.</i>`;
+
+      const replyMarkup = {
+        inline_keyboard: [
+          [
+            {
+              text: "✅ Kirishni tasdiqlash",
+              url: `${config.miniAppUrl}?otp=${code}`,
+            },
+          ],
+        ],
+      };
+
+      // 1) Asosiy bot orqali urinish
+      if (config.biznesgoBotToken) {
+        try {
+          const tgRes = await callTelegramApi(config.biznesgoBotToken, 'sendMessage', {
+            chat_id: targetTgId,
+            text,
+            parse_mode: 'HTML',
+            reply_markup: replyMarkup,
+          });
+          if (tgRes.ok) {
+            deliveredViaTelegram = true;
+            botName = 'biznesgo_bot';
+          }
+        } catch (e) {
+          // Fallback to legacy bot below
+        }
+      }
+
+      // 2) Agar asosiy botdan o'tmasa, agroz_auth_bot orqali fallback
+      if (!deliveredViaTelegram && config.agrozAuthBotToken) {
+        try {
+          const tgRes = await callTelegramApi(config.agrozAuthBotToken, 'sendMessage', {
+            chat_id: targetTgId,
+            text,
+            parse_mode: 'HTML',
+            reply_markup: replyMarkup,
+          });
+          if (tgRes.ok) {
+            deliveredViaTelegram = true;
+            botName = 'agroz_auth_bot';
+          }
+        } catch (e) {
+          // Ignore error
+        }
+      }
+
+      if (deliveredViaTelegram) {
+        await query(
+          `UPDATE otp_codes SET delivered_at = now() WHERE id = $1`,
+          [insOtp.rows[0].id]
+        );
+      }
+    }
+
+    const botUrl = `https://t.me/${config.biznesgoBotUsername}?start=otp_${code}`;
+
+    res.json({
+      ok: true,
+      delivered_via_telegram: deliveredViaTelegram,
+      bot_name: botName,
+      phone,
+      expires_in_seconds: 300,
+      bot_url: botUrl,
+      has_telegram_link: Boolean(targetTgId),
+      message: deliveredViaTelegram
+        ? "Tasdiqlash kodi Telegram botingizga yuborildi"
+        : "Kodni olish uchun quyidagi Telegram bot havolasiga o'ting",
+    });
+  })
+);
+
+/**
+ * POST /api/biznesgo/auth/verify-otp
+ * Web: OTP kodni tekshirish, Cross-Platform sinxronizatsiya va JWT Token berish
+ */
+router.post(
+  '/verify-otp',
+  authLimiter,
+  asyncHandler(async (req, res) => {
+    const phone = v.phone(req.body.phone, 'phone', { required: true });
+    const code = v.str(req.body.code, 'code', { required: true, min: 4, max: 10 });
+    const phoneDigits = phone.replace(/\D/g, '');
+
+    // 1. Eng so'nggi aktiv OTP kodni tekshirish
+    const otpRes = await query(
+      `SELECT id, phone, code, used, attempts, telegram_id, expires_at
+         FROM otp_codes
+        WHERE regexp_replace(COALESCE(phone,''), '\\D', '', 'g') = $1
+          AND used = false
+        ORDER BY id DESC
+        LIMIT 1`,
+      [phoneDigits]
+    );
+
+    const otpRecord = otpRes.rows[0];
+    if (!otpRecord) {
+      throw new HttpError(400, "Tasdiqlash kodi topilmadi yoki muddati tugagan. Qaytadan kod so'rang.", 'OTP_NOT_FOUND');
+    }
+
+    if (new Date(otpRecord.expires_at) < new Date()) {
+      throw new HttpError(400, "Tasdiqlash kodi muddati o'tgan (5 daqiqa). Qaytadan kod so'rang.", 'OTP_EXPIRED');
+    }
+
+    if (otpRecord.attempts >= 5) {
+      throw new HttpError(429, "Ko'p noto'g'ri urinish. Iltimos, yangi kod so'rang.", 'OTP_MAX_ATTEMPTS');
+    }
+
+    // Kodni solishtirish
+    if (otpRecord.code.trim() !== code.trim()) {
+      await query(`UPDATE otp_codes SET attempts = attempts + 1 WHERE id = $1`, [otpRecord.id]);
+      throw new HttpError(400, "Tasdiqlash kodi noto'g'ri", 'OTP_INVALID');
+    }
+
+    // Kod to'g'ri — used holatiga o'tkazish
+    await query(`UPDATE otp_codes SET used = true WHERE id = $1`, [otpRecord.id]);
+
+    // 2. CROSS-PLATFORM DATA SYNC (Neon DB)
+    const syncedMerchant = await withTransaction(async (client) => {
+      // 2a. Mavjud merchant bormi?
+      const mRes = await client.query(
+        `SELECT ${JOINED_MERCHANT_COLUMNS}, u.id AS owner_user_id, u.telegram_id AS current_tg_id
+           FROM merchants m
+           JOIN users u ON u.id = m.user_id
+          WHERE regexp_replace(COALESCE(m.phone,''), '\\D', '', 'g') = $1
+          ORDER BY m.id LIMIT 1`,
+        [phoneDigits]
+      );
+      let merchant = mRes.rows[0];
+      const linkedTgId = otpRecord.telegram_id;
+
+      if (merchant) {
+        // Agar users da telegram_id yo'q bo'lsa, lekin OTP orqali topilgan bo'lsa, sinxronizatsiya qilamiz
+        if (linkedTgId && !merchant.current_tg_id) {
+          await client.query(
+            `UPDATE users SET telegram_id = $1 WHERE id = $2`,
+            [linkedTgId, merchant.owner_user_id]
+          );
+        }
+        return merchant;
+      }
+
+      // 2b. Agar merchant yo'q bo'lsa, mavjud yoki yangi user yaratamiz
+      const uRes = await client.query(
+        `SELECT id, name, telegram_id FROM users
+          WHERE regexp_replace(COALESCE(phone,''), '\\D', '', 'g') = $1
+          ORDER BY id LIMIT 1`,
+        [phoneDigits]
+      );
+      let userId = uRes.rows[0]?.id;
+      let tgId = uRes.rows[0]?.telegram_id || linkedTgId;
+
+      if (!userId) {
+        const insUser = await client.query(
+          `INSERT INTO users (phone, telegram_id, name) VALUES ($1, $2, $3) RETURNING id`,
+          [phone, tgId ? Number(tgId) : null, req.body.full_name || "Sotuvchi"]
+        );
+        userId = insUser.rows[0].id;
+      } else if (linkedTgId && !uRes.rows[0]?.telegram_id) {
+        await client.query(`UPDATE users SET telegram_id = $1 WHERE id = $2`, [linkedTgId, userId]);
+      }
+
+      const storeName = (req.body.store_name || '').trim() || (req.body.full_name ? `${req.body.full_name} Do'koni` : "Mening Do'konim");
+      const businessType = req.body.business_type || 'agro_vet';
+      const address = (req.body.address || '').trim();
+
+      const insM = await client.query(
+        `INSERT INTO merchants (user_id, store_name, phone, business_type, address, is_active)
+         VALUES ($1, $2, $3, $4, $5, true)
+         RETURNING ${MERCHANT_COLUMNS}`,
+        [userId, storeName, phone, businessType, address || null]
+      );
+      return insM.rows[0];
+    });
+
+    if (!syncedMerchant.is_active) {
+      throw new HttpError(403, "Sotuvchi hisobi bloklangan", 'MERCHANT_DISABLED');
+    }
+
+    res.json(sessionResponse(syncedMerchant, 'web_otp'));
+  })
+);
 
 // ---------------------------------------------------------------------------
 // WEB: register
@@ -208,6 +475,22 @@ router.post(
     const fullName = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ') || null;
 
     const merchant = await withTransaction(async (client) => {
+      const digits = phone.replace(/\D/g, '');
+      const existingM = await client.query(
+        `SELECT ${JOINED_MERCHANT_COLUMNS}, u.id AS owner_user_id
+           FROM merchants m
+           JOIN users u ON u.id = m.user_id
+          WHERE regexp_replace(COALESCE(m.phone,''), '\\D', '', 'g') = $1
+          ORDER BY m.id LIMIT 1`,
+        [digits]
+      );
+      if (existingM.rows[0]) {
+        // CROSS-PLATFORM DATA SYNC:
+        // Webda ro'yxatdan o'tgan do'konga Telegram hisobini biriktiramiz
+        await client.query(`UPDATE users SET telegram_id = $1 WHERE id = $2`, [tgUser.id, existingM.rows[0].owner_user_id]);
+        return existingM.rows[0];
+      }
+
       await assertPhoneFree(client, phone);
       const found = await client.query('SELECT id FROM users WHERE telegram_id = $1 ORDER BY id LIMIT 1', [tgUser.id]);
       let userId = found.rows[0] && found.rows[0].id;
