@@ -43,9 +43,12 @@ app.use(
 );
 app.use(express.json({ limit: '200kb' }));
 
-app.get('/healthz', (_req, res) => {
-  res.status(200).json({ ok: true, uptime: process.uptime() });
-});
+const healthHandler = (_req, res) => {
+  res.status(200).json({ ok: true, status: 'ok', service: 'biznesgo-backend', uptime: process.uptime() });
+};
+app.get('/healthz', healthHandler);
+app.get('/health', healthHandler);
+app.get('/api/health', healthHandler);
 
 app.use('/api/biznesgo', require('./routes/biznesgo'));
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Endpoint topilmadi', code: 'NOT_FOUND' }));
