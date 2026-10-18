@@ -182,27 +182,11 @@ router.post(
           );
           return insM.rows[0];
         });
-      } else {
-        // 2) users jadvalida telefon bilan mavjud bo'lsa
-        const uRes = await query('SELECT id, phone, name FROM users WHERE telegram_id = $1 LIMIT 1', [tgUser.id]);
-        if (uRes.rows[0] && uRes.rows[0].phone) {
-          const u = uRes.rows[0];
-          merchant = await withTransaction(async (client) => {
-            const insM = await client.query(
-              `INSERT INTO merchants (user_id, store_name, phone, business_type, address)
-               VALUES ($1, $2, $3, 'agro_vet', 'O\'zbekiston')
-               ON CONFLICT (user_id) DO UPDATE SET is_active = true
-               RETURNING ${MERCHANT_COLUMNS}`,
-              [u.id, u.name || 'Agro-Vet Do\'koni', u.phone]
-            );
-            return insM.rows[0];
-          });
-        }
       }
     }
 
     if (!merchant) {
-      // Ro'yxatdan o'tmagan — yangi foydalanuvchi
+      // Ro'yxatdan o'tmagan — yangi foydalanuvchi (do'kon turini o'zi tanlab ro'yxatdan o'tadi)
       return res.status(200).json({
         registered: false,
         telegram_user: { id: tgUser.id, first_name: tgUser.first_name, last_name: tgUser.last_name, username: tgUser.username },
