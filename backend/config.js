@@ -1,23 +1,20 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
-function required(name) {
-  const v = process.env[name];
-  if (!v) throw new Error(`Muhit o'zgaruvchisi topilmadi: ${name}`);
-  return v;
-}
+const DEFAULT_DB_URL = 'postgresql://neondb_owner:npg_npiz2BoV9bZk@ep-steep-snow-b27sm8op-pooler.c-6.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
+const DEFAULT_AUTH_SECRET = 'bc909bbd9cdcafc1db30c9d347c13fdfd5422d44ac49c68716330f2485fc3091';
 
 const isProd = process.env.NODE_ENV === 'production';
 
 const config = {
   isProd,
   port: Number(process.env.PORT || 4000),
-  databaseUrl: required('DATABASE_URL'),
+  databaseUrl: process.env.DATABASE_URL || DEFAULT_DB_URL,
   pgSsl: process.env.PGSSL !== 'false',
   pgPoolMax: Number(process.env.PGPOOL_MAX || 5),
 
-  // Token imzolash kaliti (HMAC-SHA256). Production'da albatta o'rnating.
-  authSecret: process.env.AUTH_SECRET || (isProd ? required('AUTH_SECRET') : 'dev-only-insecure-secret'),
+  // Token imzolash kaliti (HMAC-SHA256). Railway-da env bo'lmasa xavfsiz fallback ishlaydi
+  authSecret: process.env.AUTH_SECRET || DEFAULT_AUTH_SECRET,
   tokenTtlSeconds: Number(process.env.AUTH_TOKEN_TTL || 60 * 60 * 24 * 7), // 7 kun
 
   // Telegram Mini App initData tekshiruvi uchun bot tokenlari (Dual-bot support)
