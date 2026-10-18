@@ -4,7 +4,7 @@ const API_BASE = (import.meta.env.VITE_API_URL as string) || 'https://backend-pr
 const ADMIN_KEY_STORAGE = 'super_adm_key';
 
 class SuperAdminApi {
-  private key: string = localStorage.getItem(ADMIN_KEY_STORAGE) || 'AgrozAdmin_2026_Prod_9f3b8c';
+  private key: string = localStorage.getItem(ADMIN_KEY_STORAGE) || (import.meta.env.VITE_ADMIN_KEY as string) || 'AgrozAdmin_2026_Prod_9f3b8c';
 
   setKey(key: string) {
     this.key = key.trim();
