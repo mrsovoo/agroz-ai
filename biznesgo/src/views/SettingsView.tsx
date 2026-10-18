@@ -22,11 +22,11 @@ import {
 import { BusinessType } from '../types';
 
 const BUSINESS_TYPE_LABELS: Record<BusinessType, { title: string; icon: React.ElementType }> = {
-  agro_vet: { title: 'Agro-Vet do‘kon / Dorixona', icon: Sprout },
-  feed: { title: 'Yem-Ozuqa savdosi', icon: Scale },
-  warehouse: { title: 'Ulgurji Ombor', icon: Building2 },
-  seeds: { title: 'Urug‘ va Ko‘chat savdosi', icon: Wheat },
-  machinery: { title: 'Agro-Texnika va Jihozlar', icon: Wrench },
+  agro_vet: { title: 'Dorixona', icon: Sprout },
+  feed: { title: 'Yem', icon: Scale },
+  warehouse: { title: 'Ombor', icon: Building2 },
+  seeds: { title: 'Urug‘', icon: Wheat },
+  machinery: { title: 'Texnika', icon: Wrench },
 };
 
 export const SettingsView: React.FC = () => {

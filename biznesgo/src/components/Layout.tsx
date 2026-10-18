@@ -54,6 +54,16 @@ export const Layout: React.FC<LayoutProps> = ({
 
   const BusinessIcon = getBusinessIcon(merchant?.business_type);
 
+  const BUSINESS_TYPE_TITLES: Record<string, string> = {
+    agro_vet: 'Dorixona',
+    feed: 'Yem',
+    warehouse: 'Ombor',
+    seeds: 'Urug‘',
+    machinery: 'Texnika',
+  };
+
+  const businessLabel = merchant?.business_type ? (BUSINESS_TYPE_TITLES[merchant.business_type] || merchant.business_type) : 'Do‘kon';
+
   const navItems = [
     { key: 'dashboard', label: 'Asosiy panel', icon: LayoutDashboard, shortLabel: 'Asosiy' },
     { key: 'pos', label: 'Kassa', icon: ShoppingCart, shortLabel: 'Kassa' },
@@ -92,9 +102,9 @@ export const Layout: React.FC<LayoutProps> = ({
           <div className="font-bold text-sm text-slate-800 truncate">
             {merchant?.store_name || 'Mening Do‘konim'}
           </div>
-          <div className="flex items-center gap-1.5 mt-1 text-xs text-slate-500 font-medium">
+          <div className="flex items-center gap-1.5 mt-1 text-xs text-slate-600 font-bold">
             <BusinessIcon className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
-            <span className="truncate">{bInfo?.label || merchant?.business_type}</span>
+            <span className="truncate">{businessLabel}</span>
           </div>
         </div>
 
@@ -194,7 +204,7 @@ export const Layout: React.FC<LayoutProps> = ({
 
             <div className="p-3 mx-3 my-3 bg-slate-50 border border-slate-100 rounded-xl">
               <div className="font-bold text-xs text-slate-800 truncate">{merchant?.store_name}</div>
-              <div className="text-[11px] text-slate-500">{bInfo?.label}</div>
+              <div className="text-[11px] text-slate-600 font-bold">{businessLabel}</div>
             </div>
 
             <nav className="flex-1 px-3 space-y-1 overflow-y-auto">

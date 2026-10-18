@@ -359,7 +359,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
                       Biznes yo‘nalishi *
                     </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                       {BUSINESS_TYPE_OPTIONS.map((opt) => {
                         const Icon = opt.icon;
                         const isSelected = businessType === opt.id;
@@ -371,20 +371,20 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                               setBusinessType(opt.id);
                               tg.hapticImpact('light');
                             }}
-                            className={`cursor-pointer rounded-xl border p-2.5 flex items-center gap-2 transition-all text-left ${
+                            className={`cursor-pointer rounded-xl p-3 flex items-center gap-2.5 transition-all text-left ${
                               isSelected
-                                ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold shadow-xs'
-                                : 'border-slate-200 hover:border-slate-300 bg-white text-slate-700 font-medium'
+                                ? 'border-2 border-emerald-600 bg-emerald-50 text-emerald-950 font-bold shadow-xs'
+                                : 'border border-slate-300 hover:border-slate-400 bg-white text-slate-900 font-semibold'
                             }`}
                           >
-                            <div className={`p-1.5 rounded-lg shrink-0 ${isSelected ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                            <div className={`p-1.5 rounded-lg shrink-0 ${isSelected ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700'}`}>
                               <Icon className="w-4 h-4" />
                             </div>
-                            <span className="text-sm font-semibold truncate flex-1">
+                            <span className="text-sm font-bold text-slate-900 whitespace-nowrap">
                               {opt.title}
                             </span>
                             {isSelected && (
-                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 ml-auto" />
                             )}
                           </button>
                         );
