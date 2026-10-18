@@ -42,9 +42,9 @@ router.get(
  * :botType = 'biznesgo' | 'agroz_auth'
  */
 router.post(
-  '/webhook/:botType',
+  ['/webhook', '/webhook/:botType'],
   asyncHandler(async (req, res) => {
-    const { botType } = req.params;
+    const botType = req.params.botType || 'biznesgo';
     const update = req.body;
 
     if (!update) {

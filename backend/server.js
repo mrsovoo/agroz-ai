@@ -50,6 +50,17 @@ app.get('/healthz', healthHandler);
 app.get('/health', healthHandler);
 app.get('/api/health', healthHandler);
 
+// Webhook backward compatibility routes for Telegram
+const botRouter = require('./routes/biznesgo/bot');
+app.post(['/api/biznesgo/telegram/webhook', '/api/telegram/webhook'], (req, res, next) => {
+  req.url = '/webhook/biznesgo';
+  botRouter(req, res, next);
+});
+app.post(['/api/telegram/auth-webhook', '/api/biznesgo/telegram/auth-webhook'], (req, res, next) => {
+  req.url = '/webhook/agroz_auth';
+  botRouter(req, res, next);
+});
+
 app.use('/api/biznesgo', require('./routes/biznesgo'));
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Endpoint topilmadi', code: 'NOT_FOUND' }));
 
