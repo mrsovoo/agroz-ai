@@ -100,7 +100,16 @@ class ApiClient {
       full_name?: string;
       address?: string;
     }) =>
-      this.request<{ token: string; merchant: Merchant }>('/auth/verify-otp', {
+      this.request<{
+        ok?: boolean;
+        verified?: boolean;
+        needs_onboarding?: boolean;
+        phone?: string;
+        user?: { id?: number; name?: string; phone?: string; telegram_id?: number };
+        token?: string;
+        merchant?: Merchant;
+        message?: string;
+      }>('/auth/verify-otp', {
         method: 'POST',
         body: JSON.stringify(payload),
       }),

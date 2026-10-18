@@ -236,69 +236,55 @@ router.post(
     // Kod to'g'ri — used holatiga o'tkazish
     await query(`UPDATE otp_codes SET used = true WHERE id = $1`, [otpRecord.id]);
 
-    // 2. CROSS-PLATFORM DATA SYNC (Neon DB)
-    const syncedMerchant = await withTransaction(async (client) => {
-      // 2a. Mavjud merchant bormi?
-      const mRes = await client.query(
-        `SELECT ${JOINED_MERCHANT_COLUMNS}, u.id AS owner_user_id, u.telegram_id AS current_tg_id
-           FROM merchants m
-           JOIN users u ON u.id = m.user_id
-          WHERE RIGHT(regexp_replace(COALESCE(m.phone,''), '\\D', '', 'g'), 9) = $1
-          ORDER BY m.id LIMIT 1`,
-        [last9]
-      );
-      let merchant = mRes.rows[0];
-      const linkedTgId = otpRecord.telegram_id;
+    const linkedTgId = otpRecord.telegram_id;
 
-      if (merchant) {
-        // Agar users da telegram_id yo'q bo'lsa, lekin OTP orqali topilgan bo'lsa, sinxronizatsiya qilamiz
-        if (linkedTgId && !merchant.current_tg_id) {
-          await client.query(
-            `UPDATE users SET telegram_id = $1 WHERE id = $2`,
-            [linkedTgId, merchant.owner_user_id]
-          );
-        }
-        return merchant;
-      }
+    // 2a. Mavjud to'liq sozlangan merchant bormi?
+    const mRes = await query(
+      `SELECT ${JOINED_MERCHANT_COLUMNS}, u.id AS owner_user_id, u.telegram_id AS current_tg_id, u.name AS user_name
+         FROM merchants m
+         JOIN users u ON u.id = m.user_id
+        WHERE RIGHT(regexp_replace(COALESCE(m.phone,''), '\\D', '', 'g'), 9) = $1
+        ORDER BY m.id LIMIT 1`,
+      [last9]
+    );
+    let merchant = mRes.rows[0];
 
-      // 2b. Agar merchant yo'q bo'lsa, mavjud yoki yangi user yaratamiz
-      const uRes = await client.query(
-        `SELECT id, name, telegram_id FROM users
-          WHERE RIGHT(regexp_replace(COALESCE(phone,''), '\\D', '', 'g'), 9) = $1
-          ORDER BY id LIMIT 1`,
-        [last9]
-      );
-      let userId = uRes.rows[0]?.id;
-      let tgId = uRes.rows[0]?.telegram_id || linkedTgId;
-
-      if (!userId) {
-        const insUser = await client.query(
-          `INSERT INTO users (phone, telegram_id, name) VALUES ($1, $2, $3) RETURNING id`,
-          [phone, tgId ? Number(tgId) : null, req.body.full_name || "Sotuvchi"]
+    // Agar do'kon oldin to'liq ro'yxatdan o'tgan bo'lsa (Mening Do'konim emas)
+    if (merchant && merchant.store_name && merchant.store_name !== "Mening Do'konim") {
+      if (linkedTgId && !merchant.current_tg_id) {
+        await query(
+          `UPDATE users SET telegram_id = $1 WHERE id = $2`,
+          [linkedTgId, merchant.owner_user_id]
         );
-        userId = insUser.rows[0].id;
-      } else if (linkedTgId && !uRes.rows[0]?.telegram_id) {
-        await client.query(`UPDATE users SET telegram_id = $1 WHERE id = $2`, [linkedTgId, userId]);
       }
-
-      const storeName = (req.body.store_name || '').trim() || (req.body.full_name ? `${req.body.full_name} Do'koni` : "Mening Do'konim");
-      const businessType = req.body.business_type || 'agro_vet';
-      const address = (req.body.address || '').trim();
-
-      const insM = await client.query(
-        `INSERT INTO merchants (user_id, store_name, phone, business_type, address, is_active)
-         VALUES ($1, $2, $3, $4, $5, true)
-         RETURNING ${MERCHANT_COLUMNS}`,
-        [userId, storeName, phone, businessType, address || null]
-      );
-      return insM.rows[0];
-    });
-
-    if (!syncedMerchant.is_active) {
-      throw new HttpError(403, "Sotuvchi hisobi bloklangan", 'MERCHANT_DISABLED');
+      if (!merchant.is_active) {
+        throw new HttpError(403, "Sotuvchi hisobi bloklangan", 'MERCHANT_DISABLED');
+      }
+      return res.json(sessionResponse(merchant, 'web_otp'));
     }
 
-    res.json(sessionResponse(syncedMerchant, 'web_otp'));
+    // 2b. Agar merchant yo'q bo'lsa yoki nomi bo'lmasa ("Mening Do'konim"):
+    // Foydalanuvchiga to'liq do'kon ochish formasini ko'rsatish uchun onboarding talab qilinadi
+    const uRes = await query(
+      `SELECT id, name, phone, telegram_id FROM users
+        WHERE RIGHT(regexp_replace(COALESCE(phone,''), '\\D', '', 'g'), 9) = $1
+        ORDER BY id LIMIT 1`,
+      [last9]
+    );
+    let user = uRes.rows[0];
+    if (user && linkedTgId && !user.telegram_id) {
+      await query(`UPDATE users SET telegram_id = $1 WHERE id = $2`, [linkedTgId, user.id]);
+      user.telegram_id = linkedTgId;
+    }
+
+    return res.json({
+      ok: true,
+      verified: true,
+      needs_onboarding: true,
+      phone: phone,
+      user: user || { phone },
+      message: 'Tasdiqlandi! Do‘koningiz ma’lumotlarini kiriting.',
+    });
   })
 );
 
@@ -402,22 +388,55 @@ router.post(
     const store = parseStore(req.body);
 
     const merchant = await withTransaction(async (client) => {
-      await assertPhoneFree(client, phone);
-      // Mavjud users yozuvini telefon bo'yicha qidiramiz (raqamlar bo'yicha solishtirish).
-      // users jadvalining tuzilishi o'zgartirilmaydi — faqat kerak bo'lsa yangi qator qo'shiladi.
       const digits = phone.replace(/\D/g, '');
+      const last9 = digits.slice(-9);
+
+      // Mavjud users yozuvini oxirgi 9 raqam bo'yicha qidiramiz
       const found = await client.query(
-        `SELECT id FROM users WHERE regexp_replace(COALESCE(phone,''), '\\D', '', 'g') = $1 ORDER BY id LIMIT 1`,
-        [digits]
+        `SELECT id, name FROM users
+          WHERE RIGHT(regexp_replace(COALESCE(phone,''), '\\D', '', 'g'), 9) = $1
+          ORDER BY id LIMIT 1`,
+        [last9]
       );
-      let userId = found.rows[0] && found.rows[0].id;
+      let userId = found.rows[0]?.id;
       if (userId) {
-        const taken = await client.query('SELECT 1 FROM merchants WHERE user_id = $1', [userId]);
-        if (taken.rows[0]) throw new HttpError(409, 'Bu foydalanuvchida sotuvchi hisobi allaqachon bor', 'ALREADY_MERCHANT');
+        if (fullName) {
+          await client.query(`UPDATE users SET name = $1 WHERE id = $2`, [fullName, userId]);
+        }
       } else {
-        const ins = await client.query('INSERT INTO users (phone, name) VALUES ($1, $2) RETURNING id', [phone, fullName]);
+        const ins = await client.query('INSERT INTO users (phone, name) VALUES ($1, $2) RETURNING id', [phone, fullName || 'Sotuvchi']);
         userId = ins.rows[0].id;
       }
+
+      // Ushbu user yoki telefon uchun mavjud merchant borligini tekshiramiz
+      const existingM = await client.query(
+        `SELECT id, store_name FROM merchants
+          WHERE user_id = $1 OR RIGHT(regexp_replace(COALESCE(phone,''), '\\D', '', 'g'), 9) = $2
+          ORDER BY id LIMIT 1`,
+        [userId, last9]
+      );
+
+      if (existingM.rows[0]) {
+        const mRow = existingM.rows[0];
+        // Agar bu avval yaratilgan dummy do'kon ("Mening Do'konim") bo'lsa yoki nomi bo'lmasa, yangilaymiz
+        if (mRow.store_name === "Mening Do'konim" || !mRow.store_name) {
+          const updated = await client.query(
+            `UPDATE merchants
+                SET store_name = $1, business_type = $2, address = $3, phone = $4,
+                    lat = $5::float8, lng = $6::float8,
+                    delivery_available = $7,
+                    location = CASE WHEN $5::float8 IS NULL THEN NULL ELSE point($6::float8, $5::float8) END,
+                    is_active = true
+              WHERE id = $8
+              RETURNING ${MERCHANT_COLUMNS}`,
+            [store.store_name, store.business_type, store.address || null, phone, store.lat, store.lng, store.delivery_available, mRow.id]
+          );
+          return updated.rows[0];
+        } else {
+          throw new HttpError(409, 'Bu telefon raqam bilan sotuvchi allaqachon ro‘yxatdan o‘tgan', 'PHONE_TAKEN');
+        }
+      }
+
       return insertMerchant(client, userId, phone, store, password ? hashPassword(password) : null);
     });
 

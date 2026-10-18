@@ -148,6 +148,20 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
         code: otpCode.trim(),
       });
 
+      // Agar foydalanuvchi ma'lumotlari to'liq bo'lmasa yoki yangi bo'lsa, do'kon ochish formasini ko'rsatamiz
+      if (res.needs_onboarding || !res.merchant) {
+        if (res.phone) {
+          setPhone(formatUzbekPhone(res.phone));
+        }
+        if (res.user?.name && res.user.name !== 'Sotuvchi') {
+          setFullName(res.user.name);
+        }
+        setIsOnboardingForm(true);
+        addToast(res.message || 'Tasdiqlandi! Do‘koningiz ma’lumotlarini kiriting.', 'success');
+        tg.hapticImpact('medium');
+        return;
+      }
+
       if (res.token) {
         api.setToken(res.token);
       }
