@@ -19,6 +19,7 @@ export const App: React.FC = () => {
     first_name: string;
     last_name?: string;
     username?: string;
+    phone?: string;
   } | null>(null);
 
   useEffect(() => {
@@ -43,6 +44,7 @@ export const App: React.FC = () => {
                   first_name: res.user.first_name,
                   last_name: res.user.last_name,
                   username: res.user.username,
+                  phone: res.user.phone,
                 });
               }
             } catch (tgErr: any) {

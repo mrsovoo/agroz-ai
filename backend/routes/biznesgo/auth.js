@@ -618,10 +618,22 @@ router.post(
 
     if (!merchant) {
       // Ro'yxatdan o'tmagan — yangi foydalanuvchi (do'kon turini o'zi tanlab ro'yxatdan o'tadi)
+      const uPhoneRes = await query(
+        `SELECT phone, name FROM users WHERE telegram_id = $1 AND phone IS NOT NULL ORDER BY id DESC LIMIT 1`,
+        [tgUser.id]
+      );
+      const rememberedPhone = uPhoneRes.rows[0]?.phone || null;
+
       return res.status(200).json({
         registered: false,
         needs_onboarding: true,
-        user: { telegram_id: tgUser.id, first_name: tgUser.first_name, last_name: tgUser.last_name, username: tgUser.username },
+        user: {
+          telegram_id: tgUser.id,
+          first_name: tgUser.first_name,
+          last_name: tgUser.last_name,
+          username: tgUser.username,
+          phone: rememberedPhone,
+        },
         telegram_user: { id: tgUser.id, first_name: tgUser.first_name, last_name: tgUser.last_name, username: tgUser.username },
       });
     }
