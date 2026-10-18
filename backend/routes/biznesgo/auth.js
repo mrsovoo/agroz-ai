@@ -83,35 +83,43 @@ router.post(
   asyncHandler(async (req, res) => {
     const phone = v.phone(req.body.phone, 'phone', { required: true });
     const phoneDigits = phone.replace(/\D/g, '');
+    const last9 = phoneDigits.slice(-9);
 
     // 1. 6-xonali xavfsiz OTP kod generatsiya qilish
     const code = crypto.randomInt(100000, 1000000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 daqiqa
 
-    // 2. Ushbu telefon raqamiga bog'langan Telegram foydalanuvchisini qidirish
-    const [userRes, merchantRes, specRes] = await Promise.all([
+    // 2. Ushbu telefon raqamiga bog'langan Telegram foydalanuvchisini qidirish (oxirgi 9 raqam bo'yicha)
+    const [userRes, merchantRes, specRes, otpPrevRes] = await Promise.all([
       query(
         `SELECT id, name, telegram_id FROM users
-          WHERE regexp_replace(COALESCE(phone,''), '\\D', '', 'g') = $1
+          WHERE RIGHT(regexp_replace(COALESCE(phone,''), '\\D', '', 'g'), 9) = $1
             AND telegram_id IS NOT NULL
-          ORDER BY id LIMIT 1`,
-        [phoneDigits]
+          ORDER BY id DESC LIMIT 1`,
+        [last9]
       ),
       query(
         `SELECT m.id, m.store_name, u.telegram_id
            FROM merchants m
            JOIN users u ON u.id = m.user_id
-          WHERE regexp_replace(COALESCE(m.phone,''), '\\D', '', 'g') = $1
+          WHERE RIGHT(regexp_replace(COALESCE(m.phone,''), '\\D', '', 'g'), 9) = $1
             AND u.telegram_id IS NOT NULL
-          ORDER BY m.id LIMIT 1`,
-        [phoneDigits]
+          ORDER BY m.id DESC LIMIT 1`,
+        [last9]
       ),
       query(
         `SELECT id, name, telegram_id FROM specialists
-          WHERE regexp_replace(COALESCE(phone,''), '\\D', '', 'g') = $1
+          WHERE RIGHT(regexp_replace(COALESCE(phone,''), '\\D', '', 'g'), 9) = $1
             AND telegram_id IS NOT NULL
-          ORDER BY id LIMIT 1`,
-        [phoneDigits]
+          ORDER BY id DESC LIMIT 1`,
+        [last9]
+      ),
+      query(
+        `SELECT telegram_id FROM otp_codes
+          WHERE RIGHT(regexp_replace(COALESCE(phone,''), '\\D', '', 'g'), 9) = $1
+            AND telegram_id IS NOT NULL
+          ORDER BY id DESC LIMIT 1`,
+        [last9]
       ),
     ]);
 
@@ -119,13 +127,14 @@ router.post(
       merchantRes.rows[0]?.telegram_id ||
       userRes.rows[0]?.telegram_id ||
       specRes.rows[0]?.telegram_id ||
+      otpPrevRes.rows[0]?.telegram_id ||
       null;
 
     // 3. Avvalgi foydalanilmagan kodlarni bekor qilish va yangi kodni saqlash
     await query(
       `UPDATE otp_codes SET used = true
-        WHERE regexp_replace(COALESCE(phone,''), '\\D', '', 'g') = $1 AND used = false`,
-      [phoneDigits]
+        WHERE RIGHT(regexp_replace(COALESCE(phone,''), '\\D', '', 'g'), 9) = $1 AND used = false`,
+      [last9]
     );
 
     const insOtp = await query(
@@ -136,72 +145,35 @@ router.post(
     );
 
     let deliveredViaTelegram = false;
-    let botName = null;
+    const botName = 'biznesgo_bot';
 
-    // 4. Agar telegram_id topilsa, bot orqali darhol xabar yuborish
-    if (targetTgId) {
+    // 4. Faqat @biznesgo_bot orqali xabar yuborish
+    if (targetTgId && config.biznesgoBotToken) {
       const text =
         `🔐 <b>BiznesGO Web Kirish Kodingiz</b>:\n\n` +
         `<code>${code}</code>\n\n` +
         `⏳ Ushbu kod <b>5 daqiqa</b> davomida amal qiladi.\n` +
-        `<i>Agar bu so‘rovni siz yubormagan bo‘lsangiz, xabarga e’tibor bermang.</i>`;
+        `<i>Xavfsizlik uchun kodni begonalarga bermang.</i>`;
 
-      const replyMarkup = {
-        inline_keyboard: [
-          [
-            {
-              text: "✅ Kirishni tasdiqlash",
-              url: `${config.miniAppUrl}?otp=${code}`,
-            },
-          ],
-        ],
-      };
-
-      // 1) Asosiy bot orqali urinish
-      if (config.biznesgoBotToken) {
-        try {
-          const tgRes = await callTelegramApi(config.biznesgoBotToken, 'sendMessage', {
-            chat_id: targetTgId,
-            text,
-            parse_mode: 'HTML',
-            reply_markup: replyMarkup,
-          });
-          if (tgRes.ok) {
-            deliveredViaTelegram = true;
-            botName = 'biznesgo_bot';
-          }
-        } catch (e) {
-          // Fallback to legacy bot below
+      try {
+        const tgRes = await callTelegramApi(config.biznesgoBotToken, 'sendMessage', {
+          chat_id: targetTgId,
+          text,
+          parse_mode: 'HTML',
+        });
+        if (tgRes.ok) {
+          deliveredViaTelegram = true;
+          await query(
+            `UPDATE otp_codes SET delivered_at = now() WHERE id = $1`,
+            [insOtp.rows[0].id]
+          );
         }
-      }
-
-      // 2) Agar asosiy botdan o'tmasa, agroz_auth_bot orqali fallback
-      if (!deliveredViaTelegram && config.agrozAuthBotToken) {
-        try {
-          const tgRes = await callTelegramApi(config.agrozAuthBotToken, 'sendMessage', {
-            chat_id: targetTgId,
-            text,
-            parse_mode: 'HTML',
-            reply_markup: replyMarkup,
-          });
-          if (tgRes.ok) {
-            deliveredViaTelegram = true;
-            botName = 'agroz_auth_bot';
-          }
-        } catch (e) {
-          // Ignore error
-        }
-      }
-
-      if (deliveredViaTelegram) {
-        await query(
-          `UPDATE otp_codes SET delivered_at = now() WHERE id = $1`,
-          [insOtp.rows[0].id]
-        );
+      } catch (e) {
+        // biznesgo_bot orqali yuborishda xatolik bo'lsa
       }
     }
 
-    const botUrl = `https://t.me/${config.biznesgoBotUsername}?start=otp_${code}`;
+    const botUrl = `https://t.me/${config.biznesgoBotUsername || 'biznesgo_bot'}?start=otp_${code}`;
 
     res.json({
       ok: true,
@@ -212,8 +184,8 @@ router.post(
       bot_url: botUrl,
       has_telegram_link: Boolean(targetTgId),
       message: deliveredViaTelegram
-        ? "Tasdiqlash kodi Telegram botingizga yuborildi"
-        : "Kodni olish uchun quyidagi Telegram bot havolasiga o'ting",
+        ? "Tasdiqlash kodi @biznesgo_bot orqali yuborildi"
+        : "Kodni olish uchun @biznesgo_bot ga kiring",
     });
   })
 );
@@ -227,18 +199,18 @@ router.post(
   authLimiter,
   asyncHandler(async (req, res) => {
     const phone = v.phone(req.body.phone, 'phone', { required: true });
-    const code = v.str(req.body.code, 'code', { required: true, min: 4, max: 10 });
     const phoneDigits = phone.replace(/\D/g, '');
+    const last9 = phoneDigits.slice(-9);
 
     // 1. Eng so'nggi aktiv OTP kodni tekshirish
     const otpRes = await query(
       `SELECT id, phone, code, used, attempts, telegram_id, expires_at
          FROM otp_codes
-        WHERE regexp_replace(COALESCE(phone,''), '\\D', '', 'g') = $1
+        WHERE RIGHT(regexp_replace(COALESCE(phone,''), '\\D', '', 'g'), 9) = $1
           AND used = false
         ORDER BY id DESC
         LIMIT 1`,
-      [phoneDigits]
+      [last9]
     );
 
     const otpRecord = otpRes.rows[0];
@@ -270,9 +242,9 @@ router.post(
         `SELECT ${JOINED_MERCHANT_COLUMNS}, u.id AS owner_user_id, u.telegram_id AS current_tg_id
            FROM merchants m
            JOIN users u ON u.id = m.user_id
-          WHERE regexp_replace(COALESCE(m.phone,''), '\\D', '', 'g') = $1
+          WHERE RIGHT(regexp_replace(COALESCE(m.phone,''), '\\D', '', 'g'), 9) = $1
           ORDER BY m.id LIMIT 1`,
-        [phoneDigits]
+        [last9]
       );
       let merchant = mRes.rows[0];
       const linkedTgId = otpRecord.telegram_id;
@@ -291,9 +263,9 @@ router.post(
       // 2b. Agar merchant yo'q bo'lsa, mavjud yoki yangi user yaratamiz
       const uRes = await client.query(
         `SELECT id, name, telegram_id FROM users
-          WHERE regexp_replace(COALESCE(phone,''), '\\D', '', 'g') = $1
+          WHERE RIGHT(regexp_replace(COALESCE(phone,''), '\\D', '', 'g'), 9) = $1
           ORDER BY id LIMIT 1`,
-        [phoneDigits]
+        [last9]
       );
       let userId = uRes.rows[0]?.id;
       let tgId = uRes.rows[0]?.telegram_id || linkedTgId;

@@ -75,6 +75,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
   const [otpStep, setOtpStep] = useState<'phone' | 'code'>('phone');
   const [otpCode, setOtpCode] = useState('');
   const [otpTimer, setOtpTimer] = useState(300); // 5 daqiqa
+  const [deliveredViaTelegram, setDeliveredViaTelegram] = useState(false);
+  const [otpBotUrl, setOtpBotUrl] = useState<string | null>(null);
 
   // URL dan kelgan ?otp= parametrini tekshirish
   useEffect(() => {
@@ -119,6 +121,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
     try {
       const res = await api.auth.sendOtp(phone.trim());
       setOtpTimer(res.expires_in_seconds || 300);
+      setDeliveredViaTelegram(res.delivered_via_telegram);
+      setOtpBotUrl(res.bot_url);
       setOtpStep('code');
       addToast(res.message || 'Tasdiqlash kodi yuborildi', 'success');
       tg.hapticImpact('light');
@@ -510,6 +514,28 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                       </form>
                     ) : (
                       <form onSubmit={handleVerifyOtp} className="space-y-3">
+                        {deliveredViaTelegram ? (
+                          <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 font-medium flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                            <span>Kodingiz <strong>@biznesgo_bot</strong> ga yuborildi.</span>
+                          </div>
+                        ) : otpBotUrl ? (
+                          <div className="space-y-1.5">
+                            <p className="text-xs text-slate-600">
+                              Kodingizni olish uchun botni oching:
+                            </p>
+                            <a
+                              href={otpBotUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-full py-2 px-3 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer"
+                            >
+                              <Bot className="w-4 h-4 text-white" />
+                              <span>@biznesgo_bot da kodni ko‘rish</span>
+                            </a>
+                          </div>
+                        ) : null}
+
                         <div>
                           <div className="flex items-center justify-between mb-1">
                             <label className="block text-xs font-semibold text-slate-700">

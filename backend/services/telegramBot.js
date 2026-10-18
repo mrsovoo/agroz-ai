@@ -88,11 +88,12 @@ async function handleBiznesgoBotUpdate(update) {
 
       // Agar users da shu telefon bo'lsa, unga ham telegram_id ni biriktiramiz (Cross-Platform Sync)
       const phoneDigits = otpRow.phone.replace(/\D/g, '');
+      const last9 = phoneDigits.slice(-9);
       await query(
         `UPDATE users SET telegram_id = $1
-          WHERE regexp_replace(COALESCE(phone,''), '\\D', '', 'g') = $2
+          WHERE RIGHT(regexp_replace(COALESCE(phone,''), '\\D', '', 'g'), 9) = $2
             AND (telegram_id IS NULL OR telegram_id = $1)`,
-        [chatId, phoneDigits]
+        [chatId, last9]
       );
 
       const confirmText =
