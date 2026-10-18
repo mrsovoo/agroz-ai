@@ -1,0 +1,12 @@
+{
+  "name": "agroz-ai-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "BiznesGO B2B & Super-Admin Monorepo",
+  "scripts": {
+    "build": "cd biznesgo && npm install && npm run build",
+    "build:super-adm": "cd super-adm && npm install && npm run build",
+    "test": "cd backend && npm test"
+  }
+}
+

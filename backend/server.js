@@ -109,6 +109,7 @@ app.post(['/api/telegram/auth-webhook', '/api/biznesgo/telegram/auth-webhook'], 
 });
 
 app.use('/api/biznesgo', require('./routes/biznesgo'));
+app.use('/api/super-adm', require('./routes/super-adm'));
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Endpoint topilmadi', code: 'NOT_FOUND' }));
 
 // Frontend (SPA)

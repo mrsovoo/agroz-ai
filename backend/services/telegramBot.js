@@ -105,7 +105,7 @@ async function handleBiznesgoBotUpdate(update) {
  * Admin Push Notifications Support
  * Broadcasts messages to all users, automatically utilizing both biznesgo_bot and agroz_auth_bot fallback.
  */
-async function sendAdminBroadcast({ text, targetTelegramIds = null }) {
+async function sendAdminBroadcast({ text, photoUrl = null, targetBots = null, targetTelegramIds = null }) {
   if (!text || !text.trim()) {
     throw new Error('Xabar matni kiritilmagan');
   }
@@ -133,18 +133,22 @@ async function sendAdminBroadcast({ text, targetTelegramIds = null }) {
     details: [],
   };
 
+  const allowBiznesgo = !targetBots || targetBots.includes('biznesgo') || targetBots.includes('biznesgo_bot');
+  const allowAgrozAuth = !targetBots || targetBots.includes('agroz_auth') || targetBots.includes('agroz_auth_bot');
+
   for (const tgId of recipients) {
     let sent = false;
     let via = null;
 
     // 1. Birinchi navbatda asosiy bot (biznesgo_bot) orqali yuborishga urinish
-    if (config.biznesgoBotToken) {
+    if (allowBiznesgo && config.biznesgoBotToken) {
       try {
-        const res = await callTelegramApi(config.biznesgoBotToken, 'sendMessage', {
-          chat_id: tgId,
-          text,
-          parse_mode: 'HTML',
-        });
+        const method = photoUrl ? 'sendPhoto' : 'sendMessage';
+        const payload = photoUrl
+          ? { chat_id: tgId, photo: photoUrl, caption: text, parse_mode: 'HTML' }
+          : { chat_id: tgId, text, parse_mode: 'HTML' };
+
+        const res = await callTelegramApi(config.biznesgoBotToken, method, payload);
         if (res.ok) {
           sent = true;
           via = 'biznesgo_bot';
@@ -156,13 +160,14 @@ async function sendAdminBroadcast({ text, targetTelegramIds = null }) {
     }
 
     // 2. Agar biznesgo_bot dan o'tmasa, eski agroz_auth_bot tokeni bilan yuborish (Legacy support)
-    if (!sent && config.agrozAuthBotToken) {
+    if (!sent && allowAgrozAuth && config.agrozAuthBotToken) {
       try {
-        const res = await callTelegramApi(config.agrozAuthBotToken, 'sendMessage', {
-          chat_id: tgId,
-          text,
-          parse_mode: 'HTML',
-        });
+        const method = photoUrl ? 'sendPhoto' : 'sendMessage';
+        const payload = photoUrl
+          ? { chat_id: tgId, photo: photoUrl, caption: text, parse_mode: 'HTML' }
+          : { chat_id: tgId, text, parse_mode: 'HTML' };
+
+        const res = await callTelegramApi(config.agrozAuthBotToken, method, payload);
         if (res.ok) {
           sent = true;
           via = 'agroz_auth_bot';

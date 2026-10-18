@@ -23,8 +23,10 @@ CREATE TABLE IF NOT EXISTS merchants (
   is_active          BOOLEAN   NOT NULL DEFAULT true,
   password_hash      TEXT,                        -- Web login (scrypt). Telegram uchun shart emas
   created_at         TIMESTAMP NOT NULL DEFAULT (now() AT TIME ZONE 'Asia/Tashkent'),
-  updated_at         TIMESTAMP NOT NULL DEFAULT (now() AT TIME ZONE 'Asia/Tashkent')
+  updated_at         TIMESTAMP NOT NULL DEFAULT (now() AT TIME ZONE 'Asia/Tashkent'),
+  subscription_until TIMESTAMP
 );
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS subscription_until TIMESTAMP;
 CREATE UNIQUE INDEX IF NOT EXISTS merchants_phone_uq  ON merchants (phone);
 CREATE INDEX        IF NOT EXISTS merchants_geo_idx   ON merchants (lat, lng) WHERE is_active;
 
