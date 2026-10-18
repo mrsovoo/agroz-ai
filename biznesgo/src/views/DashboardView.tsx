@@ -69,14 +69,11 @@ export const DashboardView: React.FC = () => {
         <div className="relative z-10">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/30 text-emerald-100 border border-emerald-400/30 backdrop-blur-sm mb-2">
-                B2B Savdo & Ombor Tizimi
-              </span>
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
                 {merchant?.store_name}
               </h1>
               <p className="text-emerald-100/80 text-xs sm:text-sm mt-1">
-                Bugungi savdo ko‘rsatkichlari va ombor hisob-kitoblari
+                Bugungi savdo ko‘rsatkichlari va hisob-kitoblar
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -85,7 +82,7 @@ export const DashboardView: React.FC = () => {
                 className="bg-white text-emerald-800 hover:bg-emerald-50 px-4 py-2.5 rounded-xl font-bold text-sm shadow-md transition-all flex items-center gap-2 cursor-pointer"
               >
                 <ShoppingBag className="w-4 h-4" />
-                <span>Tezkor Kassa</span>
+                <span>Kassa</span>
               </button>
             </div>
           </div>

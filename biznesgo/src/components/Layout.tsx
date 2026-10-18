@@ -55,11 +55,11 @@ export const Layout: React.FC<LayoutProps> = ({
   const BusinessIcon = getBusinessIcon(merchant?.business_type);
 
   const navItems = [
-    { key: 'dashboard', label: 'Boshqaruv Paneli', icon: LayoutDashboard, shortLabel: 'Asosiy' },
-    { key: 'pos', label: 'Tezkor Kassa (POS)', icon: ShoppingCart, shortLabel: 'Kassa' },
-    { key: 'products', label: 'Ombor & Mahsulotlar', icon: Package, shortLabel: 'Ombor' },
-    { key: 'debts', label: 'Qarz Daftari', icon: BookOpen, shortLabel: 'Qarzlar' },
-    { key: 'settings', label: 'Do\'kon Sozlamalari', icon: Settings, shortLabel: 'Sozlamalar' },
+    { key: 'dashboard', label: 'Asosiy panel', icon: LayoutDashboard, shortLabel: 'Asosiy' },
+    { key: 'pos', label: 'Kassa', icon: ShoppingCart, shortLabel: 'Kassa' },
+    { key: 'products', label: 'Ombor', icon: Package, shortLabel: 'Ombor' },
+    { key: 'debts', label: 'Qarzlar', icon: BookOpen, shortLabel: 'Qarzlar' },
+    { key: 'settings', label: 'Sozlamalar', icon: Settings, shortLabel: 'Sozlamalar' },
   ];
 
   const handleNavClick = (view: string) => {
@@ -76,13 +76,13 @@ export const Layout: React.FC<LayoutProps> = ({
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 fixed inset-y-0 z-30">
         {/* Brand */}
         <div className="p-5 border-b border-slate-100 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/20">
+          <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-sm">
             <Store className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="font-extrabold text-base text-slate-800 leading-tight">BiznesGO</h1>
-            <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
-              B2B Platform
+            <h1 className="font-extrabold text-base text-slate-900 leading-tight">BiznesGO</h1>
+            <span className="text-[11px] font-medium text-slate-500">
+              Savdo boshqaruvi
             </span>
           </div>
         </div>
@@ -90,7 +90,7 @@ export const Layout: React.FC<LayoutProps> = ({
         {/* Store Card */}
         <div className="p-4 mx-3 my-3 bg-slate-50 border border-slate-100 rounded-xl">
           <div className="font-bold text-sm text-slate-800 truncate">
-            {merchant?.store_name || 'Mening Do\'konim'}
+            {merchant?.store_name || 'Mening Do‘konim'}
           </div>
           <div className="flex items-center gap-1.5 mt-1 text-xs text-slate-500 font-medium">
             <BusinessIcon className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
@@ -109,7 +109,7 @@ export const Layout: React.FC<LayoutProps> = ({
                 onClick={() => handleNavClick(item.key)}
                 className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                   active
-                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                    ? 'bg-emerald-600 text-white shadow-sm'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
@@ -123,12 +123,12 @@ export const Layout: React.FC<LayoutProps> = ({
         {/* Footer */}
         <div className="p-4 border-t border-slate-100 flex items-center justify-between">
           <div className="text-[11px] font-medium text-slate-400">
-            v1.0.0 • AgroZ B2B
+            v1.0.0
           </div>
           <button
             onClick={onLogout}
             title="Tizimdan chiqish"
-            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
           </button>
