@@ -104,6 +104,21 @@ class ApiClient {
         method: 'POST',
         body: JSON.stringify(payload),
       }),
+    checkOtp: (payload: { phone: string; code?: string }) =>
+      this.request<{
+        ok: boolean;
+        verified: boolean;
+        registered?: boolean;
+        waiting_for_telegram?: boolean;
+        token?: string;
+        merchant?: Merchant;
+        phone?: string;
+        telegram_id?: number;
+        message?: string;
+      }>('/auth/check-otp', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
     register: (payload: any) =>
       this.request<{ token: string; merchant: Merchant }>('/auth/register', {
         method: 'POST',

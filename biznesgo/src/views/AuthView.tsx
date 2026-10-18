@@ -73,6 +73,22 @@ const BUSINESS_TYPE_OPTIONS: { id: BusinessType; title: string; desc: string; ic
   },
 ];
 
+export function formatUzbekPhone(value: string): string {
+  let digits = value.replace(/\D/g, '');
+  if (!digits || digits === '998') return '';
+  if (digits.startsWith('998')) {
+    digits = digits.slice(3);
+  }
+  digits = digits.slice(0, 9);
+  if (digits.length === 0) return '';
+
+  let res = '+998 ' + digits.slice(0, 2);
+  if (digits.length > 2) res += ' ' + digits.slice(2, 5);
+  if (digits.length > 5) res += ' ' + digits.slice(5, 7);
+  if (digits.length > 7) res += ' ' + digits.slice(7, 9);
+  return res;
+}
+
 export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboarding }) => {
   const { setMerchant, addToast } = useStore();
   const isTgOnboarding = Boolean(telegramOnboarding);
@@ -120,6 +136,50 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
     }
     return () => clearInterval(interval);
   }, [otpStep, otpTimer]);
+
+  // Seamless Telegram Auto-Login (Polling)
+  // Foydalanuvchi Telegram botda START bosganini avtomatik sezadi va kodsiz kiradi
+  useEffect(() => {
+    let pollInterval: any = null;
+    let isChecking = false;
+
+    if (otpStep === 'code' && phone.trim()) {
+      pollInterval = setInterval(async () => {
+        if (isChecking) return;
+        isChecking = true;
+        try {
+          const res = await api.auth.checkOtp({
+            phone: phone.trim(),
+            code: otpCode.trim() || undefined,
+          });
+
+          if (res.verified) {
+            clearInterval(pollInterval);
+            if (res.registered && res.merchant && res.token) {
+              api.setToken(res.token);
+              setMerchant(res.merchant);
+              addToast(`Xush kelibsiz, ${res.merchant.store_name}!`, 'success');
+              tg.hapticImpact('heavy');
+              onSuccess();
+            } else if (!res.registered) {
+              // Yangi foydalanuvchi — do'kon ochish qadamiga o'tkazamiz
+              addToast('Telegram orqali tasdiqlandi! Endi do‘koningizni oching.', 'success');
+              setTab('register');
+              setOtpStep('phone');
+            }
+          }
+        } catch {
+          // orqa fondagi polling xatolariga e'tibor bermaymiz
+        } finally {
+          isChecking = false;
+        }
+      }, 2000);
+    }
+
+    return () => {
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [otpStep, phone, otpCode, onSuccess, setMerchant, addToast]);
 
   const formatTimer = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -242,15 +302,15 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
         onSuccess();
       } else {
         // Register
-        if (!phone.trim() || !password || !storeName.trim() || !fullName.trim()) {
-          addToast('Barcha maydonlarni to‘ldiring', 'error');
+        if (!phone.trim() || !storeName.trim() || !fullName.trim()) {
+          addToast('Do‘kon nomi, mas‘ul shaxs va telefon raqamini to‘ldiring', 'error');
           setLoading(false);
           return;
         }
 
         const res = await api.auth.register({
           phone: phone.trim(),
-          password,
+          password: password.trim() ? password.trim() : undefined,
           full_name: fullName.trim(),
           store_name: storeName.trim(),
           business_type: businessType,
@@ -365,11 +425,14 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                         type="tel"
                         required
                         value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
+                        onChange={(e) => setPhone(formatUzbekPhone(e.target.value))}
                         placeholder="+998 90 123 45 67"
-                        className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                        className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-medium tracking-wide text-slate-900"
                       />
                     </div>
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      Raqamni kiriting (masalan: 90 123 45 67) — +998 avtomatik qo‘yiladi
+                    </p>
                   </div>
 
                   <button
@@ -382,7 +445,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                     ) : (
                       <>
                         <Bot className="w-4 h-4" />
-                        <span>Telegram orqali kod olish</span>
+                        <span>Telegram orqali kirish</span>
                         <ArrowRight className="w-4 h-4" />
                       </>
                     )}
@@ -396,14 +459,14 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                       <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                       <div>
                         <span className="font-bold">Kod yuborildi!</span> Telegram ilovangizdagi{' '}
-                        <strong className="text-emerald-700">@{botName || 'biznesgo_bot'}</strong> xabarlarini tekshiring.
+                        <strong className="text-emerald-700">@{botName || 'biznesgo_bot'}</strong> botini oching.
                       </div>
                     </div>
                   ) : (
                     <div className="p-3.5 rounded-xl bg-sky-50 border border-sky-200 flex items-start gap-3 text-xs text-sky-900">
                       <Bot className="w-5 h-5 text-sky-600 shrink-0 mt-0.5" />
                       <div>
-                        Kodni olish uchun quyidagi tugmani bosib Telegram botga o‘ting va <strong>Start</strong> bosing:
+                        Telegram botga o‘ting va <strong>Start</strong> bosing — tizim sizni avtomatik taniydi:
                       </div>
                     </div>
                   )}
@@ -414,13 +477,23 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                       href={otpBotUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-full py-2.5 px-4 rounded-xl border border-sky-300 bg-sky-50 hover:bg-sky-100 text-sky-800 text-xs font-semibold flex items-center justify-center gap-2 transition"
+                      className="w-full py-3 px-4 rounded-xl shadow-lg shadow-sky-500/20 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white text-sm font-bold flex items-center justify-center gap-2 transition active:scale-[0.99]"
                     >
-                      <Bot className="w-4 h-4 text-sky-600" />
-                      <span>Telegram Botda Ochish va Tasdiqlash</span>
-                      <ExternalLink className="w-3.5 h-3.5 text-sky-500" />
+                      <Bot className="w-5 h-5 text-white" />
+                      <span>1-Tugma: Telegramda Tasdiqlash</span>
+                      <ExternalLink className="w-4 h-4 text-white/80" />
                     </a>
                   )}
+
+                  {/* Auto-polling waiting indicator */}
+                  <div className="p-3 rounded-xl bg-slate-100/90 border border-slate-200 flex items-center justify-center gap-2 text-xs text-slate-700">
+                    <div className="w-3.5 h-3.5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin shrink-0" />
+                    <span>Botda <strong>Start</strong> bosganingizda ushbu oyna <strong>avtomatik kiradi</strong></span>
+                  </div>
+
+                  <div className="relative my-1 text-center">
+                    <span className="bg-white px-3 text-[11px] text-slate-400 uppercase font-semibold">yoki kodni qo‘lda kiriting</span>
+                  </div>
 
                   {/* 6-digit Code Input */}
                   <div>
@@ -600,9 +673,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                     type="tel"
                     required
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => setPhone(formatUzbekPhone(e.target.value))}
                     placeholder="+998 90 123 45 67"
-                    className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-medium text-slate-900"
                   />
                 </div>
               </div>
@@ -610,7 +683,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
               {!isTgOnboarding && (
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                    Parol *
+                    {tab === 'login' ? 'Parol *' : 'Parol (ixtiyoriy)'}
                   </label>
                   <div className="relative rounded-lg shadow-sm">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -618,10 +691,10 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                     </div>
                     <input
                       type="password"
-                      required
+                      required={tab === 'login'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
+                      placeholder={tab === 'login' ? '••••••••' : 'Ixtiyoriy'}
                       className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                     />
                   </div>

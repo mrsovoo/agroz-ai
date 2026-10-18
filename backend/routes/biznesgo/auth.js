@@ -329,6 +329,93 @@ router.post(
   })
 );
 
+/**
+ * POST /api/biznesgo/auth/check-otp
+ * Web polling: Foydalanuvchi Telegram botda START bosganini avtomatik aniqlash va kirish
+ */
+router.post(
+  '/check-otp',
+  authLimiter,
+  asyncHandler(async (req, res) => {
+    const phone = v.phone(req.body.phone, 'phone', { required: true });
+    const phoneDigits = phone.replace(/\D/g, '');
+    const code = req.body.code ? String(req.body.code).trim() : null;
+
+    const where = [
+      `regexp_replace(COALESCE(phone,''), '\\D', '', 'g') = $1`,
+      `expires_at > now()`,
+    ];
+    const params = [phoneDigits];
+
+    if (code) {
+      params.push(code);
+      where.push(`code = $${params.length}`);
+    }
+
+    const otpRes = await query(
+      `SELECT id, phone, code, used, telegram_id, expires_at
+         FROM otp_codes
+        WHERE ${where.join(' AND ')}
+        ORDER BY id DESC
+        LIMIT 1`,
+      params
+    );
+
+    const otpRecord = otpRes.rows[0];
+    if (!otpRecord) {
+      return res.json({ ok: false, verified: false, message: 'OTP topilmadi yoki muddati tugagan' });
+    }
+
+    // Agar telegram botda /start otp_... bosilgan bo'lsa (telegram_id mavjud)
+    if (otpRecord.telegram_id) {
+      // 1. Kodni used deb belgilaymiz
+      await query(`UPDATE otp_codes SET used = true WHERE id = $1`, [otpRecord.id]);
+
+      // 2. Ushbu telefon yoki telegram_id bo'yicha mavjud do'konni qidiramiz
+      const mRes = await query(
+        `SELECT ${JOINED_MERCHANT_COLUMNS}, u.id AS owner_user_id, u.telegram_id AS current_tg_id
+           FROM merchants m
+           JOIN users u ON u.id = m.user_id
+          WHERE regexp_replace(COALESCE(m.phone,''), '\\D', '', 'g') = $1
+             OR u.telegram_id = $2
+          ORDER BY m.id LIMIT 1`,
+        [phoneDigits, otpRecord.telegram_id]
+      );
+
+      const merchant = mRes.rows[0];
+      if (merchant) {
+        // Agar users jadvalida telegram_id hali bog'lanmagan bo'lsa, sinxronlashtiramiz
+        if (!merchant.current_tg_id && otpRecord.telegram_id) {
+          await query(`UPDATE users SET telegram_id = $1 WHERE id = $2`, [otpRecord.telegram_id, merchant.owner_user_id]);
+        }
+
+        if (!merchant.is_active) {
+          throw new HttpError(403, 'Sotuvchi hisobi bloklangan', 'MERCHANT_DISABLED');
+        }
+
+        return res.json({
+          ok: true,
+          verified: true,
+          registered: true,
+          ...sessionResponse(merchant, 'web_otp_auto'),
+        });
+      } else {
+        // Telefon va Telegram tasdiqlangan, lekin do'kon hali ochilmagan (yangi foydalanuvchi)
+        return res.json({
+          ok: true,
+          verified: true,
+          registered: false,
+          phone: otpRecord.phone,
+          telegram_id: otpRecord.telegram_id,
+          message: 'Telegram orqali tasdiqlandi. Do‘koningizni oching.',
+        });
+      }
+    }
+
+    return res.json({ ok: true, verified: false, waiting_for_telegram: true });
+  })
+);
+
 // ---------------------------------------------------------------------------
 // WEB: register
 // ---------------------------------------------------------------------------
@@ -337,7 +424,7 @@ router.post(
   authLimiter,
   asyncHandler(async (req, res) => {
     const phone = v.phone(req.body.phone, 'phone', { required: true });
-    const password = v.str(req.body.password, 'password', { required: true, min: 6, max: 128 });
+    const password = req.body.password ? v.str(req.body.password, 'password', { min: 6, max: 128 }) : null;
     const fullName = v.str(req.body.full_name, 'full_name', { max: 160 });
     const store = parseStore(req.body);
 
@@ -358,7 +445,7 @@ router.post(
         const ins = await client.query('INSERT INTO users (phone, name) VALUES ($1, $2) RETURNING id', [phone, fullName]);
         userId = ins.rows[0].id;
       }
-      return insertMerchant(client, userId, phone, store, hashPassword(password));
+      return insertMerchant(client, userId, phone, store, password ? hashPassword(password) : null);
     });
 
     res.status(201).json(sessionResponse(merchant, 'web'));
@@ -456,6 +543,8 @@ router.post(
       // Ro'yxatdan o'tmagan — yangi foydalanuvchi (do'kon turini o'zi tanlab ro'yxatdan o'tadi)
       return res.status(200).json({
         registered: false,
+        needs_onboarding: true,
+        user: { telegram_id: tgUser.id, first_name: tgUser.first_name, last_name: tgUser.last_name, username: tgUser.username },
         telegram_user: { id: tgUser.id, first_name: tgUser.first_name, last_name: tgUser.last_name, username: tgUser.username },
       });
     }

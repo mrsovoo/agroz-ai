@@ -127,20 +127,62 @@ async function handleBiznesgoBotUpdate(update) {
   }
 
   if (text.startsWith('/start')) {
-    const welcomeText =
-      `👋 <b>Xush kelibsiz!</b>\n\n` +
-      `<b>BiznesGO</b> — O‘zbekistondagi agro-biznes (Agro-Vet dorixona, Yem, Ombor, Urug‘ va Texnika) egalari uchun B2B kassa, ombor va qarz boshqaruvi platformasi.\n\n` +
-      `🚀 Tizimni to‘liq ekranda ochish uchun quyidagi tugmani bosing:`;
+    const from = message.from || message.chat || {};
+    const tgId = from.id || chatId;
+    const firstName = from.first_name || 'Foydalanuvchi';
+
+    // 1. Ushbu telegram_id bo'yicha do'konni tekshiramiz
+    const mRes = await query(
+      `SELECT m.id, m.store_name, m.business_type, m.is_active, u.name AS user_name
+         FROM merchants m
+         JOIN users u ON u.id = m.user_id
+        WHERE u.telegram_id = $1
+        ORDER BY m.id DESC LIMIT 1`,
+      [tgId]
+    );
+
+    const existingM = mRes.rows[0];
+
+    let welcomeText;
+    let buttonText;
+
+    if (existingM) {
+      welcomeText =
+        `👋 Assalomu alaykum, <b>${firstName}</b>!\n\n` +
+        `🏪 <b>${existingM.store_name}</b> do‘koningiz tizimda faol.\n` +
+        `Kassa, Ombor va Qarz daftaringiz to‘liq tayyor.\n\n` +
+        `🚀 Boshqaruv panelini ochish uchun quyidagi tugmani bosing:`;
+      buttonText = `🚀 ${existingM.store_name} — Boshqaruv Paneli`;
+    } else {
+      welcomeText =
+        `👋 Assalomu alaykum, <b>${firstName}</b>!\n\n` +
+        `<b>BiznesGO</b> — O‘zbekistondagi agro-biznes (Agro-Vet dorixona, Yem, Ombor, Urug‘ va Texnika) egalari uchun B2B savdo va hisob-kitob platformasiga xush kelibsiz.\n\n` +
+        `Siz hali o‘z do‘koningizni ochmadingiz. Bir necha soniyada bepul ro‘yxatdan o‘tib, savdoni boshlang!\n\n` +
+        `👇 <b>Do‘konni ochish uchun pastdagi tugmani bosing:</b>`;
+      buttonText = `✨ Yangi Do‘kon Ochish (Ro‘yxatdan o‘tish)`;
+    }
 
     const inlineKeyboard = {
       inline_keyboard: [
         [
           {
-            text: "🚀 BiznesGO B2B Ilovasini Ochish",
+            text: buttonText,
             web_app: { url: config.miniAppUrl },
           },
         ],
       ],
+    };
+
+    const replyKeyboard = {
+      keyboard: [
+        [
+          {
+            text: buttonText,
+            web_app: { url: config.miniAppUrl },
+          },
+        ],
+      ],
+      resize_keyboard: true,
     };
 
     try {
@@ -150,7 +192,28 @@ async function handleBiznesgoBotUpdate(update) {
         parse_mode: 'HTML',
         reply_markup: inlineKeyboard,
       });
-      return { handled: true, bot: 'biznesgo_bot', started: true, telegram_response: res };
+
+      // Pastki doimiy WebApp menyu tugmasini ham yangilash
+      try {
+        await callTelegramApi(config.biznesgoBotToken, 'setChatMenuButton', {
+          chat_id: chatId,
+          menu_button: {
+            type: 'web_app',
+            text: '🚀 BiznesGO',
+            web_app: { url: config.miniAppUrl },
+          },
+        });
+      } catch (menuErr) {
+        // Optional
+      }
+
+      return { 
+        handled: true, 
+        bot: 'biznesgo_bot', 
+        started: true, 
+        is_existing: Boolean(existingM),
+        telegram_response: res 
+      };
     } catch (err) {
       return { handled: false, error: err.message };
     }
