@@ -220,7 +220,60 @@ async function handleBiznesgoBotUpdate(update) {
     }
   }
 
-  return { handled: true, bot: 'biznesgo_bot' };
+  // Har qanday boshqa xabar yoki harakat kelganda: do'kon holati va Launch App tugmasini yuboramiz
+  const from = message.from || message.chat || {};
+  const tgId = from.id || chatId;
+  const firstName = from.first_name || 'Foydalanuvchi';
+
+  const mRes = await query(
+    `SELECT m.id, m.store_name, m.business_type, m.is_active
+       FROM merchants m
+       JOIN users u ON u.id = m.user_id
+      WHERE u.telegram_id = $1
+      ORDER BY m.id DESC LIMIT 1`,
+    [tgId]
+  );
+  const existingM = mRes.rows[0];
+
+  const buttonText = existingM ? `🚀 ${existingM.store_name} — Ilovani ochish` : `🚀 BiznesGO Ilovasini ochish`;
+  const replyText = existingM
+    ? `🏪 <b>${existingM.store_name}</b>\n\n` +
+      `Kassa, ombor qoldig‘i va qarzlar hisobini yuritish uchun quyidagi tugmani bosing:`
+    : `👋 Assalomu alaykum, <b>${firstName}</b>!\n\n` +
+      `BiznesGO platformasidan to‘g‘ridan-to‘g‘ri Telegram ichida foydalanish uchun quyidagi tugmani bosing:`;
+
+  try {
+    const res = await callTelegramApi(config.biznesgoBotToken, 'sendMessage', {
+      chat_id: chatId,
+      text: replyText,
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: buttonText,
+              web_app: { url: config.miniAppUrl },
+            },
+          ],
+        ],
+      },
+    });
+
+    try {
+      await callTelegramApi(config.biznesgoBotToken, 'setChatMenuButton', {
+        chat_id: chatId,
+        menu_button: {
+          type: 'web_app',
+          text: '🚀 BiznesGO',
+          web_app: { url: config.miniAppUrl },
+        },
+      });
+    } catch {}
+
+    return { handled: true, bot: 'biznesgo_bot', telegram_response: res };
+  } catch (err) {
+    return { handled: false, error: err.message };
+  }
 }
 
 /**

@@ -151,14 +151,24 @@ router.post(
       const text =
         `🔐 <b>BiznesGO Web Kirish Kodingiz</b>:\n\n` +
         `<code>${code}</code>\n\n` +
-        `⏳ Ushbu kod <b>1 daqiqa</b> davomida amal qiladi.\n` +
-        `<i>Xavfsizlik uchun kodni begonalarga bermang.</i>`;
+        `⏳ Ushbu kod <b>1 daqiqa</b> davomida amal qiladi.\n\n` +
+        `<i>Kodni brauzerga kiriting yoki pastdagi tugma orqali ilovani oching:</i>`;
 
       try {
         const tgRes = await callTelegramApi(config.biznesgoBotToken, 'sendMessage', {
           chat_id: targetTgId,
           text,
           parse_mode: 'HTML',
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: '🚀 Ilovani ochish (Launch App)',
+                  web_app: { url: config.miniAppUrl },
+                },
+              ],
+            ],
+          },
         });
         if (tgRes.ok) {
           deliveredViaTelegram = true;
@@ -260,6 +270,41 @@ router.post(
       if (!merchant.is_active) {
         throw new HttpError(403, "Sotuvchi hisobi bloklangan", 'MERCHANT_DISABLED');
       }
+
+      // Foydalanuvchining Telegram botiga tasdiq xabari va Launch App tugmasini yuboramiz
+      const userTgId = merchant.current_tg_id || linkedTgId;
+      if (userTgId && config.biznesgoBotToken) {
+        callTelegramApi(config.biznesgoBotToken, 'sendMessage', {
+          chat_id: userTgId,
+          text:
+            `✅ <b>Hisobingizga muvaffaqiyatli kirildi!</b>\n\n` +
+            `🏪 <b>${merchant.store_name}</b>\n` +
+            `Telefon: <code>${phone}</code>\n\n` +
+            `Siz BiznesGO tizimidan brauzerda ham, ushbu Telegram bot ichida ham to‘liq foydalanishingiz mumkin.\n\n` +
+            `👇 <b>Ilovani ishga tushirish (Launch App):</b>`,
+          parse_mode: 'HTML',
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: '🚀 Ilovani ochish (Launch App)',
+                  web_app: { url: config.miniAppUrl },
+                },
+              ],
+            ],
+          },
+        }).catch(() => {});
+
+        callTelegramApi(config.biznesgoBotToken, 'setChatMenuButton', {
+          chat_id: userTgId,
+          menu_button: {
+            type: 'web_app',
+            text: '🚀 BiznesGO',
+            web_app: { url: config.miniAppUrl },
+          },
+        }).catch(() => {});
+      }
+
       return res.json(sessionResponse(merchant, 'web_otp'));
     }
 
@@ -439,6 +484,46 @@ router.post(
 
       return insertMerchant(client, userId, phone, store, password ? hashPassword(password) : null);
     });
+
+    // Foydalanuvchining Telegram botiga tabrik va Launch App tugmasini yuboramiz
+    if (config.biznesgoBotToken) {
+      query(`SELECT telegram_id FROM users WHERE id = $1`, [merchant.user_id])
+        .then((tgUserRes) => {
+          const userTgId = tgUserRes.rows[0]?.telegram_id;
+          if (userTgId) {
+            callTelegramApi(config.biznesgoBotToken, 'sendMessage', {
+              chat_id: userTgId,
+              text:
+                `🎉 <b>Do‘koningiz muvaffaqiyatli ochildi!</b>\n\n` +
+                `🏪 <b>${merchant.store_name}</b>\n` +
+                `Telefon: <code>${merchant.phone}</code>\n\n` +
+                `Boshqaruv paneli to‘liq tayyor. Kassa, ombor va qarz daftaridan Telegram ichida ham bevosita foydalanishingiz mumkin.\n\n` +
+                `👇 <b>Ilovani ishga tushirish (Launch App):</b>`,
+              parse_mode: 'HTML',
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    {
+                      text: '🚀 Ilovani ochish (Launch App)',
+                      web_app: { url: config.miniAppUrl },
+                    },
+                  ],
+                ],
+              },
+            }).catch(() => {});
+
+            callTelegramApi(config.biznesgoBotToken, 'setChatMenuButton', {
+              chat_id: userTgId,
+              menu_button: {
+                type: 'web_app',
+                text: '🚀 BiznesGO',
+                web_app: { url: config.miniAppUrl },
+              },
+            }).catch(() => {});
+          }
+        })
+        .catch(() => {});
+    }
 
     res.status(201).json(sessionResponse(merchant, 'web'));
   })
