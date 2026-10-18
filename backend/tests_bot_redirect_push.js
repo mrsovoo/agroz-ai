@@ -119,11 +119,25 @@ async function runTests() {
     );
     console.log('   ✅ biznesgo_bot javobi:', biznesgoWebhookRes.body.started ? 'Muvaffaqiyatli TMA Launch' : 'Javob olindi');
 
-    // 4. Admin Push Notifications Broadcast tekshiruvi
+    // 4. Admin Push Notifications Broadcast tekshiruvi (Avval xavfsizlik tekshiruvi: kalitsiz 401)
     console.log('\n4. Admin Push broadcast endpoint tekshirilmoqda (/api/biznesgo/bot/broadcast)...');
-    const pushRes = await makeRequest(
+    const unauthorizedPush = await makeRequest(
       server,
       { path: '/api/biznesgo/bot/broadcast', method: 'POST' },
+      { text: 'Ruxsatsiz urinish', target_ids: [99887711] }
+    );
+    if (unauthorizedPush.status !== 401) {
+      throw new Error(`Xavfsizlik buzilishi: kalitsiz broadcast 401 qaytarmadi: ${unauthorizedPush.status}`);
+    }
+    console.log('   ✅ Ruxsatsiz so\'rov muvaffaqiyatli bloklandi (401 Unauthorized)');
+
+    const pushRes = await makeRequest(
+      server,
+      {
+        path: '/api/biznesgo/bot/broadcast',
+        method: 'POST',
+        headers: { 'X-Admin-Key': config.bridgeKey },
+      },
       {
         text: 'E\'lon: BiznesGO tizimi yangilandi!',
         target_ids: [99887711],
@@ -132,7 +146,7 @@ async function runTests() {
     if (pushRes.status !== 200) {
       throw new Error(`Push broadcast xatolik qaytardi: ${JSON.stringify(pushRes.body)}`);
     }
-    console.log('   ✅ Admin push xabarnomasi qayta ishlandi. Jami qabul qiluvchilar:', pushRes.body.total);
+    console.log('   ✅ Admin push xabarnomasi admin kalit bilan qayta ishlandi. Jami qabul qiluvchilar:', pushRes.body.total);
 
     // 5. Legacy foydalanuvchini avtomatik tanish va B2B do'konga yo'naltirish
     console.log('\n5. Legacy user auto-migration (agroz_auth_bot foydalanuvchisi biznesgo_bot dan kirganda)...');

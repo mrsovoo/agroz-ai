@@ -1,7 +1,7 @@
 /**
  * BiznesGO backend server.
  *   - /api/biznesgo/*  — REST API
- *   - /healthz         — health check
+ *   - /healthz, /health, /api/health — health check
  *   - /*               — biznesgo/ frontend (SPA) statik fayllari
  */
 const path = require('path');
@@ -25,27 +25,74 @@ app.use((_req, res, next) => {
     'Referrer-Policy': 'strict-origin-when-cross-origin',
     'Content-Security-Policy':
       "default-src 'self'; script-src 'self' https://telegram.org; style-src 'self' 'unsafe-inline'; " +
-      "img-src 'self' data: https:; connect-src 'self'; " +
+      "img-src 'self' data: https:; connect-src 'self' https:; " +
       "frame-ancestors 'self' https://web.telegram.org https://*.telegram.org",
   });
   next();
 });
 
+// Qat'iy va xavfsiz CORS tekshiruvi
+const allowedOrigins = [
+  'https://biznesgo.vercel.app',
+  'https://biznesgo-sovos-projects.vercel.app',
+  'https://agroz.uz',
+  'https://www.agroz.uz',
+  'https://admin.agroz.uz',
+  ...config.corsOrigins,
+];
+
+function isOriginAllowed(origin) {
+  if (!origin) return true; // Server-to-server, curl, mobil Telegram WebApp
+  try {
+    const url = new URL(origin);
+    const host = url.hostname.toLowerCase();
+    if (host === 'localhost' || host === '127.0.0.1') return true;
+    if (host === 'telegram.org' || host.endsWith('.telegram.org')) return true;
+    if (host === 'vercel.app' || host.endsWith('.vercel.app')) return true;
+    if (host === 'agroz.uz' || host.endsWith('.agroz.uz')) return true;
+    return allowedOrigins.some((ao) => {
+      try {
+        return new URL(ao).hostname.toLowerCase() === host;
+      } catch {
+        return ao === origin;
+      }
+    });
+  } catch {
+    return false;
+  }
+}
+
 app.use(
   '/api',
   cors({
-    origin: true,
+    origin: (origin, callback) => {
+      if (isOriginAllowed(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('CORS tomonidan bloklandi: ' + origin));
+      }
+    },
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Telegram-Init-Data', 'X-Bridge-Key'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Telegram-Init-Data', 'X-Bridge-Key', 'X-Admin-Key', 'X-Telegram-Bot-Api-Secret-Token'],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     maxAge: 600,
   })
 );
 app.use(express.json({ limit: '200kb' }));
 
+let dbStatus = 'initializing';
+
 const healthHandler = (_req, res) => {
-  res.status(200).json({ ok: true, status: 'ok', service: 'biznesgo-backend', uptime: process.uptime() });
+  const isHealthy = dbStatus === 'connected' || dbStatus === 'initializing';
+  res.status(isHealthy ? 200 : 503).json({
+    ok: isHealthy,
+    status: isHealthy ? 'ok' : 'unhealthy',
+    service: 'biznesgo-backend',
+    database: dbStatus,
+    uptime: process.uptime(),
+  });
 };
+
 app.get('/healthz', healthHandler);
 app.get('/health', healthHandler);
 app.get('/api/health', healthHandler);
@@ -74,9 +121,18 @@ app.use(errorHandler);
 
 async function start() {
   try {
-    if (process.env.MIGRATE_ON_START !== 'false') await migrate();
+    if (process.env.MIGRATE_ON_START !== 'false') {
+      await migrate();
+      console.log('[biznesgo] Baza migratsiyasi muvaffaqiyatli yakunlandi.');
+    }
+    dbStatus = 'connected';
   } catch (mErr) {
-    console.error('[biznesgo] Migratsiya ogohlantirishi:', mErr.message);
+    dbStatus = 'migration_error: ' + mErr.message;
+    console.error('[biznesgo] Migratsiya xatosi:', mErr.message);
+    if (config.isProd) {
+      console.error('[biznesgo] Production muhitida xatolik sababli to\'xtatilmoqda...');
+      process.exit(1);
+    }
   }
 
   const host = '0.0.0.0';
@@ -99,4 +155,3 @@ if (require.main === module) {
 }
 
 module.exports = { app };
-

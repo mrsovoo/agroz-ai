@@ -64,7 +64,11 @@ function verifyToken(token) {
 //   secret_key = HMAC_SHA256(key="WebAppData", msg=bot_token)
 //   hash       = hex(HMAC_SHA256(key=secret_key, msg=data_check_string))
 // ---------------------------------------------------------------------------
-function verifyTelegramInitData(initData, candidateTokens = null, maxAgeSeconds = config.initDataMaxAgeSeconds) {
+function verifyTelegramInitData(
+  initData,
+  candidateTokens = null,
+  maxAgeSeconds = config.initDataMaxAgeSeconds || 86400
+) {
   const tokens = Array.isArray(candidateTokens)
     ? candidateTokens.filter(Boolean)
     : (candidateTokens ? [candidateTokens] : config.botTokens);
