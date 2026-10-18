@@ -1,1 +1,0 @@
-ALTER TABLE "diagnoses" ADD COLUMN "confidence" integer;

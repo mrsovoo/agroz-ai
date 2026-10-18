@@ -1,43 +1,29 @@
 {
-  "name": "agroz-ai-backend",
+  "name": "biznesgo-backend",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
+  "description": "BiznesGO B2B — kassa, ombor, qarz daftari va CRM API (Neon PostgreSQL)",
+  "main": "server.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "build": "tsc",
-    "start": "tsx src/server.ts",
-    "test": "node --test tests/*.test.js",
-    "typecheck": "tsc --noEmit",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:migrate:biznesgo": "tsx scripts/migrate-biznesgo.mjs",
-    "db:push": "drizzle-kit push",
-    "db:clear": "node scripts/db-clear.mjs",
-    "db:seed": "node scripts/seed-data.mjs",
-    "telegram:setup": "node scripts/telegram-setup.mjs",
-    "telegram:poll": "node scripts/telegram-poll.mjs",
-    "clean": "rm -rf node_modules dist && echo \"Backend cleaned\""
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "migrate": "node db/migrate.js",
+    "inspect-db": "node db/inspect.js",
+    "test": "node tests_mvp_agro_vet.js && node tests_mvp_all_profiles.js && node tests_dual_bot.js && node tests_bot_redirect_push.js",
+    "test:agro-vet": "node tests_mvp_agro_vet.js",
+    "test:all-profiles": "node tests_mvp_all_profiles.js",
+    "test:dual-bot": "node tests_dual_bot.js",
+    "test:bot": "node tests_bot_redirect_push.js"
   },
   "dependencies": {
-    "@google/genai": "^2.23.0",
     "cors": "^2.8.5",
-    "dotenv": "^17.3.1",
-    "drizzle-orm": "^0.45.2",
+    "dotenv": "^16.4.5",
     "express": "^4.21.2",
-    "express-rate-limit": "^8.7.0",
-    "firebase-admin": "^14.5.0",
-    "pg": "^8.20.0",
-    "redis": "^6.2.1",
-    "sharp": "^0.35.4",
-    "tsx": "^4.19.3"
-  },
-  "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
-    "@types/node": "^22.19.15",
-    "@types/pg": "^8.18.0",
-    "drizzle-kit": "^0.31.10",
-    "typescript": "^5.9.3"
+    "pg": "^8.13.1"
   }
 }
+

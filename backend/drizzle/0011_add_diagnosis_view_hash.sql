@@ -1,1 +1,0 @@
-ALTER TABLE "diagnoses" ADD COLUMN "view_hash" varchar(64);
