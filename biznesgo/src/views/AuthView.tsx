@@ -35,42 +35,12 @@ interface AuthViewProps {
   } | null;
 }
 
-const BUSINESS_TYPE_OPTIONS: { id: BusinessType; title: string; desc: string; icon: React.ElementType; color: string }[] = [
-  {
-    id: 'agro_vet',
-    title: 'Agro-Vet dorixona',
-    desc: 'O‘g‘itlar, himoya vositalari va veterinariya dori-darmonlari',
-    icon: Sprout,
-    color: 'from-emerald-500 to-teal-600',
-  },
-  {
-    id: 'feed',
-    title: 'Yem-Ozuqa savdosi',
-    desc: 'Chorva va parranda ozuqalari (Qop, tonna, kg hisobida)',
-    icon: Scale,
-    color: 'from-amber-500 to-orange-600',
-  },
-  {
-    id: 'warehouse',
-    title: 'Ulgurji ombor',
-    desc: 'Katta partiyalar, ulgurji & chakana narxlar, yirik qarzlar nazorati',
-    icon: Building2,
-    color: 'from-blue-500 to-indigo-600',
-  },
-  {
-    id: 'seeds',
-    title: 'Urug‘ va Ko‘chatlar',
-    desc: 'Mavsumiy navlar, unuvchanlik foizi va sertifikatlar nazorati',
-    icon: Wheat,
-    color: 'from-lime-500 to-green-600',
-  },
-  {
-    id: 'machinery',
-    title: 'Agro-Texnika va Jihozlar',
-    desc: 'Traktor ehtiyot qismlari, agregatlar va kafolatli uskunalar',
-    icon: Wrench,
-    color: 'from-slate-600 to-zinc-700',
-  },
+const BUSINESS_TYPE_OPTIONS: { id: BusinessType; title: string; icon: React.ElementType }[] = [
+  { id: 'agro_vet', title: 'Dorixona', icon: Sprout },
+  { id: 'feed', title: 'Yem', icon: Scale },
+  { id: 'warehouse', title: 'Ombor', icon: Building2 },
+  { id: 'seeds', title: 'Urug‘', icon: Wheat },
+  { id: 'machinery', title: 'Texnika', icon: Wrench },
 ];
 
 export function formatUzbekPhone(value: string): string {
@@ -647,40 +617,34 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                     <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
                       Biznes yo‘nalishini tanlang *
                     </label>
-                    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                       {BUSINESS_TYPE_OPTIONS.map((opt) => {
                         const Icon = opt.icon;
                         const isSelected = businessType === opt.id;
                         return (
-                          <div
+                          <button
                             key={opt.id}
+                            type="button"
                             onClick={() => {
                               setBusinessType(opt.id);
                               tg.hapticImpact('light');
                             }}
-                            className={`cursor-pointer rounded-xl border p-3 flex flex-col justify-between transition-all ${
+                            className={`cursor-pointer rounded-xl border p-2.5 flex items-center gap-2 transition-all text-left ${
                               isSelected
-                                ? 'border-emerald-600 bg-emerald-50/50 ring-2 ring-emerald-500/20 shadow-sm'
-                                : 'border-slate-200 hover:border-slate-300 bg-white'
+                                ? 'border-emerald-600 bg-emerald-50 text-emerald-950 ring-2 ring-emerald-500/20 font-bold shadow-xs'
+                                : 'border-slate-200 hover:border-slate-300 bg-white text-slate-700 font-medium'
                             }`}
                           >
-                            <div className="flex items-start justify-between">
-                              <div className="p-2 rounded-lg bg-emerald-100 text-emerald-700">
-                                <Icon className="w-5 h-5" />
-                              </div>
-                              {isSelected && (
-                                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                              )}
+                            <div className={`p-1.5 rounded-lg shrink-0 ${isSelected ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                              <Icon className="w-4 h-4" />
                             </div>
-                            <div className="mt-2">
-                              <h4 className="text-sm font-bold text-slate-900">
-                                {opt.title}
-                              </h4>
-                              <p className="text-xs text-slate-500 line-clamp-2 mt-0.5">
-                                {opt.desc}
-                              </p>
-                            </div>
-                          </div>
+                            <span className="text-sm font-semibold truncate flex-1">
+                              {opt.title}
+                            </span>
+                            {isSelected && (
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                            )}
+                          </button>
                         );
                       })}
                     </div>
