@@ -222,6 +222,56 @@ async function runSuperAdminTests() {
     }
     console.log("   ✅ Rasmli va matnli Push broadcast muvaffaqiyatli qayta ishlandi!");
 
+    // 9. Super Admin Archive & Soft-delete/Restore (/api/super-adm/archive)
+    console.log("\n9. Super Admin Archive (/api/super-adm/archive) & Soft-delete/Restore...");
+    const archiveRes = await makeRequest(server, {
+      path: '/api/super-adm/archive',
+      method: 'GET',
+      headers: { 'X-Admin-Key': adminKey },
+    });
+    if (archiveRes.status !== 200 || !archiveRes.body.ok || !Array.isArray(archiveRes.body.items)) {
+      throw new Error(`Archive GET xatosi: ${JSON.stringify(archiveRes.body)}`);
+    }
+    console.log(`   ✅ Arxiv ro'yxati olindi: ${archiveRes.body.total} ta yozuv, stats:`, archiveRes.body.stats);
+
+    // Test merchant yaratamiz va arxivlaymiz (Soft-delete)
+    const testArchiveUser = await query(
+      "INSERT INTO users (name, phone, telegram_id) VALUES ('Archive Tester', '+998909998877', 99887766) RETURNING id"
+    );
+    const archiveUId = testArchiveUser.rows[0].id;
+    const testArchiveMerchant = await query(
+      `INSERT INTO merchants (user_id, store_name, phone, business_type, is_active)
+       VALUES ($1, 'Archive Test Store', '+998909998877', 'seeds', true) RETURNING id`,
+      [archiveUId]
+    );
+    const archiveMId = testArchiveMerchant.rows[0].id;
+
+    // Arxivlash (Soft-delete)
+    const softDelRes = await makeRequest(server, {
+      path: `/api/super-adm/merchants/${archiveMId}/archive`,
+      method: 'PATCH',
+      headers: { 'X-Admin-Key': adminKey },
+    });
+    if (softDelRes.status !== 200 || softDelRes.body.merchant?.is_archived !== true) {
+      throw new Error(`Soft-delete xatosi: ${JSON.stringify(softDelRes.body)}`);
+    }
+    console.log("   ✅ Do'kon muvaffaqiyatli arxivlandi (is_archived: true, is_active: false)");
+
+    // Qayta tiklash (Restore)
+    const restoreRes = await makeRequest(server, {
+      path: `/api/super-adm/merchants/${archiveMId}/restore`,
+      method: 'PATCH',
+      headers: { 'X-Admin-Key': adminKey },
+    });
+    if (restoreRes.status !== 200 || restoreRes.body.merchant?.is_archived !== false || restoreRes.body.merchant?.is_active !== true) {
+      throw new Error(`Restore xatosi: ${JSON.stringify(restoreRes.body)}`);
+    }
+    console.log("   ✅ Do'kon arxivdan qayta tiklandi (is_archived: false, is_active: true)");
+
+    // Test tozalash
+    await query('DELETE FROM merchants WHERE id = $1', [archiveMId]);
+    await query('DELETE FROM users WHERE id = $1', [archiveUId]);
+
     console.log('\n===============================================================');
     console.log('🎉 SUPER ADMIN BACKEND API BARCHA TESTLARI 100% MUVAFFAQITYATLI O\'TDI!');
     console.log('===============================================================\n');

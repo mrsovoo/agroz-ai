@@ -39,9 +39,11 @@ router.get(
     }
 
     if (status === 'active') {
-      where.push(`m.is_active = true`);
+      where.push(`m.is_active = true AND (m.is_archived IS FALSE OR m.is_archived IS NULL)`);
     } else if (status === 'blocked') {
-      where.push(`m.is_active = false`);
+      where.push(`m.is_active = false AND (m.is_archived IS FALSE OR m.is_archived IS NULL)`);
+    } else if (status === 'archived') {
+      where.push(`m.is_archived = true`);
     }
 
     const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
@@ -58,6 +60,8 @@ router.get(
         m.lng,
         m.delivery_available,
         m.is_active,
+        COALESCE(m.is_archived, false) AS is_archived,
+        m.archived_at,
         m.created_at,
         m.subscription_until,
         u.name AS owner_name,
@@ -116,7 +120,9 @@ router.get(
     const sql = `
       SELECT 
         m.id, m.user_id, m.store_name, m.phone, m.business_type, m.address,
-        m.lat, m.lng, m.delivery_available, m.is_active, m.created_at, m.subscription_until,
+        m.lat, m.lng, m.delivery_available, m.is_active,
+        COALESCE(m.is_archived, false) AS is_archived, m.archived_at,
+        m.created_at, m.subscription_until,
         u.name AS owner_name, u.telegram_id, u.created_at AS user_created_at
       FROM merchants m
       JOIN users u ON u.id = m.user_id
@@ -163,7 +169,7 @@ router.patch(
       UPDATE merchants
          SET ${updates.join(', ')}
        WHERE id = $1
-   RETURNING id, store_name, phone, business_type, is_active, subscription_until, updated_at
+   RETURNING id, store_name, phone, business_type, is_active, is_archived, archived_at, subscription_until, updated_at
     `;
 
     const { rows } = await query(updateSql, params);
@@ -172,6 +178,66 @@ router.patch(
     res.json({
       ok: true,
       message: "Do'kon holati muvaffaqiyatli yangilandi",
+      merchant: rows[0],
+    });
+  })
+);
+
+/**
+ * PATCH /api/super-adm/merchants/:id/archive
+ * Do'konni to'g'ridan-to'g'ri o'chirmasdan, statusini 'archived' ga o'tkazish (Soft-delete)
+ */
+router.patch(
+  '/:id/archive',
+  asyncHandler(async (req, res) => {
+    const id = v.int(req.params.id, 'id', { required: true, min: 1 });
+
+    const updateSql = `
+      UPDATE merchants
+         SET is_archived = true,
+             is_active = false,
+             archived_at = (now() AT TIME ZONE 'Asia/Tashkent'),
+             updated_at = (now() AT TIME ZONE 'Asia/Tashkent')
+       WHERE id = $1
+   RETURNING id, store_name, phone, business_type, is_active, is_archived, archived_at, updated_at
+    `;
+
+    const { rows } = await query(updateSql, [id]);
+    if (!rows[0]) throw new HttpError(404, "Do'kon topilmadi", 'MERCHANT_NOT_FOUND');
+
+    res.json({
+      ok: true,
+      message: `Do'kon ("${rows[0].store_name}") muvaffaqiyatli arxivlandi (Soft-delete)`,
+      merchant: rows[0],
+    });
+  })
+);
+
+/**
+ * PATCH /api/super-adm/merchants/:id/restore
+ * Arxivdagi do'konni qayta faollashtirish ('active')
+ */
+router.patch(
+  '/:id/restore',
+  asyncHandler(async (req, res) => {
+    const id = v.int(req.params.id, 'id', { required: true, min: 1 });
+
+    const updateSql = `
+      UPDATE merchants
+         SET is_archived = false,
+             is_active = true,
+             archived_at = NULL,
+             updated_at = (now() AT TIME ZONE 'Asia/Tashkent')
+       WHERE id = $1
+   RETURNING id, store_name, phone, business_type, is_active, is_archived, archived_at, updated_at
+    `;
+
+    const { rows } = await query(updateSql, [id]);
+    if (!rows[0]) throw new HttpError(404, "Do'kon topilmadi", 'MERCHANT_NOT_FOUND');
+
+    res.json({
+      ok: true,
+      message: `Do'kon ("${rows[0].store_name}") arxivdan qayta tiklandi va faollashtirildi`,
       merchant: rows[0],
     });
   })

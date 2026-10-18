@@ -1,9 +1,9 @@
 import React from 'react';
-import { LayoutDashboard, Store, Send, ShieldAlert, Key } from 'lucide-react';
+import { LayoutDashboard, Store, Send, ShieldAlert, Key, Archive } from 'lucide-react';
 
 interface SidebarProps {
-  currentView: 'dashboard' | 'merchants' | 'broadcast';
-  onSelectView: (view: 'dashboard' | 'merchants' | 'broadcast') => void;
+  currentView: 'dashboard' | 'merchants' | 'broadcast' | 'archive';
+  onSelectView: (view: 'dashboard' | 'merchants' | 'broadcast' | 'archive') => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentView, onSelectView }) => {
@@ -11,6 +11,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onSelectView }) =
     { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'merchants' as const, label: "Do'konlar (Merchants)", icon: Store },
     { id: 'broadcast' as const, label: 'Push Xabarnoma', icon: Send },
+    { id: 'archive' as const, label: '📦 Arxiv', icon: Archive },
   ];
 
   return (

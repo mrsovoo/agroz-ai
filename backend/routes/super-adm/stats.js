@@ -15,14 +15,16 @@ router.get(
     const merchantStatsRes = await query(`
       SELECT 
         COUNT(*)::int AS total_merchants,
-        COUNT(*) FILTER (WHERE is_active = true)::int AS active_merchants,
-        COUNT(*) FILTER (WHERE is_active = false)::int AS blocked_merchants
+        COUNT(*) FILTER (WHERE is_active = true AND (is_archived IS FALSE OR is_archived IS NULL))::int AS active_merchants,
+        COUNT(*) FILTER (WHERE is_active = false AND (is_archived IS FALSE OR is_archived IS NULL))::int AS blocked_merchants,
+        COUNT(*) FILTER (WHERE is_archived = true)::int AS archived_merchants
       FROM merchants
     `);
     const merchantStats = merchantStatsRes.rows[0] || {
       total_merchants: 0,
       active_merchants: 0,
       blocked_merchants: 0,
+      archived_merchants: 0,
     };
 
     // 2. Biznes turlari bo'yicha taqsimot

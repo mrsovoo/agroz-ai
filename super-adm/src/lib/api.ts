@@ -1,4 +1,4 @@
-import type { PlatformStats, Merchant, BroadcastPayload, BroadcastResult } from '../types';
+import type { PlatformStats, Merchant, BroadcastPayload, BroadcastResult, ArchiveItem, ArchiveStats } from '../types';
 
 const API_BASE = (import.meta.env.VITE_API_URL as string) || 'https://backend-production-96bd5.up.railway.app/api/super-adm';
 const ADMIN_KEY_STORAGE = 'super_adm_key';
@@ -55,6 +55,41 @@ class SuperAdminApi {
       body: JSON.stringify(updates),
     });
     return res.merchant;
+  }
+
+  async archiveMerchant(id: number): Promise<Merchant> {
+    const res = await this.request<{ ok: boolean; merchant: Merchant }>(`/merchants/${id}/archive`, {
+      method: 'PATCH',
+    });
+    return res.merchant;
+  }
+
+  async restoreMerchant(id: number): Promise<Merchant> {
+    const res = await this.request<{ ok: boolean; merchant: Merchant }>(`/merchants/${id}/restore`, {
+      method: 'PATCH',
+    });
+    return res.merchant;
+  }
+
+  async getArchive(params: {
+    search?: string;
+    type?: string;
+    source?: string;
+    status?: string;
+    limit?: number;
+    offset?: number;
+  } = {}): Promise<{ items: ArchiveItem[]; total: number; stats: ArchiveStats }> {
+    const query = new URLSearchParams();
+    if (params.search) query.set('search', params.search);
+    if (params.type) query.set('type', params.type);
+    if (params.source) query.set('source', params.source);
+    if (params.status) query.set('status', params.status);
+    if (params.limit) query.set('limit', String(params.limit));
+    if (params.offset) query.set('offset', String(params.offset));
+
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    const res = await this.request<{ ok: boolean; items: ArchiveItem[]; total: number; stats: ArchiveStats }>(`/archive${qs}`);
+    return { items: res.items, total: res.total, stats: res.stats };
   }
 
   async deleteMerchant(id: number): Promise<{ deleted_merchant_id: number }> {

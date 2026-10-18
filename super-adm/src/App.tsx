@@ -4,9 +4,10 @@ import { Header } from './components/Header';
 import { DashboardView } from './views/DashboardView';
 import { MerchantsView } from './views/MerchantsView';
 import { BroadcastView } from './views/BroadcastView';
+import { ArchiveView } from './views/ArchiveView';
 
 export function App() {
-  const [currentView, setCurrentView] = useState<'dashboard' | 'merchants' | 'broadcast'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'merchants' | 'broadcast' | 'archive'>('dashboard');
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-900 text-slate-100 font-sans">
@@ -21,6 +22,7 @@ export function App() {
           {currentView === 'dashboard' && <DashboardView />}
           {currentView === 'merchants' && <MerchantsView />}
           {currentView === 'broadcast' && <BroadcastView />}
+          {currentView === 'archive' && <ArchiveView />}
         </main>
       </div>
     </div>

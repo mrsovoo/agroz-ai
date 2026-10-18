@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Phone,
   Store,
+  Archive,
 } from 'lucide-react';
 
 export const MerchantsView: React.FC = () => {
@@ -120,6 +121,34 @@ export const MerchantsView: React.FC = () => {
     }
   };
 
+  const handleArchive = async (m: Merchant) => {
+    if (!window.confirm(`"${m.store_name}" do'konini arxivlashni (Soft-delete) tasdiqlaysizmi?\nDo'kon ma'lumotlari saqlanib qoladi.`)) return;
+    setActionLoading(m.id);
+    try {
+      await api.archiveMerchant(m.id);
+      showNotification(`"${m.store_name}" arxivlandi`);
+      await loadMerchants();
+    } catch (err: any) {
+      showNotification(err.message, 'error');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRestore = async (m: Merchant) => {
+    if (!window.confirm(`"${m.store_name}" do'konini arxivdan qayta tiklashni tasdiqlaysizmi?`)) return;
+    setActionLoading(m.id);
+    try {
+      await api.restoreMerchant(m.id);
+      showNotification(`"${m.store_name}" arxivdan qayta tiklandi`);
+      await loadMerchants();
+    } catch (err: any) {
+      showNotification(err.message, 'error');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const formatMoney = (val: number) => {
     return new Intl.NumberFormat('uz-UZ').format(Math.round(val || 0)) + " so'm";
   };
@@ -198,6 +227,7 @@ export const MerchantsView: React.FC = () => {
             <option value="">Barcha statuslar</option>
             <option value="active">Faol do'konlar</option>
             <option value="blocked">Bloklanganlar</option>
+            <option value="archived">📦 Arxivlanganlar</option>
           </select>
         </div>
       </div>
@@ -317,6 +347,27 @@ export const MerchantsView: React.FC = () => {
 
                     {/* Actions */}
                     <td className="px-4 py-3.5 text-right space-x-1.5 whitespace-nowrap">
+                      {/* Archive / Restore */}
+                      {!m.is_archived ? (
+                        <button
+                          title="Do'konni arxivlash (Soft-delete)"
+                          disabled={actionLoading === m.id}
+                          onClick={() => handleArchive(m)}
+                          className="p-1.5 text-slate-400 hover:text-amber-400 hover:bg-amber-500/10 rounded-lg transition"
+                        >
+                          <Archive className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        <button
+                          title="Arxivdan qayta tiklash"
+                          disabled={actionLoading === m.id}
+                          onClick={() => handleRestore(m)}
+                          className="p-1.5 text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                        </button>
+                      )}
+
                       {/* Reset data */}
                       <button
                         title="Savdo va qarzlarni 0 qilish (Reset)"

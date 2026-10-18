@@ -13,6 +13,7 @@ router.use(requireSuperAdmin);
 router.use('/stats', require('./stats'));
 router.use('/merchants', require('./merchants'));
 router.use('/broadcast', require('./broadcast'));
+router.use('/archive', require('./archive'));
 
 module.exports = router;
 

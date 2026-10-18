@@ -11,6 +11,8 @@ export interface Merchant {
   lng: number | null;
   delivery_available: boolean;
   is_active: boolean;
+  is_archived: boolean;
+  archived_at: string | null;
   created_at: string;
   subscription_until: string | null;
   owner_name: string | null;
@@ -20,6 +22,32 @@ export interface Merchant {
   total_sales: number;
   open_debts_count: number;
   total_open_debt: number;
+}
+
+export interface ArchiveItem {
+  id: string;
+  name: string;
+  owner_name: string | null;
+  phone: string | null;
+  telegram_id: string | null;
+  business_type: string;
+  role: 'merchant' | 'specialist' | 'user';
+  source: 'biznesgo_bot' | 'agroz_auth_bot';
+  status: 'active' | 'archived' | 'blocked' | 'inactive';
+  is_archived: boolean;
+  merchant_id: number | null;
+  created_at: string;
+  archived_at: string | null;
+}
+
+export interface ArchiveStats {
+  total_all: number;
+  total_archived: number;
+  total_merchants: number;
+  total_specialists: number;
+  total_users: number;
+  total_biznesgo: number;
+  total_agroz_auth: number;
 }
 
 export interface PlatformStats {

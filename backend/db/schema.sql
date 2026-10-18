@@ -24,11 +24,16 @@ CREATE TABLE IF NOT EXISTS merchants (
   password_hash      TEXT,                        -- Web login (scrypt). Telegram uchun shart emas
   created_at         TIMESTAMP NOT NULL DEFAULT (now() AT TIME ZONE 'Asia/Tashkent'),
   updated_at         TIMESTAMP NOT NULL DEFAULT (now() AT TIME ZONE 'Asia/Tashkent'),
-  subscription_until TIMESTAMP
+  subscription_until TIMESTAMP,
+  is_archived        BOOLEAN   NOT NULL DEFAULT false,
+  archived_at        TIMESTAMP
 );
 ALTER TABLE merchants ADD COLUMN IF NOT EXISTS subscription_until TIMESTAMP;
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS is_archived BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP;
 CREATE UNIQUE INDEX IF NOT EXISTS merchants_phone_uq  ON merchants (phone);
 CREATE INDEX        IF NOT EXISTS merchants_geo_idx   ON merchants (lat, lng) WHERE is_active;
+CREATE INDEX        IF NOT EXISTS merchants_archived_idx ON merchants (is_archived);
 
 -- 2) PRODUCTS — ombor / katalog
 CREATE TABLE IF NOT EXISTS products (
