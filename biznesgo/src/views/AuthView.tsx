@@ -113,6 +113,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
   const [deliveredViaTelegram, setDeliveredViaTelegram] = useState(false);
   const [botName, setBotName] = useState<string | null>(null);
 
+  // View mode: tashqi brauzerda to'g'ridan-to'g'ri Telegram tugmasi ko'rinadi
+  const [viewMode, setViewMode] = useState<'telegram' | 'form'>(isTgOnboarding ? 'form' : 'telegram');
+
   // URL dan kelgan ?otp= parametrini tekshirish
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -122,6 +125,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
         setOtpCode(codeFromUrl);
         setTab('otp');
         setOtpStep('code');
+        setViewMode('form');
       }
     }
   }, []);
@@ -352,53 +356,117 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
 
       <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-xl">
         <div className="bg-white py-8 px-6 shadow-xl shadow-slate-200/50 rounded-2xl border border-slate-100 sm:px-10">
-          {/* Navigation Tabs (Web Browser) */}
-          {!isTgOnboarding && (
-            <div className="flex rounded-xl bg-slate-100 p-1 mb-6 text-xs sm:text-sm">
-              <button
-                type="button"
-                onClick={() => {
-                  setTab('otp');
-                  setOtpStep('phone');
-                }}
-                className={`flex-1 py-2 font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                  tab === 'otp'
-                    ? 'bg-white text-emerald-700 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Bot className="w-4 h-4 text-emerald-600" />
-                <span>Telegram OTP</span>
-                <span className="hidden sm:inline px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-100 text-emerald-800 font-bold">
-                  Tezkor
+          {/* 1. PRIMARY VIEW: Telegram Orqali Ochish (Browser Visitor) */}
+          {!isTgOnboarding && viewMode === 'telegram' ? (
+            <div className="space-y-6 text-center py-2">
+              <div className="p-4 rounded-2xl bg-emerald-50/90 border border-emerald-100 text-xs text-emerald-900 leading-relaxed text-left shadow-sm">
+                <span className="font-bold text-sm block mb-1 text-emerald-950 flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-emerald-600" />
+                  BiznesGO B2B Platformasiga Xush Kelibsiz!
                 </span>
-              </button>
+                Kassa, ombor qoldiqlari va qarz daftari boshqaruvi to‘liq rasmiy <strong>@biznesgo_bot</strong> Telegram boti orqali ishlaydi. Login yoki parol kiritish shart emas.
+              </div>
 
-              <button
-                type="button"
-                onClick={() => setTab('login')}
-                className={`flex-1 py-2 font-semibold rounded-lg transition-all ${
-                  tab === 'login'
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
+              {/* Grand Telegram CTA Button */}
+              <a
+                href="https://t.me/biznesgo_bot?start=launch"
+                className="w-full py-4 px-6 rounded-2xl shadow-xl shadow-sky-500/30 bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 text-white font-extrabold text-base flex items-center justify-center gap-3 transition transform active:scale-[0.98] cursor-pointer"
               >
-                Parol bilan
-              </button>
+                <Bot className="w-6 h-6 text-white" />
+                <span>Telegram Orqali Ochish</span>
+                <ExternalLink className="w-5 h-5 text-white/80" />
+              </a>
 
-              <button
-                type="button"
-                onClick={() => setTab('register')}
-                className={`flex-1 py-2 font-semibold rounded-lg transition-all ${
-                  tab === 'register'
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Yangi do‘kon
-              </button>
+              <p className="text-xs text-slate-500 font-mono">
+                👉 Rasmiy bot: <strong className="text-slate-800">@biznesgo_bot</strong>
+              </p>
+
+              {/* Feature Highlights */}
+              <div className="grid grid-cols-3 gap-2.5 pt-2">
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-[11px] text-slate-700 font-semibold shadow-xs">
+                  ⚡️ 1 bosishda kirish
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-[11px] text-slate-700 font-semibold shadow-xs">
+                  🏪 Kassa & Ombor
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-[11px] text-slate-700 font-semibold shadow-xs">
+                  📒 Qarz daftari
+                </div>
+              </div>
+
+              {/* Alternative Web Option */}
+              <div className="pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('form')}
+                  className="text-xs font-semibold text-slate-400 hover:text-emerald-700 transition"
+                >
+                  Brauzerda telefon raqam orqali kirish →
+                </button>
+              </div>
             </div>
-          )}
+          ) : (
+            <>
+              {!isTgOnboarding && (
+                <div className="flex items-center justify-between mb-4">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('telegram')}
+                    className="text-xs text-slate-500 hover:text-slate-900 flex items-center gap-1 font-medium transition"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Telegram orqali ochishga qaytish</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Navigation Tabs (Web Browser) */}
+              {!isTgOnboarding && (
+                <div className="flex rounded-xl bg-slate-100 p-1 mb-6 text-xs sm:text-sm">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTab('otp');
+                      setOtpStep('phone');
+                    }}
+                    className={`flex-1 py-2 font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                      tab === 'otp'
+                        ? 'bg-white text-emerald-700 shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Bot className="w-4 h-4 text-emerald-600" />
+                    <span>Telegram OTP</span>
+                    <span className="hidden sm:inline px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-100 text-emerald-800 font-bold">
+                      Tezkor
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTab('login')}
+                    className={`flex-1 py-2 font-semibold rounded-lg transition-all ${
+                      tab === 'login'
+                        ? 'bg-white text-slate-900 shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Parol bilan
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTab('register')}
+                    className={`flex-1 py-2 font-semibold rounded-lg transition-all ${
+                      tab === 'register'
+                        ? 'bg-white text-slate-900 shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Yangi do‘kon
+                  </button>
+                </div>
+              )}
 
           {/* 1. TELEGRAM OTP FLOW (Recommended) */}
           {tab === 'otp' && !isTgOnboarding && (
@@ -742,6 +810,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                 )}
               </button>
             </form>
+          )}
+            </>
           )}
 
           <div className="mt-6 pt-6 border-t border-slate-100 flex items-center justify-center gap-2 text-xs text-slate-500">
