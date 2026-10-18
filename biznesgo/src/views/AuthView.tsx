@@ -74,7 +74,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
   // OTP oqimi holatlari
   const [otpStep, setOtpStep] = useState<'phone' | 'code'>('phone');
   const [otpCode, setOtpCode] = useState('');
-  const [otpTimer, setOtpTimer] = useState(300); // 5 daqiqa
+  const [otpTimer, setOtpTimer] = useState(60); // 1 daqiqa
   const [deliveredViaTelegram, setDeliveredViaTelegram] = useState(false);
   const [otpBotUrl, setOtpBotUrl] = useState<string | null>(null);
 
@@ -120,7 +120,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
     setLoading(true);
     try {
       const res = await api.auth.sendOtp(phone.trim());
-      setOtpTimer(res.expires_in_seconds || 300);
+      setOtpTimer(res.expires_in_seconds || 60);
       setDeliveredViaTelegram(res.delivered_via_telegram);
       setOtpBotUrl(res.bot_url);
       setOtpStep('code');

@@ -87,7 +87,6 @@ router.post(
 
     // 1. 6-xonali xavfsiz OTP kod generatsiya qilish
     const code = crypto.randomInt(100000, 1000000).toString();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 daqiqa
 
     // 2. Ushbu telefon raqamiga bog'langan Telegram foydalanuvchisini qidirish (oxirgi 9 raqam bo'yicha)
     const [userRes, merchantRes, specRes, otpPrevRes] = await Promise.all([
@@ -130,7 +129,7 @@ router.post(
       otpPrevRes.rows[0]?.telegram_id ||
       null;
 
-    // 3. Avvalgi foydalanilmagan kodlarni bekor qilish va yangi kodni saqlash
+    // 3. Avvalgi foydalanilmagan kodlarni bekor qilish va yangi kodni saqlash (1 daqiqa = 60 soniya)
     await query(
       `UPDATE otp_codes SET used = true
         WHERE RIGHT(regexp_replace(COALESCE(phone,''), '\\D', '', 'g'), 9) = $1 AND used = false`,
@@ -139,9 +138,9 @@ router.post(
 
     const insOtp = await query(
       `INSERT INTO otp_codes (phone, code, used, attempts, telegram_id, expires_at, created_at)
-       VALUES ($1, $2, false, 0, $3, $4, now())
+       VALUES ($1, $2, false, 0, $3, now() + interval '60 seconds', now())
        RETURNING id, phone, code, expires_at`,
-      [phone, code, targetTgId ? Number(targetTgId) : null, expiresAt]
+      [phone, code, targetTgId ? Number(targetTgId) : null]
     );
 
     let deliveredViaTelegram = false;
@@ -152,7 +151,7 @@ router.post(
       const text =
         `🔐 <b>BiznesGO Web Kirish Kodingiz</b>:\n\n` +
         `<code>${code}</code>\n\n` +
-        `⏳ Ushbu kod <b>5 daqiqa</b> davomida amal qiladi.\n` +
+        `⏳ Ushbu kod <b>1 daqiqa</b> davomida amal qiladi.\n` +
         `<i>Xavfsizlik uchun kodni begonalarga bermang.</i>`;
 
       try {
@@ -180,7 +179,7 @@ router.post(
       delivered_via_telegram: deliveredViaTelegram,
       bot_name: botName,
       phone,
-      expires_in_seconds: 300,
+      expires_in_seconds: 60,
       bot_url: botUrl,
       has_telegram_link: Boolean(targetTgId),
       message: deliveredViaTelegram
@@ -199,12 +198,14 @@ router.post(
   authLimiter,
   asyncHandler(async (req, res) => {
     const phone = v.phone(req.body.phone, 'phone', { required: true });
+    const code = v.str(req.body.code, 'code', { required: true, min: 4, max: 10 });
     const phoneDigits = phone.replace(/\D/g, '');
     const last9 = phoneDigits.slice(-9);
 
-    // 1. Eng so'nggi aktiv OTP kodni tekshirish
+    // 1. Eng so'nggi aktiv OTP kodni tekshirish (now() bilan xavfsiz solishtirish)
     const otpRes = await query(
-      `SELECT id, phone, code, used, attempts, telegram_id, expires_at
+      `SELECT id, phone, code, used, attempts, telegram_id, expires_at,
+              (expires_at > now()) AS is_valid
          FROM otp_codes
         WHERE RIGHT(regexp_replace(COALESCE(phone,''), '\\D', '', 'g'), 9) = $1
           AND used = false
@@ -215,11 +216,11 @@ router.post(
 
     const otpRecord = otpRes.rows[0];
     if (!otpRecord) {
-      throw new HttpError(400, "Tasdiqlash kodi topilmadi yoki muddati tugagan. Qaytadan kod so'rang.", 'OTP_NOT_FOUND');
+      throw new HttpError(400, "Tasdiqlash kodi topilmadi. Qaytadan kod so‘rang.", 'OTP_NOT_FOUND');
     }
 
-    if (new Date(otpRecord.expires_at) < new Date()) {
-      throw new HttpError(400, "Tasdiqlash kodi muddati o'tgan (5 daqiqa). Qaytadan kod so'rang.", 'OTP_EXPIRED');
+    if (!otpRecord.is_valid) {
+      throw new HttpError(400, "Tasdiqlash kodi muddati o‘tgan (1 daqiqa). Qaytadan kod so‘rang.", 'OTP_EXPIRED');
     }
 
     if (otpRecord.attempts >= 5) {
