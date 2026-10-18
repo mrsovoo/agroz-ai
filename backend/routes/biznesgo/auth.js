@@ -341,16 +341,16 @@ router.post(
     const phoneDigits = phone.replace(/\D/g, '');
     const code = req.body.code ? String(req.body.code).trim() : null;
 
+    if (!code || code.length < 4) {
+      return res.json({ ok: false, verified: false, message: 'Tasdiqlash kodi kiritilishi shart' });
+    }
+
     const where = [
       `regexp_replace(COALESCE(phone,''), '\\D', '', 'g') = $1`,
+      `code = $2`,
       `expires_at > now()`,
     ];
-    const params = [phoneDigits];
-
-    if (code) {
-      params.push(code);
-      where.push(`code = $${params.length}`);
-    }
+    const params = [phoneDigits, code];
 
     const otpRes = await query(
       `SELECT id, phone, code, used, telegram_id, expires_at

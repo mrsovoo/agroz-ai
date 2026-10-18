@@ -99,47 +99,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
     return () => clearInterval(interval);
   }, [otpStep, otpTimer]);
 
-  // Seamless Telegram Auto-Login (Polling)
-  // Foydalanuvchi Telegram botda tasdiqlaganda avtomatik sezadi va kodsiz kiradi
-  useEffect(() => {
-    let pollInterval: any = null;
-    let isChecking = false;
 
-    if (otpStep === 'code' && phone.trim()) {
-      pollInterval = setInterval(async () => {
-        if (isChecking) return;
-        isChecking = true;
-        try {
-          const res = await api.auth.checkOtp({
-            phone: phone.trim(),
-            code: otpCode.trim() || undefined,
-          });
-
-          if (res.verified) {
-            clearInterval(pollInterval);
-            if (res.registered && res.merchant && res.token) {
-              api.setToken(res.token);
-              setMerchant(res.merchant);
-              addToast(`Xush kelibsiz, ${res.merchant.store_name}!`, 'success');
-              tg.hapticImpact('heavy');
-              onSuccess();
-            } else if (!res.registered) {
-              addToast('Tasdiqlandi! Do‘koningizni oching.', 'success');
-              setIsOnboardingForm(true);
-            }
-          }
-        } catch {
-          // Fondagi tekshiruv xatolarini jimgina o'tkazamiz
-        } finally {
-          isChecking = false;
-        }
-      }, 2000);
-    }
-
-    return () => {
-      if (pollInterval) clearInterval(pollInterval);
-    };
-  }, [otpStep, phone, otpCode, onSuccess, setMerchant, addToast]);
 
   const formatTimer = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
