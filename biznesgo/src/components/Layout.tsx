@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { tg } from '../lib/telegram';
 import {
@@ -13,9 +13,17 @@ import {
   Warehouse,
   Sprout,
   Wrench,
-  ShieldCheck
+  ShieldCheck,
+  CreditCard,
+  HelpCircle,
+  Bell,
+  Sparkles
 } from 'lucide-react';
 import type { BusinessType } from '../types';
+import { SupportModal } from './SupportModal';
+import { TariffModal } from './TariffModal';
+import { NewsModal } from './NewsModal';
+import { DEFAULT_SUBSCRIPTION_PLAN } from '../lib/supportAndTariff';
 
 interface LayoutProps {
   currentView?: string;
@@ -30,6 +38,9 @@ export const Layout: React.FC<LayoutProps> = ({
   onLogout: propsLogout,
   children
 }) => {
+  const [showSupportModal, setShowSupportModal] = useState(false);
+  const [showTariffModal, setShowTariffModal] = useState(false);
+  const [showNewsModal, setShowNewsModal] = useState(false);
   const { merchant, currentView: storeView, setCurrentView, getBusinessInfo } = useStore();
   const currentView = propsView || storeView;
   const onNavigate = propsNavigate || ((v: any) => setCurrentView(v));
@@ -104,6 +115,28 @@ export const Layout: React.FC<LayoutProps> = ({
           </div>
         </div>
 
+        {/* Tarif Mini Vidjet */}
+        <div 
+          onClick={() => {
+            tg.hapticImpact('light');
+            setShowTariffModal(true);
+          }}
+          className="mx-3 mb-2 p-3 bg-gradient-to-r from-slate-900 to-slate-950 text-white rounded-xl border border-slate-800 hover:border-emerald-500/50 transition cursor-pointer shadow-xs group"
+        >
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="text-slate-400 font-semibold group-hover:text-emerald-300 transition-colors">
+              {DEFAULT_SUBSCRIPTION_PLAN.plan_name}
+            </span>
+            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950 px-1.5 py-0.5 rounded border border-emerald-800">
+              Faol
+            </span>
+          </div>
+          <div className="flex items-center justify-between mt-1 text-xs">
+            <span className="font-extrabold text-white">{DEFAULT_SUBSCRIPTION_PLAN.days_left} kun qoldi</span>
+            <span className="text-[10px] text-slate-400 underline decoration-slate-600">Batafsil</span>
+          </div>
+        </div>
+
         {/* Nav list */}
         <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
@@ -124,6 +157,33 @@ export const Layout: React.FC<LayoutProps> = ({
               </button>
             );
           })}
+
+          {/* Support & News buttons in sidebar */}
+          <div className="pt-2 border-t border-slate-100 space-y-1">
+            <button
+              onClick={() => {
+                tg.hapticImpact('light');
+                setShowSupportModal(true);
+              }}
+              className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
+            >
+              <HelpCircle className="w-4 h-4 text-emerald-600" />
+              <span>Qo‘llab-quvvatlash</span>
+            </button>
+            <button
+              onClick={() => {
+                tg.hapticImpact('light');
+                setShowNewsModal(true);
+              }}
+              className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <Bell className="w-4 h-4 text-emerald-600" />
+                <span>Yangiliklar</span>
+              </div>
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            </button>
+          </div>
         </nav>
 
         {/* Footer */}
@@ -155,7 +215,45 @@ export const Layout: React.FC<LayoutProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-slate-600 max-w-[160px] truncate">
+            <button
+              onClick={() => {
+                tg.hapticImpact('light');
+                setShowTariffModal(true);
+              }}
+              className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-900 text-white hover:bg-slate-800 transition cursor-pointer shadow-xs"
+              title="Oylik tarif va obuna"
+            >
+              <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
+              <span>B2B Pro</span>
+              <span className="text-[10px] text-emerald-400 font-normal">({DEFAULT_SUBSCRIPTION_PLAN.days_left} kun)</span>
+            </button>
+
+            <button
+              onClick={() => {
+                tg.hapticImpact('light');
+                setShowNewsModal(true);
+              }}
+              title="Yangiliklar va E'lonlar"
+              className="p-2 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition relative cursor-pointer"
+            >
+              <Bell className="w-4 h-4" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-500" />
+            </button>
+
+            <button
+              onClick={() => {
+                tg.hapticImpact('light');
+                setShowSupportModal(true);
+              }}
+              title="Qo‘llab-quvvatlash xizmati"
+              className="p-2 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer"
+            >
+              <HelpCircle className="w-4 h-4" />
+            </button>
+
+            <div className="h-4 w-px bg-slate-200 mx-1 hidden sm:block" />
+
+            <span className="text-xs font-semibold text-slate-600 max-w-[140px] truncate hidden sm:inline-block">
               {merchant?.store_name}
             </span>
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/50">
@@ -192,6 +290,11 @@ export const Layout: React.FC<LayoutProps> = ({
           );
         })}
       </nav>
+
+      {/* Support, Tariff and News Modals */}
+      <SupportModal isOpen={showSupportModal} onClose={() => setShowSupportModal(false)} />
+      <TariffModal isOpen={showTariffModal} onClose={() => setShowTariffModal(false)} />
+      <NewsModal isOpen={showNewsModal} onClose={() => setShowNewsModal(false)} />
     </div>
   );
 };

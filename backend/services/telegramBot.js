@@ -16,6 +16,39 @@ const BUSINESS_TYPE_MAP = {
   machinery: { title: '🔧 Jihoz va texnika', desc: 'Uskunalar, purkagich va ehtiyot qismlar' },
 };
 
+const SECTOR_SUPPORT_MAP = {
+  agro_vet: {
+    name: 'Dr. Jamshid Olimov',
+    role: 'Agro-kimyo va Fitosanitariya bosh mutaxassisi',
+    phone: '+998 71 200 45 61',
+    hours: 'Dush - Shan, 08:00 - 20:00 (24/7 navbatchi)',
+  },
+  feed: {
+    name: 'Muzaffar Yoqubov',
+    role: 'Chorvachilik va Parrandachilik ozuqa texnologi',
+    phone: '+998 71 200 45 62',
+    hours: 'Har kuni 08:00 - 20:00',
+  },
+  warehouse: {
+    name: 'Akmal Rustamov',
+    role: 'B2B Distribyutsiya va Logistika koordinatori',
+    phone: '+998 71 200 45 63',
+    hours: '24/7 Doimiy aloqada',
+  },
+  seeds: {
+    name: 'Olimjon Qodirov',
+    role: 'Urug‘chilik va Seleksiya bo‘yicha bosh agronom',
+    phone: '+998 71 200 45 64',
+    hours: 'Dush - Shan, 08:30 - 19:30',
+  },
+  machinery: {
+    name: 'Farhod Ergashov',
+    role: 'Qishloq xo‘jaligi texnikasi bosh muhandisi',
+    phone: '+998 71 200 45 65',
+    hours: 'Har kuni 08:00 - 21:00',
+  },
+};
+
 const memorySessions = new Map();
 
 async function getSession(chatId) {
@@ -226,12 +259,118 @@ async function handleBiznesgoBotUpdate(update) {
   );
   const existingM = mRes.rows[0];
 
+  const bizMeta = existingM ? (BUSINESS_TYPE_MAP[existingM.business_type] || { title: existingM.business_type }) : { title: 'Agro-biznes' };
+  const sectorContact = existingM ? (SECTOR_SUPPORT_MAP[existingM.business_type] || SECTOR_SUPPORT_MAP.agro_vet) : SECTOR_SUPPORT_MAP.agro_vet;
+
+  // 1a. Tarif ko'rish (Buyruq yoki tugma orqali)
+  if (text === '/tariff' || text === '💳 Mening tarifim' || (callbackQuery && callbackQuery.data === 'cmd_tariff')) {
+    const tariffText =
+      `💳 <b>Sizning tarifingiz: BiznesGO B2B Pro</b>\n\n` +
+      `🏪 <b>Do‘kon:</b> ${existingM ? existingM.store_name : 'Do‘koningiz'}\n` +
+      `📌 <b>Yo‘nalish:</b> ${bizMeta.title}\n` +
+      `💰 <b>Oylik to‘lov:</b> 199,000 so‘m / oy\n` +
+      `⏳ <b>Holat:</b> Faol Obuna (30 kun qoldi)\n\n` +
+      `✨ <b>Tarif ichiga kiritilgan imkoniyatlar:</b>\n` +
+      `• Cheksiz tovarlar, partiyalar va qoldiq monitoringi\n` +
+      `• Sektorga mos aqlli Kassa va POS chek chiqarish\n` +
+      `• CRM va Qarz daftari (Kredit limiti va jadvallar)\n` +
+      `• Telegram bot va Web sinxronizatsiyasi\n` +
+      `• Sektor bo‘yicha 24/7 shaxsiy mutaxassis yordami\n\n` +
+      `Tarifni uzaytirish yoki to‘lov qilish uchun adminga yozing: @biznesgo_support`;
+
+    const inlineKeyboard = {
+      inline_keyboard: [
+        [{ text: "🚀 Ilovani ochish", web_app: { url: config.miniAppUrl } }],
+        [{ text: "📞 Qo‘llab-quvvatlash", callback_data: "cmd_support" }, { text: "📢 Yangiliklar", callback_data: "cmd_news" }],
+      ],
+    };
+
+    try {
+      const res = await callTelegramApi(config.biznesgoBotToken, 'sendMessage', {
+        chat_id: chatId,
+        text: tariffText,
+        parse_mode: 'HTML',
+        reply_markup: inlineKeyboard,
+      });
+      return { handled: true, cmd: 'tariff', telegram_response: res };
+    } catch (err) {
+      return { handled: false, error: err.message };
+    }
+  }
+
+  // 1b. Qo'llab-quvvatlash (Buyruq yoki tugma orqali)
+  if (text === '/support' || text === '📞 Qo‘llab-quvvatlash' || (callbackQuery && callbackQuery.data === 'cmd_support')) {
+    const supportText =
+      `📞 <b>BiznesGO Qo‘llab-quvvatlash xizmati</b>\n\n` +
+      `📌 <b>Sizning yo‘nalishingiz:</b> ${bizMeta.title}\n` +
+      `👤 <b>Sektor kuratori:</b> ${sectorContact.name}\n` +
+      `💼 <b>Mutaxassisligi:</b> ${sectorContact.role}\n` +
+      `📱 <b>Aloqa telefoni:</b> ${sectorContact.phone}\n` +
+      `💬 <b>Telegram:</b> @biznesgo_support\n` +
+      `⏰ <b>Ish vaqti:</b> ${sectorContact.hours}\n\n` +
+      `🏢 <b>Markaziy 24/7 Call-markaz:</b> +998 71 200 45 67\n\n` +
+      `<i>Mutaxassis sektorga xos sertifikatlar, yaroqlilik, doza, kredit limitlari va texnik masalalarda bepul maslahat beradi.</i>`;
+
+    const inlineKeyboard = {
+      inline_keyboard: [
+        [{ text: "💬 Telegram orqali yozish", url: "https://t.me/biznesgo_support" }],
+        [{ text: "💳 Mening tarifim", callback_data: "cmd_tariff" }, { text: "📢 Yangiliklar", callback_data: "cmd_news" }],
+      ],
+    };
+
+    try {
+      const res = await callTelegramApi(config.biznesgoBotToken, 'sendMessage', {
+        chat_id: chatId,
+        text: supportText,
+        parse_mode: 'HTML',
+        reply_markup: inlineKeyboard,
+      });
+      return { handled: true, cmd: 'support', telegram_response: res };
+    } catch (err) {
+      return { handled: false, error: err.message };
+    }
+  }
+
+  // 1c. Yangiliklar (Buyruq yoki tugma orqali)
+  if (text === '/news' || text === '📢 Yangiliklar' || (callbackQuery && callbackQuery.data === 'cmd_news')) {
+    const newsText =
+      `📢 <b>BiznesGO Platformasi Yangiliklari & Relizlar</b>\n\n` +
+      `🚀 <b>1. BiznesGO v1.0.0 ishga tushirildi!</b>\n` +
+      `Barcha 5 ta yo‘nalish (Agro-Vet, Yem, Ombor, Urug‘, Texnika) uchun mos kassa, ombor va CRM to‘liq yangilandi.\n\n` +
+      `📍 <b>2. Geolokatsiya orqali manzilni avtomatik tasdiqlash</b>\n` +
+      `Do‘kon joylashuvi faqat aniq GPS koordinatalari asosida xaritada belgilanadi va xatolar oldi olinadi.\n\n` +
+      `💳 <b>3. B2B Kredit Limiti va Nasiya nazorati</b>\n` +
+      `Ulgurji ombor va do‘konlar uchun xaridorlarga kredit limiti o‘rnatish va limit oshganda ogohlantirish qo‘shildi.\n\n` +
+      `⚠️ <b>4. Yaroqlilik muddati monitoringi</b>\n` +
+      `Muddati o‘tayotgan dorilar Dashboardda avtomatik qizil signal bilan ko‘rsatiladi.`;
+
+    const inlineKeyboard = {
+      inline_keyboard: [
+        [{ text: "🚀 Ilovani ochish", web_app: { url: config.miniAppUrl } }],
+        [{ text: "💳 Mening tarifim", callback_data: "cmd_tariff" }, { text: "📞 Qo‘llab-quvvatlash", callback_data: "cmd_support" }],
+      ],
+    };
+
+    try {
+      const res = await callTelegramApi(config.biznesgoBotToken, 'sendMessage', {
+        chat_id: chatId,
+        text: newsText,
+        parse_mode: 'HTML',
+        reply_markup: inlineKeyboard,
+      });
+      return { handled: true, cmd: 'news', telegram_response: res };
+    } catch (err) {
+      return { handled: false, error: err.message };
+    }
+  }
+
   if (existingM && (text.startsWith('/start') || !callbackQuery)) {
     const welcomeText =
       `👋 Assalomu alaykum, <b>${firstName}</b>!\n\n` +
       `🏪 <b>${existingM.store_name}</b> do‘koningiz tizimda faol.\n` +
+      `📌 <b>Yo‘nalish:</b> ${bizMeta.title}\n` +
       `Kassa, Ombor va Qarz daftaringiz to‘liq tayyor.\n\n` +
-      `Boshqaruv paneliga kirish uchun quyidagi tugmalardan birini tanlang:`;
+      `Boshqaruv paneliga kirish yoki kerakli bo‘limni tanlang:`;
 
     const inlineKeyboard = {
       inline_keyboard: [
@@ -242,12 +381,23 @@ async function handleBiznesgoBotUpdate(update) {
           },
         ],
         [
-          {
-            text: "🌐 Web brauzerda ochish",
-            url: "https://biznesgo.vercel.app",
-          },
+          { text: "💳 Mening tarifim", callback_data: "cmd_tariff" },
+          { text: "📞 Qo‘llab-quvvatlash", callback_data: "cmd_support" },
+        ],
+        [
+          { text: "📢 Yangiliklar (v1.0.0)", callback_data: "cmd_news" },
+          { text: "🌐 Web brauzerda", url: "https://biznesgo.vercel.app" },
         ],
       ],
+    };
+
+    const replyKeyboard = {
+      keyboard: [
+        [{ text: '🚀 BiznesGO Ilovasini ochish', web_app: { url: config.miniAppUrl } }],
+        [{ text: '💳 Mening tarifim' }, { text: '📞 Qo‘llab-quvvatlash' }],
+        [{ text: '📢 Yangiliklar' }],
+      ],
+      resize_keyboard: true,
     };
 
     try {
@@ -257,6 +407,15 @@ async function handleBiznesgoBotUpdate(update) {
         parse_mode: 'HTML',
         reply_markup: inlineKeyboard,
       });
+
+      // Shuningdek pastki doimiy menyuni yangilaymiz
+      try {
+        await callTelegramApi(config.biznesgoBotToken, 'sendMessage', {
+          chat_id: chatId,
+          text: "👇 Menyudan kerakli bo‘limni tanlashingiz mumkin:",
+          reply_markup: replyKeyboard,
+        });
+      } catch {}
 
       try {
         await callTelegramApi(config.biznesgoBotToken, 'setChatMenuButton', {
@@ -561,12 +720,23 @@ async function handleBiznesgoBotUpdate(update) {
           },
         ],
         [
-          {
-            text: "🌐 Web brauzerda ochish",
-            url: "https://biznesgo.vercel.app",
-          },
+          { text: "💳 Mening tarifim", callback_data: "cmd_tariff" },
+          { text: "📞 Qo‘llab-quvvatlash", callback_data: "cmd_support" },
+        ],
+        [
+          { text: "📢 Yangiliklar (v1.0.0)", callback_data: "cmd_news" },
+          { text: "🌐 Web brauzerda", url: "https://biznesgo.vercel.app" },
         ],
       ],
+    };
+
+    const replyKeyboard = {
+      keyboard: [
+        [{ text: '🚀 BiznesGO Ilovasini ochish', web_app: { url: config.miniAppUrl } }],
+        [{ text: '💳 Mening tarifim' }, { text: '📞 Qo‘llab-quvvatlash' }],
+        [{ text: '📢 Yangiliklar' }],
+      ],
+      resize_keyboard: true,
     };
 
     const res = await callTelegramApi(config.biznesgoBotToken, 'sendMessage', {
@@ -575,6 +745,14 @@ async function handleBiznesgoBotUpdate(update) {
       parse_mode: 'HTML',
       reply_markup: finalKeyboard,
     });
+
+    try {
+      await callTelegramApi(config.biznesgoBotToken, 'sendMessage', {
+        chat_id: chatId,
+        text: "👇 Menyudan kerakli bo‘limni tanlashingiz mumkin:",
+        reply_markup: replyKeyboard,
+      });
+    } catch {}
 
     try {
       await callTelegramApi(config.biznesgoBotToken, 'setChatMenuButton', {
