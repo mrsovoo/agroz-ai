@@ -59,9 +59,7 @@ export const ProductsView: React.FC = () => {
 
   // Sector Specific Fields
   // 1. Agro-Vet
-  const [batchNumber, setBatchNumber] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
-  const [activeIngredient, setActiveIngredient] = useState('');
 
   // 2. Feed
   const [bagWeightKg, setBagWeightKg] = useState<number | ''>('');
@@ -112,9 +110,7 @@ export const ProductsView: React.FC = () => {
     setSku('');
     setImageUrl('');
 
-    setBatchNumber('');
     setExpiryDate('');
-    setActiveIngredient('');
 
     setBagWeightKg(businessType === 'feed' ? 50 : '');
 
@@ -152,9 +148,7 @@ export const ProductsView: React.FC = () => {
     setSku(p.sku || '');
     setImageUrl(p.image_url || '');
 
-    setBatchNumber(p.batch_number || '');
     setExpiryDate(p.expiry_date ? p.expiry_date.split('T')[0] : '');
-    setActiveIngredient(p.active_ingredient || '');
 
     setBagWeightKg(p.bag_weight_kg || '');
 
@@ -235,10 +229,10 @@ export const ProductsView: React.FC = () => {
         sku: sku.trim() || undefined,
         image_url: imageUrl.trim() || undefined,
 
-        // agro_vet
-        batch_number: batchNumber.trim() || undefined,
+        // agro_vet (saqlash muddati qoldirildi, partiya va yo'riqnoma keyingi versiyalarda)
+        batch_number: editingProduct?.batch_number || undefined,
         expiry_date: expiryDate || undefined,
-        active_ingredient: activeIngredient.trim() || undefined,
+        active_ingredient: editingProduct?.active_ingredient || undefined,
 
         // feed
         bag_weight_kg: bagWeightKg !== '' ? Number(bagWeightKg) : undefined,
@@ -404,10 +398,7 @@ export const ProductsView: React.FC = () => {
 
                   {/* Sektorga mos ustunlar */}
                   {businessType === 'agro_vet' && (
-                    <>
-                      <th className="py-3.5 px-4">Partiya & Yaroqlilik</th>
-                      <th className="py-3.5 px-4">Faol modda / Doza</th>
-                    </>
+                    <th className="py-3.5 px-4">Saqlash muddati</th>
                   )}
                   {businessType === 'feed' && (
                     <>
@@ -497,30 +488,15 @@ export const ProductsView: React.FC = () => {
 
                       {/* Sektor 1: Agro-Vet */}
                       {businessType === 'agro_vet' && (
-                        <>
-                          <td className="py-3.5 px-4 text-slate-600">
-                            {product.batch_number && (
-                              <div className="font-mono text-[11px] font-semibold text-slate-800">
-                                P: {product.batch_number}
-                              </div>
-                            )}
-                            {product.expiry_date && (
-                              <div className="text-amber-700 font-bold text-[11px]">
-                                {formatDate(product.expiry_date)}
-                              </div>
-                            )}
-                            {!product.batch_number && !product.expiry_date && '—'}
-                          </td>
-                          <td className="py-3.5 px-4 text-slate-600">
-                            {product.active_ingredient ? (
-                              <span className="bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded text-[11px] font-medium border border-emerald-100">
-                                {product.active_ingredient}
-                              </span>
-                            ) : (
-                              '—'
-                            )}
-                          </td>
-                        </>
+                        <td className="py-3.5 px-4 text-slate-600">
+                          {product.expiry_date ? (
+                            <span className="text-amber-800 font-bold text-[11px] bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 inline-block">
+                              {formatDate(product.expiry_date)}
+                            </span>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
                       )}
 
                       {/* Sektor 2: Feed */}
@@ -871,52 +847,23 @@ export const ProductsView: React.FC = () => {
               <span>Sohaviy parametrlar ({businessType})</span>
             </h4>
 
-            {/* 1. AGRO-VET: Partiya, Yaroqlilik, Faol modda/Doza */}
+            {/* 1. AGRO-VET: Saqlash muddati (Partiya va Yo'riqnoma keyingi versiyalarda) */}
             {businessType === 'agro_vet' && (
-              <div className="space-y-3 bg-emerald-50/60 p-4 rounded-xl border border-emerald-200">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                      Partiya / Seriya raqami *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={batchNumber}
-                      onChange={(e) => setBatchNumber(e.target.value)}
-                      placeholder="B-2024-098"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                      Yaroqlilik muddati (Expiry Date) *
-                    </label>
-                    <input
-                      type="date"
-                      required
-                      value={expiryDate}
-                      onChange={(e) => setExpiryDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-700 font-semibold"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    Faol modda / Doza va qo‘llash yo‘riqnomasi
-                  </label>
-                  <input
-                    type="text"
-                    value={activeIngredient}
-                    onChange={(e) => setActiveIngredient(e.target.value)}
-                    placeholder="Masalan: Enrofloksatsin 10% / 1 litr suvga 1 ml"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                  <p className="text-[11px] text-emerald-800/80 mt-1">
-                    Fermer va xaridorlarga kassa chekida to‘g‘ri doza yo‘riqnomasi sifatida ko‘rinadi.
-                  </p>
-                </div>
+              <div className="bg-emerald-50/60 p-4 rounded-xl border border-emerald-200">
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1 flex items-center justify-between">
+                  <span>Saqlash muddati (Yaroqlilik muddati) *</span>
+                  <span className="text-[10px] text-emerald-800 font-normal">Avtomatik nazorat</span>
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={expiryDate}
+                  onChange={(e) => setExpiryDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-700 font-semibold"
+                />
+                <p className="text-[11px] text-emerald-800/80 mt-1.5">
+                  Muddati o‘tgan yoki yaqinlashgan tovarlar haqida kassa va omborda ogohlantirish beriladi.
+                </p>
               </div>
             )}
 

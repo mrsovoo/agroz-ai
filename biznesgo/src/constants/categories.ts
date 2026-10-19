@@ -66,3 +66,4 @@ export const SECTOR_CATEGORIES: Record<BusinessType, string[]> = {
     'Qo‘l mehnat qurollari (Bel, Ketmon, Tirnoq)',
   ],
 };
+

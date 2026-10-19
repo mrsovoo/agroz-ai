@@ -228,14 +228,9 @@ export const PosView: React.FC = () => {
                     </h4>
 
                     {/* Agro-Vet specific tags */}
-                    {isAgroVet && (product.batch_number || product.expiry_date) && (
+                    {isAgroVet && product.expiry_date && (
                       <div className="text-[10px] text-slate-500 space-y-0.5 pt-1 border-t border-slate-100">
-                        {product.batch_number && (
-                          <div className="truncate">Partiya: <span className="font-mono">{product.batch_number}</span></div>
-                        )}
-                        {product.expiry_date && (
-                          <div className="truncate text-amber-700">Muddat: {formatDate(product.expiry_date)}</div>
-                        )}
+                        <div className="truncate text-amber-700 font-medium">Saqlash muddati: {formatDate(product.expiry_date)}</div>
                       </div>
                     )}
                   </div>
