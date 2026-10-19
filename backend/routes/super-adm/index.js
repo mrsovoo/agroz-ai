@@ -7,8 +7,18 @@ const { requireSuperAdmin } = require('../../middleware/adminAuth');
 
 const router = express.Router();
 
-// Barcha super admin route'larini requireSuperAdmin guard bilan himoyalash
+const authModule = require('./auth');
+
+// 1. Ochiq kirish endpointlari (Login va Token berish)
+router.post('/login', authModule.loginHandler);
+router.use('/auth', authModule.publicRouter);
+
+// 2. Barcha qolgan super admin route'larini requireSuperAdmin guard bilan himoyalash
 router.use(requireSuperAdmin);
+
+// 3. Himoyalangan admin ma'lumotlari
+router.get('/me', authModule.meHandler);
+router.get('/auth/me', authModule.meHandler);
 
 router.use('/stats', require('./stats'));
 router.use('/merchants', require('./merchants'));

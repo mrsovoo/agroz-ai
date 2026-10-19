@@ -42,6 +42,22 @@ function issueToken({ userId, merchantId = null, via }) {
   return { token: `${body}.${sign(body)}`, expiresAt: new Date(payload.exp * 1000).toISOString() };
 }
 
+function issueAdminToken({ userId = 0, username = 'admin', role = 'super_admin' } = {}) {
+  const now = Math.floor(Date.now() / 1000);
+  const ttl = config.tokenTtlSeconds || 60 * 60 * 24 * 7;
+  const payload = { uid: userId, username, role, via: 'super_adm_auth', iat: now, exp: now + ttl };
+  const body = b64url(JSON.stringify(payload));
+  return {
+    token: `${body}.${sign(body)}`,
+    expiresAt: new Date(payload.exp * 1000).toISOString(),
+    user: {
+      id: userId,
+      username,
+      role
+    }
+  };
+}
+
 function verifyToken(token) {
   if (!token || typeof token !== 'string' || !token.includes('.')) return null;
   const [body, sig] = token.split('.');
@@ -118,5 +134,5 @@ function verifyTelegramInitData(
   return { ok: true, user, authDate, bot: matchedBot };
 }
 
-module.exports = { hashPassword, verifyPassword, issueToken, verifyToken, verifyTelegramInitData };
+module.exports = { hashPassword, verifyPassword, issueToken, issueAdminToken, verifyToken, verifyTelegramInitData };
 

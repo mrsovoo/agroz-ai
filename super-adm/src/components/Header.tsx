@@ -10,7 +10,8 @@ import {
   MessageSquare,
   MapPin,
   TrendingUp,
-  ArrowRight
+  ArrowRight,
+  LogOut
 } from 'lucide-react';
 import { api } from '../lib/api';
 
@@ -19,13 +20,15 @@ interface HeaderProps {
   showKeyModal: boolean;
   setShowKeyModal: (open: boolean) => void;
   onNavigate?: (view: 'dashboard' | 'merchants' | 'map' | 'broadcast' | 'archive' | 'support') => void;
+  onLogout?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ 
   onSearch, 
   showKeyModal, 
   setShowKeyModal,
-  onNavigate 
+  onNavigate,
+  onLogout 
 }) => {
   const [keyInput, setKeyInput] = useState(api.getKey());
   const [saved, setSaved] = useState(false);
@@ -106,6 +109,18 @@ export const Header: React.FC<HeaderProps> = ({
               className="w-full h-full object-cover"
             />
           </div>
+
+          {/* Logout Chiqish Tugmasi */}
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-full text-xs font-bold transition cursor-pointer border border-rose-200 shadow-2xs"
+              title="Tizimdan chiqish"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Chiqish</span>
+            </button>
+          )}
 
           {/* Bildirishnomalar Popover */}
           {showNotifications && (

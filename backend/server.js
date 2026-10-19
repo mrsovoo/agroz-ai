@@ -36,6 +36,7 @@ const allowedOrigins = [
   'https://biznesgo.uz',
   'https://www.biznesgo.uz',
   'https://super-adm.biznesgo.uz',
+  'https://sohibjon.biznesgo.uz',
   'https://biznesgo.vercel.app',
   'https://biznesgo-sovos-projects.vercel.app',
   'https://agroz.uz',

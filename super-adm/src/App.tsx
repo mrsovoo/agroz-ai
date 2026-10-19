@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { api } from './lib/api';
+import { LoginView } from './views/LoginView';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { DashboardView } from './views/DashboardView';
@@ -9,9 +11,19 @@ import { ArchiveView } from './views/ArchiveView';
 import { SupportView } from './views/SupportView';
 
 export function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => api.isAuthenticated());
   const [currentView, setCurrentView] = useState<'dashboard' | 'merchants' | 'map' | 'broadcast' | 'archive' | 'support'>('dashboard');
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const handleLogout = () => {
+    api.logout();
+    setIsAuthenticated(false);
+  };
+
+  if (!isAuthenticated) {
+    return <LoginView onLoginSuccess={() => setIsAuthenticated(true)} />;
+  }
 
   return (
     <div className="min-h-screen bg-black text-slate-900 font-sans p-0 sm:p-4 md:p-6 lg:p-8 flex items-center justify-center">
@@ -22,6 +34,7 @@ export function App() {
           currentView={currentView} 
           onSelectView={setCurrentView}
           onOpenKeyModal={() => setShowKeyModal(true)}
+          onLogout={handleLogout}
         />
 
         {/* Right Main Content Column */}
@@ -32,6 +45,7 @@ export function App() {
             showKeyModal={showKeyModal}
             setShowKeyModal={setShowKeyModal}
             onNavigate={setCurrentView}
+            onLogout={handleLogout}
           />
 
           {/* Main Scrollable View Area */}

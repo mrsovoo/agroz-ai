@@ -64,6 +64,38 @@ async function runSuperAdminTests() {
     }
     console.log("   ✅ Kalitsiz so'rov muvaffaqiyatli bloklandi (401 Unauthorized)");
 
+    // 1b. Super Admin Login & JWT Auth tekshiruvi
+    console.log("\n1b. Super Admin Login (/api/super-adm/login) va JWT Token tekshiruvi...");
+    const badLoginRes = await makeRequest(server, {
+      path: '/api/super-adm/login',
+      method: 'POST',
+    }, { username: 'sohibjon', password: 'not_the_real_password' });
+    if (badLoginRes.status !== 401) {
+      throw new Error(`Login xatosi: Noto'g'ri parol 401 bermadi: ${badLoginRes.status}`);
+    }
+    console.log("   ✅ Noto'g'ri login/parol muvaffaqiyatli bloklandi (401 Unauthorized)");
+
+    const goodLoginRes = await makeRequest(server, {
+      path: '/api/super-adm/login',
+      method: 'POST',
+    }, { username: 'sohibjon', password: config.adminPassword });
+    if (goodLoginRes.status !== 200 || !goodLoginRes.body.token) {
+      throw new Error(`Login xatosi: To'g'ri login JWT qaytarmadi: ${JSON.stringify(goodLoginRes.body)}`);
+    }
+    const adminJwtToken = goodLoginRes.body.token;
+    console.log("   ✅ Super Admin muvaffaqiyatli kirdi va JWT token oldi:", adminJwtToken.slice(0, 20) + "...");
+
+    // 1c. /me endpointi va Bearer token orqali himoyalangan API
+    const meRes = await makeRequest(server, {
+      path: '/api/super-adm/me',
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${adminJwtToken}` },
+    });
+    if (meRes.status !== 200 || !meRes.body.admin) {
+      throw new Error(`/me xatosi: ${JSON.stringify(meRes.body)}`);
+    }
+    console.log("   ✅ Bearer JWT orqali /me ma'lumotlari tasdiqlandi:", meRes.body.admin.role);
+
     // 2. Stats olish (Neon DB aggregatsiyalari)
     console.log("\n2. Platforma statistikasi (/api/super-adm/stats)...");
     const statsRes = await makeRequest(server, {

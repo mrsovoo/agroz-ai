@@ -8,15 +8,17 @@ import {
   MessageSquare, 
   Key, 
   RotateCcw,
+  LogOut,
 } from 'lucide-react';
 
 interface SidebarProps {
   currentView: 'dashboard' | 'merchants' | 'map' | 'broadcast' | 'archive' | 'support';
   onSelectView: (view: 'dashboard' | 'merchants' | 'map' | 'broadcast' | 'archive' | 'support') => void;
   onOpenKeyModal?: () => void;
+  onLogout?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ currentView, onSelectView, onOpenKeyModal }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ currentView, onSelectView, onOpenKeyModal, onLogout }) => {
   const navItems = [
     { id: 'dashboard' as const, label: 'Boshqaruv Paneli', icon: Home },
     { id: 'merchants' as const, label: "Do'konlar Ro‘yxati", icon: Store },
@@ -92,6 +94,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onSelectView, onO
         >
           <RotateCcw className="w-4 h-4 stroke-[2]" />
         </button>
+
+        {onLogout && (
+          <button
+            onClick={onLogout}
+            title="Tizimdan Chiqish (Logout)"
+            className="w-10 h-10 rounded-full flex items-center justify-center text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition cursor-pointer"
+          >
+            <LogOut className="w-4 h-4 stroke-[2]" />
+          </button>
+        )}
       </div>
     </aside>
   );

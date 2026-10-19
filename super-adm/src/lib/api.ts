@@ -2,9 +2,12 @@ import type { PlatformStats, Merchant, BroadcastPayload, BroadcastResult, Archiv
 
 const API_BASE = (import.meta.env.VITE_API_URL as string) || 'https://backend-production-96bd5.up.railway.app/api/super-adm';
 const ADMIN_KEY_STORAGE = 'super_adm_key';
+const ADMIN_TOKEN_STORAGE = 'super_adm_token';
+const ADMIN_USER_STORAGE = 'super_adm_user';
 
 class SuperAdminApi {
   private key: string = localStorage.getItem(ADMIN_KEY_STORAGE) || (import.meta.env.VITE_ADMIN_KEY as string) || 'AgrozAdmin_2026_Prod_9f3b8c';
+  private token: string | null = localStorage.getItem(ADMIN_TOKEN_STORAGE);
 
   setKey(key: string) {
     this.key = key.trim();
@@ -15,18 +18,81 @@ class SuperAdminApi {
     return this.key;
   }
 
+  setToken(token: string | null) {
+    this.token = token;
+    if (token) {
+      localStorage.setItem(ADMIN_TOKEN_STORAGE, token);
+    } else {
+      localStorage.removeItem(ADMIN_TOKEN_STORAGE);
+    }
+  }
+
+  getToken(): string | null {
+    return this.token;
+  }
+
+  isAuthenticated(): boolean {
+    return Boolean(this.token || this.key);
+  }
+
+  getAdmin(): { username?: string; role?: string } | null {
+    try {
+      const u = localStorage.getItem(ADMIN_USER_STORAGE);
+      return u ? JSON.parse(u) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  logout() {
+    this.token = null;
+    localStorage.removeItem(ADMIN_TOKEN_STORAGE);
+    localStorage.removeItem(ADMIN_USER_STORAGE);
+  }
+
+  async login(credentials: { username: string; password: string }): Promise<{ token: string; admin: any }> {
+    const url = `${API_BASE}/login`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Login yoki parol xato');
+    }
+
+    if (data.token) {
+      this.setToken(data.token);
+      if (data.admin) {
+        localStorage.setItem(ADMIN_USER_STORAGE, JSON.stringify(data.admin));
+      }
+    }
+
+    return data;
+  }
+
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${API_BASE}${endpoint}`;
     const headers = new Headers(options.headers || {});
     headers.set('Content-Type', 'application/json');
-    if (this.key) {
+
+    if (this.token) {
+      headers.set('Authorization', `Bearer ${this.token}`);
+    } else if (this.key) {
       headers.set('X-Admin-Key', this.key);
+      headers.set('Authorization', `Bearer ${this.key}`);
     }
 
     const response = await fetch(url, { ...options, headers });
     const data = await response.json();
 
     if (!response.ok) {
+      if (response.status === 401) {
+        // Token muddati o'tgan bo'lsa tozalaymiz
+        this.logout();
+      }
       throw new Error(data.error || `So'rov xatosi: HTTP ${response.status}`);
     }
 

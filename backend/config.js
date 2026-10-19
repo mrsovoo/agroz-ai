@@ -43,6 +43,7 @@ const config = {
   miniAppUrl: process.env.BIZNESGO_MINI_APP_URL || 'https://biznesgo.uz',
 
   // Admin autentifikatsiyasi (broadcast va boshqaruv uchun)
+  adminUsername: process.env.ADMIN_USERNAME || 'admin',
   adminPassword: process.env.ADMIN_PASSWORD || 'AgrozAdmin_2026_Prod_9f3b8c',
   adminKey: process.env.ADMIN_KEY || process.env.ADMIN_PASSWORD || 'AgrozAdmin_2026_Prod_9f3b8c',
 
