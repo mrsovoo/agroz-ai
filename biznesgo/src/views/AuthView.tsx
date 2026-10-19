@@ -179,10 +179,12 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
         const data = await res.json();
         if (data && data.display_name) {
           setAddress(data.display_name);
+          return;
         }
       }
+      setAddress(`Do‘kon koordinatalari: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
     } catch (e) {
-      // Tarmoq xatosi bo'lsa indamaymiz
+      setAddress(`Do‘kon koordinatalari: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
     } finally {
       setDetectingLocation(false);
     }
@@ -392,6 +394,10 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
     if (!phone.trim()) {
       addToast('Telefon raqamingizni kiriting', 'error');
       setOnboardStep(2);
+      return;
+    }
+    if (!lat || !lng || !address.trim()) {
+      addToast('Iltimos, avval "Lokatsiyani aniqlash" tugmasi orqali do‘kon joylashuvini tasdiqlang', 'error');
       return;
     }
 
@@ -799,7 +805,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                               Brauzerda lokatsiyaga ruxsat berilmadi
                             </div>
                             <p className="text-[11px] leading-relaxed text-amber-800">
-                              Brauzer qidiruv qatoridagi 🔒 (qulf/sozlamalar) belgisini bosib, <b>"Joylashuv" (Location)</b> ruxsatini yoqing yoki quyidagi maydonga manzilni qo‘lda yozing.
+                              Manzilni avtomatik aniqlash uchun brauzer qidiruv qatoridagi 🔒 (qulf/sozlamalar) belgisini bosib, <b>"Joylashuv" (Location)</b> ruxsatini yoqing.
                             </p>
                             <button
                               type="button"
@@ -819,24 +825,42 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                         )}
                       </div>
 
-                      {/* Yozma manzil maydoni */}
+                      {/* Do'kon manzili (Faqat lokatsiya orqali avtomatik yoziladi) */}
                       <div>
-                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                          Do‘kon manzili (Yozma) *
-                        </label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                            Do‘kon manzili (Avtomatik) *
+                          </label>
+                          {address ? (
+                            <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3" />
+                              Lokatsiyadan olindi
+                            </span>
+                          ) : (
+                            <span className="text-[11px] font-medium text-slate-400">
+                              Qo‘lda kiritilmaydi
+                            </span>
+                          )}
+                        </div>
                         <div className="relative rounded-xl shadow-xs">
                           <div className="absolute top-3 left-3 flex items-start pointer-events-none text-slate-400">
-                            <MapPin className="w-4 h-4" />
+                            <MapPin className={`w-4 h-4 ${address ? 'text-emerald-600' : 'text-slate-400'}`} />
                           </div>
                           <textarea
                             rows={2}
-                            required
+                            readOnly
                             value={address}
-                            onChange={(e) => setAddress(e.target.value)}
-                            placeholder="Viloyat, tuman, bozor nomi yoki aniq ko‘cha/mo‘ljal..."
-                            className="block w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-900 bg-white"
+                            placeholder="Yuqoridagi 'Lokatsiyani aniqlash' tugmasini bosing, do‘koningiz manzili bu yerga avtomatik yoziladi..."
+                            className={`block w-full pl-9 pr-3 py-2.5 border rounded-xl text-sm font-medium transition-colors select-none ${
+                              address
+                                ? 'bg-emerald-50/40 border-emerald-300 text-slate-900'
+                                : 'bg-slate-100/80 border-slate-200 text-slate-500 cursor-not-allowed'
+                            }`}
                           />
                         </div>
+                        <p className="text-[11px] text-slate-500 mt-1">
+                          Do‘kon manzili faqat GPS/Geolokatsiya orqali avtomatik belgilanadi (tashqaridan o‘zboshimchalik bilan yozilmaydi).
+                        </p>
                       </div>
 
                       {/* Web Parol (ixtiyoriy yoki kelajakda web orqali kirish uchun) */}
