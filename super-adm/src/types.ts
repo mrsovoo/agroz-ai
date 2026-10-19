@@ -80,6 +80,7 @@ export interface PlatformStats {
     amount: number;
     sales_count: number;
   }>;
+  recent_sales?: RecentSaleItem[];
 }
 
 export interface BroadcastPayload {
@@ -136,4 +137,67 @@ export interface SupportChatMessage {
   reply_to_id?: number | null;
   created_at: string;
 }
+
+export interface RecentSaleItem {
+  id: number;
+  amount: number;
+  payment_type: string;
+  created_at: string;
+  merchant_id: number;
+  store_name: string;
+  business_type: BusinessType;
+}
+
+export interface RegionMerchant {
+  id: number;
+  store_name: string;
+  phone: string;
+  owner_name: string | null;
+  business_type: BusinessType;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+  is_active: boolean;
+  total_sales: number;
+  products_count: number;
+}
+
+export interface RegionData {
+  id: string;
+  name: string;
+  code: string;
+  lat: number;
+  lng: number;
+  merchants_count: number;
+  active_count: number;
+  total_sales: number;
+  total_products: number;
+  by_business_type: Record<BusinessType, number>;
+  merchants: RegionMerchant[];
+}
+
+export interface RegionsSummary {
+  total_merchants: number;
+  total_regions: number;
+  covered_regions: number;
+  top_region: { id: string; name: string; count: number } | null;
+  geocoded_pins_count: number;
+}
+
+export interface RegionsResponse {
+  ok: boolean;
+  summary: RegionsSummary;
+  regions: RegionData[];
+  general_merchants: RegionData;
+  pins: Array<{
+    id: number;
+    name: string;
+    phone: string;
+    business_type: BusinessType;
+    lat: number;
+    lng: number;
+    region_name: string;
+  }>;
+}
+
 

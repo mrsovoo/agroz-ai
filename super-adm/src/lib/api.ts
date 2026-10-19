@@ -1,4 +1,4 @@
-import type { PlatformStats, Merchant, BroadcastPayload, BroadcastResult, ArchiveItem, ArchiveStats, SupportConversation, SupportChatMessage } from '../types';
+import type { PlatformStats, Merchant, BroadcastPayload, BroadcastResult, ArchiveItem, ArchiveStats, SupportConversation, SupportChatMessage, RegionsResponse } from '../types';
 
 const API_BASE = (import.meta.env.VITE_API_URL as string) || 'https://backend-production-96bd5.up.railway.app/api/super-adm';
 const ADMIN_KEY_STORAGE = 'super_adm_key';
@@ -136,6 +136,10 @@ class SuperAdminApi {
       method: 'POST',
       body: JSON.stringify(payload),
     });
+  }
+
+  async getRegions(): Promise<RegionsResponse> {
+    return this.request<RegionsResponse>('/regions');
   }
 }
 

@@ -91,6 +91,22 @@ router.get(
       ORDER BY d.day ASC
     `);
 
+    // 7. So'nggi savdolar (Transactions jadvali uchun)
+    const recentSalesRes = await query(`
+      SELECT 
+        s.id,
+        s.total_amount AS amount,
+        s.payment_type,
+        s.created_at,
+        m.id AS merchant_id,
+        m.store_name,
+        m.business_type
+      FROM sales s
+      JOIN merchants m ON m.id = s.merchant_id
+      ORDER BY s.created_at DESC
+      LIMIT 15
+    `);
+
     res.json({
       ok: true,
       stats: {
@@ -100,6 +116,7 @@ router.get(
         products: productStats,
         by_business_type: byTypeRes.rows,
         daily_trend: trendRes.rows,
+        recent_sales: recentSalesRes.rows,
       },
     });
   })

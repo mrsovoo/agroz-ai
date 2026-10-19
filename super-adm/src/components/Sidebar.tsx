@@ -2,6 +2,7 @@ import React from 'react';
 import { 
   Home, 
   Store, 
+  MapPin,
   Send, 
   Archive, 
   MessageSquare, 
@@ -10,8 +11,8 @@ import {
 } from 'lucide-react';
 
 interface SidebarProps {
-  currentView: 'dashboard' | 'merchants' | 'broadcast' | 'archive' | 'support';
-  onSelectView: (view: 'dashboard' | 'merchants' | 'broadcast' | 'archive' | 'support') => void;
+  currentView: 'dashboard' | 'merchants' | 'map' | 'broadcast' | 'archive' | 'support';
+  onSelectView: (view: 'dashboard' | 'merchants' | 'map' | 'broadcast' | 'archive' | 'support') => void;
   onOpenKeyModal?: () => void;
 }
 
@@ -19,6 +20,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onSelectView, onO
   const navItems = [
     { id: 'dashboard' as const, label: 'Boshqaruv Paneli', icon: Home },
     { id: 'merchants' as const, label: "Do'konlar Ro‘yxati", icon: Store },
+    { id: 'map' as const, label: 'Viloyatlar Xaritasi', icon: MapPin },
     { id: 'support' as const, label: 'Murojaatlar & Chat', icon: MessageSquare },
     { id: 'broadcast' as const, label: 'Push Xabarnoma', icon: Send },
     { id: 'archive' as const, label: 'Arxiv & Baza', icon: Archive },

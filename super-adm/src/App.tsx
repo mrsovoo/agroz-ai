@@ -3,12 +3,13 @@ import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { DashboardView } from './views/DashboardView';
 import { MerchantsView } from './views/MerchantsView';
+import { MapView } from './views/MapView';
 import { BroadcastView } from './views/BroadcastView';
 import { ArchiveView } from './views/ArchiveView';
 import { SupportView } from './views/SupportView';
 
 export function App() {
-  const [currentView, setCurrentView] = useState<'dashboard' | 'merchants' | 'broadcast' | 'archive' | 'support'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'merchants' | 'map' | 'broadcast' | 'archive' | 'support'>('dashboard');
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -36,6 +37,7 @@ export function App() {
           <main className="flex-1 overflow-y-auto px-6 sm:px-10 pb-8">
             {currentView === 'dashboard' && <DashboardView />}
             {currentView === 'merchants' && <MerchantsView />}
+            {currentView === 'map' && <MapView />}
             {currentView === 'support' && <SupportView />}
             {currentView === 'broadcast' && <BroadcastView />}
             {currentView === 'archive' && <ArchiveView />}

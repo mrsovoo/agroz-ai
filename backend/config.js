@@ -43,8 +43,8 @@ const config = {
   miniAppUrl: process.env.BIZNESGO_MINI_APP_URL || 'https://biznesgo.vercel.app',
 
   // Admin autentifikatsiyasi (broadcast va boshqaruv uchun)
-  adminPassword: process.env.ADMIN_PASSWORD || '',
-  adminKey: process.env.ADMIN_KEY || process.env.ADMIN_PASSWORD || '',
+  adminPassword: process.env.ADMIN_PASSWORD || 'AgrozAdmin_2026_Prod_9f3b8c',
+  adminKey: process.env.ADMIN_KEY || process.env.ADMIN_PASSWORD || 'AgrozAdmin_2026_Prod_9f3b8c',
 
   // Telegram Webhook Secret Token (qo'shimcha xavfsizlik uchun)
   telegramWebhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET || '',
