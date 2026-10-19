@@ -51,9 +51,9 @@ export const SECTORS: Sector[] = [
     title: 'Agro-Vet',
     subtitle: 'Vet-dorixonalar',
     description:
-      "Chorva va parrandalar uchun dori-darmonlar, vitaminlar va vaksinalar — saqlash sharoiti va yaroqlilik muddati kafolati bilan.",
+      "Chorva va parrandalar uchun dori-darmonlar, vitaminlar va vaksinalar — saqlash sharoiti, partiya № va yaroqlilik muddati kafolati bilan.",
     guarantee: 'Yaroqlilik muddati nazorati',
-    tags: ['Vaksinalar', 'Vitaminlar', 'Antibiotiklar', 'Dezinfeksiya'],
+    tags: ['Antibiotiklar', 'Vaksinalar', 'Insektitsidlar', 'Mineral o‘g‘itlar'],
     metric: { value: '100%', label: 'Muddati tekshirilgan' },
   },
   {
@@ -63,9 +63,9 @@ export const SECTORS: Sector[] = [
     title: 'Yem va Ozuqa',
     subtitle: 'Feed',
     description:
-      "Omuxta yem, kepak, arpa va premikslar — butun qop yoki kerakli kilogramm miqdorida bo'lib sotib olish imkoniyati.",
+      "Omuxta yem, kepak, arpa va premikslar — butun 50 kg qop yoki kerakli kilogramm miqdorida bo'lib sotib olish imkoniyati.",
     guarantee: 'Qop yoki kg-lab xarid',
-    tags: ['Omuxta yem', 'Kepak', 'Premiks', 'Arpa'],
+    tags: ['Parranda yemi', 'Qoramol omuxta yemi', 'Bug‘doy kepagi', 'Paxta kunjara'],
     metric: { value: '1 kg', label: 'dan boshlab' },
   },
   {
@@ -77,7 +77,7 @@ export const SECTORS: Sector[] = [
     description:
       "Diler va ulgurji omborlar bilan to'g'ridan-to'g'ri aloqa. Chakana va ulgurji narxlar oldindan ochiq ko'rsatiladi.",
     guarantee: 'Shaffof ikki bosqichli narx',
-    tags: ['Ulgurji narx', 'Chakana narx', 'Diler', 'Yetkazib berish'],
+    tags: ['Tomchilatib sug‘orish', 'Issiqxona plyonkasi', 'Soyabon to‘rlar', 'Qadoqlash qoplari'],
     metric: { value: '2x', label: 'narx shaffofligi' },
   },
   {
@@ -89,8 +89,8 @@ export const SECTORS: Sector[] = [
     description:
       "Sertifikatlangan navlar, unuvchanlik foizi va hosil yili ko'rsatilgan urug'lar hamda sog'lom ko'chatlar.",
     guarantee: 'Unuvchanlik % kafolati',
-    tags: ["Sabzavot urug'i", "G'alla", "Mevali ko'chat", 'Issiqxona'],
-    metric: { value: '95%+', label: 'unuvchanlik' },
+    tags: ['Pomidor F1 gibrid', 'Bodring F1 gibrid', 'Elita g‘alla urug‘i', 'Meva ko‘chatlari'],
+    metric: { value: '98%', label: 'unuvchanlik kafolati' },
   },
   {
     id: 'machinery',
@@ -99,10 +99,10 @@ export const SECTORS: Sector[] = [
     title: 'Texnika va Jihozlar',
     subtitle: 'Machinery',
     description:
-      "Agro-texnika, nasoslar, tomchilatib sug'orish tizimlari va ehtiyot qismlar — seriya raqami va rasmiy kafolat bilan.",
+      "Agro-texnika, nasoslar, motorli purkagichlar va ehtiyot qismlar — zavod seriya raqami va rasmiy kafolat bilan.",
     guarantee: 'S/N va kafolat nazorati',
-    tags: ['Traktor qismlari', 'Nasoslar', "Sug'orish", 'Asboblar'],
-    metric: { value: '12+ oy', label: 'kafolat' },
+    tags: ['Motorli purkagichlar', 'Suv nasoslari', 'Motobloklar', 'Ehtiyot qismlar'],
+    metric: { value: '12+ oy', label: 'rasmiy kafolat' },
   },
 ];
 
@@ -192,13 +192,23 @@ export const FEATURES = [
   },
 ];
 
-export const SEARCH_SUGGESTIONS = ['Omuxta yem', 'Ivermektin', "Pomidor urug'i", 'Nasos', 'Kepak'];
+export const SEARCH_SUGGESTIONS = [
+  'Arpa omuxta yem',
+  'Enrofloksatsin 10%',
+  'Pomidor F1 Red Bull',
+  'Karbamid N46%',
+  'Motorli purkagich 25L',
+  'Tomchilatib sug‘orish',
+  'Bug‘doy kepagi',
+];
 
-export const DEMO_RESULTS: Record<string, { store: string; distance: string; price: string; sector: SectorId }[]> = {
+export const DEMO_RESULTS: Record<string, { store: string; distance: string; price: string; sector: SectorId; address: string }[]> = {
   default: [
-    { store: 'Vet-Farm Plus', distance: '1.2 km', price: '45 000 so‘m', sector: 'agro_vet' },
-    { store: 'Barakali Yem', distance: '2.8 km', price: '210 000 so‘m / qop', sector: 'feed' },
-    { store: 'Hosil Urug‘lari', distance: '4.1 km', price: '18 000 so‘m', sector: 'seeds' },
+    { store: 'Vet-Farm Plus', distance: '1.2 km', price: '45 000 so‘m / dona', sector: 'agro_vet', address: 'Toshkent, Chilonzor' },
+    { store: 'Chinoz Baraka Yem', distance: '2.4 km', price: '220 000 so‘m / qop (4 400 s/kg)', sector: 'feed', address: 'Chinoz tumani' },
+    { store: 'Dehqon Bobo Urug‘lari', distance: '3.8 km', price: '85 000 so‘m / pachka', sector: 'seeds', address: 'Samarqand, Jomboy' },
+    { store: 'Optom Agro Baza', distance: '4.5 km', price: '20 000 so‘m (Ulgurji)', sector: 'warehouse', address: 'Farg‘ona, Qo‘qon' },
+    { store: 'AgroTexnika Savdo', distance: '5.1 km', price: '1 800 000 so‘m (12 oy kafolat)', sector: 'machinery', address: 'Toshkent, Sergeli' },
   ],
 };
 
@@ -209,110 +219,150 @@ export const CONTACT_INFO = {
   address: 'Toshkent, O‘zbekiston',
 };
 
-/** Referens dizayndagi "Elevates drone agricultural operations new heights" bloklari */
+/** BiznesGO va AgrozGO ekotizimining 3 ta tayanch texnologik ustuni */
 export const OPERATION_PILLARS = [
   {
-    id: 'payload',
-    title: 'Yuqori Hosildorlik',
-    en: 'Heavy Payload',
-    tag: '50 kg yuklama',
-    desc: '40–50 kg bak sig‘imi bilan bir parvozda 21 gektargacha maydonga dori purkash.',
-    image: '/images/drone-spraying.jpg',
+    id: 'sync',
+    title: '1:1 Live Kassa Sinxronizatsiyasi',
+    en: 'Real-Time Inventory Sync',
+    tag: '0 soniya kechikish',
+    desc: 'BiznesGO POS kassa orqali do‘konda sotilgan har bir dori, urug‘ yoki yem AgrozGO qoldig‘idan avtomatik kamayadi. Fermer faqat do‘konda bor tovargagina buyurtma beradi.',
+    image: '/images/smart-controller.jpg',
   },
   {
-    id: 'spreading',
-    title: 'Tekis Don Sochish',
-    en: 'Smooth Spreading',
-    tag: 'Santimetr aniqlik',
-    desc: 'Omuxta yem, don va mineral o‘g‘itlarni butun maydon bo‘ylab teng taqsimlash.',
+    id: 'feed-calc',
+    title: 'Qoplab yoki Kg-lab Bo‘lib Sotish',
+    en: 'Feed & Bulk Calculator',
+    tag: '1 kg dan boshlab',
+    desc: 'Yem va ozuqa do‘konlarida 50 kg qopdagi yemni mijoz xohishiga ko‘ra 5–10 kg qilib bo‘lib sotish kalkulyatori. Tizim qoldiqni avtomatik to‘g‘ri hisoblab boradi.',
+    image: '/images/livestock.jpg',
+  },
+  {
+    id: 'wholesale',
+    title: 'Shaffof Ikki Bosqichli Narx',
+    en: 'Dual Retail & Wholesale',
+    tag: 'Ulgurji chegirma',
+    desc: 'Omborlar uchun chakana va minimal ulgurji partiyalar (masalan, 10 qopdan boshlab) narxi oldindan ochiq ko‘rsatiladi. Dilerlik va qarz daftari to‘liq avtomatlashtirilgan.',
     image: '/images/aerial-fields.jpg',
-  },
-  {
-    id: 'sprinkler',
-    title: 'To‘rtlamchi Purkagich',
-    en: 'Four Sprinkler Kit',
-    tag: 'Dispers tuman',
-    desc: 'Santrifugal atomizatorlar orqali dori sarfini 30% tejab, chuqur barg qatlamigacha yetkazish.',
-    image: '/images/agro-drone.jpg',
   },
 ];
 
-/** Referens dizayndagi "Explore Our Products" mahsulotlar ro'yxati */
+/** BiznesGO dagi real B2B do'konlardan olingan mahsulotlar */
 export const PRODUCTS = [
   {
-    id: 'dji-t50',
-    name: 'DJI Agras T50 Smart Dron',
-    category: 'Agro-Texnika',
-    oldPrice: '$2,100',
-    price: '$1,880',
-    image: '/images/agro-drone.jpg',
-    badge: 'Yangi Model',
+    id: 'enrofloksatsin',
+    name: 'Enrofloksatsin 10% (Antibiotik)',
+    category: 'Agro-Vet',
+    store: 'Vet-Farm Plus',
+    location: 'Toshkent, Chilonzor',
+    oldPrice: '52 000 so‘m',
+    price: '45 000 so‘m',
+    unit: 'dona',
+    image: '/images/seedlings.jpg',
+    badge: 'Yaroqlilik kafolati',
     rating: '4.9',
-    stock: 'Omborda mavjud',
+    stock: '28 dona qoldi',
   },
   {
-    id: 'controller-pro',
-    name: 'Agro Remote Controller Pro',
-    category: 'Monitoring & Boshqaruv',
-    oldPrice: '$1,200',
-    price: '$980',
-    image: '/images/smart-controller.jpg',
-    badge: 'Smart Ekran',
-    rating: '5.0',
-    stock: '12 dona qoldi',
-  },
-  {
-    id: 'premium-feed',
-    name: 'Yuqori Proteinli Granula Yem',
+    id: 'arpa-yem',
+    name: 'Arpa omuxta yemi №1 (50 kg qop)',
     category: 'Yem va Ozuqa',
-    oldPrice: '7,500 so‘m',
-    price: '6,200 so‘m / kg',
+    store: 'Chinoz Baraka Yem',
+    location: 'Toshkent vil., Chinoz',
+    oldPrice: '240 000 so‘m',
+    price: '220 000 so‘m',
+    unit: 'qop',
     image: '/images/livestock.jpg',
-    badge: 'Ulgurji Narx',
-    rating: '4.8',
-    stock: '5 tonna mavjud',
+    badge: '1 kg = 4 400 so‘m',
+    rating: '5.0',
+    stock: '45 qop mavjud',
   },
   {
-    id: 'wheat-seeds',
-    name: 'Elita Navli Bug‘doy Urug‘i',
+    id: 'pomidor-redbull',
+    name: 'Pomidor F1 Red Bull (Gollandiya)',
     category: "Urug'chilik",
-    oldPrice: '15,000 so‘m',
-    price: '12,000 so‘m / kg',
+    store: 'Dehqon Bobo Urug‘lari',
+    location: 'Samarqand, Jomboy',
+    oldPrice: '95 000 so‘m',
+    price: '85 000 so‘m',
+    unit: 'pachka',
     image: '/images/seedlings.jpg',
     badge: '98% Unuvchanlik',
     rating: '4.9',
     stock: 'Sertifikatlangan',
   },
-];
-
-/** Referens dizayndagi "News & Articles" agro maqolalar */
-export const ARTICLES = [
   {
-    id: 'drones-efficiency',
-    title: 'Agro-dronlar bilan purkash: Yoqilg‘i va dori xarajatini 3 barobarga kamaytirish sirlari',
-    category: 'Agro-Texnologiya',
-    date: '18 Oktyabr, 2026',
-    readTime: '4 daqiqa',
-    image: '/images/drone-spraying.jpg',
-    author: 'Aziz Rahimov',
+    id: 'karbamid-n46',
+    name: 'Karbamid N46% mineral o‘g‘it',
+    category: 'Ulgurji Ombor',
+    store: 'Optom Agro Baza',
+    location: 'Farg‘ona, Qo‘qon',
+    oldPrice: '25 000 so‘m',
+    price: '20 000 so‘m',
+    unit: 'qop',
+    image: '/images/aerial-fields.jpg',
+    badge: 'Ulgurji (min 10 qop)',
+    rating: '4.8',
+    stock: '120 qop mavjud',
   },
   {
-    id: 'autumn-crop-care',
-    title: 'Kuzgi ekinlarni qishlashga tayyorlash: Ozuqa va mineral moddalar balansi',
-    category: 'Agronom Maslahati',
+    id: 'purkagich-25l',
+    name: 'Benzinli motorli purkagich 25L (MS-073D)',
+    category: 'Texnika va Jihozlar',
+    store: 'AgroTexnika Savdo',
+    location: 'Toshkent, Sergeli',
+    oldPrice: '2 050 000 so‘m',
+    price: '1 800 000 so‘m',
+    unit: 'dona',
+    image: '/images/agro-drone.jpg',
+    badge: '12 oy kafolat (S/N)',
+    rating: '4.9',
+    stock: '8 dona qoldi',
+  },
+  {
+    id: 'drip-irrigation',
+    name: 'Tomchilatib sug‘orish lentasi (1000m)',
+    category: 'Ulgurji Ombor',
+    store: 'Optom Agro Baza',
+    location: 'Toshkent, Bektemir',
+    oldPrice: '480 000 so‘m',
+    price: '420 000 so‘m',
+    unit: 'o‘ram',
+    image: '/images/tractor.jpg',
+    badge: '16 mm / 20 sm oraliq',
+    rating: '4.9',
+    stock: '35 o‘ram mavjud',
+  },
+];
+
+/** O'zbekistonlik fermerlar uchun foydali agro-maslahatlar */
+export const ARTICLES = [
+  {
+    id: 'autumn-feeding',
+    title: 'Chorvachilikda qishki yem zaxirasini to‘g‘ri tuzish: Omuxta yem va kepak mutanosibligi',
+    category: 'Yem va Ozuqa',
+    date: '18 Oktyabr, 2026',
+    readTime: '4 daqiqa',
+    image: '/images/livestock.jpg',
+    author: 'Aziz Rahimov (Zootexnik)',
+  },
+  {
+    id: 'greenhouse-hybrid-seeds',
+    title: 'Issiqxonalarda F1 gibrid urug‘lar unuvchanligini 98% ga yetkazish va parvarish sirlari',
+    category: 'Urug‘chilik',
     date: '15 Oktyabr, 2026',
     readTime: '6 daqiqa',
     image: '/images/farmer.jpg',
-    author: 'Dilshod Karimov',
+    author: 'Dilshod Karimov (Agronom)',
   },
   {
-    id: 'biznesgo-agrozgo-sync',
-    title: 'BiznesGO kassa tizimi va AgrozGO: Do‘konlar savdosini 40% oshirish amaliyoti',
-    category: 'B2B & B2C Ekotizim',
+    id: 'agro-vet-safety',
+    title: 'Veterinariya preparatlarida partiya va yaroqlilik muddati nazorati nega muhim?',
+    category: 'Agro-Vet',
     date: '12 Oktyabr, 2026',
     readTime: '5 daqiqa',
-    image: '/images/tractor.jpg',
-    author: 'AgrozGO Tahlilchilari',
+    image: '/images/seedlings.jpg',
+    author: 'Dr. Alisher Valiyev (Vet-vrach)',
   },
 ];
 

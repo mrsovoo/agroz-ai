@@ -45,8 +45,8 @@ export const Technology: React.FC = () => {
                 Imkoniyatlar tahlili
               </span>
               <p className="mt-4 text-sm leading-relaxed text-charcoal/75">
-                DJI va zamonaviy purkash tizimlari yordamida bir parvozda 21 gektargacha dorilash,
-                yoqilg‘ini 4 barobarga tejash va ekin zararlanishini nolga tushirish imkoniyati.
+                BiznesGO (B2B) kassa-ombor tizimi va AgrozGO (B2C) fermerlar bozori sinxronizatsiyasi orqali
+                ombor qoldiqlari, qoplab/kg-lab bo‘lib sotish va ulgurji narxlar 100% real vaqtda yangilanadi.
               </p>
               <div className="mt-6 rounded-2xl bg-white p-4 border border-charcoal/5">
                 <p className="text-xs font-bold text-charcoal">{OPERATION_PILLARS[activeIdx].title}</p>
@@ -119,3 +119,4 @@ export const Technology: React.FC = () => {
     </section>
   );
 };
+

@@ -74,3 +74,4 @@ export const Articles: React.FC = () => {
     </section>
   );
 };
+

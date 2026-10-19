@@ -151,17 +151,17 @@ export const Hero: React.FC = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-agroGreen-800 bg-agroGreen/15 px-2.5 py-0.5 rounded-full">
-                    Agro-Dronlar
+                    Agro-Vet & Dorixonalar
                   </span>
-                  <h3 className="mt-2 text-xl font-black text-charcoal">DJI Agras T50</h3>
+                  <h3 className="mt-2 text-xl font-black text-charcoal">Enrofloksatsin & Dorilar</h3>
                   <p className="mt-1 text-xs text-charcoal/70 leading-relaxed">
-                    Avtomatlashtirilgan dorilash va ekin maydonlari o‘sish monitoringi.
+                    Vaksinalar, antibiotiklar va premikslar — partiya raqami va yaroqlilik muddati nazorati bilan.
                   </p>
                   <a
-                    href="#technology"
+                    href="#products"
                     className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-charcoal/20 bg-white px-4 py-2 text-xs font-bold text-charcoal hover:bg-forest-dark hover:text-white transition"
                   >
-                    Batafsil ko‘rish
+                    Mahsulotlarni ko‘rish
                   </a>
                 </div>
                 {/* Tepada ulagich yashil dumaloq belgi */}
@@ -174,11 +174,11 @@ export const Hero: React.FC = () => {
               <div className="group relative flex flex-col sm:flex-row items-center gap-5 rounded-[28px] bg-[#F7F5EE] p-5 sm:p-6 text-charcoal shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
                 <div className="flex-1 min-w-0 order-2 sm:order-1">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-agroGreen-800 bg-agroGreen/15 px-2.5 py-0.5 rounded-full">
-                    Aqlli Kassa & POS
+                    BiznesGO (B2B) Do‘konlar
                   </span>
-                  <h3 className="mt-2 text-xl font-black text-charcoal">BiznesGO Sinxron</h3>
+                  <h3 className="mt-2 text-xl font-black text-charcoal">Smart POS & Kassa</h3>
                   <p className="mt-1 text-xs text-charcoal/70 leading-relaxed">
-                    Do‘kon kassasi va ombor qoldiqlari AgrozGO marketplace bilan real vaqtda bog‘langan.
+                    Do‘kon kassasi, ombor qoldiqlari va CRM qarz daftari AgrozGO marketplace bilan real vaqtda bog‘langan.
                   </p>
                   <a
                     href={BIZNESGO_URL}

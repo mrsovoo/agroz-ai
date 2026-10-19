@@ -1,11 +1,18 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, ArrowUpRight, Star } from 'lucide-react';
+import { ArrowUpRight, Star, Store, MapPin } from 'lucide-react';
 import { AgroImage } from './ui';
 import { PRODUCTS } from '../data/content';
 
 export const Products: React.FC = () => {
   const [filter, setFilter] = useState('Barchasi');
-  const categories = ['Barchasi', 'Agro-Texnika', 'Yem va Ozuqa', "Urug'chilik"];
+  const categories = [
+    'Barchasi',
+    'Agro-Vet',
+    'Yem va Ozuqa',
+    "Urug'chilik",
+    'Ulgurji Ombor',
+    'Texnika va Jihozlar',
+  ];
 
   const filtered =
     filter === 'Barchasi' ? PRODUCTS : PRODUCTS.filter((p) => p.category === filter);
@@ -43,8 +50,8 @@ export const Products: React.FC = () => {
           </div>
         </div>
 
-        {/* 4 ta Mahsulot Kartasi (Referens 1:1) */}
-        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Mahsulot Kartalari */}
+        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((p) => (
             <article
               key={p.id}
@@ -69,15 +76,29 @@ export const Products: React.FC = () => {
               <div className="mt-4 flex flex-1 flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between text-xs text-charcoal/50">
-                    <span>{p.category}</span>
+                    <span className="font-semibold text-agroGreen-900">{p.category}</span>
                     <span className="flex items-center gap-1 font-bold text-charcoal">
                       <Star className="h-3.5 w-3.5 fill-amber text-amber" /> {p.rating}
                     </span>
                   </div>
-                  <h3 className="mt-1.5 text-base font-black text-charcoal leading-snug group-hover:text-agroGreen-900 transition">
+
+                  <h3 className="mt-1.5 text-base font-black text-charcoal leading-snug group-hover:text-agroGreen-900 transition line-clamp-2">
                     {p.name}
                   </h3>
-                  <p className="mt-1 text-[11px] font-medium text-agroGreen-800 flex items-center gap-1">
+
+                  {/* Do'kon va manzil */}
+                  <div className="mt-2.5 flex items-center justify-between text-[11px] text-charcoal/70 bg-cream/40 rounded-xl px-2.5 py-1.5">
+                    <span className="flex items-center gap-1.5 font-bold truncate">
+                      <Store className="h-3 w-3 text-agroGreen-800 shrink-0" />
+                      <span className="truncate">{p.store}</span>
+                    </span>
+                    <span className="flex items-center gap-1 text-[10px] text-charcoal/50 shrink-0">
+                      <MapPin className="h-2.5 w-2.5 text-forest/40" />
+                      <span>{p.location}</span>
+                    </span>
+                  </div>
+
+                  <p className="mt-2 text-[11px] font-medium text-agroGreen-800 flex items-center gap-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-agroGreen" />
                     {p.stock}
                   </p>
@@ -86,7 +107,10 @@ export const Products: React.FC = () => {
                 <div className="mt-4 flex items-center justify-between border-t border-charcoal/5 pt-3">
                   <div>
                     <span className="text-[11px] text-charcoal/40 line-through mr-1.5">{p.oldPrice}</span>
-                    <span className="text-base font-black text-forest-dark">{p.price}</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-base font-black text-forest-dark">{p.price}</span>
+                      {p.unit && <span className="text-[11px] font-bold text-charcoal/50">/ {p.unit}</span>}
+                    </div>
                   </div>
                   <a
                     href="#contact"
@@ -103,3 +127,4 @@ export const Products: React.FC = () => {
     </section>
   );
 };
+
