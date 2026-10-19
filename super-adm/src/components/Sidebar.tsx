@@ -1,15 +1,16 @@
 import React from 'react';
-import { LayoutDashboard, Store, Send, ShieldAlert, Key, Archive } from 'lucide-react';
+import { LayoutDashboard, Store, Send, ShieldAlert, Key, Archive, MessageSquare } from 'lucide-react';
 
 interface SidebarProps {
-  currentView: 'dashboard' | 'merchants' | 'broadcast' | 'archive';
-  onSelectView: (view: 'dashboard' | 'merchants' | 'broadcast' | 'archive') => void;
+  currentView: 'dashboard' | 'merchants' | 'broadcast' | 'archive' | 'support';
+  onSelectView: (view: 'dashboard' | 'merchants' | 'broadcast' | 'archive' | 'support') => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentView, onSelectView }) => {
   const menuItems = [
     { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'merchants' as const, label: "Do'konlar (Merchants)", icon: Store },
+    { id: 'support' as const, label: '💬 Murojaatlar (Chat)', icon: MessageSquare },
     { id: 'broadcast' as const, label: 'Push Xabarnoma', icon: Send },
     { id: 'archive' as const, label: '📦 Arxiv', icon: Archive },
   ];

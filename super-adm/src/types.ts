@@ -103,3 +103,37 @@ export interface BroadcastResult {
   }>;
 }
 
+export interface SupportConversation {
+  thread_id: string;
+  merchant_id: number | null;
+  telegram_id: number | null;
+  sender_type: 'merchant' | 'admin' | 'bot_user';
+  sender_name: string;
+  sender_phone: string;
+  business_type: string;
+  last_message: string;
+  last_message_at: string;
+  source: 'web' | 'telegram_bot';
+  unread_count: number;
+  total_messages: number;
+  store_name?: string | null;
+  owner_name?: string | null;
+  current_phone?: string | null;
+  resolved_business_type?: string | null;
+}
+
+export interface SupportChatMessage {
+  id: number;
+  merchant_id: number | null;
+  telegram_id: number | null;
+  sender_type: 'merchant' | 'admin' | 'bot_user';
+  sender_name: string;
+  sender_phone?: string;
+  business_type?: string;
+  message: string;
+  source: 'web' | 'telegram_bot';
+  is_read: boolean;
+  reply_to_id?: number | null;
+  created_at: string;
+}
+

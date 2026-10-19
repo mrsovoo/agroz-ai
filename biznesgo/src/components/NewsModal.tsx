@@ -59,3 +59,4 @@ export const NewsModal: React.FC<NewsModalProps> = ({ isOpen, onClose }) => {
     </Modal>
   );
 };
+

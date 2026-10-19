@@ -54,8 +54,8 @@ export const SECTOR_SUPPORT_CONTACTS: Record<BusinessType, SectorSupportContact>
     sector_title: 'Agro-Vet dorixona va himoya preparatlari',
     specialist_name: 'Dr. Jamshid Olimov',
     specialist_role: 'Agro-kimyo va Fitosanitariya bosh mutaxassisi',
-    phone: '+998 71 200 45 61',
-    telegram_username: 'biznesgo_support',
+    phone: '+998 90 838 37 72',
+    telegram_username: 'bydsgn',
     working_hours: 'Dush - Shan, 08:00 - 20:00 (24/7 navbatchi)',
     topics: [
       'Dori-darmonlar sertifikatlari va standartlari',
@@ -69,8 +69,8 @@ export const SECTOR_SUPPORT_CONTACTS: Record<BusinessType, SectorSupportContact>
     sector_title: 'Yem va Ozuqa mahsulotlari savdosi',
     specialist_name: 'Muzaffar Yoqubov',
     specialist_role: 'Chorvachilik va Parrandachilik ozuqa texnologi',
-    phone: '+998 71 200 45 62',
-    telegram_username: 'biznesgo_support',
+    phone: '+998 90 838 37 72',
+    telegram_username: 'bydsgn',
     working_hours: 'Har kuni 08:00 - 20:00',
     topics: [
       'Ozuqa ratsionlari va aralashmalar tarkibi',
@@ -84,8 +84,8 @@ export const SECTOR_SUPPORT_CONTACTS: Record<BusinessType, SectorSupportContact>
     sector_title: 'Ulgurji ombor va B2B distribyutsiya',
     specialist_name: 'Akmal Rustamov',
     specialist_role: 'B2B Distribyutsiya va Logistika koordinatori',
-    phone: '+998 71 200 45 63',
-    telegram_username: 'biznesgo_support',
+    phone: '+998 90 838 37 72',
+    telegram_username: 'bydsgn',
     working_hours: '24/7 Doimiy aloqada',
     topics: [
       'B2B do‘konlar uchun kredit limitlarini sozlash',
@@ -99,8 +99,8 @@ export const SECTOR_SUPPORT_CONTACTS: Record<BusinessType, SectorSupportContact>
     sector_title: 'Urug‘chilik va Ko‘chat xo‘jaligi',
     specialist_name: 'Olimjon Qodirov',
     specialist_role: 'Urug‘chilik va Seleksiya bo‘yicha bosh agronom',
-    phone: '+998 71 200 45 64',
-    telegram_username: 'biznesgo_support',
+    phone: '+998 90 838 37 72',
+    telegram_username: 'bydsgn',
     working_hours: 'Dush - Shan, 08:30 - 19:30',
     topics: [
       'Urug‘lar unuvchanlik foizi va sertifikatlari',
@@ -114,8 +114,8 @@ export const SECTOR_SUPPORT_CONTACTS: Record<BusinessType, SectorSupportContact>
     sector_title: 'Jihoz va Texnika, ehtiyot qismlar',
     specialist_name: 'Farhod Ergashov',
     specialist_role: 'Qishloq xo‘jaligi texnikasi bosh muhandisi',
-    phone: '+998 71 200 45 65',
-    telegram_username: 'biznesgo_support',
+    phone: '+998 90 838 37 72',
+    telegram_username: 'bydsgn',
     working_hours: 'Har kuni 08:00 - 21:00',
     topics: [
       'Texnikalar zavod kafolatlari va servis monitoringi',
@@ -164,3 +164,4 @@ export const PLATFORM_NEWS: NewsItem[] = [
     badge: 'Dorixona',
   },
 ];
+

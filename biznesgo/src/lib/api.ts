@@ -378,6 +378,16 @@ class ApiClient {
       };
     }
   };
+
+  // Support Chat
+  support = {
+    list: () => this.request<{ ok: boolean; messages: any[] }>('/support'),
+    send: (message: string) =>
+      this.request<{ ok: boolean; message: any }>('/support', {
+        method: 'POST',
+        body: JSON.stringify({ message }),
+      }),
+  };
 }
 
 export const api = new ApiClient();

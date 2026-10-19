@@ -20,31 +20,31 @@ const SECTOR_SUPPORT_MAP = {
   agro_vet: {
     name: 'Dr. Jamshid Olimov',
     role: 'Agro-kimyo va Fitosanitariya bosh mutaxassisi',
-    phone: '+998 71 200 45 61',
+    phone: '+998 90 838 37 72',
     hours: 'Dush - Shan, 08:00 - 20:00 (24/7 navbatchi)',
   },
   feed: {
     name: 'Muzaffar Yoqubov',
     role: 'Chorvachilik va Parrandachilik ozuqa texnologi',
-    phone: '+998 71 200 45 62',
+    phone: '+998 90 838 37 72',
     hours: 'Har kuni 08:00 - 20:00',
   },
   warehouse: {
     name: 'Akmal Rustamov',
     role: 'B2B Distribyutsiya va Logistika koordinatori',
-    phone: '+998 71 200 45 63',
+    phone: '+998 90 838 37 72',
     hours: '24/7 Doimiy aloqada',
   },
   seeds: {
     name: 'Olimjon Qodirov',
     role: 'Urug‘chilik va Seleksiya bo‘yicha bosh agronom',
-    phone: '+998 71 200 45 64',
+    phone: '+998 90 838 37 72',
     hours: 'Dush - Shan, 08:30 - 19:30',
   },
   machinery: {
     name: 'Farhod Ergashov',
     role: 'Qishloq xo‘jaligi texnikasi bosh muhandisi',
-    phone: '+998 71 200 45 65',
+    phone: '+998 90 838 37 72',
     hours: 'Har kuni 08:00 - 21:00',
   },
 };
@@ -250,7 +250,7 @@ async function handleBiznesgoBotUpdate(update) {
 
   // 1. Agar foydalanuvchi allaqachon ro'yxatdan o'tgan bo'lsa
   const mRes = await query(
-    `SELECT m.id, m.store_name, m.business_type, m.is_active, u.name AS user_name
+    `SELECT m.id, m.store_name, m.business_type, m.phone, m.is_active, u.name AS user_name
        FROM merchants m
        JOIN users u ON u.id = m.user_id
       WHERE u.telegram_id = $1
@@ -300,21 +300,32 @@ async function handleBiznesgoBotUpdate(update) {
 
   // 1b. Qo'llab-quvvatlash (Buyruq yoki tugma orqali)
   if (text === '/support' || text === '📞 Qo‘llab-quvvatlash' || (callbackQuery && callbackQuery.data === 'cmd_support')) {
+    await setSession(chatId, 'STEP_SUPPORT_CHAT', {
+      tg_id: tgId,
+      first_name: firstName,
+      merchant_id: existingM ? existingM.id : null,
+      business_type: existingM ? existingM.business_type : 'agro_vet',
+      phone: existingM ? existingM.phone : '',
+    });
+
     const supportText =
-      `📞 <b>BiznesGO Qo‘llab-quvvatlash xizmati</b>\n\n` +
+      `📞 <b>BiznesGO Qo‘llab-quvvatlash & Admin Chati</b>\n\n` +
       `📌 <b>Sizning yo‘nalishingiz:</b> ${bizMeta.title}\n` +
       `👤 <b>Sektor kuratori:</b> ${sectorContact.name}\n` +
       `💼 <b>Mutaxassisligi:</b> ${sectorContact.role}\n` +
-      `📱 <b>Aloqa telefoni:</b> ${sectorContact.phone}\n` +
-      `💬 <b>Telegram:</b> @biznesgo_support\n` +
+      `📱 <b>Aloqa telefoni:</b> +998 90 838 37 72\n` +
+      `💬 <b>Telegram:</b> @bydsgn\n` +
       `⏰ <b>Ish vaqti:</b> ${sectorContact.hours}\n\n` +
-      `🏢 <b>Markaziy 24/7 Call-markaz:</b> +998 71 200 45 67\n\n` +
-      `<i>Mutaxassis sektorga xos sertifikatlar, yaroqlilik, doza, kredit limitlari va texnik masalalarda bepul maslahat beradi.</i>`;
+      `🏢 <b>Markaziy Call-markaz:</b> +998 90 838 37 72\n\n` +
+      `✍️ <b>Super Administratorga to‘g‘ridan-to‘g‘ri xabar yuborish:</b>\n` +
+      `Savol, taklif yoki murojaatingizni to‘g‘ridan-to‘g‘ri shu yerga yozib yuboring!\n` +
+      `Xabaringiz zudlik bilan Super Admin boshqaruv paneliga tushadi va mutaxassis javob qaytaradi.`;
 
     const inlineKeyboard = {
       inline_keyboard: [
-        [{ text: "💬 Telegram orqali yozish", url: "https://t.me/biznesgo_support" }],
+        [{ text: "💬 Telegram profil: @bydsgn", url: "https://t.me/bydsgn" }],
         [{ text: "💳 Mening tarifim", callback_data: "cmd_tariff" }, { text: "📢 Yangiliklar", callback_data: "cmd_news" }],
+        [{ text: "❌ Chatdan chiqish", callback_data: "cmd_cancel_support" }],
       ],
     };
 
@@ -471,8 +482,57 @@ async function handleBiznesgoBotUpdate(update) {
     }
   }
 
-  // 3. Aktiv ro'yxatdan o'tish sessiyasini tekshirish
+  // 3. Aktiv sessiyani tekshirish
   const session = await getSession(chatId);
+
+  // Chat rejimi: Foydalanuvchi Super Adminga xabar yozmoqda
+  if (session && session.step === 'STEP_SUPPORT_CHAT') {
+    if (callbackQuery && callbackQuery.data === 'cmd_cancel_support') {
+      await clearSession(chatId);
+      await callTelegramApi(config.biznesgoBotToken, 'sendMessage', {
+        chat_id: chatId,
+        text: "✅ Qo‘llab-quvvatlash chati yakunlandi. Menyudan foydalanishingiz mumkin.",
+      });
+      return { handled: true, step: 'SUPPORT_CANCELLED' };
+    }
+
+    if (text && !text.startsWith('/')) {
+      const supportService = require('./supportService');
+      const senderPhone = (existingM && existingM.phone) || (session.data && session.data.phone) || '';
+      const bizType = (existingM && existingM.business_type) || (session.data && session.data.business_type) || 'agro_vet';
+      const mId = existingM ? existingM.id : (session.data?.merchant_id || null);
+
+      await supportService.addMessage({
+        merchantId: mId,
+        telegramId: tgId,
+        senderType: 'bot_user',
+        senderName: firstName + (from.username ? ` (@${from.username})` : ''),
+        senderPhone: senderPhone,
+        businessType: bizType,
+        message: text,
+        source: 'telegram_bot',
+      });
+
+      const confirmText =
+        `✅ <b>Xabaringiz Super Adminga yetkazildi!</b>\n\n` +
+        `<i>"${text.length > 90 ? text.slice(0, 90) + '...' : text}"</i>\n\n` +
+        `👨‍💼 Administratorimiz xabaringizni ko‘rib chiqib, tez orada shu yerda javob qaytaradi.\n` +
+        `Yana xabar yozishingiz yoki bosh menyuga qaytish uchun /start ni bosishingiz mumkin.`;
+
+      const res = await callTelegramApi(config.biznesgoBotToken, 'sendMessage', {
+        chat_id: chatId,
+        text: confirmText,
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "💬 Shaxsiy Telegram: @bydsgn", url: "https://t.me/bydsgn" }],
+            [{ text: "❌ Chatni yakunlash", callback_data: "cmd_cancel_support" }],
+          ],
+        },
+      });
+      return { handled: true, step: 'SUPPORT_MESSAGE_RECORDED', telegram_response: res };
+    }
+  }
 
   // 1-bosqich natijasi: Callback query orqali yo'nalish tanlandi
   if (callbackQuery && callbackQuery.data?.startsWith('reg_type_')) {

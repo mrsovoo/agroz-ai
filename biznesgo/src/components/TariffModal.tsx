@@ -121,3 +121,4 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
     </Modal>
   );
 };
+

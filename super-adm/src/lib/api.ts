@@ -1,4 +1,4 @@
-import type { PlatformStats, Merchant, BroadcastPayload, BroadcastResult, ArchiveItem, ArchiveStats } from '../types';
+import type { PlatformStats, Merchant, BroadcastPayload, BroadcastResult, ArchiveItem, ArchiveStats, SupportConversation, SupportChatMessage } from '../types';
 
 const API_BASE = (import.meta.env.VITE_API_URL as string) || 'https://backend-production-96bd5.up.railway.app/api/super-adm';
 const ADMIN_KEY_STORAGE = 'super_adm_key';
@@ -107,6 +107,32 @@ class SuperAdminApi {
 
   async sendBroadcast(payload: BroadcastPayload): Promise<BroadcastResult> {
     return this.request<BroadcastResult>('/broadcast', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async getSupportConversations(): Promise<{ conversations: SupportConversation[]; unread_total: number }> {
+    const res = await this.request<{ ok: boolean; conversations: SupportConversation[]; unread_total: number }>('/support');
+    return { conversations: res.conversations, unread_total: res.unread_total };
+  }
+
+  async getSupportThread(params: { merchant_id?: number | null; telegram_id?: number | null }): Promise<{ messages: SupportChatMessage[] }> {
+    const query = new URLSearchParams();
+    if (params.merchant_id) query.set('merchant_id', String(params.merchant_id));
+    if (params.telegram_id) query.set('telegram_id', String(params.telegram_id));
+
+    const res = await this.request<{ ok: boolean; messages: SupportChatMessage[] }>(`/support/thread?${query.toString()}`);
+    return { messages: res.messages };
+  }
+
+  async sendSupportReply(payload: {
+    merchant_id?: number | null;
+    telegram_id?: number | null;
+    message: string;
+    admin_name?: string;
+  }): Promise<{ message: SupportChatMessage; telegram_sent: boolean }> {
+    return this.request<{ ok: boolean; message: SupportChatMessage; telegram_sent: boolean }>('/support/reply', {
       method: 'POST',
       body: JSON.stringify(payload),
     });

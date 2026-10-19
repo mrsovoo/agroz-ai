@@ -14,6 +14,7 @@ router.use('/stats', require('./stats'));
 router.use('/merchants', require('./merchants'));
 router.use('/broadcast', require('./broadcast'));
 router.use('/archive', require('./archive'));
+router.use('/support', require('./support'));
 
 module.exports = router;
 

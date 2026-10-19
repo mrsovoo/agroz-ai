@@ -23,6 +23,7 @@ router.use('/sales', guarded, require('./sales'));
 router.use('/debts', guarded, require('./debts'));
 router.use('/customers', guarded, require('./customers'));
 router.use('/orders', guarded, require('./orders'));
+router.use('/support', guarded, require('./support'));
 
 module.exports = router;
 
