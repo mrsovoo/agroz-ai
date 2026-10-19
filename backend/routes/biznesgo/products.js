@@ -54,7 +54,14 @@ function parseProduct(body, merchant, { partial = false } = {}) {
   const has = (k) => !partial || Object.prototype.hasOwnProperty.call(body, k);
 
   if (has('name')) out.name = v.str(body.name, 'name', { required: true, min: 1, max: 200 });
-  if (has('category')) out.category = v.str(body.category, 'category', { max: 100 });
+  if (has('category')) {
+    const cat = v.str(body.category, 'category', { max: 100 });
+    const allowed = bt && Array.isArray(bt.categories) ? bt.categories : [];
+    if (cat && allowed.length > 0 && !allowed.includes(cat)) {
+      throw new HttpError(400, `"${cat}" kategoriyasi ushbu sektor (${merchant.business_type}) uchun ruxsat etilmagan`);
+    }
+    out.category = cat;
+  }
   if (has('price')) out.price = v.money(v.num(body.price, 'price', { required: !partial, min: 0, max: 1e12 }) ?? 0);
   if (has('unit')) {
     let rawUnit = body.unit || (partial ? undefined : bt && bt.defaultUnit) || 'dona';
@@ -182,13 +189,19 @@ router.get(
 router.get(
   '/categories',
   asyncHandler(async (req, res) => {
+    const bt = BUSINESS_TYPES[req.merchant.business_type];
+    const allowed = bt && Array.isArray(bt.categories) ? bt.categories : [];
     const { rows } = await query(
       `SELECT category, COUNT(*)::int AS count FROM products
         WHERE merchant_id = $1 AND is_active AND category IS NOT NULL
         GROUP BY category ORDER BY category`,
       [req.merchant.id]
     );
-    res.json({ categories: rows });
+    // Boshqa sektor kategoriyalari aralashib ketmasligi uchun qat'iy filtrlash
+    const filteredRows = allowed.length > 0
+      ? rows.filter((r) => allowed.includes(r.category))
+      : rows;
+    res.json({ categories: filteredRows, sector_categories: allowed });
   })
 );
 

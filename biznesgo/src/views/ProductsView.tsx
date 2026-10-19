@@ -100,8 +100,9 @@ export const ProductsView: React.FC = () => {
   }, []);
 
   const resetForm = () => {
+    const sectorCats = SECTOR_CATEGORIES[businessType] || [];
     setName('');
-    setCategory('');
+    setCategory(sectorCats[0] || '');
     setPrice('');
     setCostPrice('');
     setUnit(businessType === 'feed' ? 'qop' : 'dona');
@@ -137,9 +138,12 @@ export const ProductsView: React.FC = () => {
   };
 
   const handleOpenEdit = (p: Product) => {
+    const sectorCats = SECTOR_CATEGORIES[businessType] || [];
     setEditingProduct(p);
     setName(p.name);
-    setCategory(p.category || '');
+    // Faqat ushbu sektorga tegishli kategoriyani saqlaymiz, begona sektor kategoriyasi kirmaydi
+    const validCategory = p.category && sectorCats.includes(p.category) ? p.category : (sectorCats[0] || '');
+    setCategory(validCategory);
     setPrice(p.price);
     setCostPrice(p.cost_price || '');
     setUnit(p.unit);
@@ -741,9 +745,6 @@ export const ProductsView: React.FC = () => {
                     {cat}
                   </option>
                 ))}
-                {category && !SECTOR_CATEGORIES[businessType]?.includes(category) && (
-                  <option value={category}>{category}</option>
-                )}
               </select>
               <p className="text-[11px] text-slate-500 mt-1">
                 Sektor yo‘nalishi bo‘yicha faqat tanlab qo‘yiladi
