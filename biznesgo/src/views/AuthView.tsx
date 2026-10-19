@@ -26,7 +26,8 @@ import {
   Lock,
   Eye,
   EyeOff,
-  Loader2
+  Loader2,
+  AlertTriangle
 } from 'lucide-react';
 
 interface AuthViewProps {
@@ -117,6 +118,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
   const [detectingLocation, setDetectingLocation] = useState(false);
+  const [locationPermissionDenied, setLocationPermissionDenied] = useState(false);
   const [password, setPassword] = useState('');
 
   // Web Kirish rejimi: 'password' yoki 'otp'
@@ -167,44 +169,91 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // 1. Geolokatsiyani aniqlash (3-bosqich)
+  // Reverse geocoding orqali yozma manzilni avtomatik topish
+  const reverseGeocode = async (latitude: number, longitude: number) => {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.display_name) {
+          setAddress(data.display_name);
+        }
+      }
+    } catch (e) {
+      // Tarmoq xatosi bo'lsa indamaymiz
+    } finally {
+      setDetectingLocation(false);
+    }
+  };
+
+  // 1. Geolokatsiyani aniqlash (Brauzer va Telegram ruxsatlari bilan)
   const handleGetLocation = () => {
+    setLocationPermissionDenied(false);
+
+    // Agar Telegram WebApp LocationManager mavjud bo'lsa
+    const wa = typeof window !== 'undefined' ? window.Telegram?.WebApp : undefined;
+    if (wa && (wa as any).LocationManager) {
+      setDetectingLocation(true);
+      try {
+        (wa as any).LocationManager.init(() => {
+          (wa as any).LocationManager.getLocation((data: any) => {
+            if (data && data.latitude && data.longitude) {
+              setLat(data.latitude);
+              setLng(data.longitude);
+              tg.hapticImpact('medium');
+              addToast('Lokatsiya muvaffaqiyatli aniqlandi!', 'success');
+              reverseGeocode(data.latitude, data.longitude);
+            } else {
+              fallbackBrowserGeolocation();
+            }
+          });
+        });
+        return;
+      } catch (e) {
+        fallbackBrowserGeolocation();
+        return;
+      }
+    }
+
+    fallbackBrowserGeolocation();
+  };
+
+  const fallbackBrowserGeolocation = () => {
     if (!navigator.geolocation) {
-      addToast('Brauzeringiz geolokatsiyani qo‘llab-quvvatlamaydi', 'error');
+      setDetectingLocation(false);
+      addToast('Brauzeringiz geolokatsiyani qo‘llab-quvvatlamaydi. Manzilni qo‘lda kiriting.', 'error');
       return;
     }
+
     setDetectingLocation(true);
+
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const latitude = pos.coords.latitude;
         const longitude = pos.coords.longitude;
         setLat(latitude);
         setLng(longitude);
+        setLocationPermissionDenied(false);
         tg.hapticImpact('medium');
         addToast('Lokatsiya muvaffaqiyatli aniqlandi!', 'success');
-
-        // Reverse geocoding orqali yozma manzilni avtomatik topish
-        try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
-          );
-          if (res.ok) {
-            const data = await res.json();
-            if (data && data.display_name) {
-              setAddress(data.display_name);
-            }
-          }
-        } catch (e) {
-          // Tarmoq xatosi bo'lsa indamaymiz
-        } finally {
-          setDetectingLocation(false);
-        }
+        await reverseGeocode(latitude, longitude);
       },
       (err) => {
         setDetectingLocation(false);
-        addToast('Lokatsiyani aniqlash imkoni bo‘lmadi: ' + err.message, 'error');
+        if (err.code === 1) { // PERMISSION_DENIED
+          setLocationPermissionDenied(true);
+          addToast('Brauzerda lokatsiyaga ruxsat berilmadi. Manzilni qo‘lda yozishingiz mumkin.', 'warning');
+        } else if (err.code === 2) { // POSITION_UNAVAILABLE
+          addToast('Qurilma joylashuvini aniqlab bo‘lmadi. GPS yoqilganligini tekshiring.', 'error');
+        } else if (err.code === 3) { // TIMEOUT
+          addToast('Joylashuvni aniqlash vaqti tugadi. Qayta urinib ko‘ring.', 'error');
+        } else {
+          addToast('Lokatsiyani aniqlashda xatolik: ' + err.message, 'error');
+        }
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
     );
   };
 
@@ -699,9 +748,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                   {onboardStep === 3 && (
                     <form onSubmit={handleOnboardSubmit} className="space-y-4 pt-1">
                       
-                      {/* Geolokatsiya tugmasi */}
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                      {/* Geolokatsiya tugmasi va Ruxsat xabarlari */}
+                      <div className="space-y-2">
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                           Xaritadagi lokatsiya
                         </label>
                         <button
@@ -727,13 +776,47 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                           ) : (
                             <>
                               <Navigation className="w-4 h-4 text-emerald-600 shrink-0" />
-                              <span>Lokatsiyani aniqlash</span>
+                              <span>Lokatsiyani aniqlash (Ruxsat berish)</span>
                             </>
                           )}
                         </button>
-                        <p className="text-[11px] text-slate-500 mt-1">
-                          Tugmani bosing, do‘koningiz joylashgan manzil avtomatik aniqlanadi.
-                        </p>
+
+                        {/* Ruxsat so'ralayotgan paytdagi yo'riqnoma */}
+                        {detectingLocation && (
+                          <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs flex items-start gap-2">
+                            <span className="text-base leading-none">🔔</span>
+                            <div className="text-[11px] leading-relaxed">
+                              Brauzeringiz ekranda <b>"Joylashuvdan foydalanishga ruxsat berasizmi?"</b> deb so‘raydi. Iltimos, <b>"Ruxsat berish" (Allow)</b> tugmasini bosing.
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Ruxsat rad etilganda ko'rsatiladigan yordam */}
+                        {locationPermissionDenied && (
+                          <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-950 text-xs space-y-1.5">
+                            <div className="font-bold flex items-center gap-1.5 text-amber-900">
+                              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                              Brauzerda lokatsiyaga ruxsat berilmadi
+                            </div>
+                            <p className="text-[11px] leading-relaxed text-amber-800">
+                              Brauzer qidiruv qatoridagi 🔒 (qulf/sozlamalar) belgisini bosib, <b>"Joylashuv" (Location)</b> ruxsatini yoqing yoki quyidagi maydonga manzilni qo‘lda yozing.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={handleGetLocation}
+                              className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-900 hover:text-amber-950 underline cursor-pointer"
+                            >
+                              <RotateCcw className="w-3 h-3" />
+                              Qayta ruxsat so‘rash
+                            </button>
+                          </div>
+                        )}
+
+                        {!detectingLocation && !locationPermissionDenied && !lat && (
+                          <p className="text-[11px] text-slate-500">
+                            Tugmani bosing, brauzerdan ruxsat so‘raladi va do‘kon manzili avtomatik aniqlanadi.
+                          </p>
+                        )}
                       </div>
 
                       {/* Yozma manzil maydoni */}
