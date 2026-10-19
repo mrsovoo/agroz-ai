@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { api } from '../lib/api';
 import { tg } from '../lib/telegram';
-import { formatCurrency, formatDate } from '../lib/utils';
+import { formatCurrency, formatDate, formatUzbekPhone, getFutureDateString } from '../lib/utils';
 import { Product, Customer } from '../types';
 import { FeedCalculatorModal } from '../components/FeedCalculatorModal';
 import { ReceiptModal } from '../components/ReceiptModal';
@@ -94,8 +94,14 @@ export const PosView: React.FC = () => {
         addToast('Xaridor ismini kiriting (Nasiya uchun)', 'error');
         return;
       }
-      if (!customerPhone.trim()) {
-        addToast('Xaridor telefon raqamini kiriting', 'error');
+      const rawDigits = customerPhone.replace(/\D/g, '');
+      const validDigits = rawDigits.startsWith('998') ? rawDigits.slice(3) : rawDigits;
+      if (validDigits.length < 9) {
+        addToast('Xaridor telefon raqamini to‘liq kiriting (+998 90 000 00 00)', 'error');
+        return;
+      }
+      if (!debtDueDate) {
+        addToast('Nasiya qaytarish muddatini belgilang', 'error');
         return;
       }
     }
@@ -484,35 +490,76 @@ export const PosView: React.FC = () => {
                   <span>Nasiya (Qarz daftari) tafsilotlari</span>
                 </div>
                 <div>
+                  <label className="block text-[11px] font-bold text-rose-800 mb-1">
+                    Xaridor ismi <span className="text-rose-600">*</span>
+                  </label>
                   <input
                     type="text"
                     required
-                    placeholder="Xaridor ismi (Masalan: Bobur aka) *"
+                    placeholder="Masalan: Bobur aka"
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-rose-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-rose-500 bg-white"
+                    className="w-full px-3 py-2 text-xs border border-rose-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-rose-500 bg-white font-medium"
                   />
                 </div>
                 <div>
+                  <label className="block text-[11px] font-bold text-rose-800 mb-1">
+                    Telefon raqami <span className="text-rose-600">*</span>
+                  </label>
                   <input
                     type="tel"
                     required
-                    placeholder="Telefon raqami (+998...) *"
+                    placeholder="+998 90 000 00 00"
                     value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-rose-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-rose-500 bg-white"
+                    onFocus={() => {
+                      if (!customerPhone) setCustomerPhone('+998 ');
+                    }}
+                    onChange={(e) => setCustomerPhone(formatUzbekPhone(e.target.value))}
+                    className="w-full px-3 py-2 text-xs border border-rose-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-rose-500 bg-white font-semibold text-slate-800 tracking-wide"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-semibold text-rose-700 mb-1">
-                    Qaytarish muddati (Due date):
+                  <label className="block text-[11px] font-bold text-rose-800 mb-1">
+                    Qaytarish muddati <span className="text-rose-600">*</span>
                   </label>
                   <input
                     type="date"
+                    required
                     value={debtDueDate}
                     onChange={(e) => setDebtDueDate(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs border border-rose-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-rose-500 bg-white text-slate-700"
+                    className="w-full px-3 py-1.5 text-xs border border-rose-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-rose-500 bg-white text-slate-700 font-semibold"
                   />
+                  {/* Quick preset chips */}
+                  <div className="flex items-center gap-1.5 mt-2 overflow-x-auto pb-0.5 scrollbar-none">
+                    <button
+                      type="button"
+                      onClick={() => setDebtDueDate(getFutureDateString(15))}
+                      className="px-2 py-1 bg-white hover:bg-rose-100/70 border border-rose-200 rounded text-[10px] font-bold text-rose-700 cursor-pointer transition whitespace-nowrap active:scale-95"
+                    >
+                      +15 kun
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDebtDueDate(getFutureDateString(30))}
+                      className="px-2 py-1 bg-white hover:bg-rose-100/70 border border-rose-200 rounded text-[10px] font-bold text-rose-700 cursor-pointer transition whitespace-nowrap active:scale-95"
+                    >
+                      +1 oy
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDebtDueDate(getFutureDateString(60))}
+                      className="px-2 py-1 bg-white hover:bg-rose-100/70 border border-rose-200 rounded text-[10px] font-bold text-rose-700 cursor-pointer transition whitespace-nowrap active:scale-95"
+                    >
+                      +2 oy
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDebtDueDate(getFutureDateString(90))}
+                      className="px-2 py-1 bg-white hover:bg-rose-100/70 border border-rose-200 rounded text-[10px] font-bold text-rose-700 cursor-pointer transition whitespace-nowrap active:scale-95"
+                    >
+                      +3 oy
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

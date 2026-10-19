@@ -26,3 +26,29 @@ export function formatDate(dateStr: string | undefined | null, includeTime = fal
     return dateStr;
   }
 }
+
+export function formatUzbekPhone(value: string): string {
+  if (!value) return '';
+  let digits = value.replace(/\D/g, '');
+  if (!digits || digits === '998') return '+998 ';
+  if (digits.startsWith('998')) {
+    digits = digits.slice(3);
+  }
+  digits = digits.slice(0, 9);
+  if (digits.length === 0) return '+998 ';
+
+  let res = '+998 ' + digits.slice(0, 2);
+  if (digits.length > 2) res += ' ' + digits.slice(2, 5);
+  if (digits.length > 5) res += ' ' + digits.slice(5, 7);
+  if (digits.length > 7) res += ' ' + digits.slice(7, 9);
+  return res;
+}
+
+export function getFutureDateString(daysAhead: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + daysAhead);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}

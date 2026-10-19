@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { api } from '../lib/api';
 import { tg } from '../lib/telegram';
-import { formatCurrency, formatDate } from '../lib/utils';
+import { formatCurrency, formatDate, formatUzbekPhone, getFutureDateString } from '../lib/utils';
 import { Debt, Customer } from '../types';
 import { Modal } from '../components/Modal';
 import { 
@@ -105,8 +105,22 @@ export const DebtsView: React.FC = () => {
 
   const handleAddDebt = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customerName.trim() || !customerPhone.trim() || !debtAmount || Number(debtAmount) <= 0) {
-      addToast('Mijoz ismi, telefon va qarz summasini to‘g‘ri kiriting', 'error');
+    if (!customerName.trim()) {
+      addToast('Mijoz ismini kiriting', 'error');
+      return;
+    }
+    const rawDigits = customerPhone.replace(/\D/g, '');
+    const validDigits = rawDigits.startsWith('998') ? rawDigits.slice(3) : rawDigits;
+    if (validDigits.length < 9) {
+      addToast('Telefon raqamini to‘liq kiriting (+998 90 000 00 00)', 'error');
+      return;
+    }
+    if (!debtAmount || Number(debtAmount) <= 0) {
+      addToast('Qarz summasini to‘g‘ri kiriting', 'error');
+      return;
+    }
+    if (!dueDate) {
+      addToast('Qarz qaytarish muddatini (due date) belgilang!', 'error');
       return;
     }
 
@@ -122,12 +136,6 @@ export const DebtsView: React.FC = () => {
           return;
         }
       }
-    }
-
-    // Agro-Vet uchun qat'iy due_date nazorati
-    if (businessType === 'agro_vet' && !dueDate) {
-      addToast('Agro-Vet do‘konida qarz qaytarish muddati (due_date) ko‘rsatilishi shart!', 'error');
-      return;
     }
 
     try {
@@ -686,9 +694,12 @@ export const DebtsView: React.FC = () => {
               type="tel"
               required
               value={customerPhone}
-              onChange={(e) => setCustomerPhone(e.target.value)}
-              placeholder="+998 90 123 45 67"
-              className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              onFocus={() => {
+                if (!customerPhone) setCustomerPhone('+998 ');
+              }}
+              onChange={(e) => setCustomerPhone(formatUzbekPhone(e.target.value))}
+              placeholder="+998 90 000 00 00"
+              className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold text-slate-800 tracking-wide"
             />
           </div>
 
@@ -817,15 +828,46 @@ export const DebtsView: React.FC = () => {
 
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-              Qaytarish muddati (Due date) {businessType === 'agro_vet' ? '*' : ''}
+              Qaytarish muddati (Due date) *
             </label>
             <input
               type="date"
-              required={businessType === 'agro_vet'}
+              required
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
               className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-700 font-semibold"
             />
+            {/* Quick preset chips */}
+            <div className="flex items-center gap-1.5 mt-2 overflow-x-auto pb-0.5 scrollbar-none">
+              <button
+                type="button"
+                onClick={() => setDueDate(getFutureDateString(15))}
+                className="px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 cursor-pointer transition whitespace-nowrap active:scale-95"
+              >
+                +15 kun
+              </button>
+              <button
+                type="button"
+                onClick={() => setDueDate(getFutureDateString(30))}
+                className="px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 cursor-pointer transition whitespace-nowrap active:scale-95"
+              >
+                +1 oy
+              </button>
+              <button
+                type="button"
+                onClick={() => setDueDate(getFutureDateString(60))}
+                className="px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 cursor-pointer transition whitespace-nowrap active:scale-95"
+              >
+                +2 oy
+              </button>
+              <button
+                type="button"
+                onClick={() => setDueDate(getFutureDateString(90))}
+                className="px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 cursor-pointer transition whitespace-nowrap active:scale-95"
+              >
+                +3 oy
+              </button>
+            </div>
           </div>
 
           <div>
