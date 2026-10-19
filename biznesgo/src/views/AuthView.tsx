@@ -21,7 +21,12 @@ import {
   RotateCcw, 
   Zap,
   Package,
-  BookOpen
+  BookOpen,
+  Navigation,
+  Lock,
+  Eye,
+  EyeOff,
+  Loader2
 } from 'lucide-react';
 
 interface AuthViewProps {
@@ -95,16 +100,30 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
 
   const [loading, setLoading] = useState(false);
 
-  // Ro'yxatdan o'tish / Onboarding formasi holati
+  // Ro'yxatdan o'tish / Onboarding 3 bosqichli holat
   const [isOnboardingForm, setIsOnboardingForm] = useState(isTgOnboarding);
-  const [onboardStep, setOnboardStep] = useState<1 | 2>(1);
+  const [onboardStep, setOnboardStep] = useState<1 | 2 | 3>(1);
+
+  // Formalar ma'lumotlari
+  const [businessType, setBusinessType] = useState<BusinessType>('agro_vet');
+  const [storeName, setStoreName] = useState('');
+  const [fullName, setFullName] = useState(telegramOnboarding?.first_name || '');
   const [phone, setPhone] = useState(
     telegramOnboarding?.phone ? formatUzbekPhone(telegramOnboarding.phone) : ''
   );
-  const [fullName, setFullName] = useState(telegramOnboarding?.first_name || '');
-  const [storeName, setStoreName] = useState('');
+  
+  // 3-bosqich: Manzil, lokatsiya va parol
   const [address, setAddress] = useState('');
-  const [businessType, setBusinessType] = useState<BusinessType>('agro_vet');
+  const [lat, setLat] = useState<number | null>(null);
+  const [lng, setLng] = useState<number | null>(null);
+  const [detectingLocation, setDetectingLocation] = useState(false);
+  const [password, setPassword] = useState('');
+
+  // Web Kirish rejimi: 'password' yoki 'otp'
+  const [loginMode, setLoginMode] = useState<'password' | 'otp'>('password');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
 
   // OTP oqimi holatlari
   const [otpStep, setOtpStep] = useState<'phone' | 'code'>('phone');
@@ -113,14 +132,20 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
   const [deliveredViaTelegram, setDeliveredViaTelegram] = useState(false);
   const [otpBotUrl, setOtpBotUrl] = useState<string | null>(null);
 
-  // URL dan kelgan ?otp= parametrini tekshirish
+  // Eslab qolingan telefon raqamni yuklash
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      const savedPhone = localStorage.getItem('biznesgo_remember_phone');
+      if (savedPhone && !phone) {
+        setPhone(formatUzbekPhone(savedPhone));
+      }
+
       const urlParams = new URLSearchParams(window.location.search);
       const codeFromUrl = urlParams.get('otp');
       if (codeFromUrl) {
         setOtpCode(codeFromUrl);
         setOtpStep('code');
+        setLoginMode('otp');
       }
     }
   }, []);
@@ -136,15 +161,111 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
     return () => clearInterval(interval);
   }, [otpStep, otpTimer]);
 
-
-
   const formatTimer = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // 1. Web orqali OTP kod yuborish
+  // 1. Geolokatsiyani aniqlash (3-bosqich)
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      addToast('Brauzeringiz geolokatsiyani qo‘llab-quvvatlamaydi', 'error');
+      return;
+    }
+    setDetectingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const latitude = pos.coords.latitude;
+        const longitude = pos.coords.longitude;
+        setLat(latitude);
+        setLng(longitude);
+        tg.hapticImpact('medium');
+        addToast('Lokatsiya muvaffaqiyatli aniqlandi!', 'success');
+
+        // Reverse geocoding orqali yozma manzilni avtomatik topish
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
+          );
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.display_name) {
+              setAddress(data.display_name);
+            }
+          }
+        } catch (e) {
+          // Tarmoq xatosi bo'lsa indamaymiz
+        } finally {
+          setDetectingLocation(false);
+        }
+      },
+      (err) => {
+        setDetectingLocation(false);
+        addToast('Lokatsiyani aniqlash imkoni bo‘lmadi: ' + err.message, 'error');
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  // 2. 2-bosqichdan 3-bosqichga o'tish
+  const handleStep2Next = () => {
+    if (!storeName.trim()) {
+      addToast('Do‘kon nomini kiriting', 'error');
+      return;
+    }
+    if (!fullName.trim()) {
+      addToast('Mas’ul shaxs ismini kiriting', 'error');
+      return;
+    }
+    if (!phone.trim()) {
+      addToast('Telefon raqamingizni kiriting', 'error');
+      return;
+    }
+    tg.hapticImpact('light');
+    setOnboardStep(3);
+  };
+
+  // 3. Web orqali Parol bilan kirish
+  const handlePasswordLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!phone.trim()) {
+      addToast('Telefon raqamingizni kiriting', 'error');
+      return;
+    }
+    if (!loginPassword.trim()) {
+      addToast('Parolingizni kiriting', 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await api.auth.login({
+        phone: phone.trim(),
+        password: loginPassword.trim(),
+      });
+
+      if (rememberMe) {
+        localStorage.setItem('biznesgo_remember_phone', phone.trim());
+      } else {
+        localStorage.removeItem('biznesgo_remember_phone');
+      }
+
+      if (res.token) {
+        api.setToken(res.token);
+      }
+      setMerchant(res.merchant);
+      addToast(`Xush kelibsiz, ${res.merchant.store_name}!`, 'success');
+      tg.hapticImpact('heavy');
+      onSuccess();
+    } catch (err: any) {
+      addToast(err.message || 'Telefon yoki parol noto‘g‘ri', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 4. Web orqali OTP kod yuborish
   const handleSendOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!phone.trim()) {
@@ -168,7 +289,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
     }
   };
 
-  // 2. OTP kodni qo'lda tekshirish
+  // 5. OTP kodni tekshirish
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!otpCode.trim() || otpCode.trim().length < 6) {
@@ -183,7 +304,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
         code: otpCode.trim(),
       });
 
-      // Agar foydalanuvchi ma'lumotlari to'liq bo'lmasa yoki yangi bo'lsa, do'kon ochish formasini ko'rsatamiz
       if (res.needs_onboarding || !res.merchant) {
         if (res.phone) {
           setPhone(formatUzbekPhone(res.phone));
@@ -192,6 +312,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
           setFullName(res.user.name);
         }
         setIsOnboardingForm(true);
+        setOnboardStep(1);
         addToast(res.message || 'Tasdiqlandi! Do‘koningiz ma’lumotlarini kiriting.', 'success');
         tg.hapticImpact('medium');
         return;
@@ -211,15 +332,17 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
     }
   };
 
-  // 3. Do'kon ochish formasi
+  // 6. Do'kon ochishni yakunlash (3-bosqich tasdiqlash)
   const handleOnboardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!storeName.trim()) {
       addToast('Do‘kon nomini kiriting', 'error');
+      setOnboardStep(2);
       return;
     }
     if (!phone.trim()) {
       addToast('Telefon raqamingizni kiriting', 'error');
+      setOnboardStep(2);
       return;
     }
 
@@ -232,6 +355,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
           business_type: businessType,
           phone: phone.trim(),
           address: address.trim(),
+          lat,
+          lng,
+          password: password.trim() || undefined,
           full_name: fullName.trim() || telegramOnboarding!.first_name,
           username: telegramOnboarding!.username,
         });
@@ -250,13 +376,20 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
           full_name: fullName.trim(),
           business_type: businessType,
           address: address.trim(),
+          lat,
+          lng,
+          password: password.trim() || undefined,
         });
+
+        if (rememberMe) {
+          localStorage.setItem('biznesgo_remember_phone', phone.trim());
+        }
 
         if (res.token) {
           api.setToken(res.token);
         }
         setMerchant(res.merchant);
-        addToast('Do‘koningiz yaratildi!', 'success');
+        addToast('Do‘koningiz muvaffaqiyatli ochildi!', 'success');
         tg.hapticImpact('heavy');
         onSuccess();
       }
@@ -348,18 +481,18 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
             <div className="bg-white py-8 px-6 sm:px-8 shadow-xl shadow-slate-200/50 rounded-2xl border border-slate-200/80">
               
               {/* ======================================================== */}
-              {/* 1. ONBOARDING / RO'YXATDAN O'TISH FORMASI (2 BOSQICH)    */}
+              {/* 1. ONBOARDING / RO'YXATDAN O'TISH (3 BOSQICH)            */}
               {/* ======================================================== */}
               {isOnboardingForm ? (
-                <form onSubmit={handleOnboardSubmit} className="space-y-4">
+                <div className="space-y-4">
                   
                   {/* Bosqich sarlavhasi va indikatori */}
                   <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                     <div className="flex items-center gap-2">
-                      {onboardStep === 2 ? (
+                      {onboardStep > 1 ? (
                         <button
                           type="button"
-                          onClick={() => setOnboardStep(1)}
+                          onClick={() => setOnboardStep((prev) => (prev - 1) as any)}
                           className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
                         >
                           <ArrowLeft className="w-4 h-4" />
@@ -375,22 +508,24 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                       ) : null}
                       <div>
                         <h3 className="text-base font-bold text-slate-900">
-                          {onboardStep === 1 ? 'Biznes yo‘nalishini tanlang' : 'Do‘kon ma’lumotlari'}
+                          {onboardStep === 1 && 'Biznes yo‘nalishini tanlang'}
+                          {onboardStep === 2 && 'Do‘kon ma’lumotlari'}
+                          {onboardStep === 3 && 'Manzil va lokatsiyani tasdiqlash'}
                         </h3>
                         <p className="text-xs text-slate-500">
-                          {onboardStep === 1
-                            ? 'Do‘koningiz qaysi sohada faoliyat yuritadi?'
-                            : 'Mas’ul shaxs va do‘kon nomi'}
+                          {onboardStep === 1 && 'Do‘koningiz qaysi sohada faoliyat yuritadi?'}
+                          {onboardStep === 2 && 'Do‘kon nomi va mas’ul shaxs'}
+                          {onboardStep === 3 && 'Do‘kon joylashuvi va xaritadagi lokatsiyasi'}
                         </p>
                       </div>
                     </div>
                     <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/60 shrink-0">
-                      {onboardStep}/2-bosqich
+                      {onboardStep}/3-bosqich
                     </span>
                   </div>
 
                   {/* ==================== 1-BOSQICH ==================== */}
-                  {onboardStep === 1 ? (
+                  {onboardStep === 1 && (
                     <div className="space-y-3 pt-1">
                       <div className="space-y-2">
                         {BUSINESS_TYPE_OPTIONS.map((opt) => {
@@ -449,12 +584,14 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                         }}
                         className="w-full mt-3 py-3 px-4 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 flex items-center justify-center gap-2 cursor-pointer transition shadow-xs"
                       >
-                        <span>Keyingi bosqichga o‘tish</span>
+                        <span>Keyingi bosqichga o‘tish (2-bosqich)</span>
                         <ArrowRight className="w-4 h-4" />
                       </button>
                     </div>
-                  ) : (
-                    /* ==================== 2-BOSQICH ==================== */
+                  )}
+
+                  {/* ==================== 2-BOSQICH ==================== */}
+                  {onboardStep === 2 && (
                     <div className="space-y-4 pt-1">
                       {/* Tanlangan yo'nalish belgisi */}
                       <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
@@ -477,7 +614,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                             required
                             value={storeName}
                             onChange={(e) => setStoreName(e.target.value)}
-                            placeholder="Masalan: AgroHimoya"
+                            placeholder="Masalan: AgroHimoya yoki Baraka Ulgurji"
                             className="block w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-900"
                           />
                         </div>
@@ -529,28 +666,117 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                         </div>
                       </div>
 
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setOnboardStep(1)}
+                          className="py-3 px-4 rounded-xl text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition cursor-pointer"
+                        >
+                          Ortga
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleStep2Next}
+                          className="flex-1 py-3 px-4 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition cursor-pointer flex items-center justify-center gap-2 shadow-xs"
+                        >
+                          <span>Keyingi bosqichga o‘tish (3-bosqich)</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ==================== 3-BOSQICH ==================== */}
+                  {onboardStep === 3 && (
+                    <form onSubmit={handleOnboardSubmit} className="space-y-4 pt-1">
+                      
+                      {/* Geolokatsiya tugmasi */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                          Xaritadagi lokatsiya
+                        </label>
+                        <button
+                          type="button"
+                          disabled={detectingLocation}
+                          onClick={handleGetLocation}
+                          className={`w-full py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer ${
+                            lat && lng
+                              ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                              : 'bg-slate-50 border-slate-300 text-slate-700 hover:bg-slate-100'
+                          }`}
+                        >
+                          {detectingLocation ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                              <span>Lokatsiya aniqlanmoqda...</span>
+                            </>
+                          ) : lat && lng ? (
+                            <>
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                              <span>✓ Lokatsiya aniqlandi ({lat.toFixed(4)}, {lng.toFixed(4)})</span>
+                            </>
+                          ) : (
+                            <>
+                              <Navigation className="w-4 h-4 text-emerald-600 shrink-0" />
+                              <span>📍 Geolokatsiyani aniqlash</span>
+                            </>
+                          )}
+                        </button>
+                        <p className="text-[11px] text-slate-500 mt-1">
+                          Tugmani bosing, do‘koningiz joylashgan manzil avtomatik aniqlanadi.
+                        </p>
+                      </div>
+
+                      {/* Yozma manzil maydoni */}
                       <div>
                         <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                          Manzil (ixtiyoriy)
+                          Do‘kon manzili (Yozma) *
+                        </label>
+                        <div className="relative rounded-xl shadow-xs">
+                          <div className="absolute top-3 left-3 flex items-start pointer-events-none text-slate-400">
+                            <MapPin className="w-4 h-4" />
+                          </div>
+                          <textarea
+                            rows={2}
+                            required
+                            value={address}
+                            onChange={(e) => setAddress(e.target.value)}
+                            placeholder="Viloyat, tuman, bozor nomi yoki aniq ko‘cha/mo‘ljal..."
+                            className="block w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-900 bg-white"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Web Parol (ixtiyoriy yoki kelajakda web orqali kirish uchun) */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                          Web orqali kirish paroli (ixtiyoriy)
                         </label>
                         <div className="relative rounded-xl shadow-xs">
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                            <MapPin className="w-4 h-4" />
+                            <Lock className="w-4 h-4" />
                           </div>
                           <input
-                            type="text"
-                            value={address}
-                            onChange={(e) => setAddress(e.target.value)}
-                            placeholder="Shahar, tuman, bozor yoki ko‘cha"
-                            className="block w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-900"
+                            type={showPassword ? 'text' : 'password'}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="Kamida 6 ta belgi (Web brauzerda kirish uchun)"
+                            className="block w-full pl-9 pr-10 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-900"
                           />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                          >
+                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
                         </div>
                       </div>
 
                       <div className="flex gap-2 pt-2">
                         <button
                           type="button"
-                          onClick={() => setOnboardStep(1)}
+                          onClick={() => setOnboardStep(2)}
                           className="py-3 px-4 rounded-xl text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition cursor-pointer"
                         >
                           Ortga
@@ -567,14 +793,15 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                           )}
                         </button>
                       </div>
-                    </div>
+                    </form>
                   )}
-                </form>
+
+                </div>
               ) : (
                 /* ======================================================== */
-                /* 2. KIRISH: TELEGRAM YOKI TELEFON RAQAM                  */
+                /* 2. KIRISH: PAROL, TELEGRAM YOKI OTP                     */
                 /* ======================================================== */
-                <div className="space-y-6">
+                <div className="space-y-5">
                   
                   <div>
                     <h2 className="text-2xl font-black text-slate-900 tracking-tight">
@@ -585,13 +812,13 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                     </p>
                   </div>
 
-                  {/* Asosiy Telegram Button */}
+                  {/* Asosiy Telegram Button (Launch App) */}
                   <a
                     href="https://t.me/biznesgo_bot?start=launch"
                     className="w-full py-3.5 px-4 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-sm flex items-center justify-center gap-2.5 transition active:scale-[0.99] cursor-pointer shadow-sm"
                   >
                     <Bot className="w-5 h-5 text-white shrink-0" />
-                    <span>Telegram orqali kirish</span>
+                    <span>Telegram orqali kirish (Launch App)</span>
                   </a>
 
                   {/* Divider */}
@@ -600,130 +827,256 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                       <div className="w-full border-t border-slate-200" />
                     </div>
                     <div className="relative flex justify-center text-xs font-medium text-slate-400">
-                      <span className="bg-white px-3 text-[11px]">yoki telefon raqami bilan</span>
+                      <span className="bg-white px-3 text-[11px]">yoki Web orqali kirish</span>
                     </div>
                   </div>
 
-                  {/* Telefon orqali kirish */}
-                  <div>
-                    {otpStep === 'phone' ? (
-                      <form onSubmit={handleSendOtp} className="space-y-3">
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-700 mb-1">
-                            Telefon raqami
-                          </label>
-                          <div className="relative rounded-xl shadow-xs">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                              <Phone className="w-4 h-4" />
-                            </div>
-                            <input
-                              type="tel"
-                              required
-                              value={phone}
-                              onChange={(e) => setPhone(formatUzbekPhone(e.target.value))}
-                              placeholder="+998 90 123 45 67"
-                              className="block w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-900 bg-white"
-                            />
-                          </div>
-                        </div>
+                  {/* Tablar: Parol bilan / OTP bilan */}
+                  <div className="flex p-1 bg-slate-100 rounded-xl text-xs font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => setLoginMode('password')}
+                      className={`flex-1 py-2 text-center rounded-lg transition cursor-pointer ${
+                        loginMode === 'password'
+                          ? 'bg-white text-slate-900 shadow-xs'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                    >
+                      Parol bilan kirish
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLoginMode('otp')}
+                      className={`flex-1 py-2 text-center rounded-lg transition cursor-pointer ${
+                        loginMode === 'otp'
+                          ? 'bg-white text-slate-900 shadow-xs'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                    >
+                      Kodni tasdiqlash
+                    </button>
+                  </div>
 
-                        <button
-                          type="submit"
-                          disabled={loading}
-                          className="w-full py-2.5 px-4 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition cursor-pointer"
-                        >
-                          {loading ? (
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
-                          ) : (
-                            'Kodni yuborish'
-                          )}
-                        </button>
-                      </form>
-                    ) : (
-                      <form onSubmit={handleVerifyOtp} className="space-y-3">
-                        {deliveredViaTelegram ? (
-                          <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 font-medium flex items-center gap-2">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                            <span>Kodingiz <strong>@biznesgo_bot</strong> ga yuborildi.</span>
+                  {/* FORM 1: Parol bilan kirish (Remember Me bilan) */}
+                  {loginMode === 'password' ? (
+                    <form onSubmit={handlePasswordLogin} className="space-y-3.5">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                          Telefon raqami
+                        </label>
+                        <div className="relative rounded-xl shadow-xs">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                            <Phone className="w-4 h-4" />
                           </div>
-                        ) : otpBotUrl ? (
-                          <div className="space-y-1.5">
-                            <p className="text-xs text-slate-600">
-                              Kodingizni olish uchun botni oching:
-                            </p>
-                            <a
-                              href={otpBotUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="w-full py-2 px-3 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer"
-                            >
-                              <Bot className="w-4 h-4 text-white" />
-                              <span>@biznesgo_bot da kodni ko‘rish</span>
-                            </a>
-                          </div>
-                        ) : null}
-
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <label className="block text-xs font-semibold text-slate-700">
-                              Tasdiqlash kodi
-                            </label>
-                            <div className="flex items-center gap-1 text-[11px] font-mono text-slate-500">
-                              <Clock className="w-3 h-3 text-emerald-600" />
-                              <span>{formatTimer(otpTimer)}</span>
-                            </div>
-                          </div>
-
                           <input
-                            type="text"
-                            inputMode="numeric"
-                            maxLength={6}
-                            autoFocus
+                            type="tel"
                             required
-                            value={otpCode}
-                            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                            placeholder="• • • • • •"
-                            className="block w-full py-2.5 text-center tracking-[0.4em] text-xl font-mono font-bold border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 text-slate-900"
+                            value={phone}
+                            onChange={(e) => setPhone(formatUzbekPhone(e.target.value))}
+                            placeholder="+998 90 123 45 67"
+                            className="block w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-900 bg-white"
                           />
                         </div>
+                      </div>
 
-                        <button
-                          type="submit"
-                          disabled={loading || otpCode.length < 6}
-                          className="w-full py-2.5 px-4 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition cursor-pointer"
-                        >
-                          {loading ? (
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
-                          ) : (
-                            'Tasdiqlash'
-                          )}
-                        </button>
-
-                        <div className="flex items-center justify-between pt-1 text-xs">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                          Parol
+                        </label>
+                        <div className="relative rounded-xl shadow-xs">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                            <Lock className="w-4 h-4" />
+                          </div>
+                          <input
+                            type={showPassword ? 'text' : 'password'}
+                            required
+                            value={loginPassword}
+                            onChange={(e) => setLoginPassword(e.target.value)}
+                            placeholder="Parolingizni kiriting"
+                            className="block w-full pl-9 pr-10 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-900 bg-white"
+                          />
                           <button
                             type="button"
-                            onClick={() => setOtpStep('phone')}
-                            className="text-slate-500 hover:text-slate-800 cursor-pointer"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
                           >
-                            Raqamni o‘zgartirish
-                          </button>
-
-                          <button
-                            type="button"
-                            disabled={otpTimer > 0 || loading}
-                            onClick={() => handleSendOtp()}
-                            className={`flex items-center gap-1 font-semibold cursor-pointer ${
-                              otpTimer > 0
-                                ? 'text-slate-300 cursor-not-allowed'
-                                : 'text-emerald-600 hover:text-emerald-700'
-                            }`}
-                          >
-                            <RotateCcw className="w-3 h-3" />
-                            <span>Qayta yuborish</span>
+                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                           </button>
                         </div>
-                      </form>
-                    )}
+                      </div>
+
+                      {/* Eslab qolish checkboxi */}
+                      <div className="flex items-center justify-between text-xs pt-0.5">
+                        <label className="flex items-center gap-2 cursor-pointer text-slate-700 select-none">
+                          <input
+                            type="checkbox"
+                            checked={rememberMe}
+                            onChange={(e) => setRememberMe(e.target.checked)}
+                            className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
+                          />
+                          <span>Meni eslab qolish</span>
+                        </label>
+
+                        <button
+                          type="button"
+                          onClick={() => setLoginMode('otp')}
+                          className="text-emerald-600 hover:text-emerald-700 font-medium cursor-pointer"
+                        >
+                          Parolni unutdingizmi?
+                        </button>
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full py-2.5 px-4 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition cursor-pointer shadow-xs"
+                      >
+                        {loading ? (
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+                        ) : (
+                          'Kirish'
+                        )}
+                      </button>
+                    </form>
+                  ) : (
+                    /* FORM 2: OTP orqali kirish */
+                    <div>
+                      {otpStep === 'phone' ? (
+                        <form onSubmit={handleSendOtp} className="space-y-3">
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-700 mb-1">
+                              Telefon raqami
+                            </label>
+                            <div className="relative rounded-xl shadow-xs">
+                              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                <Phone className="w-4 h-4" />
+                              </div>
+                              <input
+                                type="tel"
+                                required
+                                value={phone}
+                                onChange={(e) => setPhone(formatUzbekPhone(e.target.value))}
+                                placeholder="+998 90 123 45 67"
+                                className="block w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-900 bg-white"
+                              />
+                            </div>
+                          </div>
+
+                          <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full py-2.5 px-4 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition cursor-pointer"
+                          >
+                            {loading ? (
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+                            ) : (
+                              'Kodni yuborish'
+                            )}
+                          </button>
+                        </form>
+                      ) : (
+                        <form onSubmit={handleVerifyOtp} className="space-y-3">
+                          {deliveredViaTelegram ? (
+                            <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 font-medium flex items-center gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                              <span>Kodingiz <strong>@biznesgo_bot</strong> ga yuborildi.</span>
+                            </div>
+                          ) : otpBotUrl ? (
+                            <div className="space-y-1.5">
+                              <p className="text-xs text-slate-600">
+                                Kodingizni olish uchun botni oching:
+                              </p>
+                              <a
+                                href={otpBotUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-full py-2 px-3 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer"
+                              >
+                                <Bot className="w-4 h-4 text-white" />
+                                <span>@biznesgo_bot da kodni ko‘rish</span>
+                              </a>
+                            </div>
+                          ) : null}
+
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="block text-xs font-semibold text-slate-700">
+                                Tasdiqlash kodi
+                              </label>
+                              <div className="flex items-center gap-1 text-[11px] font-mono text-slate-500">
+                                <Clock className="w-3 h-3 text-emerald-600" />
+                                <span>{formatTimer(otpTimer)}</span>
+                              </div>
+                            </div>
+
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              maxLength={6}
+                              autoFocus
+                              required
+                              value={otpCode}
+                              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                              placeholder="• • • • • •"
+                              className="block w-full py-2.5 text-center tracking-[0.4em] text-xl font-mono font-bold border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 text-slate-900"
+                            />
+                          </div>
+
+                          <button
+                            type="submit"
+                            disabled={loading || otpCode.length < 6}
+                            className="w-full py-2.5 px-4 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition cursor-pointer"
+                          >
+                            {loading ? (
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+                            ) : (
+                              'Tasdiqlash'
+                            )}
+                          </button>
+
+                          <div className="flex items-center justify-between pt-1 text-xs">
+                            <button
+                              type="button"
+                              onClick={() => setOtpStep('phone')}
+                              className="text-slate-500 hover:text-slate-800 cursor-pointer"
+                            >
+                              Raqamni o‘zgartirish
+                            </button>
+
+                            <button
+                              type="button"
+                              disabled={otpTimer > 0 || loading}
+                              onClick={() => handleSendOtp()}
+                              className={`flex items-center gap-1 font-semibold cursor-pointer ${
+                                otpTimer > 0
+                                  ? 'text-slate-300 cursor-not-allowed'
+                                  : 'text-emerald-600 hover:text-emerald-700'
+                              }`}
+                            >
+                              <RotateCcw className="w-3 h-3" />
+                              <span>Qayta yuborish</span>
+                            </button>
+                          </div>
+                        </form>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Ro'yxatdan o'tishga havola */}
+                  <div className="pt-2 text-center border-t border-slate-100">
+                    <p className="text-xs text-slate-500">
+                      Do‘koningiz hali ro‘yxatdan o‘tmaganmi?{' '}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsOnboardingForm(true);
+                          setOnboardStep(1);
+                        }}
+                        className="font-bold text-emerald-600 hover:text-emerald-700 cursor-pointer"
+                      >
+                        Yangi do‘kon ochish
+                      </button>
+                    </p>
                   </div>
 
                 </div>

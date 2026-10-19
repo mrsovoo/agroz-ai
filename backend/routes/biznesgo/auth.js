@@ -465,16 +465,18 @@ router.post(
         const mRow = existingM.rows[0];
         // Agar bu avval yaratilgan dummy do'kon ("Mening Do'konim") bo'lsa yoki nomi bo'lmasa, yangilaymiz
         if (mRow.store_name === "Mening Do'konim" || !mRow.store_name) {
+          const passHash = password ? hashPassword(password) : null;
           const updated = await client.query(
             `UPDATE merchants
                 SET store_name = $1, business_type = $2, address = $3, phone = $4,
                     lat = $5::float8, lng = $6::float8,
                     delivery_available = $7,
                     location = CASE WHEN $5::float8 IS NULL THEN NULL ELSE point($6::float8, $5::float8) END,
+                    password_hash = COALESCE($8, password_hash),
                     is_active = true
-              WHERE id = $8
+              WHERE id = $9
               RETURNING ${MERCHANT_COLUMNS}`,
-            [store.store_name, store.business_type, store.address || null, phone, store.lat, store.lng, store.delivery_available, mRow.id]
+            [store.store_name, store.business_type, store.address || null, phone, store.lat, store.lng, store.delivery_available, passHash, mRow.id]
           );
           return updated.rows[0];
         } else {
