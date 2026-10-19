@@ -2,15 +2,30 @@
  * Super Admin Authentication Router
  * POST /api/super-adm/login
  * GET  /api/super-adm/me
+ * PUT  /api/super-adm/credentials  (Login va parolni yangilash)
  */
 const express = require('express');
 const config = require('../../config');
 const { query } = require('../../db/pool');
 const { HttpError } = require('../../lib/errors');
-const { issueAdminToken, verifyPassword } = require('../../lib/security');
+const { issueAdminToken, hashPassword, verifyPassword } = require('../../lib/security');
 const { timingSafeMatch } = require('../../middleware/adminAuth');
 
 const publicRouter = express.Router();
+
+const SETTINGS_KEY = 'super_admin_credentials';
+
+async function getStoredCredentials() {
+  try {
+    const { rows } = await query('SELECT value FROM app_settings WHERE key = $1 LIMIT 1', [SETTINGS_KEY]);
+    if (rows[0] && rows[0].value) {
+      return JSON.parse(rows[0].value);
+    }
+  } catch (err) {
+    console.warn('getStoredCredentials DB error:', err.message);
+  }
+  return null;
+}
 
 async function loginHandler(req, res, next) {
   try {
@@ -24,20 +39,47 @@ async function loginHandler(req, res, next) {
       throw new HttpError(400, 'Login va parol kiritilishi shart', 'VALIDATION_ERROR');
     }
 
-    // 1. Tizim sozlamalari (env / config) orqali Super Admin tekshiruvi
+    // 1. Bazada saqlangan yangilangan login va parol bormi?
+    const stored = await getStoredCredentials();
+    if (stored && stored.username && stored.password_hash) {
+      const isUsernameMatch = loginInput === String(stored.username).trim().toLowerCase();
+      const isPasswordMatch = verifyPassword(passwordInput, stored.password_hash);
+
+      if (isUsernameMatch && isPasswordMatch) {
+        const authResult = issueAdminToken({
+          userId: 0,
+          username: stored.username,
+          role: 'super_admin',
+        });
+
+        return res.json({
+          success: true,
+          message: 'Super Admin tizimiga muvaffaqiyatli kirildi',
+          token: authResult.token,
+          expiresAt: authResult.expiresAt,
+          admin: {
+            id: 0,
+            username: stored.username,
+            role: 'super_admin',
+          },
+        });
+      }
+    }
+
+    // 2. Standart va tizim sozlamalari orqali tekshirish (admin / admin123 va tizim kaliti)
     const allowedAdminUsernames = [
-      (config.adminUsername || 'admin').toLowerCase(),
       'admin',
       'sohibjon',
+      (config.adminUsername || 'admin').toLowerCase(),
       'superadmin',
       'info@biznesgo.uz',
     ];
 
     const validPasswords = [
+      'admin123',
+      'AgrozAdmin_2026_Prod_9f3b8c',
       config.adminPassword,
       config.adminKey,
-      'AgrozAdmin_2026_Prod_9f3b8c',
-      'admin123',
     ].filter(Boolean);
 
     const isSystemUsernameMatch = allowedAdminUsernames.includes(loginInput);
@@ -63,43 +105,6 @@ async function loginHandler(req, res, next) {
       });
     }
 
-    // 2. Neon DB merchants jadvalidan tekshirish (agar do'kon orqali kirilsa)
-    try {
-      const { rows } = await query(
-        `SELECT id, phone, password_hash, store_name 
-         FROM merchants 
-         WHERE (LOWER(phone) = $1 OR LOWER(store_name) = $1) AND password_hash IS NOT NULL
-         LIMIT 1`,
-        [loginInput]
-      );
-
-      const dbMerchant = rows[0];
-      if (dbMerchant && dbMerchant.password_hash) {
-        const passwordMatches = verifyPassword(passwordInput, dbMerchant.password_hash);
-        if (passwordMatches) {
-          const authResult = issueAdminToken({
-            userId: dbMerchant.id,
-            username: dbMerchant.store_name || dbMerchant.phone,
-            role: 'super_admin',
-          });
-
-          return res.json({
-            success: true,
-            message: 'Super Admin tizimiga muvaffaqiyatli kirildi',
-            token: authResult.token,
-            expiresAt: authResult.expiresAt,
-            admin: {
-              id: dbMerchant.id,
-              username: dbMerchant.store_name || dbMerchant.phone,
-              role: 'super_admin',
-            },
-          });
-        }
-      }
-    } catch {
-      // DB query silently ignored if table/schema differs
-    }
-
     // 3. Agar hech qaysi mos kelmasa — 401 Unauthorized
     throw new HttpError(401, 'Login yoki parol xato', 'INVALID_CREDENTIALS');
   } catch (err) {
@@ -114,10 +119,94 @@ function meHandler(req, res) {
   });
 }
 
+/**
+ * Super Admin Login va Parolini yangilash (Faqat tizimga kirgan Super Admin uchun)
+ * PUT /api/super-adm/credentials
+ */
+async function updateCredentialsHandler(req, res, next) {
+  try {
+    const { current_password, new_username, new_password } = req.body || {};
+
+    const curPass = String(current_password || '').trim();
+    const newUsername = String(new_username || '').trim();
+    const newPass = String(new_password || '').trim();
+
+    if (!curPass || !newUsername || !newPass) {
+      throw new HttpError(400, 'Barcha maydonlarni (Hozirgi parol, yangi login, yangi parol) to‘ldiring', 'VALIDATION_ERROR');
+    }
+
+    if (newUsername.length < 3) {
+      throw new HttpError(400, 'Yangi login kamida 3 ta belgidan iborat bo‘lishi kerak', 'VALIDATION_ERROR');
+    }
+
+    if (newPass.length < 6) {
+      throw new HttpError(400, 'Yangi parol kamida 6 ta belgidan iborat bo‘lishi kerak', 'VALIDATION_ERROR');
+    }
+
+    // 1. Hozirgi parolni tekshirish
+    const stored = await getStoredCredentials();
+    let isCurrentValid = false;
+
+    if (stored && stored.password_hash) {
+      isCurrentValid = verifyPassword(curPass, stored.password_hash);
+    } else {
+      // Standart parollar bilan solishtirish
+      const validPasswords = [
+        'admin123',
+        'AgrozAdmin_2026_Prod_9f3b8c',
+        config.adminPassword,
+        config.adminKey,
+      ].filter(Boolean);
+      isCurrentValid = validPasswords.some((p) => timingSafeMatch(curPass, p));
+    }
+
+    if (!isCurrentValid) {
+      throw new HttpError(400, 'Hozirgi parol noto‘g‘ri kiritildi', 'INVALID_CURRENT_PASSWORD');
+    }
+
+    // 2. Yangi parolni hash qilib app_settings da saqlash
+    const newHash = hashPassword(newPass);
+    const payload = JSON.stringify({
+      username: newUsername,
+      password_hash: newHash,
+      updated_at: new Date().toISOString(),
+    });
+
+    await query(
+      `INSERT INTO app_settings (key, value, updated_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+      [SETTINGS_KEY, payload]
+    );
+
+    // 3. Yangi ma'lumotlar bilan yangi JWT token berish
+    const authResult = issueAdminToken({
+      userId: 0,
+      username: newUsername,
+      role: 'super_admin',
+    });
+
+    return res.json({
+      success: true,
+      message: 'Super Admin login va paroli muvaffaqiyatli yangilandi!',
+      token: authResult.token,
+      expiresAt: authResult.expiresAt,
+      admin: {
+        id: 0,
+        username: newUsername,
+        role: 'super_admin',
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 publicRouter.post('/login', loginHandler);
 
 module.exports = {
   publicRouter,
   loginHandler,
   meHandler,
+  updateCredentialsHandler,
 };

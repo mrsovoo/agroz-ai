@@ -16,7 +16,7 @@ interface LoginViewProps {
 }
 
 export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
-  const [username, setUsername] = useState('sohibjon');
+  const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -104,7 +104,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="sohibjon yoki admin"
+                placeholder="admin"
                 required
                 className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200/80 rounded-2xl text-xs font-semibold text-slate-900 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-black/10 focus:border-black transition"
               />
@@ -123,7 +123,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Parolni kiriting..."
+                placeholder="admin123"
                 required
                 className="w-full pl-10 pr-11 py-3 bg-white border border-slate-200/80 rounded-2xl text-xs font-semibold text-slate-900 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-black/10 focus:border-black transition"
               />
@@ -136,6 +136,13 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+          </div>
+
+          {/* Standart login parol eslatmasi */}
+          <div className="p-3 bg-white/70 border border-slate-200/70 rounded-2xl flex items-center justify-between text-[11px] text-slate-600">
+            <span>Standart login: <strong className="text-black font-bold">admin</strong></span>
+            <span className="text-slate-300">•</span>
+            <span>Parol: <strong className="text-black font-bold">admin123</strong></span>
           </div>
 
           <button
@@ -169,3 +176,4 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     </div>
   );
 };
+

@@ -16,9 +16,12 @@ router.use('/auth', authModule.publicRouter);
 // 2. Barcha qolgan super admin route'larini requireSuperAdmin guard bilan himoyalash
 router.use(requireSuperAdmin);
 
-// 3. Himoyalangan admin ma'lumotlari
+// 3. Himoyalangan admin ma'lumotlari va sozlamalari
 router.get('/me', authModule.meHandler);
 router.get('/auth/me', authModule.meHandler);
+router.put('/credentials', authModule.updateCredentialsHandler);
+router.post('/credentials', authModule.updateCredentialsHandler);
+router.put('/auth/credentials', authModule.updateCredentialsHandler);
 
 router.use('/stats', require('./stats'));
 router.use('/merchants', require('./merchants'));

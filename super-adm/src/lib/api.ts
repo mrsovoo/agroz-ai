@@ -73,6 +73,24 @@ class SuperAdminApi {
     return data;
   }
 
+  async updateCredentials(data: {
+    current_password: string;
+    new_username: string;
+    new_password: string;
+  }): Promise<{ success: boolean; message: string; token: string; admin: any }> {
+    const res = await this.request<{ success: boolean; message: string; token: string; admin: any }>('/credentials', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    if (res.token) {
+      this.setToken(res.token);
+      if (res.admin) {
+        localStorage.setItem(ADMIN_USER_STORAGE, JSON.stringify(res.admin));
+      }
+    }
+    return res;
+  }
+
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${API_BASE}${endpoint}`;
     const headers = new Headers(options.headers || {});

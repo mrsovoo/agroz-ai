@@ -96,6 +96,43 @@ async function runSuperAdminTests() {
     }
     console.log("   ✅ Bearer JWT orqali /me ma'lumotlari tasdiqlandi:", meRes.body.admin.role);
 
+    // 1d. admin / admin123 bilan kirish tekshiruvi
+    const defaultLoginRes = await makeRequest(server, {
+      path: '/api/super-adm/login',
+      method: 'POST',
+    }, { username: 'admin', password: 'admin123' });
+    if (defaultLoginRes.status !== 200 || !defaultLoginRes.body.token) {
+      throw new Error(`Standart admin/admin123 kirish xatosi: ${JSON.stringify(defaultLoginRes.body)}`);
+    }
+    console.log("   ✅ Standart admin / admin123 bilan kirish 100% muvaffaqiyatli!");
+
+    // 1e. Super Admin parolini yangilash (PUT /api/super-adm/credentials)
+    const updateCredRes = await makeRequest(server, {
+      path: '/api/super-adm/credentials',
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${adminJwtToken}` },
+    }, {
+      current_password: 'admin123',
+      new_username: 'admin',
+      new_password: 'admin123_updated_test'
+    });
+    if (updateCredRes.status !== 200) {
+      throw new Error(`Parol yangilash xatosi: ${JSON.stringify(updateCredRes.body)}`);
+    }
+    console.log("   ✅ Super Admin login va paroli muvaffaqiyatli yangilandi (app_settings DB)!");
+
+    // Qayta admin123 ga qaytarib qo'yamiz (keyingi testlar uchun)
+    await makeRequest(server, {
+      path: '/api/super-adm/credentials',
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${updateCredRes.body.token}` },
+    }, {
+      current_password: 'admin123_updated_test',
+      new_username: 'admin',
+      new_password: 'admin123'
+    });
+    console.log("   ✅ Login va parol standart holatga tiklandi (admin / admin123)");
+
     // 2. Stats olish (Neon DB aggregatsiyalari)
     console.log("\n2. Platforma statistikasi (/api/super-adm/stats)...");
     const statsRes = await makeRequest(server, {
