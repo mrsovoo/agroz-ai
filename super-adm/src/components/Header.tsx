@@ -39,7 +39,7 @@ export const Header: React.FC<HeaderProps> = ({ onSearch, showKeyModal, setShowK
             type="text"
             value={searchVal}
             onChange={handleSearchChange}
-            placeholder="Search your today analysis"
+            placeholder="Bugungi tahlillar va do‘konlarni qidirish..."
             className="w-full pl-11 pr-4 py-2.5 bg-white/90 rounded-full text-xs text-slate-800 placeholder-slate-400 shadow-xs border border-slate-200/50 focus:outline-none focus:ring-2 focus:ring-black/10 transition"
           />
         </div>
@@ -52,8 +52,8 @@ export const Header: React.FC<HeaderProps> = ({ onSearch, showKeyModal, setShowK
             className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white/90 rounded-full text-xs font-medium text-slate-700 shadow-xs border border-slate-200/50 hover:bg-white transition cursor-pointer"
           >
             <Bell className="w-3.5 h-3.5 text-slate-600" />
-            <span>Notifications</span>
-            <span className="w-5 h-5 rounded-full bg-slate-300 text-slate-700 text-[10px] font-bold flex items-center justify-center">
+            <span>Bildirishnomalar</span>
+            <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-800 text-[10px] font-bold flex items-center justify-center">
               4
             </span>
           </button>
@@ -65,14 +65,14 @@ export const Header: React.FC<HeaderProps> = ({ onSearch, showKeyModal, setShowK
             title="Admin Kalitini tekshirish"
           >
             <span className="w-2 h-2 rounded-full bg-[#22C55E]"></span>
-            <span className="font-semibold text-slate-800">Admin</span>
+            <span className="font-semibold text-slate-800">Super Admin</span>
           </button>
 
           {/* User Profile Avatar */}
-          <div className="w-9 h-9 rounded-full ring-2 ring-white shadow-xs overflow-hidden cursor-pointer">
+          <div className="w-9 h-9 rounded-full ring-2 ring-white shadow-xs overflow-hidden cursor-pointer" title="Super Admin Profili">
             <img
               src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&h=120&q=80"
-              alt="Admin Profile"
+              alt="Admin Profili"
               className="w-full h-full object-cover"
             />
           </div>
@@ -103,34 +103,43 @@ export const Header: React.FC<HeaderProps> = ({ onSearch, showKeyModal, setShowK
             </div>
 
             <p className="text-xs text-slate-500 leading-relaxed">
-              Super Admin API so'rovlarini tasdiqlash uchun maxfiy kalit. Kalit brauzeringizda xavfsiz saqlanadi.
+              Super Admin API endpointlariga so‘rov yuborish uchun maxfiy kalitni kiriting:
             </p>
 
-            <div>
+            <div className="space-y-1.5">
               <input
                 type="password"
+                placeholder="agroz_super_secret_admin_2026"
                 value={keyInput}
                 onChange={(e) => setKeyInput(e.target.value)}
-                placeholder="Admin kalitini kiriting..."
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-black font-mono"
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-black"
+                required
               />
+              <span className="text-[10px] text-slate-400 block">
+                Ushbu kalit brauzeringizning xavfsiz xotirasida (localStorage) saqlanadi.
+              </span>
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setShowKeyModal(false)}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-black transition"
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-black cursor-pointer"
               >
                 Bekor qilish
               </button>
               <button
                 type="submit"
-                disabled={saved}
-                className="px-5 py-2 bg-black text-white hover:bg-neutral-800 text-xs font-semibold rounded-full shadow-sm transition flex items-center gap-1.5"
+                className="px-5 py-2 bg-black text-white hover:bg-neutral-800 text-xs font-semibold rounded-full shadow-sm transition flex items-center gap-1.5 cursor-pointer"
               >
-                {saved ? <Check className="w-4 h-4" /> : null}
-                <span>{saved ? 'Saqlandi' : 'Saqlash'}</span>
+                {saved ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-[#22C55E]" />
+                    <span>Saqlandi!</span>
+                  </>
+                ) : (
+                  <span>Saqlash va Tasdiqlash</span>
+                )}
               </button>
             </div>
           </form>

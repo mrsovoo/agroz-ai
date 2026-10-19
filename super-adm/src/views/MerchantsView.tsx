@@ -183,9 +183,9 @@ export const MerchantsView: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
-            Merchants<br />Directory
+            Do‘konlar<br />Boshqaruvi
           </h1>
-          <p className="text-xs text-slate-500 mt-1 font-medium">Barcha ro‘yxatdan o‘tgan B2B do‘konlar ({total} ta)</p>
+          <p className="text-xs text-slate-500 mt-1 font-medium">Barcha ro‘yxatdan o‘tgan B2B savdo nuqtalari ({total} ta)</p>
         </div>
 
         <button

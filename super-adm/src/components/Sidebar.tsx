@@ -7,8 +7,6 @@ import {
   MessageSquare, 
   Key, 
   RotateCcw,
-  Settings,
-  Bell
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -19,11 +17,11 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentView, onSelectView, onOpenKeyModal }) => {
   const navItems = [
-    { id: 'dashboard' as const, label: 'Dashboard', icon: Home },
-    { id: 'merchants' as const, label: "Do'konlar", icon: Store },
-    { id: 'support' as const, label: 'Murojaatlar', icon: MessageSquare },
+    { id: 'dashboard' as const, label: 'Boshqaruv Paneli', icon: Home },
+    { id: 'merchants' as const, label: "Do'konlar Ro‘yxati", icon: Store },
+    { id: 'support' as const, label: 'Murojaatlar & Chat', icon: MessageSquare },
     { id: 'broadcast' as const, label: 'Push Xabarnoma', icon: Send },
-    { id: 'archive' as const, label: 'Arxiv', icon: Archive },
+    { id: 'archive' as const, label: 'Arxiv & Baza', icon: Archive },
   ];
 
   return (
@@ -32,8 +30,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onSelectView, onO
       <div className="flex flex-col items-center gap-6">
         <button 
           onClick={() => onSelectView('dashboard')}
-          className="w-10 h-10 flex items-center justify-center hover:rotate-45 transition-transform duration-300"
-          title="BiznesGO Super Admin"
+          className="w-10 h-10 flex items-center justify-center hover:rotate-45 transition-transform duration-300 cursor-pointer"
+          title="BiznesGO Boshqaruv Markazi"
         >
           {/* 12-ray sunburst asterisk icon matching reference image */}
           <svg className="w-8 h-8 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
