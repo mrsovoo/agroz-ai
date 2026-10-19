@@ -24,14 +24,21 @@ import {
   Upload,
   ShieldCheck,
   Layers,
-  Sprout
+  Sprout,
+  Camera,
+  Loader2,
+  RefreshCw,
+  Filter
 } from 'lucide-react';
+import { SECTOR_CATEGORIES } from '../constants/categories';
+import { compressImage } from '../lib/imageCompressor';
 
 export const ProductsView: React.FC = () => {
   const { merchant, addToast } = useStore();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
 
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -46,9 +53,9 @@ export const ProductsView: React.FC = () => {
   const [unit, setUnit] = useState('dona');
   const [stockQuantity, setStockQuantity] = useState<number | ''>('');
   const [minStockAlert, setMinStockAlert] = useState<number | ''>(5);
-  const [barcode, setBarcode] = useState('');
   const [sku, setSku] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [isCompressingImage, setIsCompressingImage] = useState(false);
 
   // Sector Specific Fields
   // 1. Agro-Vet
@@ -102,7 +109,6 @@ export const ProductsView: React.FC = () => {
     setUnit(businessType === 'feed' ? 'qop' : 'dona');
     setStockQuantity('');
     setMinStockAlert(5);
-    setBarcode('');
     setSku('');
     setImageUrl('');
 
@@ -143,7 +149,6 @@ export const ProductsView: React.FC = () => {
     setUnit(p.unit);
     setStockQuantity(p.stock_quantity);
     setMinStockAlert(p.min_stock_alert || 5);
-    setBarcode(p.barcode || '');
     setSku(p.sku || '');
     setImageUrl(p.image_url || '');
 
@@ -170,20 +175,29 @@ export const ProductsView: React.FC = () => {
     setIsAddModalOpen(true);
   };
 
-  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      addToast('Rasm hajmi 2MB dan oshmasligi kerak', 'error');
+    if (!file.type.startsWith('image/')) {
+      addToast('Faqat rasm fayli (JPEG, PNG, WebP) tanlang', 'error');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImageUrl(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    try {
+      setIsCompressingImage(true);
+      // Yuqori sifatli kamera yoki galereya rasmlarini brauzerda avtomatik optimallashtirish (2MB cheklovsiz)
+      const compressed = await compressImage(file, 1200, 1200, 0.82);
+      setImageUrl(compressed);
+      addToast('Rasm muvaffaqiyatli yuklandi', 'success');
+      tg.hapticImpact('light');
+    } catch (err: any) {
+      console.error('Rasm yuklashda xatolik:', err);
+      addToast('Rasmni yuklashda xatolik yuz berdi', 'error');
+    } finally {
+      setIsCompressingImage(false);
+      e.target.value = '';
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -217,7 +231,7 @@ export const ProductsView: React.FC = () => {
         unit,
         stock_quantity: Number(stockQuantity),
         min_stock_alert: minStockAlert !== '' ? Number(minStockAlert) : 5,
-        barcode: barcode.trim() || undefined,
+        barcode: editingProduct?.barcode || undefined,
         sku: sku.trim() || undefined,
         image_url: imageUrl.trim() || undefined,
 
@@ -280,12 +294,13 @@ export const ProductsView: React.FC = () => {
   };
 
   const filtered = products.filter((p) => {
-    const q = searchQuery.toLowerCase();
+    if (categoryFilter && p.category !== categoryFilter) return false;
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
     return (
       p.name.toLowerCase().includes(q) ||
       (p.category && p.category.toLowerCase().includes(q)) ||
       (p.batch_number && p.batch_number.toLowerCase().includes(q)) ||
-      (p.barcode && p.barcode.toLowerCase().includes(q)) ||
       (p.active_ingredient && p.active_ingredient.toLowerCase().includes(q)) ||
       (p.variety && p.variety.toLowerCase().includes(q)) ||
       (p.model && p.model.toLowerCase().includes(q)) ||
@@ -311,7 +326,7 @@ export const ProductsView: React.FC = () => {
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Sektorga moslashtirilgan tovar kartochkalari, narxlar va qoldiqlar
+            5 ta B2B sektorga moslashtirilgan tovar kartochkalari, narxlar va qoldiqlar
           </p>
         </div>
         <button
@@ -323,22 +338,42 @@ export const ProductsView: React.FC = () => {
         </button>
       </div>
 
-      {/* Search & Counter bar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between gap-3">
-        <div className="relative flex-1 max-w-md">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-            <Search className="w-5 h-5" />
+      {/* Search & Category Filter bar */}
+      <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-1 max-w-2xl">
+          <div className="relative flex-1">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <Search className="w-4 h-4" />
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Nomi, faol modda, nav yoki model bo‘yicha izlash..."
+              className="block w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
           </div>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Nomi, kod, seriya, faol modda yoki nav bo‘yicha izlash..."
-            className="block w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-          />
+
+          <div className="flex items-center gap-1.5 sm:w-64">
+            <Filter className="w-4 h-4 text-slate-400 shrink-0 hidden sm:block" />
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs sm:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-700 font-medium"
+            >
+              <option value="">Barcha kategoriyalar</option>
+              {SECTOR_CATEGORIES[businessType]?.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
         </div>
-        <div className="text-xs font-semibold text-slate-600">
-          Jami: <span className="text-emerald-700 font-bold">{filtered.length} ta</span>
+
+        <div className="text-xs font-semibold text-slate-600 flex items-center justify-between sm:justify-end gap-2">
+          <span>Jami tovarlar:</span>
+          <span className="text-emerald-700 font-extrabold px-2 py-0.5 rounded-lg bg-emerald-50 border border-emerald-200">
+            {filtered.length} ta
+          </span>
         </div>
       </div>
 
@@ -427,11 +462,6 @@ export const ProductsView: React.FC = () => {
                             <div className="font-bold text-slate-900 text-sm">
                               {product.name}
                             </div>
-                            {product.barcode && (
-                              <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-                                {product.barcode}
-                              </div>
-                            )}
                           </div>
                         </div>
                       </td>
@@ -609,54 +639,98 @@ export const ProductsView: React.FC = () => {
         <form onSubmit={handleSubmit} className="space-y-4">
           
           {/* Sektor belgisi va Rasm maydoni */}
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-            <div className="flex items-center justify-between mb-2">
+          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
+            <div className="flex items-center justify-between mb-2.5">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                <ImageIcon className="w-4 h-4 text-emerald-600" />
+                <Camera className="w-4 h-4 text-emerald-600" />
                 <span>
                   Mahsulot rasmi {businessType === 'agro_vet' || businessType === 'seeds' || businessType === 'machinery' ? '*' : '(Ixtiyoriy)'}
                 </span>
               </label>
               {(businessType === 'agro_vet' || businessType === 'seeds' || businessType === 'machinery') && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-100 text-rose-700">
-                  Majburiy yuklash
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                  Tavsiya / Majburiy
                 </span>
               )}
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-3">
-              {imageUrl ? (
-                <div className="relative group w-20 h-20 rounded-xl overflow-hidden border border-slate-300 shrink-0">
+            {imageUrl ? (
+              <div className="flex items-center gap-4 bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+                <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 shrink-0">
                   <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => setImageUrl('')}
-                    className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition text-xs font-bold cursor-pointer"
-                  >
-                    O‘chirish
-                  </button>
                 </div>
-              ) : (
-                <label className="w-20 h-20 rounded-xl border-2 border-dashed border-slate-300 hover:border-emerald-500 bg-white flex flex-col items-center justify-center text-slate-400 hover:text-emerald-600 cursor-pointer transition shrink-0">
-                  <Upload className="w-5 h-5 mb-1" />
-                  <span className="text-[10px] font-semibold">Fayl</span>
-                  <input type="file" accept="image/*" onChange={handleImageFileChange} className="hidden" />
-                </label>
-              )}
-
-              <div className="flex-1 w-full">
-                <input
-                  type="url"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  placeholder="Yoki rasm URL havolasini kiriting (https://...)"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
-                />
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Xaridorlarga chekda va katalogda tovar aniq ko‘rinishi uchun qulay.
-                </p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700">
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span>Rasm yuklandi va optimallashtirildi</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Kassa va cheklarda aniq va tiniq ko‘rinadi.
+                  </p>
+                  <div className="flex items-center gap-2 mt-2.5">
+                    <label className="px-3 py-1.5 text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg cursor-pointer transition flex items-center gap-1.5 shadow-2xs">
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span>Boshqa rasm tanlash</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={isCompressingImage}
+                        onChange={handleImageFileChange}
+                        className="hidden"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setImageUrl('')}
+                      className="px-3 py-1.5 text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg cursor-pointer transition flex items-center gap-1.5"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>O‘chirish</span>
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div>
+                <label className="w-full flex flex-col sm:flex-row items-center justify-between gap-3 p-4 sm:p-5 border-2 border-dashed border-emerald-300 hover:border-emerald-500 bg-white hover:bg-emerald-50/30 rounded-2xl cursor-pointer transition group shadow-2xs">
+                  {isCompressingImage ? (
+                    <div className="flex items-center gap-3 py-2 text-emerald-700 w-full justify-center">
+                      <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
+                      <div>
+                        <div className="text-xs font-bold">Rasm optimallashtirilmoqda...</div>
+                        <div className="text-[11px] text-slate-500">Iltimos kuting</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-3.5 text-center sm:text-left">
+                        <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                          <Camera className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-bold text-slate-800">
+                            Kamera yoki galereyadan rasm tanlash
+                          </div>
+                          <div className="text-[11px] text-slate-500 mt-0.5">
+                            Istalgan sifatdagi rasmni yuklang (avtomatik sifatli siqiladi, 2MB cheklov yo‘q)
+                          </div>
+                        </div>
+                      </div>
+                      <span className="px-4 py-2 bg-emerald-600 group-hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition shrink-0">
+                        Rasm yuklash
+                      </span>
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={isCompressingImage}
+                    onChange={handleImageFileChange}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            )}
           </div>
 
           {/* Asosiy ma'lumotlar */}
@@ -677,15 +751,27 @@ export const ProductsView: React.FC = () => {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                Kategoriya
+                Kategoriya *
               </label>
-              <input
-                type="text"
+              <select
+                required
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                placeholder="Masalan: Insektitsidlar, Yem, Urug‘..."
-                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
+                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white font-medium text-slate-800"
+              >
+                <option value="">— Kategoriyani tanlang —</option>
+                {SECTOR_CATEGORIES[businessType]?.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+                {category && !SECTOR_CATEGORIES[businessType]?.includes(category) && (
+                  <option value={category}>{category}</option>
+                )}
+              </select>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Sektor yo‘nalishi bo‘yicha faqat tanlab qo‘yiladi
+              </p>
             </div>
 
             <div>

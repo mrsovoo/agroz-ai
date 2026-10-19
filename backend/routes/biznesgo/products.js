@@ -66,7 +66,7 @@ function parseProduct(body, merchant, { partial = false } = {}) {
     if (m !== null) out.min_stock_alert = m;
   }
   if (has('image_url')) {
-    const url = v.str(body.image_url, 'image_url', { max: 200000 });
+    const url = v.str(body.image_url, 'image_url', { max: 5000000 });
     out.image_url = url;
   }
 

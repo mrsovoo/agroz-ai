@@ -66,10 +66,11 @@ export const PosView: React.FC = () => {
   }, []);
 
   const filteredProducts = products.filter((p) => {
-    const q = searchQuery.toLowerCase();
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
     return (
       p.name.toLowerCase().includes(q) ||
-      (p.barcode && p.barcode.toLowerCase().includes(q)) ||
+      (p.category && p.category.toLowerCase().includes(q)) ||
       (p.sku && p.sku.toLowerCase().includes(q)) ||
       (p.batch_number && p.batch_number.toLowerCase().includes(q))
     );

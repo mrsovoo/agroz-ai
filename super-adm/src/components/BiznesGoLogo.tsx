@@ -94,3 +94,4 @@ export const BiznesGoLogo: React.FC<BiznesGoLogoProps> = ({
     </div>
   );
 };
+
