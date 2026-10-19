@@ -1,17 +1,36 @@
 import React, { useState } from 'react';
-import { Search, Bell, Key, Check, ShieldCheck, X } from 'lucide-react';
+import { 
+  Search, 
+  Bell, 
+  Key, 
+  Check, 
+  ShieldCheck, 
+  X,
+  Store,
+  MessageSquare,
+  MapPin,
+  TrendingUp,
+  ArrowRight
+} from 'lucide-react';
 import { api } from '../lib/api';
 
 interface HeaderProps {
   onSearch?: (q: string) => void;
   showKeyModal: boolean;
   setShowKeyModal: (open: boolean) => void;
+  onNavigate?: (view: 'dashboard' | 'merchants' | 'map' | 'broadcast' | 'archive' | 'support') => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onSearch, showKeyModal, setShowKeyModal }) => {
+export const Header: React.FC<HeaderProps> = ({ 
+  onSearch, 
+  showKeyModal, 
+  setShowKeyModal,
+  onNavigate 
+}) => {
   const [keyInput, setKeyInput] = useState(api.getKey());
   const [saved, setSaved] = useState(false);
   const [searchVal, setSearchVal] = useState('');
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const handleSaveKey = (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,6 +48,12 @@ export const Header: React.FC<HeaderProps> = ({ onSearch, showKeyModal, setShowK
     if (onSearch) onSearch(e.target.value);
   };
 
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchVal.trim() && onNavigate) {
+      onNavigate('merchants');
+    }
+  };
+
   return (
     <>
       <header className="h-20 bg-transparent flex items-center justify-between px-6 sm:px-10 shrink-0">
@@ -39,21 +64,22 @@ export const Header: React.FC<HeaderProps> = ({ onSearch, showKeyModal, setShowK
             type="text"
             value={searchVal}
             onChange={handleSearchChange}
-            placeholder="Bugungi tahlillar va do‘konlarni qidirish..."
+            onKeyDown={handleSearchKeyDown}
+            placeholder="Do‘kon, telefon yoki tahlillarni qidirish..."
             className="w-full pl-11 pr-4 py-2.5 bg-white/90 rounded-full text-xs text-slate-800 placeholder-slate-400 shadow-xs border border-slate-200/50 focus:outline-none focus:ring-2 focus:ring-black/10 transition"
           />
         </div>
 
         {/* Right: Notifications & User Avatar */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 relative">
           {/* Notifications Pill */}
           <button
-            onClick={() => setShowKeyModal(true)}
+            onClick={() => setShowNotifications(!showNotifications)}
             className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white/90 rounded-full text-xs font-medium text-slate-700 shadow-xs border border-slate-200/50 hover:bg-white transition cursor-pointer"
           >
             <Bell className="w-3.5 h-3.5 text-slate-600" />
             <span>Bildirishnomalar</span>
-            <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-800 text-[10px] font-bold flex items-center justify-center">
+            <span className="w-5 h-5 rounded-full bg-[#22C55E] text-black text-[10px] font-black flex items-center justify-center">
               4
             </span>
           </button>
@@ -69,13 +95,105 @@ export const Header: React.FC<HeaderProps> = ({ onSearch, showKeyModal, setShowK
           </button>
 
           {/* User Profile Avatar */}
-          <div className="w-9 h-9 rounded-full ring-2 ring-white shadow-xs overflow-hidden cursor-pointer" title="Super Admin Profili">
+          <div 
+            onClick={() => setShowKeyModal(true)}
+            className="w-9 h-9 rounded-full ring-2 ring-white shadow-xs overflow-hidden cursor-pointer" 
+            title="Super Admin Profili & Kalit"
+          >
             <img
               src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&h=120&q=80"
               alt="Admin Profili"
               className="w-full h-full object-cover"
             />
           </div>
+
+          {/* Bildirishnomalar Popover */}
+          {showNotifications && (
+            <div className="absolute right-0 top-14 z-50 w-80 bg-white rounded-3xl shadow-2xl border border-slate-100 p-4 space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <Bell className="w-4 h-4 text-black" />
+                  <h4 className="text-xs font-bold text-slate-900">Platforma Bildirishnomalari</h4>
+                </div>
+                <button
+                  onClick={() => setShowNotifications(false)}
+                  className="w-6 h-6 rounded-full bg-slate-100 text-slate-500 hover:text-black flex items-center justify-center cursor-pointer text-xs"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div className="space-y-2 text-xs">
+                {/* 1. Yangi do'konlar */}
+                <div 
+                  onClick={() => {
+                    setShowNotifications(false);
+                    if (onNavigate) onNavigate('merchants');
+                  }}
+                  className="p-3 bg-[#F8F8F6] rounded-2xl hover:bg-slate-100 transition cursor-pointer flex items-start gap-2.5"
+                >
+                  <div className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+                    <Store className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-900">Yangi B2B Do‘konlar</div>
+                    <div className="text-[11px] text-slate-500">105 ta do‘kon bazada faol</div>
+                  </div>
+                </div>
+
+                {/* 2. Yangi murojaatlar */}
+                <div 
+                  onClick={() => {
+                    setShowNotifications(false);
+                    if (onNavigate) onNavigate('support');
+                  }}
+                  className="p-3 bg-[#F8F8F6] rounded-2xl hover:bg-slate-100 transition cursor-pointer flex items-start gap-2.5"
+                >
+                  <div className="w-7 h-7 rounded-full bg-sky-100 text-sky-800 flex items-center justify-center shrink-0">
+                    <MessageSquare className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-900">Murojaatlar & Chat</div>
+                    <div className="text-[11px] text-slate-500">Telegram va Webdan kelgan xabarlar</div>
+                  </div>
+                </div>
+
+                {/* 3. Viloyatlar qamrovi */}
+                <div 
+                  onClick={() => {
+                    setShowNotifications(false);
+                    if (onNavigate) onNavigate('map');
+                  }}
+                  className="p-3 bg-[#F8F8F6] rounded-2xl hover:bg-slate-100 transition cursor-pointer flex items-start gap-2.5"
+                >
+                  <div className="w-7 h-7 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+                    <MapPin className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-900">Hududiy Qamrov</div>
+                    <div className="text-[11px] text-slate-500">14 ta viloyat bo‘yicha B2B xaritasi</div>
+                  </div>
+                </div>
+
+                {/* 4. Neon DB Savdolari */}
+                <div 
+                  onClick={() => {
+                    setShowNotifications(false);
+                    if (onNavigate) onNavigate('dashboard');
+                  }}
+                  className="p-3 bg-[#F8F8F6] rounded-2xl hover:bg-slate-100 transition cursor-pointer flex items-start gap-2.5"
+                >
+                  <div className="w-7 h-7 rounded-full bg-purple-100 text-purple-800 flex items-center justify-center shrink-0">
+                    <TrendingUp className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-900">Savdo Aylanmasi</div>
+                    <div className="text-[11px] text-slate-500">53M+ UZS savdolar va kassa cheklari</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </header>
 
@@ -109,7 +227,7 @@ export const Header: React.FC<HeaderProps> = ({ onSearch, showKeyModal, setShowK
             <div className="space-y-1.5">
               <input
                 type="password"
-                placeholder="agroz_super_secret_admin_2026"
+                placeholder="AgrozAdmin_2026_Prod_9f3b8c"
                 value={keyInput}
                 onChange={(e) => setKeyInput(e.target.value)}
                 className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-black"

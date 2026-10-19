@@ -16,24 +16,41 @@ import {
   Archive,
   ArrowUpRight,
   ShieldAlert,
-  X
+  X,
+  Download,
+  MapPin,
+  Package,
+  Layers,
+  Receipt
 } from 'lucide-react';
 
-export const MerchantsView: React.FC = () => {
+interface MerchantsViewProps {
+  searchQuery?: string;
+}
+
+export const MerchantsView: React.FC<MerchantsViewProps> = ({ searchQuery = '' }) => {
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(searchQuery);
   const [businessType, setBusinessType] = useState('');
   const [status, setStatus] = useState('');
   const [total, setTotal] = useState(0);
 
   // Modal / action state
   const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [selectedMerchant, setSelectedMerchant] = useState<Merchant | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Merchant | null>(null);
   const [confirmReset, setConfirmReset] = useState<Merchant | null>(null);
   const [subscriptionModal, setSubscriptionModal] = useState<Merchant | null>(null);
   const [newSubDate, setNewSubDate] = useState('');
   const [notification, setNotification] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  // Sync external search query from Header
+  useEffect(() => {
+    if (searchQuery !== undefined && searchQuery !== search) {
+      setSearch(searchQuery);
+    }
+  }, [searchQuery]);
 
   const loadMerchants = async () => {
     setLoading(true);
@@ -64,6 +81,9 @@ export const MerchantsView: React.FC = () => {
       setMerchants((prev) =>
         prev.map((m) => (m.id === merchant.id ? { ...m, is_active: updated.is_active } : m))
       );
+      if (selectedMerchant?.id === merchant.id) {
+        setSelectedMerchant((prev) => prev ? { ...prev, is_active: updated.is_active } : null);
+      }
       showNotification(`"${merchant.store_name}" holati yangilandi (${updated.is_active ? 'Faol' : 'Bloklangan'})`);
     } catch (err: any) {
       showNotification(err.message, 'error');
@@ -82,6 +102,9 @@ export const MerchantsView: React.FC = () => {
       setMerchants((prev) =>
         prev.map((m) => (m.id === subscriptionModal.id ? { ...m, subscription_until: updated.subscription_until } : m))
       );
+      if (selectedMerchant?.id === subscriptionModal.id) {
+        setSelectedMerchant((prev) => prev ? { ...prev, subscription_until: updated.subscription_until } : null);
+      }
       showNotification(`"${subscriptionModal.store_name}" obunasi saqlandi`);
       setSubscriptionModal(null);
     } catch (err: any) {
@@ -99,6 +122,9 @@ export const MerchantsView: React.FC = () => {
       setMerchants((prev) =>
         prev.map((m) => (m.id === confirmReset.id ? { ...m, sales_count: 0, total_sales: 0, open_debts_count: 0, total_open_debt: 0 } : m))
       );
+      if (selectedMerchant?.id === confirmReset.id) {
+        setSelectedMerchant((prev) => prev ? { ...prev, sales_count: 0, total_sales: 0, open_debts_count: 0, total_open_debt: 0 } : null);
+      }
       showNotification(`"${confirmReset.store_name}" test ma'lumotlari tozalandi (${res.deleted_sales} savdo, ${res.deleted_debts} qarz)`);
       setConfirmReset(null);
     } catch (err: any) {
@@ -115,6 +141,9 @@ export const MerchantsView: React.FC = () => {
       await api.deleteMerchant(confirmDelete.id);
       setMerchants((prev) => prev.filter((m) => m.id !== confirmDelete.id));
       setTotal((t) => t - 1);
+      if (selectedMerchant?.id === confirmDelete.id) {
+        setSelectedMerchant(null);
+      }
       showNotification(`"${confirmDelete.store_name}" va uning barcha ma'lumotlari o'chirildi`);
       setConfirmDelete(null);
     } catch (err: any) {
@@ -152,16 +181,45 @@ export const MerchantsView: React.FC = () => {
     }
   };
 
+  const handleExportCSV = () => {
+    if (!merchants.length) return;
+
+    const headers = ['ID', 'Do‘kon Nomi', 'Egasi', 'Sektor', 'Telefon', 'Tovarlar Soni', 'Jami Savdo', 'Ochiq Qarz', 'Obuna Muddati', 'Holat'];
+    const rows = merchants.map((m) => [
+      m.id,
+      `"${m.store_name}"`,
+      `"${m.owner_name || ''}"`,
+      `"${businessTypeLabels[m.business_type] || m.business_type}"`,
+      `"${m.phone}"`,
+      m.products_count || 0,
+      m.total_sales || 0,
+      m.total_open_debt || 0,
+      `"${m.subscription_until ? m.subscription_until.split('T')[0] : ''}"`,
+      m.is_archived ? 'Arxivlangan' : m.is_active ? 'Faol' : 'Bloklangan',
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `biznesgo_dokonlar_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const formatMoney = (val: number) => {
     return new Intl.NumberFormat('uz-UZ').format(Math.round(val || 0)) + " so'm";
   };
 
   const businessTypeLabels: Record<BusinessType, string> = {
     agro_vet: 'Agro-Vet',
-    feed: 'Yem',
-    warehouse: 'Ombor',
-    seeds: "Urug'",
-    machinery: 'Texnika',
+    feed: 'Yem-Ozuqa',
+    warehouse: 'Ulgurji Ombor',
+    seeds: "Urug‘chilik",
+    machinery: 'Jihoz & Texnika',
   };
 
   return (
@@ -188,13 +246,23 @@ export const MerchantsView: React.FC = () => {
           <p className="text-xs text-slate-500 mt-1 font-medium">Barcha ro‘yxatdan o‘tgan B2B savdo nuqtalari ({total} ta)</p>
         </div>
 
-        <button
-          onClick={loadMerchants}
-          className="flex items-center gap-2 px-5 py-2.5 bg-black hover:bg-neutral-800 text-white rounded-full text-xs font-semibold shadow-xs transition cursor-pointer self-start sm:self-auto"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          <span>Yangilash</span>
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={loadMerchants}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200/80 rounded-full text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition cursor-pointer"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span>Yangilash</span>
+          </button>
+
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-2 px-5 py-2.5 bg-black hover:bg-neutral-800 text-white rounded-full text-xs font-semibold shadow-xs transition cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Excel / CSV</span>
+          </button>
+        </div>
       </div>
 
       {/* Bento Controls & Filters Bar */}
@@ -214,7 +282,7 @@ export const MerchantsView: React.FC = () => {
           <select
             value={businessType}
             onChange={(e) => setBusinessType(e.target.value)}
-            className="bg-white border border-slate-200/80 rounded-full px-4 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-black"
+            className="bg-white border border-slate-200/80 rounded-full px-4 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-black cursor-pointer"
           >
             <option value="">Barcha yo'nalishlar</option>
             <option value="agro_vet">Agro-Vet Dorixona</option>
@@ -227,7 +295,7 @@ export const MerchantsView: React.FC = () => {
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="bg-white border border-slate-200/80 rounded-full px-4 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-black"
+            className="bg-white border border-slate-200/80 rounded-full px-4 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-black cursor-pointer"
           >
             <option value="">Barcha statuslar</option>
             <option value="active">Faol do'konlar</option>
@@ -270,13 +338,17 @@ export const MerchantsView: React.FC = () => {
                 </tr>
               ) : (
                 merchants.map((m) => (
-                  <tr key={m.id} className="hover:bg-slate-50/70 transition">
+                  <tr 
+                    key={m.id} 
+                    onClick={() => setSelectedMerchant(m)}
+                    className="hover:bg-slate-50/70 transition cursor-pointer"
+                  >
                     <td className="py-3.5 font-bold text-slate-900 flex items-center gap-2.5">
                       <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-800">
                         {m.store_name ? m.store_name[0].toUpperCase() : 'D'}
                       </div>
                       <div>
-                        <div className="font-bold text-slate-900">{m.store_name}</div>
+                        <div className="font-bold text-slate-900 hover:underline">{m.store_name}</div>
                         <div className="text-[10px] text-slate-400 font-normal">{m.owner_name || 'Noma‘lum'} (ID: {m.id})</div>
                       </div>
                     </td>
@@ -286,7 +358,13 @@ export const MerchantsView: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-3.5 text-slate-700 font-medium">
-                      {m.phone}
+                      <a 
+                        href={`tel:${m.phone}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="hover:underline font-mono"
+                      >
+                        {m.phone}
+                      </a>
                     </td>
                     <td className="py-3.5 font-semibold text-slate-800">
                       {m.products_count || 0}
@@ -300,7 +378,8 @@ export const MerchantsView: React.FC = () => {
                     <td className="py-3.5 text-[11px] text-slate-500">
                       {m.subscription_until ? (
                         <button
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setSubscriptionModal(m);
                             setNewSubDate(m.subscription_until ? m.subscription_until.split('T')[0] : '');
                           }}
@@ -310,7 +389,8 @@ export const MerchantsView: React.FC = () => {
                         </button>
                       ) : (
                         <button
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setSubscriptionModal(m);
                             setNewSubDate('');
                           }}
@@ -336,7 +416,7 @@ export const MerchantsView: React.FC = () => {
                       )}
                     </td>
                     <td className="py-3.5 text-right">
-                      <div className="flex items-center justify-end gap-1">
+                      <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => handleToggleStatus(m)}
                           disabled={actionLoading === m.id}
@@ -396,6 +476,113 @@ export const MerchantsView: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Do'kon Tafsilotlari Modali (Row Click Modal) */}
+      {selectedMerchant && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center text-lg font-black">
+                  {selectedMerchant.store_name ? selectedMerchant.store_name[0] : 'D'}
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">{selectedMerchant.store_name}</h3>
+                  <div className="text-xs text-slate-400">ID: #{selectedMerchant.id} • {selectedMerchant.owner_name || 'Noma‘lum egasi'}</div>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectedMerchant(null)} 
+                className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:text-black flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Asosiy ko'rsatkichlar kartochkalari */}
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="p-3 bg-[#F8F8F6] rounded-2xl">
+                <span className="text-slate-400 text-[10px] block">Biznes Yo‘nalishi</span>
+                <span className="font-bold text-slate-900">{businessTypeLabels[selectedMerchant.business_type] || selectedMerchant.business_type}</span>
+              </div>
+              <div className="p-3 bg-[#F8F8F6] rounded-2xl">
+                <span className="text-slate-400 text-[10px] block">Telefon</span>
+                <a href={`tel:${selectedMerchant.phone}`} className="font-bold text-emerald-600 font-mono hover:underline">
+                  {selectedMerchant.phone}
+                </a>
+              </div>
+              <div className="p-3 bg-[#F8F8F6] rounded-2xl">
+                <span className="text-slate-400 text-[10px] block">Jami Savdolar</span>
+                <span className="font-bold text-slate-900">{formatMoney(selectedMerchant.total_sales)}</span>
+              </div>
+              <div className="p-3 bg-[#F8F8F6] rounded-2xl">
+                <span className="text-slate-400 text-[10px] block">Ochiq Qarz</span>
+                <span className="font-bold text-rose-600">{formatMoney(selectedMerchant.total_open_debt)}</span>
+              </div>
+            </div>
+
+            {/* Manzil va Qoldiqlar */}
+            <div className="p-3.5 bg-[#F8F8F6] rounded-2xl space-y-1.5 text-xs">
+              <div className="flex items-center gap-1.5 font-semibold text-slate-800">
+                <MapPin className="w-3.5 h-3.5 text-slate-500" />
+                <span>Manzil:</span>
+                <span className="text-slate-600 font-normal">{selectedMerchant.address || 'Manzil kiritilmagan'}</span>
+              </div>
+              <div className="flex items-center gap-1.5 font-semibold text-slate-800">
+                <Package className="w-3.5 h-3.5 text-slate-500" />
+                <span>Faol Mahsulotlar:</span>
+                <span className="text-slate-600 font-normal">{selectedMerchant.products_count} ta tovar</span>
+              </div>
+              <div className="flex items-center gap-1.5 font-semibold text-slate-800">
+                <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                <span>Obuna muddati:</span>
+                <span className="text-slate-600 font-normal">
+                  {selectedMerchant.subscription_until ? selectedMerchant.subscription_until.split('T')[0] : 'Belgilanmagan'}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 font-semibold text-slate-800">
+                <CheckCircle className="w-3.5 h-3.5 text-slate-500" />
+                <span>Holat:</span>
+                <span className={`font-bold ${selectedMerchant.is_active ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  {selectedMerchant.is_archived ? 'Arxivlangan' : selectedMerchant.is_active ? 'Faol' : 'Bloklangan'}
+                </span>
+              </div>
+            </div>
+
+            {/* Amallar Tugmalari */}
+            <div className="pt-2 flex flex-wrap gap-2">
+              <button
+                onClick={() => handleToggleStatus(selectedMerchant)}
+                className={`flex-1 py-2.5 rounded-full text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                  selectedMerchant.is_active
+                    ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
+                    : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
+                }`}
+              >
+                {selectedMerchant.is_active ? <XCircle className="w-3.5 h-3.5" /> : <CheckCircle className="w-3.5 h-3.5" />}
+                <span>{selectedMerchant.is_active ? 'Bloklash' : 'Faollashtirish'}</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setSubscriptionModal(selectedMerchant);
+                  setNewSubDate(selectedMerchant.subscription_until ? selectedMerchant.subscription_until.split('T')[0] : '');
+                }}
+                className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-full text-xs font-bold transition cursor-pointer"
+              >
+                Obuna berish
+              </button>
+
+              <button
+                onClick={() => setConfirmReset(selectedMerchant)}
+                className="py-2.5 px-4 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-full text-xs font-bold transition cursor-pointer"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Subscription Modal */}
       {subscriptionModal && (

@@ -31,12 +31,13 @@ export function App() {
             onSearch={setSearchQuery} 
             showKeyModal={showKeyModal}
             setShowKeyModal={setShowKeyModal}
+            onNavigate={setCurrentView}
           />
 
           {/* Main Scrollable View Area */}
           <main className="flex-1 overflow-y-auto px-6 sm:px-10 pb-8">
-            {currentView === 'dashboard' && <DashboardView />}
-            {currentView === 'merchants' && <MerchantsView />}
+            {currentView === 'dashboard' && <DashboardView onNavigate={setCurrentView} />}
+            {currentView === 'merchants' && <MerchantsView searchQuery={searchQuery} />}
             {currentView === 'map' && <MapView />}
             {currentView === 'support' && <SupportView />}
             {currentView === 'broadcast' && <BroadcastView />}

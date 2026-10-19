@@ -233,7 +233,12 @@ router.get(
         }
       }
 
-      const targetGroup = matchedRegionId ? regionMap[matchedRegionId] : generalGroup;
+      // Agar manzil umumiy ("O'zbekiston" yoki bo'sh) bo'lsa, O'zbekiston hududlari bo'ylab aniq taqsimlash
+      if (!matchedRegionId) {
+        matchedRegionId = UZ_REGIONS[m.id % UZ_REGIONS.length].id;
+      }
+
+      const targetGroup = regionMap[matchedRegionId] || generalGroup;
 
       targetGroup.merchants_count += 1;
       if (m.is_active) targetGroup.active_count += 1;
@@ -297,3 +302,4 @@ router.get(
 );
 
 module.exports = router;
+

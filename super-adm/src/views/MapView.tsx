@@ -555,3 +555,4 @@ export const MapView: React.FC = () => {
     </div>
   );
 };
+
