@@ -37,9 +37,9 @@ router.post('/', async (req, res) => {
 
     const created = await addMessage({
       merchantId: merchant.id,
-      telegramId: merchant.telegram_id || null,
+      telegramId: null,
       senderType: 'merchant',
-      senderName: merchant.owner_name || merchant.store_name,
+      senderName: merchant.store_name,
       senderPhone: merchant.phone,
       businessType: merchant.business_type,
       message: message.trim(),
@@ -49,8 +49,9 @@ router.post('/', async (req, res) => {
     return res.status(201).json({ ok: true, message: created });
   } catch (err) {
     console.error('[BiznesGO Support POST Error]:', err.message);
-    return res.status(500).json({ ok: false, error: 'Xabar yuborishda xatolik yuz berdi' });
+    return res.status(500).json({ ok: false, error: 'Xabar yuborishda xatolik yuz berdi: ' + err.message });
   }
 });
 
 module.exports = router;
+

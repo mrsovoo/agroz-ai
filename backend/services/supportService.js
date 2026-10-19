@@ -11,7 +11,7 @@ async function ensureSupportTable() {
         id              SERIAL PRIMARY KEY,
         merchant_id     INT REFERENCES merchants(id) ON DELETE SET NULL,
         telegram_id     BIGINT,
-        sender_type     VARCHAR(20) NOT NULL, -- 'merchant' | 'admin' | 'bot_user'
+        sender_type     VARCHAR(20) NOT NULL DEFAULT 'merchant', -- 'merchant' | 'admin' | 'bot_user'
         sender_name     VARCHAR(160),
         sender_phone    VARCHAR(32),
         business_type   VARCHAR(32),
@@ -21,6 +21,31 @@ async function ensureSupportTable() {
         reply_to_id     INT REFERENCES support_messages(id) ON DELETE SET NULL,
         created_at      TIMESTAMP NOT NULL DEFAULT (now() AT TIME ZONE 'Asia/Tashkent')
       );
+
+      DO $$
+      BEGIN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'support_messages' AND column_name = 'ticket_id') THEN
+          ALTER TABLE support_messages ALTER COLUMN ticket_id DROP NOT NULL;
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'support_messages' AND column_name = 'sender') THEN
+          ALTER TABLE support_messages ALTER COLUMN sender DROP NOT NULL;
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'support_messages' AND column_name = 'text') THEN
+          ALTER TABLE support_messages ALTER COLUMN text DROP NOT NULL;
+        END IF;
+      END $$;
+
+      ALTER TABLE support_messages ADD COLUMN IF NOT EXISTS merchant_id INT REFERENCES merchants(id) ON DELETE SET NULL;
+      ALTER TABLE support_messages ADD COLUMN IF NOT EXISTS telegram_id BIGINT;
+      ALTER TABLE support_messages ADD COLUMN IF NOT EXISTS sender_type VARCHAR(20) NOT NULL DEFAULT 'merchant';
+      ALTER TABLE support_messages ADD COLUMN IF NOT EXISTS sender_name VARCHAR(160);
+      ALTER TABLE support_messages ADD COLUMN IF NOT EXISTS sender_phone VARCHAR(32);
+      ALTER TABLE support_messages ADD COLUMN IF NOT EXISTS business_type VARCHAR(32);
+      ALTER TABLE support_messages ADD COLUMN IF NOT EXISTS message TEXT;
+      ALTER TABLE support_messages ADD COLUMN IF NOT EXISTS source VARCHAR(20) NOT NULL DEFAULT 'web';
+      ALTER TABLE support_messages ADD COLUMN IF NOT EXISTS is_read BOOLEAN NOT NULL DEFAULT false;
+      ALTER TABLE support_messages ADD COLUMN IF NOT EXISTS reply_to_id INT REFERENCES support_messages(id) ON DELETE SET NULL;
+
       CREATE INDEX IF NOT EXISTS support_msg_merchant_idx ON support_messages (merchant_id);
       CREATE INDEX IF NOT EXISTS support_msg_tg_idx ON support_messages (telegram_id);
       CREATE INDEX IF NOT EXISTS support_msg_created_idx ON support_messages (created_at DESC);
@@ -47,16 +72,19 @@ async function addMessage({
 }) {
   await ensureSupportTable();
 
-  // If merchantId is present but some fields are missing, enrich from merchants table
-  if (merchantId && (!senderName || !senderPhone || !businessType)) {
+  // If merchantId is present but some fields are missing, enrich from merchants and users table
+  if (merchantId && (!senderName || !senderPhone || !businessType || !telegramId)) {
     try {
       const mRes = await query(
-        'SELECT store_name, owner_name, phone, business_type, telegram_id FROM merchants WHERE id = $1',
+        `SELECT m.store_name, u.name AS owner_name, m.phone, m.business_type, u.telegram_id 
+         FROM merchants m 
+         LEFT JOIN users u ON u.id = m.user_id 
+         WHERE m.id = $1`,
         [merchantId]
       );
       if (mRes.rows[0]) {
         const m = mRes.rows[0];
-        if (!senderName) senderName = m.owner_name || m.store_name;
+        if (!senderName) senderName = m.store_name || m.owner_name;
         if (!senderPhone) senderPhone = m.phone;
         if (!businessType) businessType = m.business_type;
         if (!telegramId && m.telegram_id) telegramId = m.telegram_id;
@@ -100,8 +128,6 @@ async function getMerchantMessages(merchantId) {
 async function getAllConversations() {
   await ensureSupportTable();
 
-  // Pick the latest message and unread count per thread
-  // Thread key: COALESCE('m_' || merchant_id, 'tg_' || telegram_id)
   const sql = `
     WITH latest_messages AS (
       SELECT DISTINCT ON (
@@ -143,13 +169,14 @@ async function getAllConversations() {
       COALESCE(uc.unread_count, 0)::int AS unread_count,
       COALESCE(mc.total_messages, 1)::int AS total_messages,
       m.store_name,
-      m.owner_name,
+      u.name AS owner_name,
       COALESCE(m.phone, lm.sender_phone) AS current_phone,
       COALESCE(m.business_type, lm.business_type) AS resolved_business_type
     FROM latest_messages lm
     LEFT JOIN unread_counts uc ON lm.thread_id = uc.thread_id
     LEFT JOIN message_counts mc ON lm.thread_id = mc.thread_id
     LEFT JOIN merchants m ON lm.merchant_id = m.id
+    LEFT JOIN users u ON u.id = m.user_id
     ORDER BY lm.last_message_at DESC
   `;
 
@@ -204,7 +231,6 @@ async function replyToThread({
 }) {
   await ensureSupportTable();
 
-  // If merchant has a telegram_id, resolve it
   let targetTgId = telegramId;
   let targetBusinessType = '';
   let targetStoreName = '';
@@ -212,7 +238,10 @@ async function replyToThread({
   if (merchantId) {
     try {
       const mRes = await query(
-        'SELECT store_name, business_type, telegram_id FROM merchants WHERE id = $1',
+        `SELECT m.store_name, m.business_type, u.telegram_id 
+         FROM merchants m 
+         LEFT JOIN users u ON u.id = m.user_id 
+         WHERE m.id = $1`,
         [merchantId]
       );
       if (mRes.rows[0]) {
