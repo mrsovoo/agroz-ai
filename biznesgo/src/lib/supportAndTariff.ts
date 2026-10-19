@@ -17,9 +17,14 @@ export interface SectorSupportContact {
   specialist_role: string;
   phone: string;
   telegram_username: string;
+  email: string;
   working_hours: string;
   topics: string[];
 }
+
+export const SUPPORT_EMAIL = 'info@biznesgo.uz';
+export const SUPPORT_PHONE = '+998 90 838 37 72';
+export const SUPPORT_TELEGRAM = 'bydsgn';
 
 export interface NewsItem {
   id: string;
@@ -56,6 +61,7 @@ export const SECTOR_SUPPORT_CONTACTS: Record<BusinessType, SectorSupportContact>
     specialist_role: 'Agro-kimyo va Fitosanitariya bosh mutaxassisi',
     phone: '+998 90 838 37 72',
     telegram_username: 'bydsgn',
+    email: 'info@biznesgo.uz',
     working_hours: 'Dush - Shan, 08:00 - 20:00 (24/7 navbatchi)',
     topics: [
       'Dori-darmonlar sertifikatlari va standartlari',
@@ -71,6 +77,7 @@ export const SECTOR_SUPPORT_CONTACTS: Record<BusinessType, SectorSupportContact>
     specialist_role: 'Chorvachilik va Parrandachilik ozuqa texnologi',
     phone: '+998 90 838 37 72',
     telegram_username: 'bydsgn',
+    email: 'info@biznesgo.uz',
     working_hours: 'Har kuni 08:00 - 20:00',
     topics: [
       'Ozuqa ratsionlari va aralashmalar tarkibi',
@@ -86,6 +93,7 @@ export const SECTOR_SUPPORT_CONTACTS: Record<BusinessType, SectorSupportContact>
     specialist_role: 'B2B Distribyutsiya va Logistika koordinatori',
     phone: '+998 90 838 37 72',
     telegram_username: 'bydsgn',
+    email: 'info@biznesgo.uz',
     working_hours: '24/7 Doimiy aloqada',
     topics: [
       'B2B do‘konlar uchun kredit limitlarini sozlash',
@@ -101,6 +109,7 @@ export const SECTOR_SUPPORT_CONTACTS: Record<BusinessType, SectorSupportContact>
     specialist_role: 'Urug‘chilik va Seleksiya bo‘yicha bosh agronom',
     phone: '+998 90 838 37 72',
     telegram_username: 'bydsgn',
+    email: 'info@biznesgo.uz',
     working_hours: 'Dush - Shan, 08:30 - 19:30',
     topics: [
       'Urug‘lar unuvchanlik foizi va sertifikatlari',
@@ -116,6 +125,7 @@ export const SECTOR_SUPPORT_CONTACTS: Record<BusinessType, SectorSupportContact>
     specialist_role: 'Qishloq xo‘jaligi texnikasi bosh muhandisi',
     phone: '+998 90 838 37 72',
     telegram_username: 'bydsgn',
+    email: 'info@biznesgo.uz',
     working_hours: 'Har kuni 08:00 - 21:00',
     topics: [
       'Texnikalar zavod kafolatlari va servis monitoringi',

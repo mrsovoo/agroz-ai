@@ -24,7 +24,8 @@ import {
   Sparkles,
   HelpCircle,
   Bell,
-  UserCheck
+  UserCheck,
+  Mail
 } from 'lucide-react';
 import { BusinessType } from '../types';
 import { 
@@ -395,7 +396,7 @@ export const SettingsView: React.FC = () => {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
                 <a
                   href={`tel:${sectorContact.phone.replace(/\s+/g, '')}`}
                   className="px-3.5 py-2 rounded-xl bg-white text-slate-900 hover:bg-slate-100 font-bold text-xs flex items-center gap-1.5 transition shadow-xs"
@@ -411,6 +412,13 @@ export const SettingsView: React.FC = () => {
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span>Telegram</span>
+                </a>
+                <a
+                  href={`mailto:${sectorContact.email || 'info@biznesgo.uz'}`}
+                  className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-xs border border-white/10 font-mono"
+                >
+                  <Mail className="w-3.5 h-3.5 text-emerald-300" />
+                  <span>info@biznesgo.uz</span>
                 </a>
               </div>
             </div>

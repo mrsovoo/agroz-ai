@@ -12,7 +12,8 @@ import {
   Store,
   Clock,
   Sparkles,
-  ArrowUpRight
+  ArrowUpRight,
+  Mail
 } from 'lucide-react';
 
 const BIZ_MAP: Record<string, { label: string; color: string }> = {
@@ -168,6 +169,13 @@ export function SupportView() {
         </div>
 
         <div className="flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#EBF7EE] border border-emerald-200/80 text-xs text-emerald-900 font-medium">
+            <Mail className="w-3.5 h-3.5 text-emerald-600" />
+            <a href="mailto:info@biznesgo.uz" className="font-mono font-semibold hover:underline">info@biznesgo.uz</a>
+            <span className="text-emerald-300">•</span>
+            <Phone className="w-3.5 h-3.5 text-emerald-600" />
+            <a href="tel:+998908383772" className="hover:underline">+998 90 838 37 72</a>
+          </div>
           <button
             type="button"
             onClick={() => fetchConversations()}

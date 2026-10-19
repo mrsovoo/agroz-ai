@@ -315,8 +315,10 @@ async function handleBiznesgoBotUpdate(update) {
       `💼 <b>Mutaxassisligi:</b> ${sectorContact.role}\n` +
       `📱 <b>Aloqa telefoni:</b> +998 90 838 37 72\n` +
       `💬 <b>Telegram:</b> @bydsgn\n` +
+      `✉️ <b>Email:</b> info@biznesgo.uz\n` +
       `⏰ <b>Ish vaqti:</b> ${sectorContact.hours}\n\n` +
-      `🏢 <b>Markaziy Call-markaz:</b> +998 90 838 37 72\n\n` +
+      `🏢 <b>Markaziy Call-markaz:</b> +998 90 838 37 72\n` +
+      `✉️ <b>Rasmiy Pochta:</b> info@biznesgo.uz\n\n` +
       `✍️ <b>Super Administratorga to‘g‘ridan-to‘g‘ri xabar yuborish:</b>\n` +
       `Savol, taklif yoki murojaatingizni to‘g‘ridan-to‘g‘ri shu yerga yozib yuboring!\n` +
       `Xabaringiz zudlik bilan Super Admin boshqaruv paneliga tushadi va mutaxassis javob qaytaradi.`;

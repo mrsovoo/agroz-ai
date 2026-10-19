@@ -16,7 +16,8 @@ import {
   Bot,
   User,
   CheckCheck,
-  RefreshCw
+  RefreshCw,
+  Mail
 } from 'lucide-react';
 
 interface SupportModalProps {
@@ -133,6 +134,11 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) =
     window.location.href = `tel:${phoneNumber.replace(/\s+/g, '')}`;
   };
 
+  const handleEmail = (emailAddr: string) => {
+    tg.hapticImpact('light');
+    window.location.href = `mailto:${emailAddr}`;
+  };
+
   return (
     <Modal
       isOpen={isOpen}
@@ -194,7 +200,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) =
                 </span>
                 <span className="text-[11px] font-semibold text-emerald-900">Admin onlayn • Javob berish: 5-15 daqiqa</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
                 <button
                   type="button"
                   onClick={() => handleCall('+998908383772')}
@@ -202,6 +208,15 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) =
                 >
                   <Phone className="w-3 h-3" />
                   +998 90 838 37 72
+                </button>
+                <span className="text-slate-300">|</span>
+                <button
+                  type="button"
+                  onClick={() => handleEmail('info@biznesgo.uz')}
+                  className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-1 font-mono"
+                >
+                  <Mail className="w-3 h-3" />
+                  info@biznesgo.uz
                 </button>
               </div>
             </div>
@@ -344,6 +359,15 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) =
                     <Send className="w-4 h-4" />
                     <span>@bydsgn</span>
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleEmail(sectorContact.email || 'info@biznesgo.uz')}
+                    className="col-span-2 py-2 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer border border-white/10"
+                  >
+                    <Mail className="w-3.5 h-3.5 text-emerald-300" />
+                    <span className="font-mono">{sectorContact.email || 'info@biznesgo.uz'}</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -381,6 +405,27 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) =
                 className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
               >
                 Bog‘lanish
+              </button>
+            </div>
+
+            {/* Rasmiy Elektron Pochta (Email) */}
+            <div className="p-4 rounded-xl border border-slate-200 flex items-center justify-between gap-3 bg-white">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <Mail className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-900">Rasmiy Elektron Pochta</div>
+                  <div className="text-[11px] text-slate-500 font-mono">info@biznesgo.uz</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleEmail('info@biznesgo.uz')}
+                className="px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition cursor-pointer flex items-center gap-1.5"
+              >
+                <Mail className="w-3.5 h-3.5" />
+                <span>Email yozish</span>
               </button>
             </div>
           </div>
