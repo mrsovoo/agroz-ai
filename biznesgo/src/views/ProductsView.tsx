@@ -757,26 +757,19 @@ export const ProductsView: React.FC = () => {
               <select
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white font-medium"
               >
-                {businessType === 'feed' ? (
-                  <>
-                    <option value="qop">Qop</option>
-                    <option value="kg">Kg</option>
-                    <option value="tonna">Tonna</option>
-                  </>
-                ) : (
-                  <>
-                    <option value="dona">dona</option>
-                    <option value="kg">kg</option>
-                    <option value="litr">litr</option>
-                    <option value="qop">qop</option>
-                    <option value="tonna">tonna</option>
-                    <option value="pachka">pachka</option>
-                    <option value="metr">metr</option>
-                    <option value="gram">gram</option>
-                  </>
-                )}
+                <option value="dona">dona</option>
+                <option value="kg">kg</option>
+                <option value="litr">litr</option>
+                <option value="qop">qop</option>
+                <option value="gram">gram</option>
+                <option value="tonna">tonna</option>
+                <option value="pachka">pachka</option>
+                <option value="metr">metr</option>
+                <option value="flakon">flakon</option>
+                <option value="kanistr">kanistr</option>
+                <option value="tup">tup</option>
               </select>
             </div>
 

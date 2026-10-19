@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS products (
   category          VARCHAR(100),
   price             DECIMAL(14,2) NOT NULL DEFAULT 0 CHECK (price >= 0),
   unit              VARCHAR(16)  NOT NULL DEFAULT 'dona'
-                    CHECK (unit IN ('dona','kg','liter','qop','tonna','pachka','metr')),
+                    CHECK (unit IN ('dona','kg','litr','liter','qop','tonna','pachka','metr','gram','tup','flakon','kanistr','rulon','blok','komplekt')),
   stock_quantity    DECIMAL(14,3) NOT NULL DEFAULT 0,
   min_stock_alert   DECIMAL(14,3) NOT NULL DEFAULT 5,
   image_url         TEXT,

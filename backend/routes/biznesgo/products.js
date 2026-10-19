@@ -27,6 +27,7 @@ async function ensureExtraColumns() {
       ALTER TABLE products ADD COLUMN IF NOT EXISTS germination_rate_percent INT;
       ALTER TABLE products ADD COLUMN IF NOT EXISTS harvest_year INT;
       ALTER TABLE products ADD COLUMN IF NOT EXISTS part_number VARCHAR(100);
+      ALTER TABLE products DROP CONSTRAINT IF EXISTS products_unit_check;
     `);
     columnsChecked = true;
   } catch (e) {}
@@ -56,8 +57,13 @@ function parseProduct(body, merchant, { partial = false } = {}) {
   if (has('category')) out.category = v.str(body.category, 'category', { max: 100 });
   if (has('price')) out.price = v.money(v.num(body.price, 'price', { required: !partial, min: 0, max: 1e12 }) ?? 0);
   if (has('unit')) {
-    const allowed = bt ? bt.units : ALL_UNITS;
-    out.unit = v.oneOf(body.unit || (partial ? undefined : bt && bt.defaultUnit), 'unit', allowed, { required: !partial }) ;
+    let rawUnit = body.unit || (partial ? undefined : bt && bt.defaultUnit) || 'dona';
+    if (typeof rawUnit === 'string') {
+      rawUnit = rawUnit.trim().toLowerCase();
+      if (rawUnit === 'liter') rawUnit = 'litr';
+    }
+    const allowed = ALL_UNITS;
+    out.unit = v.oneOf(rawUnit, 'unit', allowed, { required: !partial }) || 'dona';
     if (out.unit === null) delete out.unit;
   }
   if (!partial && 'stock_quantity' in body) out.stock_quantity = v.num(body.stock_quantity, 'stock_quantity', { min: 0, max: 1e12 }) ?? 0;
