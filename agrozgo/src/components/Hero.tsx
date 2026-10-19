@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, MapPin, Loader2, Navigation, Store, ArrowUpRight } from 'lucide-react';
-import { AgroImage, DarkButton, AgrozSymbol } from './ui';
+import { AgroImage, DarkButton, GreenButton, AgrozSymbol } from './ui';
 import { IMAGES, HERO_METRICS, SEARCH_SUGGESTIONS, DEMO_RESULTS, SECTORS } from '../data/content';
 
 type Status = 'idle' | 'locating' | 'searching' | 'done';
@@ -90,40 +90,41 @@ export const Hero: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex items-center justify-center gap-2 rounded-full bg-charcoal px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-forest-light"
+                  className="flex items-center justify-center gap-2 rounded-full bg-agroGreen hover:bg-agroGreen-hover text-forest-dark font-extrabold px-6 py-2.5 text-sm transition shadow-glow-subtle active:scale-95 cursor-pointer"
                 >
-                  {status === 'searching' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Navigation className="h-4 w-4" />}
+                  {status === 'searching' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Navigation className="h-4 w-4 text-forest-dark" />}
                   Topish
                 </button>
               </form>
 
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="text-xs text-charcoal/50">Ommabop:</span>
+                <span className="text-xs font-semibold text-charcoal/50">Ommabop:</span>
                 {SEARCH_SUGGESTIONS.map((s) => (
-                  <button key={s} type="button" onClick={() => runSearch(undefined, s)} className="chip hover:border-gold hover:bg-gold-soft">
+                  <button key={s} type="button" onClick={() => runSearch(undefined, s)} className="chip hover:border-agroGreen hover:bg-agroGreen-50 hover:text-agroGreen-900 cursor-pointer">
                     {s}
                   </button>
                 ))}
               </div>
 
               {status === 'done' && (
-                <div className="mt-4 max-w-2xl animate-fade-up rounded-2xl bg-white/95 p-3 shadow-soft">
-                  <p className="px-2 pb-2 text-xs font-semibold text-charcoal/50">
-                    “{query || 'Barcha mahsulotlar'}” — {location} yaqinida {results.length} ta do‘kon (demo)
+                <div className="mt-4 max-w-2xl animate-fade-up rounded-2xl bg-white/95 p-3.5 shadow-soft border border-agroGreen/20">
+                  <p className="px-2 pb-2 text-xs font-bold text-agroGreen-900 flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-agroGreen" />
+                    “{query || 'Barcha mahsulotlar'}” — {location} yaqinida {results.length} ta do‘kon topildi (demo)
                   </p>
                   <ul className="divide-y divide-charcoal/5">
                     {results.map((r) => {
                       const s = sectorOf(r.sector);
                       return (
                         <li key={r.store} className="flex items-center gap-3 px-2 py-2.5">
-                          <span className="grid h-9 w-9 place-items-center rounded-xl bg-beige text-lg">{s?.emoji}</span>
+                          <span className="grid h-9 w-9 place-items-center rounded-xl bg-agroGreen-50 text-lg border border-agroGreen/20">{s?.emoji}</span>
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-bold">{r.store}</p>
-                            <p className="text-xs text-charcoal/55">
-                              {s?.title} • {r.distance}
+                            <p className="truncate text-sm font-bold text-charcoal">{r.store}</p>
+                            <p className="text-xs text-charcoal/60">
+                              {s?.title} • <span className="text-agroGreen-700 font-semibold">{r.distance}</span>
                             </p>
                           </div>
-                          <span className="whitespace-nowrap text-sm font-extrabold text-gold-dark">{r.price}</span>
+                          <span className="whitespace-nowrap text-sm font-extrabold text-agroGreen-800 bg-agroGreen/10 px-2.5 py-1 rounded-lg border border-agroGreen/20">{r.price}</span>
                         </li>
                       );
                     })}
@@ -132,28 +133,32 @@ export const Hero: React.FC = () => {
               )}
 
               <div className="mt-8">
-                <DarkButton href="#sectors">Sektorlarni ko‘rish</DarkButton>
+                <GreenButton href="#sectors">Sektorlarni ko‘rish</GreenButton>
               </div>
             </div>
 
             {/* O'ng tomondagi suzuvchi karta (referensdagi kabi) */}
             <div className="hidden items-end justify-end lg:col-span-5 lg:flex">
-              <div className="w-72 animate-fade-up rounded-2xl bg-charcoal p-3 text-white shadow-soft [animation-delay:200ms]">
-                <div className="flex items-start justify-between gap-3 p-2">
+              <div className="w-80 animate-fade-up rounded-3xl bg-forest-dark border border-forest-border p-3.5 text-white shadow-soft [animation-delay:200ms]">
+                <div className="flex items-start justify-between gap-3 p-2.5">
                   <div>
-                    <p className="text-sm font-bold leading-snug">AgrozGO — B2B do‘konlar bilan ulangan ekotizim</p>
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-agroGreen">
+                      <AgrozSymbol className="h-3.5 w-3.5" color="#35ca56" /> B2B ➔ B2C Ko‘prik
+                    </span>
+                    <p className="mt-1 text-sm font-bold leading-snug">BiznesGO do‘konlari bilan Live sinxronizatsiya</p>
                     <p className="mt-1.5 text-xs leading-relaxed text-white/60">
-                      BiznesGO kassasidagi real qoldiq va narxlar to‘g‘ridan-to‘g‘ri fermerga.
+                      Do‘kon kassasidagi real qoldiq va narxlar avtomatik fermerga ko‘rinadi.
                     </p>
                   </div>
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white text-charcoal">
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-agroGreen text-forest-dark shadow-glow-subtle">
                     <ArrowUpRight className="h-4 w-4" />
                   </span>
                 </div>
-                <div className="relative mt-2 h-36 overflow-hidden rounded-xl">
+                <div className="relative mt-2 h-40 overflow-hidden rounded-2xl">
                   <AgroImage src={IMAGES.tractor} alt="Agro-texnika" className="h-full w-full" />
-                  <span className="absolute bottom-2 left-2 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold text-charcoal">
-                    <Store className="h-3.5 w-3.5 text-forest-badge" /> Live sinxron
+                  <span className="absolute bottom-2.5 left-2.5 inline-flex items-center gap-1.5 rounded-full bg-forest-dark/90 backdrop-blur border border-agroGreen/40 px-3 py-1 text-[11px] font-bold text-agroGreen">
+                    <span className="h-2 w-2 rounded-full bg-agroGreen animate-pulse" />
+                    Live sinxron
                   </span>
                 </div>
               </div>
@@ -162,9 +167,18 @@ export const Hero: React.FC = () => {
             {/* Metrika kartalari */}
             <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:col-span-12 lg:max-w-xl">
               {HERO_METRICS.map((m) => (
-                <div key={m.label} className={`metric-card ${m.highlight ? '!bg-gold-soft' : ''}`}>
-                  <p className="text-xl font-extrabold sm:text-2xl">{m.value}</p>
-                  <p className="mt-1 text-[11px] leading-tight text-charcoal/65 sm:text-xs">{m.label}</p>
+                <div
+                  key={m.label}
+                  className={`metric-card ${
+                    m.highlight
+                      ? 'bg-agroGreen-50/90 !border-agroGreen/30 text-forest-dark ring-2 ring-agroGreen/20'
+                      : 'border-forest/5'
+                  }`}
+                >
+                  <p className={`text-xl font-black sm:text-2xl ${m.highlight ? 'text-agroGreen-800' : 'text-charcoal'}`}>
+                    {m.value}
+                  </p>
+                  <p className="mt-1 text-[11px] leading-tight font-medium text-charcoal/70 sm:text-xs">{m.label}</p>
                 </div>
               ))}
             </div>

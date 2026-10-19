@@ -32,9 +32,16 @@ export const Quality: React.FC = () => (
             </div>
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
               {QUALITY_BADGES.map((b, i) => (
-                <div key={b.label} className={`metric-card w-28 sm:w-36 ${i === 0 ? '!bg-gold-soft' : ''}`}>
-                  <p className="text-2xl font-extrabold">{b.rank}</p>
-                  <p className="mt-1 text-[10px] leading-tight text-charcoal/65 sm:text-[11px]">{b.label}</p>
+                <div
+                  key={b.label}
+                  className={`metric-card w-28 sm:w-36 ${
+                    i === 0
+                      ? 'bg-agroGreen text-forest-dark ring-2 ring-agroGreen/40 shadow-glow-subtle'
+                      : 'bg-white/95 text-charcoal'
+                  }`}
+                >
+                  <p className={`text-2xl font-black ${i === 0 ? 'text-forest-dark' : 'text-agroGreen-800'}`}>{b.rank}</p>
+                  <p className={`mt-1 text-[10px] leading-tight font-semibold sm:text-[11px] ${i === 0 ? 'text-forest-dark/80' : 'text-charcoal/70'}`}>{b.label}</p>
                 </div>
               ))}
             </div>
@@ -46,7 +53,7 @@ export const Quality: React.FC = () => (
       <div className="mt-16 grid gap-8 lg:grid-cols-12 lg:items-center">
         <div className="lg:col-span-3">
           <Eyebrow>Imkoniyatlar</Eyebrow>
-          <AgroImage src={IMAGES.livestock} alt="Yaylovdagi qoramollar" className="mt-6 hidden h-28 w-40 rounded-2xl lg:block" />
+          <AgroImage src={IMAGES.livestock} alt="Yaylovdagi qoramollar" className="mt-6 hidden h-28 w-40 rounded-2xl lg:block shadow-card" />
         </div>
         <div className="lg:col-span-6">
           <h2 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
@@ -55,9 +62,9 @@ export const Quality: React.FC = () => (
           <ul className="mt-6 grid gap-4 sm:grid-cols-2">
             {FEATURES.map((f) => (
               <li key={f.title} className="flex gap-3">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-forest-badge" />
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-agroGreen" />
                 <div>
-                  <p className="text-sm font-bold">{f.title}</p>
+                  <p className="text-sm font-bold text-charcoal">{f.title}</p>
                   <p className="mt-1 text-xs leading-relaxed text-charcoal/65">{f.text}</p>
                 </div>
               </li>
@@ -68,7 +75,7 @@ export const Quality: React.FC = () => (
           </div>
         </div>
         <div className="flex justify-end lg:col-span-3">
-          <AgroImage src={IMAGES.tractor} alt="Agro-texnika" className="h-28 w-40 rounded-2xl" />
+          <AgroImage src={IMAGES.tractor} alt="Agro-texnika" className="h-28 w-40 rounded-2xl shadow-card" />
         </div>
       </div>
     </div>
@@ -83,7 +90,7 @@ export const Values: React.FC = () => {
   return (
     <section className="pb-16 sm:pb-24">
       <div className="container-x">
-        <div className="grid gap-6 rounded-3xl bg-beige p-5 sm:p-8 lg:grid-cols-12 lg:p-10">
+        <div className="grid gap-6 rounded-3xl bg-beige p-5 sm:p-8 lg:grid-cols-12 lg:p-10 shadow-soft">
           <div className="flex flex-col justify-between gap-6 lg:col-span-3">
             <h2 className="text-2xl font-extrabold leading-tight sm:text-3xl">
               Biz amal qiladigan <span className="font-semibold text-charcoal/50">qadriyatlar:</span>
@@ -93,7 +100,7 @@ export const Values: React.FC = () => {
                 type="button"
                 aria-label="Oldingi"
                 onClick={() => setOffset((o) => (o + VALUES.length - 1) % VALUES.length)}
-                className="grid h-10 w-10 place-items-center rounded-full border border-charcoal/15 bg-white transition hover:bg-cream"
+                className="grid h-10 w-10 place-items-center rounded-full border border-charcoal/15 bg-white transition hover:bg-cream cursor-pointer active:scale-95"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -101,7 +108,7 @@ export const Values: React.FC = () => {
                 type="button"
                 aria-label="Keyingi"
                 onClick={() => setOffset((o) => (o + 1) % VALUES.length)}
-                className="grid h-10 w-10 place-items-center rounded-full bg-gold transition hover:bg-gold-dark"
+                className="grid h-10 w-10 place-items-center rounded-full bg-agroGreen text-forest-dark transition hover:bg-agroGreen-hover shadow-glow-subtle cursor-pointer active:scale-95"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
@@ -113,26 +120,31 @@ export const Values: React.FC = () => {
               return (
                 <div
                   key={v.title}
-                  className={`flex flex-col rounded-2xl p-5 shadow-card transition-all duration-300 ${
-                    dark ? 'bg-charcoal text-white' : 'bg-white'
+                  className={`flex flex-col rounded-3xl p-6 shadow-card transition-all duration-300 hover:-translate-y-1 ${
+                    dark
+                      ? 'bg-forest-dark text-white border border-forest-border shadow-soft ring-1 ring-agroGreen/30'
+                      : 'bg-white text-charcoal border border-forest/5'
                   }`}
                 >
-                  <p className="text-sm font-bold">
-                    <span className="mr-1 text-gold-dark">{v.num}</span> {v.title}
+                  <p className="text-sm font-black flex items-center gap-1.5">
+                    <span className="text-agroGreen">{v.num}</span>
+                    <span>{v.title}</span>
                   </p>
                   <div className="mt-4 flex flex-wrap gap-1.5">
                     {v.chips.map((c) => (
                       <span
                         key={c}
-                        className={`rounded-full border px-2.5 py-1 text-[11px] ${
-                          dark ? 'border-white/20 text-white/80' : 'border-charcoal/10 text-charcoal/70'
+                        className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
+                          dark
+                            ? 'bg-white/10 text-white/90 border border-white/10'
+                            : 'bg-cream text-charcoal/80 border border-forest/10'
                         }`}
                       >
                         {c}
                       </span>
                     ))}
                   </div>
-                  <p className={`mt-auto pt-6 text-xs leading-relaxed ${dark ? 'text-white/65' : 'text-charcoal/60'}`}>
+                  <p className={`mt-auto pt-6 text-xs leading-relaxed font-medium ${dark ? 'text-white/70' : 'text-charcoal/65'}`}>
                     {v.text}
                   </p>
                 </div>

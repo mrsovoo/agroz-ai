@@ -65,19 +65,39 @@ export const AgroImage: React.FC<{
   return <img src={src} alt={alt} loading="lazy" onError={() => setFailed(true)} className={`object-cover ${className}`} />;
 };
 
-/** Qora "pill" tugma + oq dumaloq strelka (referens dizayndagi kabi). */
-export const DarkButton: React.FC<{ href: string; children: React.ReactNode; external?: boolean }> = ({
+/** Qora/to'q "pill" tugma + yashil dumaloq strelka (referens dizayndagi kabi). */
+export const DarkButton: React.FC<{ href: string; children: React.ReactNode; external?: boolean; className?: string }> = ({
   href,
   children,
   external,
+  className = '',
 }) => (
   <a
     href={href}
     {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-    className="btn-dark group"
+    className={`btn-dark group ${className}`}
   >
     {children}
     <span className="btn-dark-icon">
+      <ArrowRight className="h-4 w-4" />
+    </span>
+  </a>
+);
+
+/** Yashil brend "pill" tugma + to'q dumaloq strelka. */
+export const GreenButton: React.FC<{ href: string; children: React.ReactNode; external?: boolean; className?: string }> = ({
+  href,
+  children,
+  external,
+  className = '',
+}) => (
+  <a
+    href={href}
+    {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+    className={`btn-green group ${className}`}
+  >
+    {children}
+    <span className="btn-green-icon">
       <ArrowRight className="h-4 w-4" />
     </span>
   </a>

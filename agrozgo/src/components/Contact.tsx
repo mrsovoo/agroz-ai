@@ -43,15 +43,15 @@ export const AppAndContact: React.FC = () => {
     <section id="contact" className="pb-16 sm:pb-24">
       <div className="container-x grid gap-4 lg:grid-cols-2">
         {/* Mobil ilova e'loni */}
-        <div className="relative flex flex-col overflow-hidden rounded-3xl bg-forest p-6 text-white shadow-soft sm:p-10">
-          <AgroImage src={IMAGES.hero} alt="" className="absolute inset-0 h-full w-full opacity-25" />
-          <div className="absolute inset-0 bg-gradient-to-br from-forest via-forest/90 to-forest/40" />
+        <div className="relative flex flex-col overflow-hidden rounded-3xl bg-forest-dark border border-forest-border p-6 text-white shadow-soft sm:p-10">
+          <AgroImage src={IMAGES.hero} alt="" className="absolute inset-0 h-full w-full opacity-20" />
+          <div className="absolute inset-0 bg-gradient-to-br from-forest-dark via-forest-dark/95 to-forest-dark/70" />
           <div className="relative flex flex-1 flex-col">
-            <span className="inline-flex w-fit items-center gap-2 rounded-full bg-gold px-3 py-1.5 text-xs font-bold text-charcoal">
+            <span className="inline-flex w-fit items-center gap-2 rounded-full bg-agroGreen px-3 py-1.5 text-xs font-bold text-forest-dark shadow-glow-subtle">
               <Smartphone className="h-4 w-4" /> Tez orada
             </span>
             <h2 className="mt-5 text-3xl font-extrabold leading-tight sm:text-4xl">
-              Tez orada AgrozGO <span className="text-gold">mobil ilovasi</span> ishga tushadi
+              Tez orada AgrozGO <span className="text-agroGreen">mobil ilovasi</span> ishga tushadi
             </h2>
             <p className="mt-4 max-w-md text-sm leading-relaxed text-white/70">
               iOS, Android va Telegram Mini App ko‘rinishida. Ishga tushganda birinchilardan bo‘lib xabar olish uchun
@@ -60,7 +60,7 @@ export const AppAndContact: React.FC = () => {
 
             <div className="mt-6 flex flex-wrap gap-2">
               {['App Store', 'Google Play', 'Telegram Mini App'].map((p) => (
-                <span key={p} className="rounded-xl border border-white/20 bg-white/5 px-3 py-2 text-xs font-semibold text-white/85">
+                <span key={p} className="rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold text-white/85">
                   {p}
                 </span>
               ))}
@@ -68,11 +68,11 @@ export const AppAndContact: React.FC = () => {
 
             <div className="mt-auto pt-8">
               {notified ? (
-                <p className="flex items-center gap-2 rounded-2xl bg-white/10 p-4 text-sm font-semibold">
-                  <CheckCircle2 className="h-5 w-5 text-gold" /> Rahmat! Ilova ishga tushganda xabar beramiz.
+                <p className="flex items-center gap-2 rounded-2xl bg-white/10 p-4 text-sm font-semibold border border-agroGreen/30">
+                  <CheckCircle2 className="h-5 w-5 text-agroGreen" /> Rahmat! Ilova ishga tushganda xabar beramiz.
                 </p>
               ) : (
-                <form onSubmit={submitNotify} className="flex flex-col gap-2 rounded-2xl bg-white p-2 sm:flex-row sm:rounded-full">
+                <form onSubmit={submitNotify} className="flex flex-col gap-2 rounded-2xl bg-white p-2 sm:flex-row sm:rounded-full shadow-lg">
                   <input
                     type="tel"
                     value={notifyPhone}
@@ -85,7 +85,7 @@ export const AppAndContact: React.FC = () => {
                   <button
                     type="submit"
                     disabled={phoneDigits(notifyPhone).length < 9}
-                    className="flex items-center justify-center gap-2 rounded-full bg-gold px-5 py-2.5 text-sm font-bold text-charcoal transition hover:bg-gold-dark disabled:opacity-50"
+                    className="flex items-center justify-center gap-2 rounded-full bg-agroGreen px-5 py-2.5 text-sm font-bold text-forest-dark transition hover:bg-agroGreen-hover shadow-glow-subtle disabled:opacity-50"
                   >
                     <Bell className="h-4 w-4" /> Xabar berish
                   </button>
@@ -96,16 +96,16 @@ export const AppAndContact: React.FC = () => {
         </div>
 
         {/* Aloqa formasi */}
-        <div className="rounded-3xl bg-white p-6 shadow-card sm:p-10">
+        <div className="rounded-3xl bg-white p-6 shadow-card border border-charcoal/5 sm:p-10">
           <Eyebrow>Bog‘lanish</Eyebrow>
           <h2 className="mt-4 text-2xl font-extrabold leading-tight sm:text-3xl">
             Savol yoki taklifingiz bormi? <span className="font-semibold text-charcoal/50">Yozing.</span>
           </h2>
 
           {sent ? (
-            <div className="mt-8 rounded-2xl bg-gold-soft p-6">
-              <CheckCircle2 className="h-8 w-8 text-forest-badge" />
-              <p className="mt-3 text-lg font-bold">Xabaringiz qabul qilindi!</p>
+            <div className="mt-8 rounded-2xl bg-agroGreen-50 border border-agroGreen/20 p-6">
+              <CheckCircle2 className="h-8 w-8 text-agroGreen-dark" />
+              <p className="mt-3 text-lg font-bold text-forest-dark">Xabaringiz qabul qilindi!</p>
               <p className="mt-1 text-sm text-charcoal/65">Tez orada {form.phone} raqamiga bog‘lanamiz.</p>
               <button
                 type="button"
@@ -113,7 +113,7 @@ export const AppAndContact: React.FC = () => {
                   setSent(false);
                   setForm({ name: '', phone: '', role: 'Fermer', message: '' });
                 }}
-                className="mt-4 text-sm font-semibold underline"
+                className="mt-4 text-sm font-semibold text-agroGreen-dark underline hover:text-agroGreen-700"
               >
                 Yana yozish
               </button>
@@ -126,7 +126,7 @@ export const AppAndContact: React.FC = () => {
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   placeholder="Ismingiz"
                   aria-label="Ismingiz"
-                  className="w-full rounded-xl border border-charcoal/10 bg-cream px-4 py-3 text-sm outline-none focus:border-gold focus:ring-2 focus:ring-gold/30"
+                  className="w-full rounded-xl border border-charcoal/10 bg-cream px-4 py-3 text-sm outline-none transition focus:border-agroGreen focus:ring-2 focus:ring-agroGreen/20"
                 />
                 <input
                   type="tel"
@@ -135,7 +135,7 @@ export const AppAndContact: React.FC = () => {
                   onChange={(e) => setForm({ ...form, phone: formatUzPhone(e.target.value) })}
                   placeholder="+998 90 000 00 00"
                   aria-label="Telefon raqami"
-                  className="w-full rounded-xl border border-charcoal/10 bg-cream px-4 py-3 text-sm font-semibold outline-none focus:border-gold focus:ring-2 focus:ring-gold/30"
+                  className="w-full rounded-xl border border-charcoal/10 bg-cream px-4 py-3 text-sm font-semibold outline-none transition focus:border-agroGreen focus:ring-2 focus:ring-agroGreen/20"
                 />
               </div>
               <div className="flex flex-wrap gap-2">
@@ -145,7 +145,9 @@ export const AppAndContact: React.FC = () => {
                     type="button"
                     onClick={() => setForm({ ...form, role: r })}
                     className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
-                      form.role === r ? 'bg-charcoal text-white' : 'bg-beige text-charcoal/70 hover:bg-gold-soft'
+                      form.role === r
+                        ? 'bg-forest-dark text-white ring-1 ring-agroGreen/40 shadow-sm'
+                        : 'bg-beige text-charcoal/70 hover:bg-agroGreen-50 hover:text-agroGreen-dark'
                     }`}
                   >
                     {r}
@@ -158,7 +160,7 @@ export const AppAndContact: React.FC = () => {
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
                 placeholder="Xabaringiz..."
                 aria-label="Xabar"
-                className="w-full resize-none rounded-xl border border-charcoal/10 bg-cream px-4 py-3 text-sm outline-none focus:border-gold focus:ring-2 focus:ring-gold/30"
+                className="w-full resize-none rounded-xl border border-charcoal/10 bg-cream px-4 py-3 text-sm outline-none transition focus:border-agroGreen focus:ring-2 focus:ring-agroGreen/20"
               />
               {error && <p className="text-xs font-semibold text-red-600">{error}</p>}
               <button type="submit" className="btn-dark group">
@@ -188,7 +190,7 @@ export const AppAndContact: React.FC = () => {
 };
 
 export const Footer: React.FC = () => (
-  <footer className="bg-charcoal text-white">
+  <footer className="bg-forest-dark border-t border-forest-border text-white">
     <div className="container-x grid gap-10 py-14 md:grid-cols-12">
       <div className="md:col-span-5">
         <Logo light />
@@ -201,7 +203,7 @@ export const Footer: React.FC = () => (
         <ul className="mt-4 space-y-2 text-sm">
           {NAV_LINKS.map((l) => (
             <li key={l.href}>
-              <a href={l.href} className="text-white/75 hover:text-gold">
+              <a href={l.href} className="text-white/75 hover:text-agroGreen transition">
                 {l.label}
               </a>
             </li>
@@ -223,7 +225,7 @@ export const Footer: React.FC = () => (
           href={BIZNESGO_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-4 inline-flex items-center gap-2 rounded-full bg-agroGreen px-4 py-2.5 text-sm font-bold text-charcoal hover:bg-agroGreen-hover transition"
+          className="mt-4 inline-flex items-center gap-2 rounded-full bg-agroGreen px-4 py-2.5 text-sm font-bold text-forest-dark hover:bg-agroGreen-hover shadow-glow-subtle transition"
         >
           <Store className="h-4 w-4" /> biznesgo.uz
         </a>
