@@ -1,66 +1,98 @@
 import React from 'react';
-import { LayoutDashboard, Store, Send, ShieldAlert, Key, Archive, MessageSquare } from 'lucide-react';
+import { 
+  Home, 
+  Store, 
+  Send, 
+  Archive, 
+  MessageSquare, 
+  Key, 
+  RotateCcw,
+  Settings,
+  Bell
+} from 'lucide-react';
 
 interface SidebarProps {
   currentView: 'dashboard' | 'merchants' | 'broadcast' | 'archive' | 'support';
   onSelectView: (view: 'dashboard' | 'merchants' | 'broadcast' | 'archive' | 'support') => void;
+  onOpenKeyModal?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ currentView, onSelectView }) => {
-  const menuItems = [
-    { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'merchants' as const, label: "Do'konlar (Merchants)", icon: Store },
-    { id: 'support' as const, label: '💬 Murojaatlar (Chat)', icon: MessageSquare },
+export const Sidebar: React.FC<SidebarProps> = ({ currentView, onSelectView, onOpenKeyModal }) => {
+  const navItems = [
+    { id: 'dashboard' as const, label: 'Dashboard', icon: Home },
+    { id: 'merchants' as const, label: "Do'konlar", icon: Store },
+    { id: 'support' as const, label: 'Murojaatlar', icon: MessageSquare },
     { id: 'broadcast' as const, label: 'Push Xabarnoma', icon: Send },
-    { id: 'archive' as const, label: '📦 Arxiv', icon: Archive },
+    { id: 'archive' as const, label: 'Arxiv', icon: Archive },
   ];
 
   return (
-    <aside className="w-64 bg-slate-950 border-r border-slate-800 flex flex-col justify-between shrink-0">
-      <div>
-        {/* Logo */}
-        <div className="h-16 flex items-center gap-3 px-6 border-b border-slate-800">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-950/40">
-            <ShieldAlert className="w-5 h-5 text-slate-950" />
-          </div>
-          <div>
-            <span className="font-bold text-white text-base tracking-tight">Super Admin</span>
-            <span className="block text-[10px] text-emerald-400 uppercase font-mono tracking-widest font-semibold">BiznesGO B2B</span>
-          </div>
-        </div>
+    <aside className="w-16 sm:w-20 bg-[#F6F6F3] flex flex-col items-center justify-between py-6 shrink-0 border-r border-slate-200/50">
+      {/* Top Brand Sunburst Logo */}
+      <div className="flex flex-col items-center gap-6">
+        <button 
+          onClick={() => onSelectView('dashboard')}
+          className="w-10 h-10 flex items-center justify-center hover:rotate-45 transition-transform duration-300"
+          title="BiznesGO Super Admin"
+        >
+          {/* 12-ray sunburst asterisk icon matching reference image */}
+          <svg className="w-8 h-8 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <line x1="12" y1="2" x2="12" y2="6"></line>
+            <line x1="12" y1="18" x2="12" y2="22"></line>
+            <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
+            <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
+            <line x1="2" y1="12" x2="6" y2="12"></line>
+            <line x1="18" y1="12" x2="22" y2="12"></line>
+            <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line>
+            <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
+          </svg>
+        </button>
 
-        {/* Navigation Items */}
-        <nav className="p-4 space-y-1.5">
-          {menuItems.map((item) => {
+        {/* Vertical Icon Navigation Dock */}
+        <nav className="flex flex-col items-center gap-3">
+          {navItems.map((item) => {
             const Icon = item.icon;
-            const active = currentView === item.id;
+            const isActive = currentView === item.id;
             return (
               <button
                 key={item.id}
                 onClick={() => onSelectView(item.id)}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${
-                  active
-                    ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent'
+                title={item.label}
+                className={`relative w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer ${
+                  isActive
+                    ? 'bg-black text-white shadow-md shadow-black/10 scale-105'
+                    : 'text-slate-500 hover:text-black hover:bg-white/80'
                 }`}
               >
-                <Icon className="w-4 h-4" />
-                {item.label}
+                <Icon className="w-5 h-5 stroke-[2]" />
+                {item.id === 'support' && (
+                  <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#22C55E] ring-2 ring-white"></span>
+                )}
               </button>
             );
           })}
         </nav>
       </div>
 
-      {/* Footer Info */}
-      <div className="p-4 border-t border-slate-800/80 text-xs text-slate-500 space-y-1">
-        <div className="flex items-center gap-1.5 text-slate-400 font-medium">
-          <Key className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Super Admin Access</span>
-        </div>
-        <div>Neon DB • Railway • Dual Bot</div>
+      {/* Bottom Actions Dock */}
+      <div className="flex flex-col items-center gap-3">
+        {onOpenKeyModal && (
+          <button
+            onClick={onOpenKeyModal}
+            title="Admin Kalitini Sozlash"
+            className="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-black hover:bg-white/80 transition cursor-pointer"
+          >
+            <Key className="w-4 h-4 stroke-[2]" />
+          </button>
+        )}
+        <button
+          onClick={() => window.location.reload()}
+          title="Sahifani yangilash"
+          className="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-black hover:bg-white/80 transition cursor-pointer"
+        >
+          <RotateCcw className="w-4 h-4 stroke-[2]" />
+        </button>
       </div>
     </aside>
   );
 };
-

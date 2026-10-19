@@ -11,7 +11,8 @@ import {
   CheckCircle2, 
   AlertTriangle,
   ArchiveRestore,
-  UserCheck
+  UserCheck,
+  ArrowUpRight
 } from 'lucide-react';
 import { api } from '../lib/api';
 import type { ArchiveItem, ArchiveStats } from '../types';
@@ -132,7 +133,6 @@ export const ArchiveView: React.FC = () => {
       `"${item.archived_at ? new Date(item.archived_at).toLocaleString('uz-UZ') : ''}"`,
     ]);
 
-    // UTF-8 BOM qo'shish (Excelda to'g'ri ochilishi uchun)
     const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -150,31 +150,30 @@ export const ArchiveView: React.FC = () => {
       {/* Header & Export Button */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
-            <Archive className="w-7 h-7 text-emerald-400" />
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
             Arxiv va Foydalanuvchilar Bazasi
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 mt-1">
             Neon DB dagi barcha foydalanuvchilar, dual-bot ro'yxatlari va arxivlangan profillar (Soft-delete)
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={loadArchive}
             disabled={loading}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition border border-slate-700"
+            className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold bg-white border border-slate-200/80 text-slate-700 hover:bg-slate-50 shadow-xs transition cursor-pointer"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-400' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-slate-900' : ''}`} />
             Yangilash
           </button>
 
           <button
             onClick={handleExportCSV}
             disabled={!items.length}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition shadow-lg shadow-emerald-950/40"
+            className="flex items-center gap-2 px-5 py-2 rounded-full text-xs font-bold bg-black text-white hover:bg-slate-800 transition shadow-xs cursor-pointer"
           >
-            <Download className="w-4 h-4" />
+            <Download className="w-3.5 h-3.5" />
             Excel / CSV Yuklab olish
           </button>
         </div>
@@ -182,16 +181,16 @@ export const ArchiveView: React.FC = () => {
 
       {/* Success Notification */}
       {successMsg && (
-        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-3 text-emerald-300 text-sm">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center gap-3 text-emerald-800 text-xs">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {/* Error Notification */}
       {error && (
-        <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center gap-3 text-rose-300 text-sm">
-          <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />
+        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 flex items-center gap-3 text-rose-800 text-xs">
+          <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
           <span>{error}</span>
         </div>
       )}
@@ -199,50 +198,60 @@ export const ArchiveView: React.FC = () => {
       {/* Stats Summary Cards */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5">
-          <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-800 backdrop-blur-sm">
-            <div className="flex items-center gap-2 text-slate-400 text-xs mb-1">
-              <Users className="w-4 h-4 text-emerald-400" />
-              <span>Jami Yozuvlar</span>
+          <div className="p-5 rounded-[28px] bg-white border border-slate-200/60 shadow-xs">
+            <div className="flex items-center justify-between text-slate-400 text-xs mb-2">
+              <span className="font-semibold text-slate-500">Jami Yozuvlar</span>
+              <div className="w-7 h-7 rounded-full bg-[#F6F6F3] flex items-center justify-center">
+                <Users className="w-3.5 h-3.5 text-slate-700" />
+              </div>
             </div>
-            <div className="text-2xl font-bold text-white">{stats.total_all.toLocaleString()}</div>
+            <div className="text-2xl font-bold tracking-tight text-slate-900">{stats.total_all.toLocaleString()}</div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-800/60 border border-amber-500/20 backdrop-blur-sm">
-            <div className="flex items-center gap-2 text-amber-400 text-xs mb-1">
-              <ArchiveRestore className="w-4 h-4" />
-              <span>Arxivlanganlar</span>
+          <div className="p-5 rounded-[28px] bg-white border border-slate-200/60 shadow-xs">
+            <div className="flex items-center justify-between text-slate-400 text-xs mb-2">
+              <span className="font-semibold text-amber-700">Arxivlanganlar</span>
+              <div className="w-7 h-7 rounded-full bg-amber-50 flex items-center justify-center">
+                <ArchiveRestore className="w-3.5 h-3.5 text-amber-600" />
+              </div>
             </div>
-            <div className="text-2xl font-bold text-amber-400">{stats.total_archived.toLocaleString()}</div>
+            <div className="text-2xl font-bold tracking-tight text-amber-600">{stats.total_archived.toLocaleString()}</div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-800 backdrop-blur-sm">
-            <div className="flex items-center gap-2 text-slate-400 text-xs mb-1">
-              <Store className="w-4 h-4 text-teal-400" />
-              <span>BiznesGO Sotuvchilar</span>
+          <div className="p-5 rounded-[28px] bg-white border border-slate-200/60 shadow-xs">
+            <div className="flex items-center justify-between text-slate-400 text-xs mb-2">
+              <span className="font-semibold text-slate-500">BiznesGO</span>
+              <div className="w-7 h-7 rounded-full bg-[#F6F6F3] flex items-center justify-center">
+                <Store className="w-3.5 h-3.5 text-slate-700" />
+              </div>
             </div>
-            <div className="text-2xl font-bold text-white">{stats.total_merchants.toLocaleString()}</div>
+            <div className="text-2xl font-bold tracking-tight text-slate-900">{stats.total_merchants.toLocaleString()}</div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-800 backdrop-blur-sm">
-            <div className="flex items-center gap-2 text-slate-400 text-xs mb-1">
-              <UserCheck className="w-4 h-4 text-sky-400" />
-              <span>Agroz Mutaxassislar</span>
+          <div className="p-5 rounded-[28px] bg-white border border-slate-200/60 shadow-xs">
+            <div className="flex items-center justify-between text-slate-400 text-xs mb-2">
+              <span className="font-semibold text-slate-500">Mutaxassislar</span>
+              <div className="w-7 h-7 rounded-full bg-[#F6F6F3] flex items-center justify-center">
+                <UserCheck className="w-3.5 h-3.5 text-slate-700" />
+              </div>
             </div>
-            <div className="text-2xl font-bold text-white">{stats.total_specialists.toLocaleString()}</div>
+            <div className="text-2xl font-bold tracking-tight text-slate-900">{stats.total_specialists.toLocaleString()}</div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-800 backdrop-blur-sm">
-            <div className="flex items-center gap-2 text-slate-400 text-xs mb-1">
-              <Bot className="w-4 h-4 text-indigo-400" />
-              <span>Telegram Mijozlar</span>
+          <div className="p-5 rounded-[28px] bg-white border border-slate-200/60 shadow-xs">
+            <div className="flex items-center justify-between text-slate-400 text-xs mb-2">
+              <span className="font-semibold text-slate-500">Telegram Bot</span>
+              <div className="w-7 h-7 rounded-full bg-[#F6F6F3] flex items-center justify-center">
+                <Bot className="w-3.5 h-3.5 text-slate-700" />
+              </div>
             </div>
-            <div className="text-2xl font-bold text-white">{stats.total_users.toLocaleString()}</div>
+            <div className="text-2xl font-bold tracking-tight text-slate-900">{stats.total_users.toLocaleString()}</div>
           </div>
         </div>
       )}
 
       {/* Filter and Search Bar */}
-      <div className="p-4 rounded-2xl bg-slate-800/50 border border-slate-800 flex flex-col md:flex-row gap-4 justify-between items-center">
+      <div className="p-4 rounded-[28px] bg-white border border-slate-200/60 shadow-xs flex flex-col md:flex-row gap-3 justify-between items-center">
         {/* Search Input */}
         <div className="relative w-full md:w-96">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -250,18 +259,17 @@ export const ArchiveView: React.FC = () => {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Telefon, Ism yoki Telegram ID bo'yicha qidirish..."
-            className="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-700/80 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+            placeholder="Telefon, Ism yoki Telegram ID bo'yicha..."
+            className="w-full pl-10 pr-4 py-2.5 bg-[#F6F6F3] border-none rounded-full text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-300"
           />
         </div>
 
         {/* Filter Chips */}
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-          {/* Type Filter */}
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value as any)}
-            className="px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+            className="px-3.5 py-2 bg-[#F6F6F3] border-none rounded-full text-xs text-slate-700 font-semibold focus:outline-hidden cursor-pointer"
           >
             <option value="all">Barcha Turlar</option>
             <option value="archived">📦 Faqat Arxivlanganlar</option>
@@ -270,11 +278,10 @@ export const ArchiveView: React.FC = () => {
             <option value="user">👤 Telegram Foydalanuvchilar</option>
           </select>
 
-          {/* Source Filter */}
           <select
             value={sourceFilter}
             onChange={(e) => setSourceFilter(e.target.value as any)}
-            className="px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+            className="px-3.5 py-2 bg-[#F6F6F3] border-none rounded-full text-xs text-slate-700 font-semibold focus:outline-hidden cursor-pointer"
           >
             <option value="all">Barcha Manbalar</option>
             <option value="biznesgo_bot">🤖 @biznesgo_bot</option>
@@ -284,10 +291,10 @@ export const ArchiveView: React.FC = () => {
       </div>
 
       {/* Main Archive Table */}
-      <div className="rounded-2xl bg-slate-800/40 border border-slate-800 overflow-hidden shadow-xl">
+      <div className="rounded-[32px] bg-white border border-slate-200/60 overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-950/70 border-b border-slate-800 text-xs uppercase text-slate-400 font-semibold tracking-wider">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-[#F8F8F6] border-b border-slate-100 text-[11px] uppercase text-slate-400 font-bold tracking-wider">
               <tr>
                 <th className="px-5 py-3.5">Foydalanuvchi / Do'kon</th>
                 <th className="px-5 py-3.5">Telefon</th>
@@ -300,17 +307,17 @@ export const ArchiveView: React.FC = () => {
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-slate-100">
               {loading && !items.length ? (
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-slate-400">
-                    <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-emerald-400" />
+                    <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-slate-900" />
                     Baza yuklanmoqda...
                   </td>
                 </tr>
               ) : !items.length ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-500">
+                  <td colSpan={8} className="py-12 text-center text-slate-400">
                     Hech qanday ma'lumot topilmadi
                   </td>
                 </tr>
@@ -318,35 +325,35 @@ export const ArchiveView: React.FC = () => {
                 items.map((item) => (
                   <tr 
                     key={item.id} 
-                    className={`hover:bg-slate-800/50 transition ${item.is_archived ? 'bg-amber-950/10' : ''}`}
+                    className={`hover:bg-slate-50/80 transition ${item.is_archived ? 'bg-amber-50/30' : ''}`}
                   >
                     {/* Name */}
                     <td className="px-5 py-3.5">
-                      <div className="font-medium text-white">{item.name}</div>
+                      <div className="font-bold text-slate-900">{item.name}</div>
                       {item.owner_name && item.owner_name !== item.name && (
-                        <div className="text-xs text-slate-400">Egasi: {item.owner_name}</div>
+                        <div className="text-[11px] text-slate-400">Egasi: {item.owner_name}</div>
                       )}
                     </td>
 
                     {/* Phone */}
-                    <td className="px-5 py-3.5 font-mono text-slate-300">
+                    <td className="px-5 py-3.5 font-mono text-slate-600">
                       {item.phone || '—'}
                     </td>
 
                     {/* Telegram ID */}
                     <td className="px-5 py-3.5">
                       {item.telegram_id ? (
-                        <span className="inline-flex items-center gap-1 font-mono text-xs px-2 py-0.5 rounded-md bg-slate-900 border border-slate-700 text-slate-300">
+                        <span className="inline-flex items-center gap-1 font-mono text-[10px] px-2 py-0.5 rounded-full bg-[#F6F6F3] text-slate-700">
                           {item.telegram_id}
                         </span>
                       ) : (
-                        <span className="text-slate-600">—</span>
+                        <span className="text-slate-300">—</span>
                       )}
                     </td>
 
                     {/* Business Type / Role */}
                     <td className="px-5 py-3.5">
-                      <span className="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full font-medium bg-slate-800 text-slate-300 border border-slate-700/80">
+                      <span className="inline-flex items-center text-[10px] px-2.5 py-0.5 rounded-full font-semibold bg-slate-100 text-slate-700">
                         {item.business_type}
                       </span>
                     </td>
@@ -354,11 +361,11 @@ export const ArchiveView: React.FC = () => {
                     {/* Source Bot */}
                     <td className="px-5 py-3.5">
                       {item.source === 'biznesgo_bot' ? (
-                        <span className="inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <span className="inline-flex items-center gap-1 text-[10px] px-2.5 py-0.5 rounded-full font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                           @biznesgo_bot
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full font-medium bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                        <span className="inline-flex items-center gap-1 text-[10px] px-2.5 py-0.5 rounded-full font-semibold bg-sky-50 text-sky-700 border border-sky-200">
                           @agroz_auth_bot
                         </span>
                       )}
@@ -367,25 +374,25 @@ export const ArchiveView: React.FC = () => {
                     {/* Status */}
                     <td className="px-5 py-3.5">
                       {item.is_archived ? (
-                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                        <span className="inline-flex items-center gap-1 text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-amber-50 text-amber-700 border border-amber-200">
                           <Archive className="w-3 h-3" /> Arxivlangan
                         </span>
                       ) : item.status === 'active' ? (
-                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                        <span className="inline-flex items-center gap-1 text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                           Faol
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-rose-500/15 text-rose-400 border border-rose-500/30">
+                        <span className="inline-flex items-center gap-1 text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-rose-50 text-rose-700 border border-rose-200">
                           {item.status === 'blocked' ? 'Bloklangan' : 'Nofaol'}
                         </span>
                       )}
                     </td>
 
                     {/* Created Date */}
-                    <td className="px-5 py-3.5 text-xs text-slate-400">
+                    <td className="px-5 py-3.5 text-[11px] text-slate-400">
                       <div>{item.created_at ? new Date(item.created_at).toLocaleDateString('uz-UZ') : '—'}</div>
                       {item.is_archived && item.archived_at && (
-                        <div className="text-[10px] text-amber-400/80 mt-0.5">
+                        <div className="text-[10px] text-amber-600 mt-0.5">
                           Arxiv: {new Date(item.archived_at).toLocaleDateString('uz-UZ')}
                         </div>
                       )}
@@ -398,25 +405,25 @@ export const ArchiveView: React.FC = () => {
                           <button
                             onClick={() => handleRestore(item.merchant_id!, item.name)}
                             disabled={actionLoading === `restore_${item.merchant_id}`}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/40 transition"
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-black text-white hover:bg-slate-800 transition shadow-xs cursor-pointer"
                             title="Arxivdan qayta tiklash"
                           >
-                            <RotateCcw className={`w-3.5 h-3.5 ${actionLoading === `restore_${item.merchant_id}` ? 'animate-spin' : ''}`} />
+                            <RotateCcw className={`w-3 h-3 ${actionLoading === `restore_${item.merchant_id}` ? 'animate-spin' : ''}`} />
                             Tiklash
                           </button>
                         ) : (
                           <button
                             onClick={() => handleArchive(item.merchant_id!, item.name)}
                             disabled={actionLoading === `archive_${item.merchant_id}`}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-amber-400 hover:bg-amber-500/10 border border-transparent hover:border-amber-500/30 transition"
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold text-slate-600 hover:text-amber-800 hover:bg-amber-50 border border-slate-200 hover:border-amber-200 transition cursor-pointer"
                             title="Arxivlash (Soft-delete)"
                           >
-                            <Archive className="w-3.5 h-3.5" />
+                            <Archive className="w-3 h-3" />
                             Arxivlash
                           </button>
                         )
                       ) : (
-                        <span className="text-xs text-slate-600 italic">Do'kon emas</span>
+                        <span className="text-[11px] text-slate-400 italic">Do'kon emas</span>
                       )}
                     </td>
                   </tr>
@@ -427,8 +434,8 @@ export const ArchiveView: React.FC = () => {
         </div>
 
         {/* Footer with Count */}
-        <div className="p-4 bg-slate-950/60 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-          <div>Jami ko'rsatilgan: <span className="font-semibold text-white">{items.length}</span> / {total}</div>
+        <div className="p-4 bg-[#F8F8F6] border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+          <div>Jami ko'rsatilgan: <span className="font-bold text-slate-900">{items.length}</span> / {total}</div>
           <div>Barcha operatsiyalar Neon PostgreSQL orqali amalga oshiriladi</div>
         </div>
       </div>

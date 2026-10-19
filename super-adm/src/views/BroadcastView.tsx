@@ -10,6 +10,7 @@ import {
   XCircle,
   RefreshCw,
   Sparkles,
+  ArrowUpRight
 } from 'lucide-react';
 
 export const BroadcastView: React.FC = () => {
@@ -65,69 +66,71 @@ export const BroadcastView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-5xl">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white tracking-tight">Telegram Push Xabarnoma</h1>
-        <p className="text-slate-400 text-sm">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          Telegram Push Xabarnoma
+        </h1>
+        <p className="text-xs text-slate-500 mt-1">
           Platformadagi barcha sotuvchi va foydalanuvchilarga @biznesgo_bot va @agroz_auth_bot orqali xabar yuborish
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Form */}
-        <form onSubmit={handleSend} className="lg:col-span-2 space-y-5 bg-slate-800/80 border border-slate-700/60 rounded-xl p-6 shadow-lg">
+        <form onSubmit={handleSend} className="lg:col-span-2 space-y-5 bg-white border border-slate-200/60 rounded-[32px] p-6 shadow-xs">
           {error && (
-            <div className="p-3.5 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-300">
+            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700">
               {error}
             </div>
           )}
 
           {/* Bot Selection */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
               Yuboruvchi Botlar (Dual-Bot)
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label
-                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition ${
+                className={`flex items-center gap-3 p-3.5 rounded-2xl border transition cursor-pointer ${
                   targetBiznesgo
-                    ? 'bg-emerald-500/10 border-emerald-500 text-white'
-                    : 'bg-slate-900 border-slate-700 text-slate-400'
+                    ? 'bg-black text-white border-black shadow-xs'
+                    : 'bg-[#F6F6F3] border-slate-200/80 text-slate-700 hover:bg-slate-100'
                 }`}
               >
                 <input
                   type="checkbox"
                   checked={targetBiznesgo}
                   onChange={(e) => setTargetBiznesgo(e.target.checked)}
-                  className="rounded text-emerald-500 focus:ring-emerald-500"
+                  className="rounded text-black focus:ring-black accent-black"
                 />
                 <div>
-                  <div className="text-sm font-semibold flex items-center gap-1.5">
-                    <Bot className="w-4 h-4 text-emerald-400" /> @biznesgo_bot
+                  <div className="text-xs font-bold flex items-center gap-1.5">
+                    <Bot className={`w-3.5 h-3.5 ${targetBiznesgo ? 'text-emerald-400' : 'text-slate-600'}`} /> @biznesgo_bot
                   </div>
-                  <div className="text-xs text-slate-400">Asosiy B2B sotuvchilar boti</div>
+                  <div className={`text-[10px] ${targetBiznesgo ? 'text-slate-300' : 'text-slate-500'}`}>Asosiy B2B sotuvchilar boti</div>
                 </div>
               </label>
 
               <label
-                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition ${
+                className={`flex items-center gap-3 p-3.5 rounded-2xl border transition cursor-pointer ${
                   targetAgrozAuth
-                    ? 'bg-emerald-500/10 border-emerald-500 text-white'
-                    : 'bg-slate-900 border-slate-700 text-slate-400'
+                    ? 'bg-black text-white border-black shadow-xs'
+                    : 'bg-[#F6F6F3] border-slate-200/80 text-slate-700 hover:bg-slate-100'
                 }`}
               >
                 <input
                   type="checkbox"
                   checked={targetAgrozAuth}
                   onChange={(e) => setTargetAgrozAuth(e.target.checked)}
-                  className="rounded text-emerald-500 focus:ring-emerald-500"
+                  className="rounded text-black focus:ring-black accent-black"
                 />
                 <div>
-                  <div className="text-sm font-semibold flex items-center gap-1.5">
-                    <Bot className="w-4 h-4 text-blue-400" /> @agroz_auth_bot
+                  <div className="text-xs font-bold flex items-center gap-1.5">
+                    <Bot className={`w-3.5 h-3.5 ${targetAgrozAuth ? 'text-sky-400' : 'text-slate-600'}`} /> @agroz_auth_bot
                   </div>
-                  <div className="text-xs text-slate-400">Eski bazadagi dorixonalar</div>
+                  <div className={`text-[10px] ${targetAgrozAuth ? 'text-slate-300' : 'text-slate-500'}`}>Eski bazadagi dorixonalar</div>
                 </div>
               </label>
             </div>
@@ -136,10 +139,10 @@ export const BroadcastView: React.FC = () => {
           {/* Message Text */}
           <div>
             <div className="flex justify-between items-center mb-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
                 Xabar Matni (HTML qo'llab-quvvatlanadi)
               </label>
-              <span className="text-xs text-slate-500">
+              <span className="text-[10px] text-slate-400 font-mono">
                 &lt;b&gt;qalin&lt;/b&gt;, &lt;i&gt;kursiv&lt;/i&gt;, &lt;a href="..."&gt;havola&lt;/a&gt;
               </span>
             </div>
@@ -148,35 +151,35 @@ export const BroadcastView: React.FC = () => {
               placeholder="E'lon: BiznesGO platformasiga yangi qulayliklar qo'shildi! Do'koningizni boshqarish uchun..."
               value={text}
               onChange={(e) => setText(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-sans"
+              className="w-full p-4 bg-[#F6F6F3] border-none rounded-2xl text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-300 font-sans"
             />
           </div>
 
           {/* Photo URL */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1.5">
-              <ImageIcon className="w-4 h-4 text-slate-400" /> Rasm Havolasi (Photo URL — ixtiyoriy)
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1.5">
+              <ImageIcon className="w-3.5 h-3.5 text-slate-500" /> Rasm Havolasi (Photo URL — ixtiyoriy)
             </label>
             <input
               type="url"
               placeholder="https://example.com/rasm.jpg"
               value={photoUrl}
               onChange={(e) => setPhotoUrl(e.target.value)}
-              className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+              className="w-full px-4 py-2.5 bg-[#F6F6F3] border-none rounded-full text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-300"
             />
           </div>
 
           {/* Target Telegram IDs */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1.5">
-              <Users className="w-4 h-4 text-slate-400" /> Maxsus Telegram ID-lar (ixtiyoriy)
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5 text-slate-500" /> Maxsus Telegram ID-lar (ixtiyoriy)
             </label>
             <input
               type="text"
               placeholder="Bo'sh qoldirilsa barcha foydalanuvchilarga yuboriladi (masalan: 12345678, 87654321)"
               value={customIds}
               onChange={(e) => setCustomIds(e.target.value)}
-              className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+              className="w-full px-4 py-2.5 bg-[#F6F6F3] border-none rounded-full text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-300"
             />
           </div>
 
@@ -184,7 +187,7 @@ export const BroadcastView: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold rounded-lg text-sm transition shadow-lg shadow-emerald-900/30"
+            className="w-full flex items-center justify-center gap-2 py-3 bg-black hover:bg-slate-800 disabled:opacity-50 text-white font-bold rounded-full text-xs transition shadow-xs cursor-pointer"
           >
             {loading ? (
               <>
@@ -192,7 +195,7 @@ export const BroadcastView: React.FC = () => {
               </>
             ) : (
               <>
-                <Send className="w-4 h-4" /> Push Xabarni Yuborish
+                <Send className="w-3.5 h-3.5" /> Push Xabarni Yuborish
               </>
             )}
           </button>
@@ -201,55 +204,55 @@ export const BroadcastView: React.FC = () => {
         {/* Live Preview & Delivery Results */}
         <div className="space-y-4">
           {/* Telegram Message Preview Card */}
-          <div className="bg-slate-800/80 border border-slate-700/60 rounded-xl p-4 shadow-lg">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-amber-400" /> Telegram Ko'rinishi (Preview)
+          <div className="bg-white border border-slate-200/60 rounded-[32px] p-5 shadow-xs">
+            <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Telegram Ko'rinishi (Preview)
             </h3>
-            <div className="bg-[#182533] rounded-xl p-3 text-slate-100 text-sm border border-slate-700 space-y-2">
+            <div className="bg-[#182533] rounded-2xl p-3.5 text-slate-100 text-xs border border-slate-800 space-y-2">
               {photoUrl ? (
-                <div className="rounded-lg overflow-hidden bg-slate-900 max-h-48 flex items-center justify-center">
+                <div className="rounded-xl overflow-hidden bg-slate-900 max-h-48 flex items-center justify-center">
                   <img src={photoUrl} alt="Preview" className="w-full h-auto object-cover" onError={(e) => ((e.target as any).style.display = 'none')} />
                 </div>
               ) : null}
-              <div className="whitespace-pre-wrap break-words leading-relaxed">
+              <div className="whitespace-pre-wrap break-words leading-relaxed text-slate-100">
                 {text ? (
                   <span dangerouslySetInnerHTML={{ __html: text.replace(/\n/g, '<br/>') }} />
                 ) : (
                   <span className="text-slate-500 italic">Xabar matni kiritilganda bu yerda ko'rinadi...</span>
                 )}
               </div>
-              <div className="text-[10px] text-right text-slate-500">12:00 ✓✓</div>
+              <div className="text-[10px] text-right text-slate-400">12:00 ✓✓</div>
             </div>
           </div>
 
           {/* Delivery Results */}
           {result && (
-            <div className="bg-slate-800/80 border border-emerald-500/40 rounded-xl p-4 shadow-lg space-y-3">
-              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Yuborish Natijalari
+            <div className="bg-white border border-slate-200/60 rounded-[32px] p-5 shadow-xs space-y-3">
+              <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-[#22C55E]" /> Yuborish Natijalari
               </h3>
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="bg-slate-900 p-2.5 rounded-lg">
-                  <span className="text-slate-400 block">Jami qabul qiluvchi:</span>
-                  <span className="text-base font-bold text-white">{result.total} ta</span>
+                <div className="bg-[#F6F6F3] p-3 rounded-2xl">
+                  <span className="text-slate-400 block text-[10px]">Jami qabul qiluvchi:</span>
+                  <span className="text-base font-bold text-slate-900">{result.total} ta</span>
                 </div>
-                <div className="bg-slate-900 p-2.5 rounded-lg">
-                  <span className="text-slate-400 block">Yetkazildi:</span>
-                  <span className="text-base font-bold text-emerald-400">
+                <div className="bg-[#F6F6F3] p-3 rounded-2xl">
+                  <span className="text-slate-400 block text-[10px]">Yetkazildi:</span>
+                  <span className="text-base font-bold text-emerald-600">
                     {result.sent_via_biznesgo + result.sent_via_agroz_auth} ta
                   </span>
                 </div>
-                <div className="bg-slate-900 p-2.5 rounded-lg">
-                  <span className="text-slate-400 block">@biznesgo_bot:</span>
-                  <span className="text-sm font-semibold text-slate-200">{result.sent_via_biznesgo}</span>
+                <div className="bg-[#F6F6F3] p-2.5 rounded-2xl">
+                  <span className="text-slate-400 block text-[10px]">@biznesgo_bot:</span>
+                  <span className="text-xs font-bold text-slate-900">{result.sent_via_biznesgo}</span>
                 </div>
-                <div className="bg-slate-900 p-2.5 rounded-lg">
-                  <span className="text-slate-400 block">@agroz_auth_bot:</span>
-                  <span className="text-sm font-semibold text-slate-200">{result.sent_via_agroz_auth}</span>
+                <div className="bg-[#F6F6F3] p-2.5 rounded-2xl">
+                  <span className="text-slate-400 block text-[10px]">@agroz_auth_bot:</span>
+                  <span className="text-xs font-bold text-slate-900">{result.sent_via_agroz_auth}</span>
                 </div>
               </div>
               {result.failed > 0 && (
-                <div className="text-xs text-red-400 flex items-center gap-1">
+                <div className="text-xs text-rose-600 flex items-center gap-1 bg-rose-50 p-2.5 rounded-xl border border-rose-200">
                   <XCircle className="w-3.5 h-3.5" /> {result.failed} ta foydalanuvchiga yetkazilmadi (bot bloklangan bo'lishi mumkin)
                 </div>
               )}
@@ -260,4 +263,3 @@ export const BroadcastView: React.FC = () => {
     </div>
   );
 };
-
