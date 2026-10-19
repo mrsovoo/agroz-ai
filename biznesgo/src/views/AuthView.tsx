@@ -486,6 +486,13 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
               {isOnboardingForm ? (
                 <div className="space-y-4">
                   
+                  {/* Bosqich progress chizig'i (3 ta oddiy segment) */}
+                  <div className="grid grid-cols-3 gap-1.5 mb-1">
+                    <div className={`h-1.5 rounded-full transition-all ${onboardStep >= 1 ? 'bg-emerald-600' : 'bg-slate-200'}`} />
+                    <div className={`h-1.5 rounded-full transition-all ${onboardStep >= 2 ? 'bg-emerald-600' : 'bg-slate-200'}`} />
+                    <div className={`h-1.5 rounded-full transition-all ${onboardStep >= 3 ? 'bg-emerald-600' : 'bg-slate-200'}`} />
+                  </div>
+
                   {/* Bosqich sarlavhasi va indikatori */}
                   <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                     <div className="flex items-center gap-2">
@@ -494,6 +501,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                           type="button"
                           onClick={() => setOnboardStep((prev) => (prev - 1) as any)}
                           className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
+                          title="Ortga"
                         >
                           <ArrowLeft className="w-4 h-4" />
                         </button>
@@ -502,25 +510,26 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                           type="button"
                           onClick={() => setIsOnboardingForm(false)}
                           className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
+                          title="Kirishga qaytish"
                         >
                           <ArrowLeft className="w-4 h-4" />
                         </button>
                       ) : null}
                       <div>
                         <h3 className="text-base font-bold text-slate-900">
-                          {onboardStep === 1 && 'Biznes yo‘nalishini tanlang'}
+                          {onboardStep === 1 && 'Biznes yo‘nalishi'}
                           {onboardStep === 2 && 'Do‘kon ma’lumotlari'}
-                          {onboardStep === 3 && 'Manzil va lokatsiyani tasdiqlash'}
+                          {onboardStep === 3 && 'Manzil va lokatsiya'}
                         </h3>
                         <p className="text-xs text-slate-500">
-                          {onboardStep === 1 && 'Do‘koningiz qaysi sohada faoliyat yuritadi?'}
+                          {onboardStep === 1 && 'Sohangizni tanlang'}
                           {onboardStep === 2 && 'Do‘kon nomi va mas’ul shaxs'}
-                          {onboardStep === 3 && 'Do‘kon joylashuvi va xaritadagi lokatsiyasi'}
+                          {onboardStep === 3 && 'Do‘kon joylashuvini tasdiqlang'}
                         </p>
                       </div>
                     </div>
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/60 shrink-0">
-                      {onboardStep}/3-bosqich
+                    <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                      {onboardStep} / 3
                     </span>
                   </div>
 
@@ -582,9 +591,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                           tg.hapticImpact('light');
                           setOnboardStep(2);
                         }}
-                        className="w-full mt-3 py-3 px-4 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 flex items-center justify-center gap-2 cursor-pointer transition shadow-xs"
+                        className="w-full mt-3 py-3 px-4 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 flex items-center justify-center gap-2 cursor-pointer transition shadow-xs active:scale-[0.99]"
                       >
-                        <span>Keyingi bosqichga o‘tish (2-bosqich)</span>
+                        <span>Keyingisi</span>
                         <ArrowRight className="w-4 h-4" />
                       </button>
                     </div>
@@ -677,9 +686,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                         <button
                           type="button"
                           onClick={handleStep2Next}
-                          className="flex-1 py-3 px-4 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition cursor-pointer flex items-center justify-center gap-2 shadow-xs"
+                          className="flex-1 py-3 px-4 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition cursor-pointer flex items-center justify-center gap-2 shadow-xs active:scale-[0.99]"
                         >
-                          <span>Keyingi bosqichga o‘tish (3-bosqich)</span>
+                          <span>Keyingisi</span>
                           <ArrowRight className="w-4 h-4" />
                         </button>
                       </div>
@@ -713,12 +722,12 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                           ) : lat && lng ? (
                             <>
                               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                              <span>✓ Lokatsiya aniqlandi ({lat.toFixed(4)}, {lng.toFixed(4)})</span>
+                              <span>Lokatsiya aniqlandi ✓ ({lat.toFixed(4)}, {lng.toFixed(4)})</span>
                             </>
                           ) : (
                             <>
                               <Navigation className="w-4 h-4 text-emerald-600 shrink-0" />
-                              <span>📍 Geolokatsiyani aniqlash</span>
+                              <span>Lokatsiyani aniqlash</span>
                             </>
                           )}
                         </button>
@@ -784,12 +793,15 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
                         <button
                           type="submit"
                           disabled={loading}
-                          className="flex-1 py-3 px-4 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition cursor-pointer flex items-center justify-center shadow-xs"
+                          className="flex-1 py-3 px-4 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition cursor-pointer flex items-center justify-center gap-2 shadow-xs active:scale-[0.99]"
                         >
                           {loading ? (
                             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
                           ) : (
-                            'Do‘konni ochish'
+                            <>
+                              <span>Do‘konni ochish</span>
+                              <CheckCircle2 className="w-4 h-4" />
+                            </>
                           )}
                         </button>
                       </div>
