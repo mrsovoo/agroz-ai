@@ -9,19 +9,22 @@ import {
   Package, 
   Plus, 
   Search, 
-  Filter, 
   Edit3, 
   Trash2, 
   Calendar, 
   Hash, 
-  Tag, 
   AlertTriangle,
   Scale,
   Wheat,
   Wrench,
   Building2,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  Image as ImageIcon,
+  Upload,
+  ShieldCheck,
+  Layers,
+  Sprout
 } from 'lucide-react';
 
 export const ProductsView: React.FC = () => {
@@ -35,7 +38,7 @@ export const ProductsView: React.FC = () => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Form states
+  // Form states - General
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
   const [price, setPrice] = useState<number | ''>('');
@@ -45,18 +48,35 @@ export const ProductsView: React.FC = () => {
   const [minStockAlert, setMinStockAlert] = useState<number | ''>(5);
   const [barcode, setBarcode] = useState('');
   const [sku, setSku] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
 
-  // Business specific fields
+  // Sector Specific Fields
+  // 1. Agro-Vet
   const [batchNumber, setBatchNumber] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
+  const [activeIngredient, setActiveIngredient] = useState('');
+
+  // 2. Feed
   const [bagWeightKg, setBagWeightKg] = useState<number | ''>('');
+
+  // 3. Warehouse
+  const [wholesalePrice, setWholesalePrice] = useState<number | ''>('');
+  const [minWholesaleQuantity, setMinWholesaleQuantity] = useState<number | ''>('');
+  const [packagingType, setPackagingType] = useState('');
+
+  // 4. Seeds
   const [variety, setVariety] = useState('');
   const [germinationRate, setGerminationRate] = useState<number | ''>('');
   const [harvestYear, setHarvestYear] = useState<number | ''>('');
+  const [ripeningPeriod, setRipeningPeriod] = useState('');
+
+  // 5. Machinery
+  const [serialNumber, setSerialNumber] = useState('');
+  const [model, setModel] = useState('');
   const [warrantyMonths, setWarrantyMonths] = useState<number | ''>('');
   const [partNumber, setPartNumber] = useState('');
-  const [wholesalePrice, setWholesalePrice] = useState<number | ''>('');
-  const [minWholesaleQuantity, setMinWholesaleQuantity] = useState<number | ''>('');
+
+  const businessType = merchant?.business_type || 'agro_vet';
 
   const fetchProducts = async () => {
     try {
@@ -79,21 +99,33 @@ export const ProductsView: React.FC = () => {
     setCategory('');
     setPrice('');
     setCostPrice('');
-    setUnit(merchant?.business_type === 'feed' ? 'qop' : 'dona');
+    setUnit(businessType === 'feed' ? 'qop' : 'dona');
     setStockQuantity('');
     setMinStockAlert(5);
     setBarcode('');
     setSku('');
+    setImageUrl('');
+
     setBatchNumber('');
     setExpiryDate('');
-    setBagWeightKg('');
-    setVariety('');
-    setGerminationRate('');
-    setHarvestYear('');
-    setWarrantyMonths('');
-    setPartNumber('');
+    setActiveIngredient('');
+
+    setBagWeightKg(businessType === 'feed' ? 50 : '');
+
     setWholesalePrice('');
     setMinWholesaleQuantity('');
+    setPackagingType('');
+
+    setVariety('');
+    setGerminationRate('');
+    setHarvestYear(new Date().getFullYear());
+    setRipeningPeriod('');
+
+    setSerialNumber('');
+    setModel('');
+    setWarrantyMonths(businessType === 'machinery' ? 12 : '');
+    setPartNumber('');
+
     setEditingProduct(null);
   };
 
@@ -113,23 +145,65 @@ export const ProductsView: React.FC = () => {
     setMinStockAlert(p.min_stock_alert || 5);
     setBarcode(p.barcode || '');
     setSku(p.sku || '');
+    setImageUrl(p.image_url || '');
+
     setBatchNumber(p.batch_number || '');
     setExpiryDate(p.expiry_date ? p.expiry_date.split('T')[0] : '');
+    setActiveIngredient(p.active_ingredient || '');
+
     setBagWeightKg(p.bag_weight_kg || '');
+
+    setWholesalePrice(p.wholesale_price || '');
+    setMinWholesaleQuantity(p.min_wholesale_quantity || p.wholesale_min_qty || '');
+    setPackagingType(p.packaging_type || '');
+
     setVariety(p.variety || '');
-    setGerminationRate(p.germination_rate_percent || '');
+    setGerminationRate(p.germination_rate_percent || p.germination_rate || '');
     setHarvestYear(p.harvest_year || '');
+    setRipeningPeriod(p.ripening_period || '');
+
+    setSerialNumber(p.serial_number || '');
+    setModel(p.model || '');
     setWarrantyMonths(p.warranty_months || '');
     setPartNumber(p.part_number || '');
-    setWholesalePrice(p.wholesale_price || '');
-    setMinWholesaleQuantity(p.min_wholesale_quantity || '');
+
     setIsAddModalOpen(true);
+  };
+
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      addToast('Rasm hajmi 2MB dan oshmasligi kerak', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImageUrl(reader.result as string);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || price === '' || stockQuantity === '') {
       addToast('Nom, narx va qoldiqni kiritish shart', 'error');
+      return;
+    }
+
+    // Sektor talabiga ko'ra rasm tekshiruvi:
+    // agro_vet (O'ta yuqori/majburiy), seeds (Muhim), machinery (Muhim)
+    const isImageRequired = businessType === 'agro_vet' || businessType === 'seeds' || businessType === 'machinery';
+    if (isImageRequired && !imageUrl.trim() && !editingProduct?.image_url) {
+      addToast(`${businessType === 'agro_vet' ? 'Agro-Vet dorixonada' : 'Ushbu yo‘nalishda'} mahsulot rasmi majburiy!`, 'error');
+      return;
+    }
+
+    // Sektor talabiga ko'ra partiya/muddat tekshiruvi
+    if (businessType === 'agro_vet' && !expiryDate) {
+      addToast('Agro-Vet mahsulotlarida yaroqlilik muddati (expiry_date) kiritilishi shart', 'error');
       return;
     }
 
@@ -145,16 +219,33 @@ export const ProductsView: React.FC = () => {
         min_stock_alert: minStockAlert !== '' ? Number(minStockAlert) : 5,
         barcode: barcode.trim() || undefined,
         sku: sku.trim() || undefined,
+        image_url: imageUrl.trim() || undefined,
+
+        // agro_vet
         batch_number: batchNumber.trim() || undefined,
         expiry_date: expiryDate || undefined,
+        active_ingredient: activeIngredient.trim() || undefined,
+
+        // feed
         bag_weight_kg: bagWeightKg !== '' ? Number(bagWeightKg) : undefined,
+
+        // warehouse
+        wholesale_price: wholesalePrice !== '' ? Number(wholesalePrice) : undefined,
+        wholesale_min_qty: minWholesaleQuantity !== '' ? Number(minWholesaleQuantity) : undefined,
+        min_wholesale_quantity: minWholesaleQuantity !== '' ? Number(minWholesaleQuantity) : undefined,
+        packaging_type: packagingType.trim() || undefined,
+
+        // seeds
         variety: variety.trim() || undefined,
         germination_rate_percent: germinationRate !== '' ? Number(germinationRate) : undefined,
         harvest_year: harvestYear !== '' ? Number(harvestYear) : undefined,
+        ripening_period: ripeningPeriod.trim() || undefined,
+
+        // machinery
+        serial_number: serialNumber.trim() || undefined,
+        model: model.trim() || undefined,
         warranty_months: warrantyMonths !== '' ? Number(warrantyMonths) : undefined,
         part_number: partNumber.trim() || undefined,
-        wholesale_price: wholesalePrice !== '' ? Number(wholesalePrice) : undefined,
-        min_wholesale_quantity: minWholesaleQuantity !== '' ? Number(minWholesaleQuantity) : undefined,
       };
 
       if (editingProduct) {
@@ -188,15 +279,17 @@ export const ProductsView: React.FC = () => {
     }
   };
 
-  const businessType = merchant?.business_type || 'agro_vet';
-
   const filtered = products.filter((p) => {
     const q = searchQuery.toLowerCase();
     return (
       p.name.toLowerCase().includes(q) ||
       (p.category && p.category.toLowerCase().includes(q)) ||
       (p.batch_number && p.batch_number.toLowerCase().includes(q)) ||
-      (p.barcode && p.barcode.toLowerCase().includes(q))
+      (p.barcode && p.barcode.toLowerCase().includes(q)) ||
+      (p.active_ingredient && p.active_ingredient.toLowerCase().includes(q)) ||
+      (p.variety && p.variety.toLowerCase().includes(q)) ||
+      (p.model && p.model.toLowerCase().includes(q)) ||
+      (p.serial_number && p.serial_number.toLowerCase().includes(q))
     );
   });
 
@@ -205,11 +298,20 @@ export const ProductsView: React.FC = () => {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-            Ombor va Mahsulotlar
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              Ombor va Mahsulotlar
+            </h1>
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200">
+              {businessType === 'agro_vet' && '🌿 Agro-Vet'}
+              {businessType === 'feed' && '🌾 Yem-Ozuqa'}
+              {businessType === 'warehouse' && '🏢 Ulgurji Ombor'}
+              {businessType === 'seeds' && '🌱 Urug‘ & Ko‘chat'}
+              {businessType === 'machinery' && '🔧 Jihoz & Texnika'}
+            </span>
+          </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Mavjud tovarlar qoldig‘i, yangi kirimlar va narxlarni boshqarish
+            Sektorga moslashtirilgan tovar kartochkalari, narxlar va qoldiqlar
           </p>
         </div>
         <button
@@ -231,7 +333,7 @@ export const ProductsView: React.FC = () => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Nomi, partiya, kategoriya yoki kod bo‘yicha izlash..."
+            placeholder="Nomi, kod, seriya, faol modda yoki nav bo‘yicha izlash..."
             className="block w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
           />
         </div>
@@ -260,25 +362,43 @@ export const ProductsView: React.FC = () => {
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 text-slate-500 uppercase font-bold border-b border-slate-200/80">
                 <tr>
-                  <th className="py-3.5 px-4">Tovar nomi</th>
+                  <th className="py-3.5 px-4">Tovar</th>
                   <th className="py-3.5 px-4">Kategoriya</th>
-                  <th className="py-3.5 px-4">Sotish narxi</th>
+                  <th className="py-3.5 px-4">Chakana narx</th>
                   <th className="py-3.5 px-4">Qoldiq</th>
+
+                  {/* Sektorga mos ustunlar */}
                   {businessType === 'agro_vet' && (
-                    <th className="py-3.5 px-4">Partiya & Muddat</th>
+                    <>
+                      <th className="py-3.5 px-4">Partiya & Yaroqlilik</th>
+                      <th className="py-3.5 px-4">Faol modda / Doza</th>
+                    </>
                   )}
                   {businessType === 'feed' && (
-                    <th className="py-3.5 px-4">1 qop vazni</th>
-                  )}
-                  {businessType === 'seeds' && (
-                    <th className="py-3.5 px-4">Nav & Unuvchanlik</th>
-                  )}
-                  {businessType === 'machinery' && (
-                    <th className="py-3.5 px-4">Kafolat & Detal</th>
+                    <>
+                      <th className="py-3.5 px-4">1 Qop vazni</th>
+                      <th className="py-3.5 px-4">Birlik</th>
+                    </>
                   )}
                   {businessType === 'warehouse' && (
-                    <th className="py-3.5 px-4">Ulgurji narx</th>
+                    <>
+                      <th className="py-3.5 px-4">Ulgurji narx</th>
+                      <th className="py-3.5 px-4">Min. partiya & Qadoq</th>
+                    </>
                   )}
+                  {businessType === 'seeds' && (
+                    <>
+                      <th className="py-3.5 px-4">Nav & Unuvchanlik</th>
+                      <th className="py-3.5 px-4">Hosil yili & Mavsum</th>
+                    </>
+                  )}
+                  {businessType === 'machinery' && (
+                    <>
+                      <th className="py-3.5 px-4">Model & Seriya №</th>
+                      <th className="py-3.5 px-4">Kafolat & Katalog kodi</th>
+                    </>
+                  )}
+
                   <th className="py-3.5 px-4 text-right">Amallar</th>
                 </tr>
               </thead>
@@ -289,19 +409,37 @@ export const ProductsView: React.FC = () => {
 
                   return (
                     <tr key={product.id} className="hover:bg-slate-50/70 transition-colors">
+                      {/* Tovar nomi va Rasmi */}
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-900 text-sm">
-                          {product.name}
-                        </div>
-                        {product.barcode && (
-                          <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-                            {product.barcode}
+                        <div className="flex items-center gap-3">
+                          {product.image_url ? (
+                            <img
+                              src={product.image_url}
+                              alt={product.name}
+                              className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg bg-slate-100 text-slate-400 flex items-center justify-center shrink-0">
+                              <Package className="w-5 h-5" />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <div className="font-bold text-slate-900 text-sm">
+                              {product.name}
+                            </div>
+                            {product.barcode && (
+                              <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                {product.barcode}
+                              </div>
+                            )}
                           </div>
-                        )}
+                        </div>
                       </td>
+
                       <td className="py-3.5 px-4 text-slate-600">
                         {product.category || '—'}
                       </td>
+
                       <td className="py-3.5 px-4">
                         <span className="font-extrabold text-slate-900 text-sm">
                           {formatCurrency(product.price)}
@@ -312,6 +450,7 @@ export const ProductsView: React.FC = () => {
                           </div>
                         )}
                       </td>
+
                       <td className="py-3.5 px-4">
                         <span
                           className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
@@ -326,64 +465,110 @@ export const ProductsView: React.FC = () => {
                         </span>
                       </td>
 
-                      {/* Business Specific Columns */}
+                      {/* Sektor 1: Agro-Vet */}
                       {businessType === 'agro_vet' && (
-                        <td className="py-3.5 px-4 text-slate-600">
-                          {product.batch_number && (
-                            <div className="font-mono text-[11px]">
-                              P: {product.batch_number}
-                            </div>
-                          )}
-                          {product.expiry_date && (
-                            <div className="text-amber-700 font-semibold text-[11px]">
-                              {formatDate(product.expiry_date)}
-                            </div>
-                          )}
-                          {!product.batch_number && !product.expiry_date && '—'}
-                        </td>
+                        <>
+                          <td className="py-3.5 px-4 text-slate-600">
+                            {product.batch_number && (
+                              <div className="font-mono text-[11px] font-semibold text-slate-800">
+                                P: {product.batch_number}
+                              </div>
+                            )}
+                            {product.expiry_date && (
+                              <div className="text-amber-700 font-bold text-[11px]">
+                                {formatDate(product.expiry_date)}
+                              </div>
+                            )}
+                            {!product.batch_number && !product.expiry_date && '—'}
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-600">
+                            {product.active_ingredient ? (
+                              <span className="bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded text-[11px] font-medium border border-emerald-100">
+                                {product.active_ingredient}
+                              </span>
+                            ) : (
+                              '—'
+                            )}
+                          </td>
+                        </>
                       )}
 
+                      {/* Sektor 2: Feed */}
                       {businessType === 'feed' && (
-                        <td className="py-3.5 px-4 text-slate-600">
-                          {product.bag_weight_kg ? `${product.bag_weight_kg} kg / qop` : '—'}
-                        </td>
+                        <>
+                          <td className="py-3.5 px-4 font-bold text-amber-900">
+                            {product.bag_weight_kg ? `${product.bag_weight_kg} kg / qop` : '—'}
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-600 font-medium">
+                            {product.unit}
+                          </td>
+                        </>
                       )}
 
-                      {businessType === 'seeds' && (
-                        <td className="py-3.5 px-4 text-slate-600">
-                          {product.variety && <div>Nav: {product.variety}</div>}
-                          {product.germination_rate_percent && (
-                            <div className="text-emerald-700 font-semibold">
-                              Unuvchanlik: {product.germination_rate_percent}%
-                            </div>
-                          )}
-                          {!product.variety && !product.germination_rate_percent && '—'}
-                        </td>
-                      )}
-
-                      {businessType === 'machinery' && (
-                        <td className="py-3.5 px-4 text-slate-600">
-                          {product.part_number && <div className="font-mono">Kod: {product.part_number}</div>}
-                          {product.warranty_months && (
-                            <div>Kafolat: {product.warranty_months} oy</div>
-                          )}
-                          {!product.part_number && !product.warranty_months && '—'}
-                        </td>
-                      )}
-
+                      {/* Sektor 3: Warehouse */}
                       {businessType === 'warehouse' && (
-                        <td className="py-3.5 px-4 text-slate-600">
-                          {product.wholesale_price ? (
-                            <div>
-                              <span className="font-bold text-blue-700">
+                        <>
+                          <td className="py-3.5 px-4">
+                            {product.wholesale_price ? (
+                              <span className="font-bold text-blue-700 text-sm">
                                 {formatCurrency(product.wholesale_price)}
                               </span>
-                              <div className="text-[10px] text-slate-400">
-                                min: {product.min_wholesale_quantity} {product.unit}
+                            ) : (
+                              '—'
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-600">
+                            <div>Min: {product.min_wholesale_quantity || product.wholesale_min_qty || '1'} {product.unit}</div>
+                            {product.packaging_type && (
+                              <div className="text-[10px] text-slate-400">{product.packaging_type}</div>
+                            )}
+                          </td>
+                        </>
+                      )}
+
+                      {/* Sektor 4: Seeds */}
+                      {businessType === 'seeds' && (
+                        <>
+                          <td className="py-3.5 px-4 text-slate-600">
+                            {product.variety && <div className="font-bold text-slate-800">{product.variety}</div>}
+                            {product.germination_rate_percent && (
+                              <div className="text-emerald-700 font-semibold text-[11px]">
+                                Unuvchanlik: {product.germination_rate_percent}%
                               </div>
-                            </div>
-                          ) : '—'}
-                        </td>
+                            )}
+                            {!product.variety && !product.germination_rate_percent && '—'}
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-600">
+                            {product.harvest_year ? `${product.harvest_year}-yil` : '—'}
+                            {product.ripening_period && (
+                              <div className="text-[10px] text-slate-400">{product.ripening_period}</div>
+                            )}
+                          </td>
+                        </>
+                      )}
+
+                      {/* Sektor 5: Machinery */}
+                      {businessType === 'machinery' && (
+                        <>
+                          <td className="py-3.5 px-4 text-slate-600">
+                            {product.model && <div className="font-bold text-slate-900">{product.model}</div>}
+                            {product.serial_number && (
+                              <div className="font-mono text-[11px] text-slate-500">SN: {product.serial_number}</div>
+                            )}
+                            {!product.model && !product.serial_number && '—'}
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-600">
+                            {product.warranty_months && (
+                              <div className="font-semibold text-emerald-700 flex items-center gap-1">
+                                <ShieldCheck className="w-3.5 h-3.5" />
+                                <span>{product.warranty_months} oy</span>
+                              </div>
+                            )}
+                            {product.part_number && (
+                              <div className="font-mono text-[10px] text-slate-400">Kod: {product.part_number}</div>
+                            )}
+                          </td>
+                        </>
                       )}
 
                       {/* Actions */}
@@ -422,7 +607,59 @@ export const ProductsView: React.FC = () => {
         maxWidth="max-w-2xl"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Main Info */}
+          
+          {/* Sektor belgisi va Rasm maydoni */}
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <ImageIcon className="w-4 h-4 text-emerald-600" />
+                <span>
+                  Mahsulot rasmi {businessType === 'agro_vet' || businessType === 'seeds' || businessType === 'machinery' ? '*' : '(Ixtiyoriy)'}
+                </span>
+              </label>
+              {(businessType === 'agro_vet' || businessType === 'seeds' || businessType === 'machinery') && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-100 text-rose-700">
+                  Majburiy yuklash
+                </span>
+              )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              {imageUrl ? (
+                <div className="relative group w-20 h-20 rounded-xl overflow-hidden border border-slate-300 shrink-0">
+                  <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setImageUrl('')}
+                    className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition text-xs font-bold cursor-pointer"
+                  >
+                    O‘chirish
+                  </button>
+                </div>
+              ) : (
+                <label className="w-20 h-20 rounded-xl border-2 border-dashed border-slate-300 hover:border-emerald-500 bg-white flex flex-col items-center justify-center text-slate-400 hover:text-emerald-600 cursor-pointer transition shrink-0">
+                  <Upload className="w-5 h-5 mb-1" />
+                  <span className="text-[10px] font-semibold">Fayl</span>
+                  <input type="file" accept="image/*" onChange={handleImageFileChange} className="hidden" />
+                </label>
+              )}
+
+              <div className="flex-1 w-full">
+                <input
+                  type="url"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="Yoki rasm URL havolasini kiriting (https://...)"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+                />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Xaridorlarga chekda va katalogda tovar aniq ko‘rinishi uchun qulay.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Asosiy ma'lumotlar */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
               <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
@@ -433,8 +670,8 @@ export const ProductsView: React.FC = () => {
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Masalan: Bi-58 insektitsid 1L"
-                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                placeholder="Masalan: Bi-58 insektitsid 1L yoki Omuxta yem 50kg"
+                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
               />
             </div>
 
@@ -446,7 +683,7 @@ export const ProductsView: React.FC = () => {
                 type="text"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                placeholder="Masalan: Insektitsidlar, Yem, Urug‘lar..."
+                placeholder="Masalan: Insektitsidlar, Yem, Urug‘..."
                 className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
@@ -460,19 +697,30 @@ export const ProductsView: React.FC = () => {
                 onChange={(e) => setUnit(e.target.value)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
               >
-                <option value="dona">dona</option>
-                <option value="kg">kg</option>
-                <option value="litr">litr</option>
-                <option value="qop">qop</option>
-                <option value="tonna">tonna</option>
-                <option value="metr">metr</option>
-                <option value="to‘plam">to‘plam</option>
+                {businessType === 'feed' ? (
+                  <>
+                    <option value="qop">Qop</option>
+                    <option value="kg">Kg</option>
+                    <option value="tonna">Tonna</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="dona">dona</option>
+                    <option value="kg">kg</option>
+                    <option value="litr">litr</option>
+                    <option value="qop">qop</option>
+                    <option value="tonna">tonna</option>
+                    <option value="pachka">pachka</option>
+                    <option value="metr">metr</option>
+                    <option value="gram">gram</option>
+                  </>
+                )}
               </select>
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                Sotish narxi (so‘m) *
+                Chakana sotish narxi (so‘m) *
               </label>
               <input
                 type="number"
@@ -481,7 +729,7 @@ export const ProductsView: React.FC = () => {
                 value={price}
                 onChange={(e) => setPrice(e.target.value === '' ? '' : Number(e.target.value))}
                 placeholder="50 000"
-                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
               />
             </div>
 
@@ -511,7 +759,7 @@ export const ProductsView: React.FC = () => {
                 value={stockQuantity}
                 onChange={(e) => setStockQuantity(e.target.value === '' ? '' : Number(e.target.value))}
                 placeholder="100"
-                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
               />
             </div>
 
@@ -530,174 +778,266 @@ export const ProductsView: React.FC = () => {
             </div>
           </div>
 
-          {/* Business Type Specific Fields Banner */}
+          {/* Sektorga Xos Maxsus Maydonlar */}
           <div className="pt-2 border-t border-slate-200">
             <h4 className="text-xs font-bold text-emerald-800 uppercase tracking-wider mb-3 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5" />
               <span>Sohaviy parametrlar ({businessType})</span>
             </h4>
 
-            {/* Agro-Vet: Batch number & Expiry date */}
+            {/* 1. AGRO-VET: Partiya, Yaroqlilik, Faol modda/Doza */}
             {businessType === 'agro_vet' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-emerald-50/50 p-3.5 rounded-xl border border-emerald-100">
+              <div className="space-y-3 bg-emerald-50/60 p-4 rounded-xl border border-emerald-200">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Partiya / Seriya raqami *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={batchNumber}
+                      onChange={(e) => setBatchNumber(e.target.value)}
+                      placeholder="B-2024-098"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Yaroqlilik muddati (Expiry Date) *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={expiryDate}
+                      onChange={(e) => setExpiryDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-700 font-semibold"
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    Partiya raqami (Batch)
+                    Faol modda / Doza va qo‘llash yo‘riqnomasi
                   </label>
                   <input
                     type="text"
-                    value={batchNumber}
-                    onChange={(e) => setBatchNumber(e.target.value)}
-                    placeholder="B-2024-098"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+                    value={activeIngredient}
+                    onChange={(e) => setActiveIngredient(e.target.value)}
+                    placeholder="Masalan: Enrofloksatsin 10% / 1 litr suvga 1 ml"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    Yaroqlilik muddati (Expiry)
-                  </label>
-                  <input
-                    type="date"
-                    value={expiryDate}
-                    onChange={(e) => setExpiryDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-700"
-                  />
+                  <p className="text-[11px] text-emerald-800/80 mt-1">
+                    Fermer va xaridorlarga kassa chekida to‘g‘ri doza yo‘riqnomasi sifatida ko‘rinadi.
+                  </p>
                 </div>
               </div>
             )}
 
-            {/* Feed: Bag weight in kg */}
+            {/* 2. FEED: 1 qop vazni (kg), O'lchov birliklari */}
             {businessType === 'feed' && (
-              <div className="bg-amber-50/50 p-3.5 rounded-xl border border-amber-100">
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  1 qopning vazni (kg hisobida)
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  step="0.1"
-                  value={bagWeightKg}
-                  onChange={(e) => setBagWeightKg(e.target.value === '' ? '' : Number(e.target.value))}
-                  placeholder="Masalan: 50 (1 qop = 50 kg)"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                />
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Kassada mijozga qopni ochib, kg-lab tortib sotganda narx avtomatik hisoblanishi uchun kerak.
-                </p>
-              </div>
-            )}
-
-            {/* Seeds: Variety, germination rate, harvest year */}
-            {businessType === 'seeds' && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-lime-50/50 p-3.5 rounded-xl border border-lime-100">
+              <div className="bg-amber-50/60 p-4 rounded-xl border border-amber-200 space-y-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    Urug‘ navi (Variety)
+                    1 Qopning sof vazni (kg da) *
                   </label>
-                  <input
-                    type="text"
-                    value={variety}
-                    onChange={(e) => setVariety(e.target.value)}
-                    placeholder="Masalan: Super F1"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-lime-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    Unuvchanlik (%)
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={germinationRate}
-                    onChange={(e) => setGerminationRate(e.target.value === '' ? '' : Number(e.target.value))}
-                    placeholder="Masalan: 95"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-lime-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    Hosil yili
-                  </label>
-                  <input
-                    type="number"
-                    min="2020"
-                    max="2030"
-                    value={harvestYear}
-                    onChange={(e) => setHarvestYear(e.target.value === '' ? '' : Number(e.target.value))}
-                    placeholder="2024"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-lime-500"
-                  />
+                  <div className="relative">
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      step="0.1"
+                      value={bagWeightKg}
+                      onChange={(e) => setBagWeightKg(e.target.value === '' ? '' : Number(e.target.value))}
+                      placeholder="Masalan: 50"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-bold"
+                    />
+                    <span className="absolute right-3 top-2 text-xs font-bold text-slate-400">KG / QOP</span>
+                  </div>
+                  <p className="text-[11px] text-amber-800 mt-1">
+                    ⚖️ Kassada qopni bo‘lib (masalan 5 kg yoki 12.5 kg) sotganda narx avtomatik proporsional hisoblanadi.
+                  </p>
                 </div>
               </div>
             )}
 
-            {/* Machinery: Part number & Warranty */}
-            {businessType === 'machinery' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-100/50 p-3.5 rounded-xl border border-slate-200">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    Kafolat muddati (oy)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={warrantyMonths}
-                    onChange={(e) => setWarrantyMonths(e.target.value === '' ? '' : Number(e.target.value))}
-                    placeholder="12"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    Detal / Katalog kodi
-                  </label>
-                  <input
-                    type="text"
-                    value={partNumber}
-                    onChange={(e) => setPartNumber(e.target.value)}
-                    placeholder="OEM-7845-TX"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-500 font-mono"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Warehouse: Wholesale price & min quantity */}
+            {/* 3. WAREHOUSE: Ulgurji narx, Minimal partiya, Qadoq */}
             {businessType === 'warehouse' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-blue-50/50 p-3.5 rounded-xl border border-blue-100">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    Ulgurji narx (so‘m)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={wholesalePrice}
-                    onChange={(e) => setWholesalePrice(e.target.value === '' ? '' : Number(e.target.value))}
-                    placeholder="Masalan: 45 000"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+              <div className="bg-blue-50/60 p-4 rounded-xl border border-blue-200 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Ulgurji (Optom) narx (so‘m)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={wholesalePrice}
+                      onChange={(e) => setWholesalePrice(e.target.value === '' ? '' : Number(e.target.value))}
+                      placeholder="Masalan: 45 000"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-blue-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Minimal ulgurji partiya miqdori
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={minWholesaleQuantity}
+                      onChange={(e) => setMinWholesaleQuantity(e.target.value === '' ? '' : Number(e.target.value))}
+                      placeholder="Masalan: 10 dona / qop"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
+
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    Min. ulgurji miqdor
+                    Blok / Korobka qadoqlash ko‘rsatkichi
                   </label>
                   <input
-                    type="number"
-                    min="2"
-                    value={minWholesaleQuantity}
-                    onChange={(e) => setMinWholesaleQuantity(e.target.value === '' ? '' : Number(e.target.value))}
-                    placeholder="Masalan: 10"
+                    type="text"
+                    value={packagingType}
+                    onChange={(e) => setPackagingType(e.target.value)}
+                    placeholder="Masalan: 1 korobka = 24 dona yoki 1 poddon = 40 qop"
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
             )}
+
+            {/* 4. SEEDS: Navi, Unuvchanlik %, Hosil yili, Pishish davri */}
+            {businessType === 'seeds' && (
+              <div className="bg-lime-50/60 p-4 rounded-xl border border-lime-200 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Urug‘ navi (Variety / Сорт) *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={variety}
+                      onChange={(e) => setVariety(e.target.value)}
+                      placeholder="Masalan: Super F1 Gollandiya"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-lime-500 font-semibold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Unuvchanlik foizi (%) *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      max="100"
+                      value={germinationRate}
+                      onChange={(e) => setGerminationRate(e.target.value === '' ? '' : Number(e.target.value))}
+                      placeholder="Masalan: 98%"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-lime-500 font-bold"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Hosil yili
+                    </label>
+                    <input
+                      type="number"
+                      min="2020"
+                      max="2035"
+                      value={harvestYear}
+                      onChange={(e) => setHarvestYear(e.target.value === '' ? '' : Number(e.target.value))}
+                      placeholder="2024"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-lime-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Pishish davri / Mavsumiylik
+                    </label>
+                    <input
+                      type="text"
+                      value={ripeningPeriod}
+                      onChange={(e) => setRipeningPeriod(e.target.value)}
+                      placeholder="Masalan: Ertapishar (60-65 kun), Bahoriy ekish"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-lime-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 5. MACHINERY: Zavod seriya №, Modeli, Kafolat, Katalog kodi */}
+            {businessType === 'machinery' && (
+              <div className="bg-slate-100/70 p-4 rounded-xl border border-slate-300 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Modeli *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={model}
+                      onChange={(e) => setModel(e.target.value)}
+                      placeholder="Masalan: Maral-125 Motoblok"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-500 font-semibold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Zavod seriya raqami (Serial №)
+                    </label>
+                    <input
+                      type="text"
+                      value={serialNumber}
+                      onChange={(e) => setSerialNumber(e.target.value)}
+                      placeholder="SN-89421-TX"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-500 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Kafolat muddati (oyda) *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      value={warrantyMonths}
+                      onChange={(e) => setWarrantyMonths(e.target.value === '' ? '' : Number(e.target.value))}
+                      placeholder="12"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-500 font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Ehtiyot qismlar katalog kodi
+                    </label>
+                    <input
+                      type="text"
+                      value={partNumber}
+                      onChange={(e) => setPartNumber(e.target.value)}
+                      placeholder="OEM-7845-TX"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-500 font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
           </div>
 
-          <div className="pt-4 flex items-center justify-end gap-2">
+          <div className="pt-4 flex items-center justify-end gap-2 border-t border-slate-100">
             <button
               type="button"
               onClick={() => setIsAddModalOpen(false)}
@@ -718,4 +1058,3 @@ export const ProductsView: React.FC = () => {
     </div>
   );
 };
-

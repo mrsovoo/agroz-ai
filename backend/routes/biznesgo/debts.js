@@ -17,14 +17,37 @@ const { recalcCustomerDebt } = require('../../services/sales');
 
 const router = express.Router();
 
+let debtColumnsChecked = false;
+async function ensureDebtColumns() {
+  if (debtColumnsChecked) return;
+  try {
+    await query(`
+      ALTER TABLE debts ADD COLUMN IF NOT EXISTS installment_months INT;
+      ALTER TABLE debts ADD COLUMN IF NOT EXISTS monthly_payment NUMERIC(14,2);
+      ALTER TABLE debts ADD COLUMN IF NOT EXISTS warranty_service_date DATE;
+      ALTER TABLE debts ADD COLUMN IF NOT EXISTS crop_or_animal_profile VARCHAR(255);
+      ALTER TABLE debts ADD COLUMN IF NOT EXISTS note TEXT;
+      ALTER TABLE customers ADD COLUMN IF NOT EXISTS crop_or_animal_profile VARCHAR(255);
+      ALTER TABLE customers ADD COLUMN IF NOT EXISTS feed_frequency_days INT;
+      ALTER TABLE customers ADD COLUMN IF NOT EXISTS credit_limit NUMERIC(14,2) DEFAULT 0;
+      ALTER TABLE customers ADD COLUMN IF NOT EXISTS planting_season VARCHAR(100);
+    `);
+    debtColumnsChecked = true;
+  } catch (e) {}
+}
+
 const DEBT_COLUMNS = `d.id, d.customer_id, d.sale_id, d.total_debt, d.paid_amount,
   (d.total_debt - d.paid_amount) AS remaining, d.status, d.due_date, d.created_at,
+  d.installment_months, d.monthly_payment, d.warranty_service_date, d.note,
   (d.status <> 'paid' AND d.due_date IS NOT NULL AND d.due_date < ${TODAY}) AS is_overdue,
-  c.full_name AS customer_name, c.phone AS customer_phone`;
+  c.full_name AS customer_name, c.phone AS customer_phone,
+  COALESCE(c.credit_limit, 0) AS credit_limit, c.feed_frequency_days, c.planting_season,
+  COALESCE(d.crop_or_animal_profile, c.crop_or_animal_profile) AS crop_or_animal_profile`;
 
 router.get(
   '/',
   asyncHandler(async (req, res) => {
+    await ensureDebtColumns();
     const mid = req.merchant.id;
     const { limit, offset } = v.paging(req.query, { defLimit: 100, maxLimit: 500 });
     const status = v.oneOf(req.query.status, 'status', ['open', 'unpaid', 'partial', 'paid', 'all']) || 'open';
@@ -51,6 +74,8 @@ router.get(
       ),
       query(
         `SELECT c.id AS customer_id, c.full_name, c.phone, c.total_debt,
+                COALESCE(c.credit_limit, 0) AS credit_limit,
+                c.crop_or_animal_profile, c.feed_frequency_days, c.planting_season,
                 COUNT(d.id)::int AS open_debts,
                 MIN(d.due_date) AS nearest_due_date,
                 BOOL_OR(d.due_date < ${TODAY}) AS has_overdue,
@@ -79,6 +104,7 @@ router.get(
 router.get(
   '/:id(\\d+)',
   asyncHandler(async (req, res) => {
+    await ensureDebtColumns();
     const id = v.idParam(req.params.id);
     await loadOwned({ query }, 'debts', id, req.merchant.id, { columns: 'id' });
     const [debt, payments] = await Promise.all([
@@ -92,17 +118,29 @@ router.get(
 router.post(
   '/',
   asyncHandler(async (req, res) => {
+    await ensureDebtColumns();
     const b = req.body || {};
     const customerId = v.idParam(b.customer_id, 'customer_id');
     const amount = v.money(v.num(b.amount, 'amount', { required: true, positive: true, max: 1e12 }));
     const dueDate = v.date(b.due_date, 'due_date');
+    const note = v.str(b.note, 'note', { max: 500 });
+    const installmentMonths = v.int(b.installment_months, 'installment_months', { min: 1, max: 60 });
+    const monthlyPayment = b.monthly_payment ? v.money(v.num(b.monthly_payment, 'monthly_payment', { min: 0, max: 1e12 })) : null;
+    const warrantyServiceDate = v.date(b.warranty_service_date, 'warranty_service_date');
+    const cropOrAnimalProfile = v.str(b.crop_or_animal_profile, 'crop_or_animal_profile', { max: 255 });
 
     const debt = await withTransaction(async (client) => {
       await loadOwned(client, 'customers', customerId, req.merchant.id, { forUpdate: true, columns: 'id' });
       const { rows } = await client.query(
-        `INSERT INTO debts (merchant_id, customer_id, total_debt, due_date) VALUES ($1,$2,$3,$4) RETURNING *`,
-        [req.merchant.id, customerId, amount, dueDate]
+        `INSERT INTO debts (
+          merchant_id, customer_id, total_debt, due_date, note,
+          installment_months, monthly_payment, warranty_service_date, crop_or_animal_profile
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+        [req.merchant.id, customerId, amount, dueDate, note, installmentMonths, monthlyPayment, warrantyServiceDate, cropOrAnimalProfile]
       );
+      if (cropOrAnimalProfile) {
+        await client.query(`UPDATE customers SET crop_or_animal_profile = COALESCE(crop_or_animal_profile, $1) WHERE id = $2`, [cropOrAnimalProfile, customerId]);
+      }
       await recalcCustomerDebt(client, customerId);
       return rows[0];
     });

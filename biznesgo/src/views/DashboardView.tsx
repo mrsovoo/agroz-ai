@@ -12,9 +12,19 @@ import {
   Clock,
   CheckCircle2,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  Scale,
+  Wheat,
+  Wrench,
+  Building2,
+  ShieldCheck,
+  Sparkles,
+  Layers,
+  Sprout,
+  DollarSign,
+  Repeat
 } from 'lucide-react';
-import { Sale } from '../types';
+import { Sale, Product, Debt } from '../types';
 
 interface DashboardStats {
   today_revenue: number;
@@ -31,13 +41,23 @@ interface DashboardStats {
 export const DashboardView: React.FC = () => {
   const { merchant, setCurrentView, addToast } = useStore();
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [debts, setDebts] = useState<Debt[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchStats = async () => {
+  const businessType = merchant?.business_type || 'agro_vet';
+
+  const fetchData = async () => {
     try {
       setLoading(true);
-      const data = await api.dashboard.getStats();
-      setStats(data);
+      const [statsData, productsData, debtsData] = await Promise.all([
+        api.dashboard.getStats(),
+        api.products.list(),
+        api.debts.list()
+      ]);
+      setStats(statsData);
+      setProducts(productsData);
+      setDebts(debtsData);
     } catch (err: any) {
       addToast(err.message || 'Statistika yuklanmadi', 'error');
     } finally {
@@ -46,7 +66,7 @@ export const DashboardView: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchStats();
+    fetchData();
   }, []);
 
   if (loading) {
@@ -58,9 +78,43 @@ export const DashboardView: React.FC = () => {
     );
   }
 
-  const isAgroVet = merchant?.business_type === 'agro_vet';
-  const expiring = stats?.expiring_products || [];
   const maxDayAmount = Math.max(...(stats?.sales_last_7_days?.map(d => d.amount) || [1]), 1);
+
+  // 1. AGRO-VET: Expired & Critical Alerts
+  const now = Date.now();
+  const expiringDrugs = products.filter((p) => {
+    if (!p.expiry_date) return false;
+    const diffDays = (new Date(p.expiry_date).getTime() - now) / (1000 * 60 * 60 * 24);
+    return diffDays <= 45; // 45 kundan kam yoki o'tib ketgan
+  });
+  const expiredCount = expiringDrugs.filter(p => new Date(p.expiry_date!).getTime() < now).length;
+  const criticalLowDrugs = products.filter(p => p.stock_quantity <= (p.min_stock_alert || 5));
+
+  // 2. FEED: Hajmlar statistikasi (Tonna / Kg)
+  const totalKgInStock = products.reduce((sum, p) => {
+    const bagKg = p.bag_weight_kg || (p.unit === 'tonna' ? 1000 : p.unit === 'kg' ? 1 : 50);
+    return sum + (p.stock_quantity * bagKg);
+  }, 0);
+  const totalTonsInStock = (totalKgInStock / 1000).toFixed(1);
+
+  // 3. WAREHOUSE: Omborning umumiy moliyaviy qiymati (Inventory Value) & B2B qarzlar
+  const totalInventoryValue = products.reduce((sum, p) => sum + (p.stock_quantity * p.price), 0);
+  const totalWholesaleValue = products.reduce((sum, p) => sum + (p.stock_quantity * (p.wholesale_price || p.price)), 0);
+  const highRiskB2BDebts = debts.filter(d => {
+    const rem = d.remaining_amount || d.remaining || 0;
+    return rem > 10000000; // 10 milliondan katta qarzlar
+  });
+
+  // 4. SEEDS: Mavsumiy navlar va unuvchanlik
+  const seedVarieties = Array.from(new Set(products.map(p => p.variety).filter(Boolean)));
+  const springSeeds = products.filter(p => p.ripening_period?.toLowerCase().includes('bahor') || !p.ripening_period);
+  const avgGermination = products.filter(p => p.germination_rate_percent).length > 0
+    ? Math.round(products.filter(p => p.germination_rate_percent).reduce((s, p) => s + (p.germination_rate_percent || 0), 0) / products.filter(p => p.germination_rate_percent).length)
+    : 95;
+
+  // 5. MACHINERY: Kafolatlar & Bo'lib to'lash
+  const machineryWithWarranty = products.filter(p => p.warranty_months && p.warranty_months > 0);
+  const activeInstallments = debts.filter(d => d.installment_months && d.status !== 'paid');
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -69,11 +123,20 @@ export const DashboardView: React.FC = () => {
         <div className="relative z-10">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-                {merchant?.store_name}
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+                  {merchant?.store_name}
+                </h1>
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-white/20 text-white backdrop-blur-xs">
+                  {businessType === 'agro_vet' && '🌿 Agro-Vet Dorixona'}
+                  {businessType === 'feed' && '🌾 Yem-Ozuqa Savdosi'}
+                  {businessType === 'warehouse' && '🏢 Ulgurji Ombor'}
+                  {businessType === 'seeds' && '🌱 Urug‘ va Ko‘chat'}
+                  {businessType === 'machinery' && '🔧 Jihoz va Texnika'}
+                </span>
+              </div>
               <p className="text-emerald-100/80 text-xs sm:text-sm mt-1">
-                Bugungi savdo ko‘rsatkichlari va hisob-kitoblar
+                Bugungi savdo ko‘rsatkichlari, sohaviy analitika va do‘kon balansi
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -82,7 +145,7 @@ export const DashboardView: React.FC = () => {
                 className="bg-white text-emerald-800 hover:bg-emerald-50 px-4 py-2.5 rounded-xl font-bold text-sm shadow-md transition-all flex items-center gap-2 cursor-pointer"
               >
                 <ShoppingBag className="w-4 h-4" />
-                <span>Kassa</span>
+                <span>Kassani ochish</span>
               </button>
             </div>
           </div>
@@ -90,46 +153,252 @@ export const DashboardView: React.FC = () => {
         <div className="absolute -right-8 -bottom-10 w-48 h-48 bg-white/5 rounded-full blur-2xl pointer-events-none" />
       </div>
 
-      {/* Agro-Vet Expiry Warning Banner */}
-      {isAgroVet && expiring.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 shadow-sm">
-          <div className="flex items-start gap-3">
-            <div className="p-2 bg-amber-100 text-amber-700 rounded-xl">
-              <AlertTriangle className="w-5 h-5" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-sm font-bold text-amber-900">
-                Muddati yaqinlashayotgan preparatlar ({expiring.length} ta)
-              </h3>
-              <p className="text-xs text-amber-700 mt-0.5">
-                Ushbu dorilarning yaroqlilik muddati 30 kundan kam qolgan yoki o‘tib bo‘lgan. Iltimos, nazorat qiling.
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {expiring.slice(0, 4).map((p: any) => (
-                  <span
-                    key={p.id}
-                    className="inline-flex items-center gap-1.5 bg-white border border-amber-300 px-2.5 py-1 rounded-lg text-xs font-medium text-amber-800 shadow-2xs"
-                  >
-                    <span>{p.name}</span>
-                    <span className="text-slate-400">|</span>
-                    <span className="font-mono text-red-600 font-semibold">{formatDate(p.expiry_date)}</span>
-                  </span>
-                ))}
-                {expiring.length > 4 && (
-                  <button
-                    onClick={() => setCurrentView('products')}
-                    className="text-xs font-bold text-amber-800 hover:underline px-2 py-1"
-                  >
-                    Barchasi ({expiring.length}) →
-                  </button>
-                )}
+      {/* ======================================================== */}
+      {/* SECTOR SPECIFIC DASHBOARD WIDGETS                       */}
+      {/* ======================================================== */}
+
+      {/* 1. AGRO-VET WIDGET: Expired & Critical Drug Alerts */}
+      {businessType === 'agro_vet' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Expired / Expiring Soon Card */}
+          <div className="bg-amber-50/70 border border-amber-200/90 rounded-2xl p-5 shadow-2xs">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-amber-100 text-amber-800 rounded-xl">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-amber-950">Muddati yaqin dorilar nazorati</h3>
+                  <p className="text-xs text-amber-700">Yaroqlilik muddati 45 kundan kam yoki o‘tgan</p>
+                </div>
               </div>
+              <span className="text-xs font-black px-2 py-1 bg-amber-200 text-amber-900 rounded-lg">
+                {expiringDrugs.length} ta preparat
+              </span>
+            </div>
+
+            {expiringDrugs.length > 0 ? (
+              <div className="space-y-2 mt-3">
+                {expiringDrugs.slice(0, 3).map((p) => {
+                  const isExp = new Date(p.expiry_date!).getTime() < now;
+                  return (
+                    <div
+                      key={p.id}
+                      className="bg-white p-2.5 rounded-xl border border-amber-200 flex items-center justify-between text-xs"
+                    >
+                      <div>
+                        <div className="font-bold text-slate-900">{p.name}</div>
+                        <div className="text-[10px] text-slate-500 font-mono">
+                          Partiya: {p.batch_number || 'B-Yo‘q'}
+                        </div>
+                      </div>
+                      <span className={`font-bold px-2 py-0.5 rounded ${isExp ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'}`}>
+                        {isExp ? 'Muddati o‘tgan' : formatDate(p.expiry_date)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-emerald-800 font-medium py-3 bg-white/60 rounded-xl px-3 border border-emerald-100">
+                ✓ Barcha dori vositalarining yaroqlilik muddati yaxshi holatda.
+              </p>
+            )}
+          </div>
+
+          {/* Minimal Stock Alert */}
+          <div className="bg-rose-50/70 border border-rose-200/90 rounded-2xl p-5 shadow-2xs">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-rose-100 text-rose-800 rounded-xl">
+                  <AlertCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-rose-950">Minimal qoldiqdagi dori-darmonlar</h3>
+                  <p className="text-xs text-rose-700">Kritik kam qolgan dorilar signali</p>
+                </div>
+              </div>
+              <span className="text-xs font-black px-2 py-1 bg-rose-200 text-rose-900 rounded-lg">
+                {criticalLowDrugs.length} ta
+              </span>
+            </div>
+
+            {criticalLowDrugs.length > 0 ? (
+              <div className="space-y-2 mt-3">
+                {criticalLowDrugs.slice(0, 3).map((p) => (
+                  <div
+                    key={p.id}
+                    className="bg-white p-2.5 rounded-xl border border-rose-200 flex items-center justify-between text-xs"
+                  >
+                    <span className="font-bold text-slate-900">{p.name}</span>
+                    <span className="font-black text-rose-700 bg-rose-50 px-2 py-0.5 rounded">
+                      {p.stock_quantity} {p.unit} qoldi
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-emerald-800 font-medium py-3 bg-white/60 rounded-xl px-3 border border-emerald-100">
+                ✓ Omborda barcha preparatlar yetarli miqdorda mavjud.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 2. FEED WIDGET: Total Volume in Tons / Kg & High turnover feeds */}
+      {businessType === 'feed' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-amber-100 text-amber-800 rounded-xl">
+                <Scale className="w-6 h-6" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">
+                  Ombordagi umumiy hajm
+                </span>
+                <div className="text-2xl font-black text-amber-950 mt-1">
+                  {totalTonsInStock} Tonna <span className="text-sm font-semibold text-amber-800">({totalKgInStock.toLocaleString()} kg)</span>
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-amber-800/80 mt-3">
+              1 qop o‘rtacha 50 kg hisobida umumiy ombor sig‘imi va ozuqa massasi.
+            </p>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                <Repeat className="w-4 h-4 text-emerald-600" />
+                <span>Tez aylanuvchi yem turlari</span>
+              </span>
+              <span className="text-xs font-bold text-emerald-600">Yuqori talab</span>
+            </div>
+            <div className="space-y-2 mt-3">
+              {products.slice(0, 3).map((p) => (
+                <div key={p.id} className="flex items-center justify-between text-xs py-1.5 border-b border-slate-100 last:border-0">
+                  <span className="font-bold text-slate-800">{p.name}</span>
+                  <span className="font-mono font-bold text-slate-600">{p.stock_quantity} qop ({p.bag_weight_kg ? `${p.bag_weight_kg} kg` : '50 kg'})</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       )}
 
-      {/* KPI Cards */}
+      {/* 3. WAREHOUSE WIDGET: Total Inventory Value & B2B Debt Risk */}
+      {businessType === 'warehouse' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-blue-100 text-blue-800 rounded-xl">
+                <Building2 className="w-6 h-6" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">
+                  Omborning umumiy moliyaviy qiymati
+                </span>
+                <div className="text-2xl font-black text-blue-950 mt-1">
+                  {formatCurrency(totalInventoryValue)}
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 text-xs text-blue-800 flex justify-between pt-2 border-t border-blue-200/60">
+              <span>Ulgurji narxdagi qiymat:</span>
+              <span className="font-bold">{formatCurrency(totalWholesaleValue)}</span>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                <DollarSign className="w-4 h-4 text-rose-600" />
+                <span>B2B Do‘konlar va Dilerlar Qarz Balansi</span>
+              </span>
+              <span className="text-xs font-bold text-rose-700">{formatCurrency(stats?.total_debt || 0)}</span>
+            </div>
+            <p className="text-xs text-slate-500 mb-3">
+              Kredit limiti 10 mln so‘mdan oshgan B2B xaridorlar: <strong className="text-rose-600">{highRiskB2BDebts.length} ta</strong>
+            </p>
+            {highRiskB2BDebts.length > 0 && (
+              <div className="p-2 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 font-medium">
+                ⚠️ Dilerlar qarz balansi qat'iy nazoratda! Yangi partiya jo‘natishdan oldin to‘lovni talab qiling.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 4. SEEDS WIDGET: Seasonal distribution & Germination */}
+      {businessType === 'seeds' && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-lime-50 border border-lime-200 rounded-2xl p-5">
+            <span className="text-xs font-bold text-lime-800 uppercase tracking-wider">Mavjud urug‘ navlari</span>
+            <div className="text-2xl font-black text-lime-950 mt-1">
+              {seedVarieties.length || products.length} xil nav
+            </div>
+            <p className="text-xs text-lime-800/80 mt-1">Ekishga tayyor sertifikatlangan navlar</p>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">O‘rtacha unuvchanlik</span>
+            <div className="text-2xl font-black text-emerald-600 mt-1">
+              {avgGermination}%
+            </div>
+            <p className="text-xs text-slate-500 mt-1">Laboratoriya unuvchanlik ko‘rsatkichi</p>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Bahoriy ekish qoldig‘i</span>
+            <div className="text-2xl font-black text-slate-900 mt-1">
+              {springSeeds.length} xil urug‘
+            </div>
+            <p className="text-xs text-slate-500 mt-1">Fermerlar uchun mavsumiy tayyorgarlik</p>
+          </div>
+        </div>
+      )}
+
+      {/* 5. MACHINERY WIDGET: Active Warranties & Installments */}
+      {businessType === 'machinery' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-slate-100 border border-slate-300 rounded-2xl p-5">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-white text-slate-800 rounded-xl shadow-2xs">
+                <ShieldCheck className="w-6 h-6 text-emerald-600" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                  Kafolatdagi texnikalar monitori
+                </span>
+                <div className="text-2xl font-black text-slate-900 mt-1">
+                  {machineryWithWarranty.length} xil uskuna
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-slate-600 mt-3">
+              Topshirilgan motoblok, nasos va purkagichlarning kafolat va servis nazorati.
+            </p>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                Bo‘lib to‘lash (Installment) rejalari
+              </span>
+              <span className="text-xs font-bold text-emerald-600">{activeInstallments.length} ta faol</span>
+            </div>
+            <p className="text-xs text-slate-500 mb-3">
+              Muddatli to‘lovga berilgan uskunalar bo‘yicha oylik grafiklar o‘z vaqtida to‘lanmoqda.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* STANDARD KPI CARDS                                       */}
+      {/* ======================================================== */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Today's Revenue */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
@@ -144,7 +413,7 @@ export const DashboardView: React.FC = () => {
               {formatCurrency(stats?.today_revenue || 0)}
             </div>
             <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-              <span className="font-semibold text-emerald-600">{stats?.today_sales_count || 0} ta</span> sotuv amalga oshirildi
+              <span className="font-semibold text-emerald-600">{stats?.today_sales_count || 0} ta</span> kassa savdosi
             </p>
           </div>
         </div>
@@ -165,7 +434,7 @@ export const DashboardView: React.FC = () => {
               {formatCurrency(stats?.total_debt || 0)}
             </div>
             <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-              <span className="font-semibold text-rose-600">{stats?.debtor_count || 0} nafar</span> faol qarzdor
+              <span className="font-semibold text-rose-600">{stats?.debtor_count || 0} nafar</span> qarzdor
             </p>
           </div>
         </div>
@@ -176,14 +445,14 @@ export const DashboardView: React.FC = () => {
           className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow cursor-pointer"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Ombor qoldig‘i</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Ombor xillari</span>
             <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
               <Package className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-3">
             <div className="text-lg sm:text-2xl font-extrabold text-slate-900">
-              {stats?.total_products || 0} xil
+              {products.length || stats?.total_products || 0} xil
             </div>
             <p className="text-xs text-slate-500 mt-1">
               Ombordagi tovar turlari soni
@@ -207,7 +476,7 @@ export const DashboardView: React.FC = () => {
               {stats?.low_stock_count || 0} ta
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              Qoldig‘i 5 tadan kam qolgan tovarlar
+              Chegaraga yaqin qoldiqlar
             </p>
           </div>
         </div>
@@ -325,4 +594,3 @@ export const DashboardView: React.FC = () => {
     </div>
   );
 };
-

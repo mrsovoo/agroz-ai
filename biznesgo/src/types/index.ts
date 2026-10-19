@@ -32,21 +32,35 @@ export interface Product {
   image_url?: string;
   barcode?: string;
   sku?: string;
+  
+  // agro_vet
   batch_number?: string;
   expiry_date?: string;
+  active_ingredient?: string; // Faol modda / Doza
+
+  // feed
+  bag_weight_kg?: number;
+
+  // warehouse
   wholesale_price?: number;
   wholesale_min_qty?: number;
   min_wholesale_quantity?: number;
-  bag_weight_kg?: number;
+  packaging_type?: string; // Blok/korobka qadoqlash ko'rsatkichlari
+
+  // seeds
   variety?: string;
   germination_rate_percent?: number;
+  germination_rate?: number;
   harvest_year?: number;
   ripening_period?: string;
   season?: string;
+
+  // machinery
   model?: string;
   part_number?: string;
   serial_number?: string;
   warranty_months?: number;
+
   is_active?: boolean;
   created_at: string;
   updated_at?: string;
@@ -62,6 +76,15 @@ export interface Customer {
   address?: string;
   total_debt: number;
   created_at: string;
+
+  // Sector specific CRM fields
+  customer_type?: 'farmer' | 'b2b_store' | 'household' | 'enterprise';
+  crop_or_animal_profile?: string; // agro_vet: ekin / chorva turi
+  feed_frequency_days?: number; // feed: yem xarid qilish chastotasi (kun)
+  credit_limit?: number; // warehouse: qarz limiti
+  planting_season?: 'spring' | 'autumn' | 'all'; // seeds: ekish mavsumi
+  equipment_model?: string; // machinery: texnika modeli
+  warranty_service_date?: string; // machinery: servis muddati
 }
 
 export interface SaleItem {
@@ -109,6 +132,17 @@ export interface Debt {
   customer_name?: string;
   customer_phone?: string;
   notes?: string;
+
+  // Sector CRM fields
+  crop_or_animal_profile?: string;
+  feed_frequency_days?: number;
+  credit_limit?: number;
+  installment_months?: number; // machinery: bo'lib to'lash oylari
+  monthly_payment?: number; // machinery: oylik to'lov
+  next_installment_date?: string; // machinery: keyingi to'lov sanasi
+  warranty_service_date?: string; // machinery: servis sanasi
+  planting_season?: string; // seeds: ekish mavsumi
+  customer_type?: string;
 }
 
 export interface DebtorSummary {
@@ -120,6 +154,10 @@ export interface DebtorSummary {
   nearest_due_date?: string | null;
   has_overdue: boolean;
   last_debt_at: string;
+  crop_or_animal_profile?: string;
+  feed_frequency_days?: number;
+  credit_limit?: number;
+  installment_months?: number;
 }
 
 export interface CartItem {

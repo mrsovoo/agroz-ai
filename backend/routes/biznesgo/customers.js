@@ -13,6 +13,20 @@ const { loadOwned } = require('../../lib/ownership');
 
 const router = express.Router();
 
+let columnsChecked = false;
+async function ensureCustomerColumns() {
+  if (columnsChecked) return;
+  try {
+    await query(`
+      ALTER TABLE customers ADD COLUMN IF NOT EXISTS crop_or_animal_profile VARCHAR(255);
+      ALTER TABLE customers ADD COLUMN IF NOT EXISTS feed_frequency_days INT;
+      ALTER TABLE customers ADD COLUMN IF NOT EXISTS credit_limit NUMERIC(14,2) DEFAULT 0;
+      ALTER TABLE customers ADD COLUMN IF NOT EXISTS planting_season VARCHAR(100);
+    `);
+    columnsChecked = true;
+  } catch (e) {}
+}
+
 const STATS = `
   COALESCE(st.purchases_count, 0)::int AS purchases_count,
   COALESCE(st.purchases_total, 0) AS purchases_total,
@@ -26,6 +40,7 @@ const STATS_JOIN = `
 router.get(
   '/',
   asyncHandler(async (req, res) => {
+    await ensureCustomerColumns();
     const { limit, offset } = v.paging(req.query, { defLimit: 100, maxLimit: 500 });
     const where = ['c.merchant_id = $1'];
     const params = [req.merchant.id];
@@ -39,7 +54,9 @@ router.get(
     const orderBy = sorts[req.query.sort] || sorts.name;
 
     const { rows } = await query(
-      `SELECT c.id, c.full_name, c.phone, c.address, c.total_debt, c.created_at, ${STATS}
+      `SELECT c.id, c.full_name, c.phone, c.address, c.total_debt, c.created_at,
+              c.crop_or_animal_profile, c.feed_frequency_days, c.credit_limit, c.planting_season,
+              ${STATS}
          FROM customers c ${STATS_JOIN}
         WHERE ${where.join(' AND ')}
         ORDER BY ${orderBy}, c.id
@@ -53,10 +70,13 @@ router.get(
 router.get(
   '/:id',
   asyncHandler(async (req, res) => {
+    await ensureCustomerColumns();
     const id = v.idParam(req.params.id);
     await loadOwned({ query }, 'customers', id, req.merchant.id, { columns: 'id' });
     const [customer, sales, debts] = await Promise.all([
-      query(`SELECT c.id, c.full_name, c.phone, c.address, c.total_debt, c.created_at, ${STATS}
+      query(`SELECT c.id, c.full_name, c.phone, c.address, c.total_debt, c.created_at,
+                    c.crop_or_animal_profile, c.feed_frequency_days, c.credit_limit, c.planting_season,
+                    ${STATS}
                FROM customers c ${STATS_JOIN} WHERE c.id = $1`, [id]),
       query(
         `SELECT s.id, s.payment_type, s.total_amount, s.discount_amount, s.source, s.status, s.created_at,
@@ -83,17 +103,26 @@ function parseCustomer(body, { partial = false } = {}) {
   if (has('full_name')) out.full_name = v.str(body.full_name, 'full_name', { required: true, min: 2, max: 160 });
   if (has('phone')) out.phone = v.phone(body.phone, 'phone');
   if (has('address')) out.address = v.str(body.address, 'address', { max: 500 });
+  if (has('crop_or_animal_profile')) out.crop_or_animal_profile = v.str(body.crop_or_animal_profile, 'crop_or_animal_profile', { max: 255 });
+  if (has('feed_frequency_days')) out.feed_frequency_days = v.int(body.feed_frequency_days, 'feed_frequency_days', { min: 1, max: 365 });
+  if (has('credit_limit')) out.credit_limit = v.money(v.num(body.credit_limit, 'credit_limit', { min: 0, max: 1e12 }));
+  if (has('planting_season')) out.planting_season = v.str(body.planting_season, 'planting_season', { max: 100 });
   return out;
 }
 
 router.post(
   '/',
   asyncHandler(async (req, res) => {
+    await ensureCustomerColumns();
     const c = parseCustomer(req.body || {});
+    const keys = Object.keys(c);
+    const cols = ['merchant_id', ...keys];
+    const vals = [req.merchant.id, ...Object.values(c)];
+    const placeholders = cols.map((_, i) => `$${i + 1}`).join(', ');
     const { rows } = await query(
-      `INSERT INTO customers (merchant_id, full_name, phone, address) VALUES ($1,$2,$3,$4)
-       RETURNING id, full_name, phone, address, total_debt, created_at`,
-      [req.merchant.id, c.full_name, c.phone, c.address]
+      `INSERT INTO customers (${cols.join(', ')}) VALUES (${placeholders})
+       RETURNING id, full_name, phone, address, total_debt, crop_or_animal_profile, feed_frequency_days, credit_limit, planting_season, created_at`,
+      vals
     );
     res.status(201).json({ customer: rows[0] });
   })
@@ -102,6 +131,7 @@ router.post(
 router.put(
   '/:id',
   asyncHandler(async (req, res) => {
+    await ensureCustomerColumns();
     const id = v.idParam(req.params.id);
     await loadOwned({ query }, 'customers', id, req.merchant.id, { columns: 'id' });
     const c = parseCustomer(req.body || {}, { partial: true });
@@ -110,7 +140,7 @@ router.put(
     const { rows } = await query(
       `UPDATE customers SET ${keys.map((k, i) => `${k} = $${i + 1}`).join(', ')}
         WHERE id = $${keys.length + 1} AND merchant_id = $${keys.length + 2}
-        RETURNING id, full_name, phone, address, total_debt, created_at`,
+        RETURNING id, full_name, phone, address, total_debt, crop_or_animal_profile, feed_frequency_days, credit_limit, planting_season, created_at`,
       [...Object.values(c), id, req.merchant.id]
     );
     res.json({ customer: rows[0] });

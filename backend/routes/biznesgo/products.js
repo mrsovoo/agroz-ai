@@ -17,9 +17,29 @@ const { BUSINESS_TYPES, ALL_UNITS } = require('../../lib/businessTypes');
 
 const router = express.Router();
 
+let columnsChecked = false;
+async function ensureExtraColumns() {
+  if (columnsChecked) return;
+  try {
+    await query(`
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS active_ingredient VARCHAR(255);
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS packaging_type VARCHAR(100);
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS germination_rate_percent INT;
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS harvest_year INT;
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS part_number VARCHAR(100);
+    `);
+    columnsChecked = true;
+  } catch (e) {}
+}
+
 const COLUMNS = `id, merchant_id, name, category, price, unit, stock_quantity, min_stock_alert, image_url,
   batch_number, expiry_date, wholesale_price, wholesale_min_qty,
   bag_weight_kg, variety, ripening_period, season, model, serial_number, warranty_months,
+  COALESCE(active_ingredient, NULL) AS active_ingredient,
+  COALESCE(packaging_type, NULL) AS packaging_type,
+  COALESCE(germination_rate_percent, NULL) AS germination_rate_percent,
+  COALESCE(harvest_year, NULL) AS harvest_year,
+  COALESCE(part_number, NULL) AS part_number,
   is_active, created_at, updated_at,
   CASE WHEN stock_quantity <= 0 THEN 'out'
        WHEN stock_quantity <= min_stock_alert THEN 'low'
@@ -46,36 +66,40 @@ function parseProduct(body, merchant, { partial = false } = {}) {
     if (m !== null) out.min_stock_alert = m;
   }
   if (has('image_url')) {
-    const url = v.str(body.image_url, 'image_url', { max: 2000 });
-    if (url && !/^https?:\/\//i.test(url)) throw new HttpError(422, "image_url http(s) bilan boshlanishi kerak", 'VALIDATION_ERROR', { field: 'image_url' });
+    const url = v.str(body.image_url, 'image_url', { max: 200000 });
     out.image_url = url;
   }
 
   // Biznes turiga xos maydonlar:
   // 1) Agro-Vet va Urug'chilik uchun partiya va yaroqlilik
-  if (bt && bt.fields.batch_number && has('batch_number')) out.batch_number = v.str(body.batch_number, 'batch_number', { max: 64 });
-  if (bt && bt.fields.expiry_date && has('expiry_date')) out.expiry_date = v.date(body.expiry_date, 'expiry_date');
+  if (has('batch_number')) out.batch_number = v.str(body.batch_number, 'batch_number', { max: 64 });
+  if (has('expiry_date')) out.expiry_date = v.date(body.expiry_date, 'expiry_date');
+  if (has('active_ingredient')) out.active_ingredient = v.str(body.active_ingredient, 'active_ingredient', { max: 255 });
 
   // 2) Ulgurji savdo (Warehouse, Feed, Machinery)
-  if (bt && bt.fields.wholesale) {
-    if (has('wholesale_price')) out.wholesale_price = v.num(body.wholesale_price, 'wholesale_price', { min: 0, max: 1e12 });
-    if (has('wholesale_min_qty')) out.wholesale_min_qty = v.num(body.wholesale_min_qty, 'wholesale_min_qty', { min: 0, max: 1e12 });
+  if (has('wholesale_price')) out.wholesale_price = v.num(body.wholesale_price, 'wholesale_price', { min: 0, max: 1e12 });
+  if (has('wholesale_min_qty') || has('min_wholesale_quantity')) {
+    out.wholesale_min_qty = v.num(body.wholesale_min_qty || body.min_wholesale_quantity, 'wholesale_min_qty', { min: 0, max: 1e12 });
   }
+  if (has('packaging_type')) out.packaging_type = v.str(body.packaging_type, 'packaging_type', { max: 100 });
 
   // 3) Yem-Ozuqa (Feed) — 1 qop vazni (kg da)
-  if (bt && bt.fields.bag_weight_kg && has('bag_weight_kg')) {
+  if (has('bag_weight_kg')) {
     out.bag_weight_kg = v.num(body.bag_weight_kg, 'bag_weight_kg', { min: 0.1, max: 10000 });
   }
 
-  // 4) Urug' va Ko'chat (Seeds) — navi, pishish muddati, mavsumiyligi
-  if (bt && bt.fields.variety && has('variety')) out.variety = v.str(body.variety, 'variety', { max: 100 });
-  if (bt && bt.fields.ripening_period && has('ripening_period')) out.ripening_period = v.str(body.ripening_period, 'ripening_period', { max: 50 });
-  if (bt && bt.fields.season && has('season')) out.season = v.str(body.season, 'season', { max: 50 });
+  // 4) Urug' va Ko'chat (Seeds) — navi, pishish muddati, mavsumiyligi, unuvchanlik, hosil yili
+  if (has('variety')) out.variety = v.str(body.variety, 'variety', { max: 100 });
+  if (has('ripening_period')) out.ripening_period = v.str(body.ripening_period, 'ripening_period', { max: 50 });
+  if (has('season')) out.season = v.str(body.season, 'season', { max: 50 });
+  if (has('germination_rate_percent')) out.germination_rate_percent = v.int(body.germination_rate_percent, 'germination_rate_percent', { min: 0, max: 100 });
+  if (has('harvest_year')) out.harvest_year = v.int(body.harvest_year, 'harvest_year', { min: 2000, max: 2050 });
 
-  // 5) Jihoz va Texnika (Machinery) — model, seriya raqami, kafolat
-  if (bt && bt.fields.model && has('model')) out.model = v.str(body.model, 'model', { max: 100 });
-  if (bt && bt.fields.serial_number && has('serial_number')) out.serial_number = v.str(body.serial_number, 'serial_number', { max: 100 });
-  if (bt && bt.fields.warranty_months && has('warranty_months')) out.warranty_months = v.int(body.warranty_months, 'warranty_months', { min: 0, max: 120 });
+  // 5) Jihoz va Texnika (Machinery) — model, seriya raqami, kafolat, zapchast kodi
+  if (has('model')) out.model = v.str(body.model, 'model', { max: 100 });
+  if (has('serial_number')) out.serial_number = v.str(body.serial_number, 'serial_number', { max: 100 });
+  if (has('warranty_months')) out.warranty_months = v.int(body.warranty_months, 'warranty_months', { min: 0, max: 120 });
+  if (has('part_number')) out.part_number = v.str(body.part_number, 'part_number', { max: 100 });
 
   if (partial && has('is_active')) out.is_active = v.bool(body.is_active, 'is_active', { defaultValue: true });
   return out;
@@ -85,6 +109,7 @@ function parseProduct(body, merchant, { partial = false } = {}) {
 router.get(
   '/',
   asyncHandler(async (req, res) => {
+    await ensureExtraColumns();
     const mid = req.merchant.id;
     const { limit, offset } = v.paging(req.query, { defLimit: 100, maxLimit: 500 });
     const where = ['merchant_id = $1'];
@@ -172,6 +197,7 @@ router.get(
 router.post(
   '/',
   asyncHandler(async (req, res) => {
+    await ensureExtraColumns();
     const p = parseProduct(req.body || {}, req.merchant);
     const cols = ['merchant_id', ...Object.keys(p)];
     const vals = [req.merchant.id, ...Object.values(p)];
