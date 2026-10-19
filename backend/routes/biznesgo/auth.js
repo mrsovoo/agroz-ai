@@ -308,7 +308,51 @@ router.post(
       return res.json(sessionResponse(merchant, 'web_otp'));
     }
 
-    // 2b. Agar merchant yo'q bo'lsa yoki nomi bo'lmasa ("Mening Do'konim"):
+    // 2b. Agar merchant yo'q bo'lsa va store_name taqdim etilgan bo'lsa (bir martalik to'liq ro'yxatdan o'tish)
+    if (!merchant && req.body.store_name) {
+      const storeName = String(req.body.store_name).trim();
+      const businessType = req.body.business_type || 'agro_vet';
+      const address = req.body.address ? String(req.body.address).trim() : null;
+      const fullName = req.body.full_name ? String(req.body.full_name).trim() : '';
+
+      const createdMerchant = await withTransaction(async (client) => {
+        let uRes = await client.query(
+          `SELECT id, name, telegram_id FROM users
+            WHERE RIGHT(regexp_replace(COALESCE(phone,''), '\\D', '', 'g'), 9) = $1
+            ORDER BY id LIMIT 1`,
+          [last9]
+        );
+        let userId = uRes.rows[0]?.id;
+        let tgId = uRes.rows[0]?.telegram_id || linkedTgId;
+
+        if (!userId) {
+          const insUser = await client.query(
+            `INSERT INTO users (phone, telegram_id, name) VALUES ($1, $2, $3) RETURNING id`,
+            [phone, tgId ? Number(tgId) : null, fullName || "Sotuvchi"]
+          );
+          userId = insUser.rows[0].id;
+        } else {
+          if (linkedTgId && !uRes.rows[0]?.telegram_id) {
+            await client.query(`UPDATE users SET telegram_id = $1 WHERE id = $2`, [linkedTgId, userId]);
+          }
+          if (fullName && !uRes.rows[0]?.name) {
+            await client.query(`UPDATE users SET name = $1 WHERE id = $2`, [fullName, userId]);
+          }
+        }
+
+        const insM = await client.query(
+          `INSERT INTO merchants (user_id, store_name, phone, business_type, address, is_active)
+           VALUES ($1, $2, $3, $4, $5, true)
+           RETURNING ${MERCHANT_COLUMNS}`,
+          [userId, storeName, phone, businessType, address]
+        );
+        return insM.rows[0];
+      });
+
+      return res.json(sessionResponse(createdMerchant, 'web_otp'));
+    }
+
+    // 2c. Agar merchant yo'q bo'lsa va store_name berilmagan bo'lsa:
     // Foydalanuvchiga to'liq do'kon ochish formasini ko'rsatish uchun onboarding talab qilinadi
     const uRes = await query(
       `SELECT id, name, phone, telegram_id FROM users

@@ -232,7 +232,7 @@ async function handleBiznesgoBotUpdate(update) {
         });
         return { handled: true, bot: 'biznesgo_bot', otp_confirmed: true, telegram_response: res };
       } catch (err) {
-        return { handled: false, error: err.message };
+        return { handled: true, bot: 'biznesgo_bot', otp_confirmed: true, telegram_error: err.message };
       }
     }
   }
