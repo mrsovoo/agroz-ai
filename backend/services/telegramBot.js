@@ -397,7 +397,7 @@ async function handleBiznesgoBotUpdate(update) {
         ],
         [
           { text: "📢 Yangiliklar (v1.0.0)", callback_data: "cmd_news" },
-          { text: "🌐 Web brauzerda", url: "https://biznesgo.vercel.app" },
+          { text: "🌐 Web brauzerda", url: config.miniAppUrl },
         ],
       ],
     };
@@ -764,7 +764,7 @@ async function handleBiznesgoBotUpdate(update) {
       `📍 <b>Manzil:</b> ${address}\n\n` +
       `─────────────────────\n` +
       `🔑 <b>Web brauzer orqali kirish ma’lumotlari:</b>\n` +
-      `• Sayt: <code>https://biznesgo.vercel.app</code>\n` +
+      `• Sayt: <code>${config.miniAppUrl}</code>\n` +
       `• Login: <code>${session.data.phone}</code>\n` +
       `• Parol: <code>${plainPassword}</code>\n` +
       `<i>(Ushbu login va parolni eslab qoling. Kompyuter yoki brauzerda kirishda kerak bo‘ladi)</i>\n` +
@@ -785,7 +785,7 @@ async function handleBiznesgoBotUpdate(update) {
         ],
         [
           { text: "📢 Yangiliklar (v1.0.0)", callback_data: "cmd_news" },
-          { text: "🌐 Web brauzerda", url: "https://biznesgo.vercel.app" },
+          { text: "🌐 Web brauzerda", url: config.miniAppUrl },
         ],
       ],
     };

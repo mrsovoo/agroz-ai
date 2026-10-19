@@ -40,7 +40,7 @@ const config = {
   // Telegram Bot usernames & URLs
   biznesgoBotUsername: process.env.BIZNESGO_BOT_USERNAME || 'biznesgo_bot',
   agrozAuthBotUsername: process.env.AGROZ_AUTH_BOT_USERNAME || 'agroz_auth_bot',
-  miniAppUrl: process.env.BIZNESGO_MINI_APP_URL || 'https://biznesgo.vercel.app',
+  miniAppUrl: process.env.BIZNESGO_MINI_APP_URL || 'https://biznesgo.uz',
 
   // Admin autentifikatsiyasi (broadcast va boshqaruv uchun)
   adminPassword: process.env.ADMIN_PASSWORD || 'AgrozAdmin_2026_Prod_9f3b8c',

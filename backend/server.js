@@ -33,6 +33,9 @@ app.use((_req, res, next) => {
 
 // Qat'iy va xavfsiz CORS tekshiruvi
 const allowedOrigins = [
+  'https://biznesgo.uz',
+  'https://www.biznesgo.uz',
+  'https://super-adm.biznesgo.uz',
   'https://biznesgo.vercel.app',
   'https://biznesgo-sovos-projects.vercel.app',
   'https://agroz.uz',
@@ -49,6 +52,7 @@ function isOriginAllowed(origin) {
     if (host === 'localhost' || host === '127.0.0.1') return true;
     if (host === 'telegram.org' || host.endsWith('.telegram.org')) return true;
     if (host === 'vercel.app' || host.endsWith('.vercel.app')) return true;
+    if (host === 'biznesgo.uz' || host.endsWith('.biznesgo.uz')) return true;
     if (host === 'agroz.uz' || host.endsWith('.agroz.uz')) return true;
     return allowedOrigins.some((ao) => {
       try {
