@@ -20,6 +20,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { api } from '../lib/api';
+import { BiznesGoLogo } from './BiznesGoLogo';
 
 interface HeaderProps {
   onSearch?: (q: string) => void;
@@ -121,17 +122,22 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <>
       <header className="h-16 sm:h-20 bg-transparent flex items-center justify-between px-3 sm:px-10 gap-2 shrink-0">
-        {/* Left: Search pill */}
-        <div className="relative flex-1 max-w-[190px] sm:max-w-xs md:max-w-sm">
-          <Search className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-slate-400 absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchVal}
-            onChange={handleSearchChange}
-            onKeyDown={handleSearchKeyDown}
-            placeholder="Do‘kon, telefon, tahlil..."
-            className="w-full pl-9 sm:pl-11 pr-3 sm:pr-4 py-2 sm:py-2.5 bg-white/90 rounded-full text-xs text-slate-800 placeholder-slate-400 shadow-xs border border-slate-200/50 focus:outline-none focus:ring-2 focus:ring-black/10 transition"
-          />
+        {/* Left: Mobile Brand Logo + Search pill */}
+        <div className="flex items-center gap-2 flex-1 max-w-[210px] sm:max-w-xs md:max-w-sm">
+          <div className="sm:hidden shrink-0" title="BiznesGO">
+            <BiznesGoLogo variant="icon" className="w-7 h-7" iconColor="#35ca56" />
+          </div>
+          <div className="relative flex-1">
+            <Search className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-slate-400 absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchVal}
+              onChange={handleSearchChange}
+              onKeyDown={handleSearchKeyDown}
+              placeholder="Do‘kon, telefon, tahlil..."
+              className="w-full pl-9 sm:pl-11 pr-3 sm:pr-4 py-2 sm:py-2.5 bg-white/90 rounded-full text-xs text-slate-800 placeholder-slate-400 shadow-xs border border-slate-200/50 focus:outline-none focus:ring-2 focus:ring-black/10 transition"
+            />
+          </div>
         </div>
 
         {/* Right: Notifications & User Avatar */}
@@ -144,7 +150,7 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Bell className="w-3.5 h-3.5 text-slate-600" />
             <span className="hidden sm:inline">Bildirishnomalar</span>
-            <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#22C55E] text-black text-[9px] sm:text-[10px] font-black flex items-center justify-center">
+            <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#35ca56] text-black text-[9px] sm:text-[10px] font-black flex items-center justify-center">
               4
             </span>
           </button>
@@ -155,7 +161,7 @@ export const Header: React.FC<HeaderProps> = ({
             className="hidden md:flex items-center gap-2 px-3.5 py-1.5 bg-white rounded-full text-xs font-medium text-slate-700 shadow-xs border border-slate-200/50 hover:bg-slate-50 transition cursor-pointer"
             title="Admin Kalitini tekshirish"
           >
-            <span className="w-2 h-2 rounded-full bg-[#22C55E]"></span>
+            <span className="w-2 h-2 rounded-full bg-[#35ca56]"></span>
             <span className="font-semibold text-slate-800">Super Admin</span>
           </button>
 
@@ -282,7 +288,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-2xl bg-black text-white flex items-center justify-center shadow-xs">
-                  <ShieldCheck className="w-5 h-5 text-[#22C55E]" />
+                  <ShieldCheck className="w-5 h-5 text-[#35ca56]" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 leading-tight">Super Admin Sozlamalari</h3>

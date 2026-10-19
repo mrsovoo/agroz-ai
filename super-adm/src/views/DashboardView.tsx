@@ -126,19 +126,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       key: 'agro_vet', 
       name: 'Agro-Vet', 
       stats: byTypeMap['agro_vet'] || { count: 0, active_count: 0 },
-      cells: ['bg-[#22C55E]', 'bg-[#22C55E]', 'bg-slate-300', 'bg-black'] 
+      cells: ['bg-[#35ca56]', 'bg-[#35ca56]', 'bg-slate-300', 'bg-black'] 
     },
     { 
       key: 'feed', 
       name: 'Yem-Ozuqa', 
       stats: byTypeMap['feed'] || { count: 0, active_count: 0 },
-      cells: ['bg-slate-200/80', 'bg-[#22C55E]', 'bg-black', 'bg-black'] 
+      cells: ['bg-slate-200/80', 'bg-[#35ca56]', 'bg-black', 'bg-black'] 
     },
     { 
       key: 'warehouse', 
       name: 'Ulgurji Ombor', 
       stats: byTypeMap['warehouse'] || { count: 0, active_count: 0 },
-      cells: ['bg-[#22C55E]', 'bg-[#22C55E]', 'bg-slate-300', 'bg-slate-600'] 
+      cells: ['bg-[#35ca56]', 'bg-[#35ca56]', 'bg-slate-300', 'bg-slate-600'] 
     },
     { 
       key: 'seeds', 
@@ -150,7 +150,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       key: 'machinery', 
       name: 'Jihoz & Texnika', 
       stats: byTypeMap['machinery'] || { count: 0, active_count: 0 },
-      cells: ['bg-slate-200/80', 'bg-[#22C55E]', 'bg-black', 'bg-slate-400'] 
+      cells: ['bg-slate-200/80', 'bg-[#35ca56]', 'bg-black', 'bg-slate-400'] 
     },
   ];
 
@@ -371,7 +371,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                     style={{ height: d.height }}
                     className={`w-full rounded-2xl transition-all duration-500 cursor-pointer ${
                       d.isPeak
-                        ? 'bg-[#22C55E] shadow-sm hover:brightness-105'
+                        ? 'bg-[#35ca56] shadow-sm hover:brightness-105'
                         : 'bg-slate-200/70 hover:bg-slate-300'
                     }`}
                   ></div>
@@ -380,7 +380,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                 {/* Kun nomi */}
                 <span
                   className={`text-xs font-semibold ${
-                    d.isPeak ? 'text-[#22C55E]' : 'text-slate-400'
+                    d.isPeak ? 'text-[#35ca56]' : 'text-slate-400'
                   }`}
                 >
                   {d.label}

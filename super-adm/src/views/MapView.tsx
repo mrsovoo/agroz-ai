@@ -249,7 +249,7 @@ export const MapView: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-1.5 text-xs text-slate-500">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#22C55E]"></span>
+              <span className="w-2.5 h-2.5 rounded-full bg-[#35ca56]"></span>
               <span className="font-semibold text-[11px]">Ko‘p B2B</span>
               <span className="w-2.5 h-2.5 rounded-full bg-slate-200 ml-2"></span>
               <span className="font-semibold text-[11px]">Hali yo‘q</span>
@@ -275,12 +275,12 @@ export const MapView: React.FC = () => {
                 let textColor = '#71717A';
 
                 if (isTop) {
-                  fillColor = '#22C55E';
+                  fillColor = '#35ca56';
                   strokeColor = '#16A34A';
                   textColor = '#000000';
                 } else if (reg.merchants_count >= 15) {
                   fillColor = '#4ADE80';
-                  strokeColor = '#22C55E';
+                  strokeColor = '#35ca56';
                   textColor = '#000000';
                 } else if (reg.merchants_count > 0) {
                   fillColor = '#BBF7D0';

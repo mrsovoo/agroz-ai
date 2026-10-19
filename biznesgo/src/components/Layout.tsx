@@ -24,6 +24,7 @@ import { SupportModal } from './SupportModal';
 import { TariffModal } from './TariffModal';
 import { NewsModal } from './NewsModal';
 import { DEFAULT_SUBSCRIPTION_PLAN } from '../lib/supportAndTariff';
+import { BiznesGoLogo } from './BiznesGoLogo';
 
 interface LayoutProps {
   currentView?: string;
@@ -92,16 +93,11 @@ export const Layout: React.FC<LayoutProps> = ({
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 fixed inset-y-0 z-30">
         {/* Brand */}
-        <div className="p-5 border-b border-slate-100 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-sm">
-            <Store className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="font-extrabold text-base text-slate-900 leading-tight">BiznesGO</h1>
-            <span className="text-[11px] font-medium text-slate-500">
-              Savdo boshqaruvi
-            </span>
-          </div>
+        <div className="p-4 px-5 border-b border-slate-100 flex items-center justify-between">
+          <BiznesGoLogo variant="full" textColor="#383838" iconColor="#35ca56" className="max-w-[145px]" />
+          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+            B2B
+          </span>
         </div>
 
         {/* Store Card */}
@@ -206,8 +202,8 @@ export const Layout: React.FC<LayoutProps> = ({
         {/* Topbar */}
         <header className="h-14 bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-20 px-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shadow-xs md:hidden">
-              <Store className="w-4 h-4" />
+            <div className="md:hidden">
+              <BiznesGoLogo variant="icon" className="w-7 h-7" iconColor="#35ca56" />
             </div>
             <h2 className="text-base font-bold text-slate-800">
               {currentTitle}

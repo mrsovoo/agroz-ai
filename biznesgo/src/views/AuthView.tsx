@@ -29,6 +29,7 @@ import {
   Loader2,
   AlertTriangle
 } from 'lucide-react';
+import { BiznesGoLogo } from '../components/BiznesGoLogo';
 
 interface AuthViewProps {
   onSuccess: () => void;
@@ -466,14 +467,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
           
           {/* Brand Logo */}
           <div>
-            <div className="inline-flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-sm">
-                <Store className="w-6 h-6" />
-              </div>
-              <span className="text-2xl font-black tracking-tight">
-                Biznes<span className="text-emerald-500">GO</span>
-              </span>
-            </div>
+            <BiznesGoLogo variant="full" textColor="#FFFFFF" iconColor="#35ca56" className="max-w-[210px]" />
           </div>
 
           {/* Center: Main Message */}
@@ -534,6 +528,11 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess, telegramOnboardin
           <div className="w-full max-w-md">
             
             <div className="bg-white py-8 px-6 sm:px-8 shadow-xl shadow-slate-200/50 rounded-2xl border border-slate-200/80">
+              
+              {/* Mobile Brand Logo */}
+              <div className="flex lg:hidden justify-center mb-6">
+                <BiznesGoLogo variant="full" textColor="#383838" iconColor="#35ca56" className="max-w-[170px]" />
+              </div>
               
               {/* ======================================================== */}
               {/* 1. ONBOARDING / RO'YXATDAN O'TISH (3 BOSQICH)            */}

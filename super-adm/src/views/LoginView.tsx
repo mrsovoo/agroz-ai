@@ -10,6 +10,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { api } from '../lib/api';
+import { BiznesGoLogo } from '../components/BiznesGoLogo';
 
 interface LoginViewProps {
   onLoginSuccess: () => void;
@@ -50,33 +51,24 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       {/* Centered Glass Bento Card */}
       <div className="w-full max-w-md bg-[#F6F6F3] rounded-[36px] shadow-2xl p-8 sm:p-10 border border-white/20 relative overflow-hidden">
         {/* Subtle decorative glow */}
-        <div className="absolute -top-20 -right-20 w-48 h-48 bg-[#22C55E]/15 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-20 -right-20 w-48 h-48 bg-[#35ca56]/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* Brand Logo & Header */}
         <div className="flex flex-col items-center text-center mb-8 relative z-10">
-          <div className="w-14 h-14 rounded-2xl bg-white shadow-md flex items-center justify-center mb-4 border border-slate-200/60">
-            {/* 12-ray sunburst asterisk icon */}
-            <svg className="w-8 h-8 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <line x1="12" y1="2" x2="12" y2="6"></line>
-              <line x1="12" y1="18" x2="12" y2="22"></line>
-              <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
-              <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
-              <line x1="2" y1="12" x2="6" y2="12"></line>
-              <line x1="18" y1="12" x2="22" y2="12"></line>
-              <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line>
-              <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
-            </svg>
+          <div className="w-16 h-16 rounded-3xl bg-white shadow-md flex items-center justify-center mb-4 border border-slate-200/80 p-3 hover:scale-105 transition-transform">
+            <BiznesGoLogo variant="icon" className="w-10 h-10" iconColor="#35ca56" />
           </div>
 
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-slate-200/80 text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2 shadow-2xs">
-            <ShieldCheck className="w-3.5 h-3.5 text-[#22C55E]" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-slate-200/80 text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-3 shadow-2xs">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#35ca56]" />
             <span>Super Admin Tizimi</span>
           </div>
 
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-            BiznesGO Nazorat Markazi
-          </h2>
+          <div className="mb-2">
+            <BiznesGoLogo variant="full" textColor="#383838" iconColor="#35ca56" className="max-w-[220px] mx-auto" />
+          </div>
+
           <p className="text-xs text-slate-500 mt-1 max-w-xs">
             B2B ekotizimini xavfsiz boshqarish uchun login va parolingizni kiriting
           </p>
@@ -167,7 +159,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         {/* Security Footer Note */}
         <div className="mt-8 pt-5 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-500">
           <div className="flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-[#22C55E]" />
+            <Sparkles className="w-3.5 h-3.5 text-[#35ca56]" />
             <span>256-bit HMAC Himoya</span>
           </div>
           <span className="font-mono text-[10px] text-slate-400">v1.2.0 (2026)</span>
