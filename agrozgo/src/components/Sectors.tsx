@@ -50,8 +50,12 @@ export const Sectors: React.FC = () => {
               >
                 {big && img && (
                   <div className="relative -mx-5 -mt-5 mb-5 h-48 overflow-hidden sm:-mx-6 sm:-mt-6 lg:h-64">
-                    <AgroImage src={img} alt={s.title} className="h-full w-full transition duration-700 group-hover:scale-105" />
-                    <div className={`absolute inset-0 bg-gradient-to-t ${isActive ? 'from-forest-dark via-forest-dark/70' : 'from-white via-white/70'} to-transparent`} />
+                    <AgroImage
+                      src={img}
+                      alt={s.title}
+                      className="h-full w-full object-cover opacity-80 group-hover:opacity-95 transition duration-700 group-hover:scale-105"
+                    />
+                    <div className={`absolute inset-0 bg-gradient-to-t ${isActive ? 'from-forest-dark via-forest-dark/80 to-forest-dark/30' : 'from-white via-white/80 to-transparent'}`} />
                   </div>
                 )}
 

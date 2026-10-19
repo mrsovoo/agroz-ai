@@ -44,8 +44,13 @@ export const AppAndContact: React.FC = () => {
       <div className="container-x grid gap-4 lg:grid-cols-2">
         {/* Mobil ilova e'loni */}
         <div className="relative flex flex-col overflow-hidden rounded-3xl bg-forest-dark border border-forest-border p-6 text-white shadow-soft sm:p-10">
-          <AgroImage src={IMAGES.hero} alt="" className="absolute inset-0 h-full w-full opacity-20" />
-          <div className="absolute inset-0 bg-gradient-to-br from-forest-dark via-forest-dark/95 to-forest-dark/70" />
+          <AgroImage src={IMAGES.hero} alt="" className="absolute inset-0 h-full w-full opacity-15 object-cover mix-blend-luminosity scale-105" />
+          <div className="absolute inset-0 bg-gradient-to-br from-forest-dark via-forest-dark/95 to-forest-dark/75" />
+
+          {/* Atmosferik zumrad nurlari */}
+          <div className="pointer-events-none absolute -bottom-20 -right-20 h-80 w-80 rounded-full bg-agroGreen/25 blur-3xl" />
+          <div className="pointer-events-none absolute -top-20 -left-20 h-64 w-64 rounded-full bg-agroGreen/15 blur-2xl" />
+
           <div className="relative flex flex-1 flex-col">
             <span className="inline-flex w-fit items-center gap-2 rounded-full bg-agroGreen px-3 py-1.5 text-xs font-bold text-forest-dark shadow-glow-subtle">
               <Smartphone className="h-4 w-4" /> Tez orada
@@ -96,7 +101,8 @@ export const AppAndContact: React.FC = () => {
         </div>
 
         {/* Aloqa formasi */}
-        <div className="rounded-3xl bg-white p-6 shadow-card border border-charcoal/5 sm:p-10">
+        <div className="relative overflow-hidden rounded-3xl bg-white/95 shadow-card border border-charcoal/5 p-6 backdrop-blur-sm sm:p-10">
+          <div className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-agroGreen/10 blur-3xl" />
           <Eyebrow>Bog‘lanish</Eyebrow>
           <h2 className="mt-4 text-2xl font-extrabold leading-tight sm:text-3xl">
             Savol yoki taklifingiz bormi? <span className="font-semibold text-charcoal/50">Yozing.</span>

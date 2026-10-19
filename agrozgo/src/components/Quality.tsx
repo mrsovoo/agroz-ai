@@ -7,9 +7,18 @@ import { IMAGES, QUALITY_BADGES, FEATURES, VALUES } from '../data/content';
 export const Quality: React.FC = () => (
   <section className="py-16 sm:py-24">
     <div className="container-x">
-      <div className="relative min-h-[440px] sm:min-h-[520px] overflow-hidden rounded-3xl shadow-soft">
-        <AgroImage src={IMAGES.farmer} alt="Planshet bilan fermer" className="absolute inset-0 h-full w-full" />
-        <div className="absolute inset-0 bg-gradient-to-b from-charcoal/55 via-charcoal/10 to-charcoal/60" />
+      <div className="relative min-h-[440px] sm:min-h-[520px] overflow-hidden rounded-3xl bg-forest-dark border border-forest-border shadow-soft">
+        <AgroImage
+          src={IMAGES.farmer}
+          alt="Planshet bilan fermer"
+          className="absolute inset-0 h-full w-full object-cover opacity-35 mix-blend-luminosity scale-105 transition-transform duration-1000"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-forest-dark via-forest-dark/75 to-forest-dark/40" />
+        <div className="absolute inset-0 bg-gradient-to-r from-forest-dark/80 via-transparent to-forest-dark/60" />
+
+        {/* Atmosferik zumrad nurlari */}
+        <div className="pointer-events-none absolute -top-24 -right-24 h-96 w-96 rounded-full bg-agroGreen/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 -left-24 h-80 w-80 rounded-full bg-agroGreen/15 blur-3xl" />
 
         <div className="relative flex min-h-[440px] sm:min-h-[520px] flex-col justify-between gap-8 p-5 sm:p-10">
           <div className="grid gap-6 lg:grid-cols-12">

@@ -38,7 +38,12 @@ export const About: React.FC = () => {
         </div>
 
         {/* Qora/to'q bento blok */}
-        <div className="mt-14 grid gap-4 rounded-3xl bg-forest-dark border border-forest-border p-4 text-white shadow-soft sm:p-6 lg:grid-cols-2 lg:p-8">
+        <div className="relative mt-14 overflow-hidden rounded-3xl bg-forest-dark border border-forest-border p-4 text-white shadow-soft sm:p-6 lg:p-8">
+          {/* Atmosferik nozik yashil nur auralari */}
+          <div className="pointer-events-none absolute -top-28 -right-28 h-96 w-96 rounded-full bg-agroGreen/20 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-28 -left-28 h-80 w-80 rounded-full bg-agroGreen/15 blur-3xl" />
+
+          <div className="relative grid gap-4 lg:grid-cols-2">
           {/* Chap: qamrov */}
           <div className="flex flex-col justify-between gap-8 p-2 sm:p-4">
             <div>
@@ -142,6 +147,7 @@ export const About: React.FC = () => {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </section>
   );

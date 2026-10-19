@@ -38,11 +38,19 @@ export const Hero: React.FC = () => {
   return (
     <section id="top" className="relative overflow-hidden pt-[88px]">
       <div className="container-x">
-        <div className="relative overflow-hidden rounded-3xl bg-beige shadow-soft">
-          {/* Fon rasm */}
-          <AgroImage src={IMAGES.hero} alt="Oltin bug'doyzor" className="absolute inset-0 h-full w-full" />
-          <div className="absolute inset-0 bg-gradient-to-r from-cream via-cream/85 to-cream/10" />
-          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-cream/80 to-transparent" />
+        <div className="relative overflow-hidden rounded-3xl bg-cream-soft/90 border border-charcoal/5 shadow-soft">
+          {/* Fon rasm — yumshoq past opacity (20%) va gradient uyg'unligi */}
+          <AgroImage
+            src={IMAGES.hero}
+            alt="Oltin bug'doyzor"
+            className="absolute inset-0 h-full w-full object-cover opacity-20 mix-blend-multiply scale-105 transition-transform duration-1000"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-cream via-cream/85 to-cream/20" />
+          <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-cream via-cream/70 to-transparent" />
+
+          {/* Atmosferik nozik yashil brend nurlari */}
+          <div className="pointer-events-none absolute -top-24 -left-24 h-96 w-96 rounded-full bg-agroGreen/15 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-24 right-1/4 h-80 w-80 rounded-full bg-amber/10 blur-3xl" />
 
           <div className="relative grid gap-10 px-5 py-10 sm:px-10 sm:py-14 lg:grid-cols-12 lg:px-14 lg:py-16">
             <div className="animate-fade-up lg:col-span-7">
