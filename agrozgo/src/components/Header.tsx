@@ -23,13 +23,13 @@ export const Header: React.FC = () => {
       <div className="container-x flex h-[72px] items-center justify-between gap-4">
         <Logo />
 
-        <nav className="hidden items-center gap-1 rounded-full bg-white/70 p-1 shadow-card backdrop-blur md:flex">
+        <nav className="hidden items-center gap-1 rounded-full bg-white/80 border border-charcoal/5 p-1 shadow-card backdrop-blur-md md:flex">
           {NAV_LINKS.map((l, i) => (
             <a
               key={l.href}
               href={l.href}
               className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                i === 0 ? 'bg-charcoal text-white' : 'text-charcoal/75 hover:bg-beige hover:text-charcoal'
+                i === 0 ? 'bg-forest-dark text-white shadow-sm' : 'text-charcoal/75 hover:bg-agroGreen-50 hover:text-agroGreen-900'
               }`}
             >
               {l.label}
@@ -42,7 +42,7 @@ export const Header: React.FC = () => {
             href={BIZNESGO_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden items-center gap-2 rounded-full bg-charcoal px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-forest-light sm:inline-flex"
+            className="hidden items-center gap-2 rounded-full bg-forest-dark border border-forest-border hover:border-agroGreen/40 px-4 py-2 text-xs font-bold text-white transition shadow-sm hover:shadow-soft sm:inline-flex active:scale-95"
           >
             <Store className="h-4 w-4 text-agroGreen" />
             BiznesGO (B2B) Do‘konlar uchun
@@ -50,7 +50,7 @@ export const Header: React.FC = () => {
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
-            className="grid h-10 w-10 place-items-center rounded-full bg-white shadow-card md:hidden"
+            className="grid h-10 w-10 place-items-center rounded-full bg-white border border-charcoal/5 shadow-card md:hidden cursor-pointer"
             aria-label="Menyu"
             aria-expanded={open}
           >
@@ -61,13 +61,13 @@ export const Header: React.FC = () => {
 
       {open && (
         <div className="container-x pb-4 md:hidden">
-          <nav className="space-y-1 rounded-2xl bg-white p-2 shadow-soft">
+          <nav className="space-y-1 rounded-2xl bg-white border border-charcoal/5 p-2 shadow-soft">
             {NAV_LINKS.map((l) => (
               <a
                 key={l.href}
                 href={l.href}
                 onClick={() => setOpen(false)}
-                className="block rounded-xl px-4 py-3 text-sm font-semibold text-charcoal hover:bg-beige"
+                className="block rounded-xl px-4 py-3 text-sm font-semibold text-charcoal hover:bg-agroGreen-50 hover:text-agroGreen-900 transition"
               >
                 {l.label}
               </a>
@@ -76,7 +76,7 @@ export const Header: React.FC = () => {
               href={BIZNESGO_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-1 flex items-center justify-center gap-2 rounded-xl bg-charcoal px-4 py-3 text-sm font-semibold text-white"
+              className="mt-1 flex items-center justify-center gap-2 rounded-xl bg-forest-dark border border-forest-border px-4 py-3 text-sm font-semibold text-white"
             >
               <Store className="h-4 w-4 text-agroGreen" />
               BiznesGO (B2B) Do‘konlar uchun

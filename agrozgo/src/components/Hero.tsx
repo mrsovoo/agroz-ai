@@ -51,7 +51,7 @@ export const Hero: React.FC = () => {
                 B2C Agro-Marketplace • Tez orada
               </span>
 
-              <h1 className="mt-5 text-[2rem] font-extrabold leading-[1.1] tracking-tight text-charcoal sm:text-5xl lg:text-[3.4rem]">
+              <h1 className="mt-5 text-3xl font-extrabold leading-[1.15] tracking-tight text-charcoal sm:text-5xl lg:text-[3.25rem]">
                 Fermer, Chorvador va Dehqonlar uchun{' '}
                 <span className="font-semibold text-charcoal/55">Yagona Agro-Marketplace</span>
               </h1>
@@ -63,7 +63,7 @@ export const Hero: React.FC = () => {
               {/* Qidiruv simulyatsiyasi */}
               <form
                 onSubmit={runSearch}
-                className="mt-7 flex max-w-2xl flex-col gap-2 rounded-2xl bg-white p-2 shadow-soft sm:flex-row sm:items-center sm:rounded-full"
+                className="mt-7 flex max-w-2xl flex-col gap-2 rounded-2xl bg-white p-2 shadow-soft border border-charcoal/5 sm:flex-row sm:items-center sm:rounded-full"
               >
                 <div className="flex flex-1 items-center gap-2 px-3">
                   <Search className="h-5 w-5 shrink-0 text-charcoal/40" />
@@ -78,19 +78,19 @@ export const Hero: React.FC = () => {
                 <button
                   type="button"
                   onClick={detectLocation}
-                  className="flex items-center gap-2 rounded-full bg-beige px-3 py-2.5 text-left text-xs font-semibold text-charcoal/80 transition hover:bg-gold-soft sm:max-w-[210px]"
+                  className="flex items-center gap-2 rounded-xl sm:rounded-full bg-cream-soft border border-charcoal/10 px-3 py-2 text-left text-xs font-semibold text-charcoal/80 transition hover:border-agroGreen/40 hover:bg-agroGreen-50 hover:text-agroGreen-900 w-full sm:w-auto sm:max-w-[210px]"
                   title="Joylashuvni aniqlash"
                 >
                   {status === 'locating' ? (
-                    <Loader2 className="h-4 w-4 shrink-0 animate-spin text-gold-dark" />
+                    <Loader2 className="h-4 w-4 shrink-0 animate-spin text-agroGreen-700" />
                   ) : (
-                    <MapPin className="h-4 w-4 shrink-0 text-gold-dark" />
+                    <MapPin className="h-4 w-4 shrink-0 text-agroGreen-700" />
                   )}
                   <span className="truncate">{status === 'locating' ? 'Aniqlanmoqda...' : location}</span>
                 </button>
                 <button
                   type="submit"
-                  className="flex items-center justify-center gap-2 rounded-full bg-agroGreen hover:bg-agroGreen-hover text-forest-dark font-extrabold px-6 py-2.5 text-sm transition shadow-glow-subtle active:scale-95 cursor-pointer"
+                  className="flex items-center justify-center gap-2 rounded-xl sm:rounded-full bg-agroGreen hover:bg-agroGreen-hover text-forest-dark font-extrabold px-6 py-2.5 text-sm transition shadow-glow-subtle active:scale-95 cursor-pointer"
                 >
                   {status === 'searching' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Navigation className="h-4 w-4 text-forest-dark" />}
                   Topish
@@ -169,16 +169,16 @@ export const Hero: React.FC = () => {
               {HERO_METRICS.map((m) => (
                 <div
                   key={m.label}
-                  className={`metric-card ${
+                  className={`metric-card !p-3 sm:!p-4 ${
                     m.highlight
                       ? 'bg-agroGreen-50/90 !border-agroGreen/30 text-forest-dark ring-2 ring-agroGreen/20'
                       : 'border-forest/5'
                   }`}
                 >
-                  <p className={`text-xl font-black sm:text-2xl ${m.highlight ? 'text-agroGreen-800' : 'text-charcoal'}`}>
+                  <p className={`text-lg sm:text-2xl font-black ${m.highlight ? 'text-agroGreen-800' : 'text-charcoal'}`}>
                     {m.value}
                   </p>
-                  <p className="mt-1 text-[11px] leading-tight font-medium text-charcoal/70 sm:text-xs">{m.label}</p>
+                  <p className="mt-1 text-[10px] sm:text-xs leading-tight font-semibold text-charcoal/70">{m.label}</p>
                 </div>
               ))}
             </div>

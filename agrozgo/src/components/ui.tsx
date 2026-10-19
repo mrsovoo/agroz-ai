@@ -57,7 +57,7 @@ export const AgroImage: React.FC<{
   alt: string;
   className?: string;
   fallback?: string;
-}> = ({ src, alt, className = '', fallback = 'from-gold-soft via-gold/60 to-forest-light' }) => {
+}> = ({ src, alt, className = '', fallback = 'from-agroGreen-100 via-agroGreen-200 to-forest-card' }) => {
   const [failed, setFailed] = useState(false);
   if (failed) {
     return <div role="img" aria-label={alt} className={`bg-gradient-to-br ${fallback} ${className}`} />;

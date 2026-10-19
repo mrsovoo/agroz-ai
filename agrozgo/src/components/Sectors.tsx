@@ -14,7 +14,7 @@ export const Sectors: React.FC = () => {
   const [active, setActive] = useState<SectorId>('agro_vet');
 
   return (
-    <section id="sectors" className="bg-beige py-16 sm:py-24">
+    <section id="sectors" className="bg-cream-soft/70 border-y border-forest/5 py-16 sm:py-24">
       <div className="container-x">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -73,7 +73,7 @@ export const Sectors: React.FC = () => {
                     className={`grid h-8 w-8 shrink-0 place-items-center rounded-full transition duration-300 ${
                       isActive
                         ? 'bg-agroGreen text-forest-dark shadow-glow-subtle'
-                        : 'bg-beige text-charcoal group-hover:bg-agroGreen group-hover:text-forest-dark'
+                        : 'bg-cream-soft text-charcoal group-hover:bg-agroGreen group-hover:text-forest-dark'
                     }`}
                   >
                     <ArrowUpRight className="h-4 w-4" />

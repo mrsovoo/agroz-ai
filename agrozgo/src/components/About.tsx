@@ -102,7 +102,7 @@ export const About: React.FC = () => {
               <div className="mt-4 grid grid-cols-3 gap-3 border-b border-charcoal/10 pb-4">
                 {[
                   { v: '62%', l: 'Agro-Vet ulushi', color: 'text-agroGreen-700' },
-                  { v: '+18%', l: 'Yem xaridlari o‘sishi', color: 'text-gold-dark' },
+                  { v: '+18%', l: 'Yem xaridlari o‘sishi', color: 'text-amber-700' },
                   { v: '85%', l: 'Takroriy mijozlar', color: 'text-charcoal' },
                 ].map((k) => (
                   <div key={k.l} className="rounded-xl border border-charcoal/10 bg-cream/40 p-2.5">
@@ -113,13 +113,13 @@ export const About: React.FC = () => {
               </div>
               <div className="mt-3 flex items-center gap-4 text-[11px] font-semibold text-charcoal/70">
                 <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-agroGreen" /> Agro-Vet</span>
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-gold" /> Yem va ozuqa</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-amber-500" /> Yem va ozuqa</span>
               </div>
               <div className="mt-3 flex h-44 items-end gap-1.5 sm:gap-2 pt-2">
                 {MONTHLY_ORDERS.map((o) => (
                   <div key={o.m} className="flex flex-1 flex-col items-center gap-1 group">
                     <div className="flex w-full flex-col overflow-hidden rounded-md transition-transform group-hover:scale-105" style={{ height: `${((o.vet + o.feed) / max) * 150}px` }}>
-                      <div className="bg-gold" style={{ flex: o.feed }} />
+                      <div className="bg-amber-500" style={{ flex: o.feed }} />
                       <div className="bg-agroGreen" style={{ flex: o.vet }} />
                     </div>
                     <span className="text-[9px] font-medium text-charcoal/50 sm:text-[10px]">{o.m}</span>

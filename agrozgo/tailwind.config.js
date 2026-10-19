@@ -4,17 +4,23 @@ export default {
   theme: {
     extend: {
       colors: {
+        canvas: {
+          DEFAULT: '#F8FAF6',
+          subtle: '#F1F6ED',
+          warm: '#FCFDFB',
+        },
         cream: {
-          DEFAULT: '#F8FAF5',
-          soft: '#F4F7EF',
-          warm: '#FBFDF8',
+          DEFAULT: '#F8FAF6',
+          soft: '#F1F6ED',
+          warm: '#FCFDFB',
         },
         beige: {
-          DEFAULT: '#EDF2E8',
-          card: '#E8EFE3',
+          DEFAULT: '#EBF2E5',
+          card: '#E4EDE0',
         },
         charcoal: {
           DEFAULT: '#1E241E',
+          logo: '#383838', // Rasmiy logotipdagi AGROZ rangi
           soft: '#2D352D',
           muted: '#4B554B',
           light: '#6E7A6E',
@@ -25,25 +31,30 @@ export default {
           200: '#BBF7D0',
           300: '#86EFAC',
           400: '#4ADE80',
-          500: '#35CA56', // Brand Logo Green
+          500: '#35CA56', // Rasmiy brend yashil
           600: '#22B343',
           700: '#1A8F34',
-          800: '#17712C',
-          900: '#145D26',
+          800: '#15732A',
+          900: '#115820',
           DEFAULT: '#35CA56',
           light: '#EAFDF0',
-          hover: '#29B648',
+          hover: '#28B847',
           dark: '#1C8A37',
         },
         forest: {
-          DEFAULT: '#0F2314', // Deep premium emerald-forest
-          dark: '#0A170D',
-          card: '#152E1C',
-          border: '#21422A',
+          DEFAULT: '#0C1C10', // Chuqur premium zumrad-o'rmon
+          dark: '#08140B',
+          card: '#122718',
+          border: '#1F3F27',
           badge: '#35CA56',
         },
+        amber: {
+          DEFAULT: '#E5A93C', // Hosil / bug'doy sarg'ish aksenti
+          soft: '#FEF7E6',
+          dark: '#B87B14',
+        },
         gold: {
-          DEFAULT: '#E5A93C', // Harvest grain gold
+          DEFAULT: '#E5A93C',
           soft: '#FEF7E6',
           dark: '#B87B14',
         },
