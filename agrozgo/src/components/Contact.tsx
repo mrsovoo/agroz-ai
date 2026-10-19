@@ -196,8 +196,55 @@ export const AppAndContact: React.FC = () => {
 };
 
 export const Footer: React.FC = () => (
-  <footer className="bg-forest-dark border-t border-forest-border text-white">
-    <div className="container-x grid gap-10 py-14 md:grid-cols-12">
+  <footer className="bg-forest-dark border-t border-forest-border text-white relative overflow-hidden">
+    {/* Pre-footer Kavisli Banner (Referensdagi: Top model for agriculture / Ready, Steady, Go) */}
+    <div className="container-x pt-16">
+      <div className="relative overflow-hidden rounded-[36px] bg-forest-card border border-forest-border p-8 sm:p-14 text-center shadow-2xl">
+        <AgroImage
+          src={IMAGES.aerial}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover opacity-25 mix-blend-luminosity scale-105"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-forest-dark via-forest-dark/85 to-forest-dark/60" />
+
+        <div className="relative max-w-2xl mx-auto flex flex-col items-center">
+          <span className="inline-flex items-center gap-2 rounded-full bg-agroGreen/20 border border-agroGreen/30 px-4 py-1.5 text-xs font-black text-agroGreen">
+            ✦ Ready, Steady, Go
+          </span>
+          <h2 className="mt-4 text-3xl sm:text-5xl font-black tracking-tight text-white leading-tight">
+            Kelajak agrotexnologiyalariga <br />
+            birinchi qadamni qo‘ying
+          </h2>
+          <p className="mt-3 text-sm sm:text-base text-white/70 max-w-lg leading-relaxed">
+            AgrozGO mobil ilovasi orqali eng yaqin dorixonalar va omborlardan qulay xarid qiling.
+          </p>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              alert("Rahmat! Ilova ishga tushganda sizga birinchilardan bo'lib xabar beramiz.");
+            }}
+            className="mt-8 flex w-full max-w-md flex-col sm:flex-row gap-2 rounded-full bg-white/10 backdrop-blur-md p-1.5 border border-white/20"
+          >
+            <input
+              type="text"
+              placeholder="Telefon raqamingiz (+998)..."
+              required
+              className="flex-1 bg-transparent px-4 py-2.5 text-sm text-white placeholder:text-white/50 outline-none"
+            />
+            <button
+              type="submit"
+              className="rounded-full bg-agroGreen hover:bg-agroGreen-hover text-forest-dark font-extrabold px-6 py-2.5 text-sm transition shadow-glow-green cursor-pointer active:scale-95"
+            >
+              A‘zo bo‘lish
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    {/* Asosiy Footer Linklari */}
+    <div className="container-x grid gap-10 py-16 md:grid-cols-12 relative z-10">
       <div className="md:col-span-5">
         <Logo light />
         <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/60">
@@ -237,10 +284,21 @@ export const Footer: React.FC = () => (
         </a>
       </div>
     </div>
-    <div className="border-t border-white/10">
-      <div className="container-x flex flex-col gap-2 py-5 text-xs text-white/40 sm:flex-row sm:justify-between">
+
+    {/* Referensdagi ulkan brend imzosi: AgrozGO ↗ */}
+    <div className="border-t border-white/5 pt-6 pb-4">
+      <div className="container-x flex items-center justify-between text-xs text-white/40 mb-4">
         <span>© {new Date().getFullYear()} AgrozGO. Barcha huquqlar himoyalangan.</span>
         <span>Ishlab chiqildi: BiznesGO jamoasi</span>
+      </div>
+
+      <div className="select-none overflow-hidden text-center py-4 sm:py-8">
+        <span className="inline-flex items-center gap-3 sm:gap-6 text-[15vw] font-black tracking-tighter text-white/10 hover:text-white/20 transition-all duration-700 leading-none">
+          AgrozGO
+          <span className="grid h-[8vw] w-[8vw] place-items-center rounded-full bg-agroGreen text-forest-dark text-[4vw] shadow-glow-green">
+            ↗
+          </span>
+        </span>
       </div>
     </div>
   </footer>

@@ -8,7 +8,12 @@ export const BIZNESGO_URL = 'https://biznesgo.uz';
 
 /** Rasmlar `public/images/` ichida. Fayl topilmasa komponentlar gradient fallback ko'rsatadi. */
 export const IMAGES = {
-  hero: '/images/hero-wheat.jpg',
+  aerial: '/images/aerial-fields.jpg',
+  drone: '/images/agro-drone.jpg',
+  controller: '/images/smart-controller.jpg',
+  spraying: '/images/drone-spraying.jpg',
+  hero: '/images/aerial-fields.jpg', // Use aerial as default hero
+  heroWheat: '/images/hero-wheat.jpg',
   farmer: '/images/farmer.jpg',
   tractor: '/images/tractor.jpg',
   seedlings: '/images/seedlings.jpg',
@@ -16,9 +21,11 @@ export const IMAGES = {
 };
 
 export const NAV_LINKS = [
-  { label: 'Biz haqimizda', href: '#about' },
+  { label: 'Bosh sahifa', href: '#top' },
   { label: 'Sektorlar', href: '#sectors' },
-  { label: 'Imkoniyatlar', href: '#features' },
+  { label: 'Texnologiyalar', href: '#technology' },
+  { label: 'Mahsulotlar', href: '#products' },
+  { label: 'Yangiliklar', href: '#articles' },
   { label: "Bog'lanish", href: '#contact' },
 ];
 
@@ -201,5 +208,112 @@ export const CONTACT_INFO = {
   phoneRaw: '+998908383772',
   address: 'Toshkent, O‘zbekiston',
 };
+
+/** Referens dizayndagi "Elevates drone agricultural operations new heights" bloklari */
+export const OPERATION_PILLARS = [
+  {
+    id: 'payload',
+    title: 'Yuqori Hosildorlik',
+    en: 'Heavy Payload',
+    tag: '50 kg yuklama',
+    desc: '40–50 kg bak sig‘imi bilan bir parvozda 21 gektargacha maydonga dori purkash.',
+    image: '/images/drone-spraying.jpg',
+  },
+  {
+    id: 'spreading',
+    title: 'Tekis Don Sochish',
+    en: 'Smooth Spreading',
+    tag: 'Santimetr aniqlik',
+    desc: 'Omuxta yem, don va mineral o‘g‘itlarni butun maydon bo‘ylab teng taqsimlash.',
+    image: '/images/aerial-fields.jpg',
+  },
+  {
+    id: 'sprinkler',
+    title: 'To‘rtlamchi Purkagich',
+    en: 'Four Sprinkler Kit',
+    tag: 'Dispers tuman',
+    desc: 'Santrifugal atomizatorlar orqali dori sarfini 30% tejab, chuqur barg qatlamigacha yetkazish.',
+    image: '/images/agro-drone.jpg',
+  },
+];
+
+/** Referens dizayndagi "Explore Our Products" mahsulotlar ro'yxati */
+export const PRODUCTS = [
+  {
+    id: 'dji-t50',
+    name: 'DJI Agras T50 Smart Dron',
+    category: 'Agro-Texnika',
+    oldPrice: '$2,100',
+    price: '$1,880',
+    image: '/images/agro-drone.jpg',
+    badge: 'Yangi Model',
+    rating: '4.9',
+    stock: 'Omborda mavjud',
+  },
+  {
+    id: 'controller-pro',
+    name: 'Agro Remote Controller Pro',
+    category: 'Monitoring & Boshqaruv',
+    oldPrice: '$1,200',
+    price: '$980',
+    image: '/images/smart-controller.jpg',
+    badge: 'Smart Ekran',
+    rating: '5.0',
+    stock: '12 dona qoldi',
+  },
+  {
+    id: 'premium-feed',
+    name: 'Yuqori Proteinli Granula Yem',
+    category: 'Yem va Ozuqa',
+    oldPrice: '7,500 so‘m',
+    price: '6,200 so‘m / kg',
+    image: '/images/livestock.jpg',
+    badge: 'Ulgurji Narx',
+    rating: '4.8',
+    stock: '5 tonna mavjud',
+  },
+  {
+    id: 'wheat-seeds',
+    name: 'Elita Navli Bug‘doy Urug‘i',
+    category: "Urug'chilik",
+    oldPrice: '15,000 so‘m',
+    price: '12,000 so‘m / kg',
+    image: '/images/seedlings.jpg',
+    badge: '98% Unuvchanlik',
+    rating: '4.9',
+    stock: 'Sertifikatlangan',
+  },
+];
+
+/** Referens dizayndagi "News & Articles" agro maqolalar */
+export const ARTICLES = [
+  {
+    id: 'drones-efficiency',
+    title: 'Agro-dronlar bilan purkash: Yoqilg‘i va dori xarajatini 3 barobarga kamaytirish sirlari',
+    category: 'Agro-Texnologiya',
+    date: '18 Oktyabr, 2026',
+    readTime: '4 daqiqa',
+    image: '/images/drone-spraying.jpg',
+    author: 'Aziz Rahimov',
+  },
+  {
+    id: 'autumn-crop-care',
+    title: 'Kuzgi ekinlarni qishlashga tayyorlash: Ozuqa va mineral moddalar balansi',
+    category: 'Agronom Maslahati',
+    date: '15 Oktyabr, 2026',
+    readTime: '6 daqiqa',
+    image: '/images/farmer.jpg',
+    author: 'Dilshod Karimov',
+  },
+  {
+    id: 'biznesgo-agrozgo-sync',
+    title: 'BiznesGO kassa tizimi va AgrozGO: Do‘konlar savdosini 40% oshirish amaliyoti',
+    category: 'B2B & B2C Ekotizim',
+    date: '12 Oktyabr, 2026',
+    readTime: '5 daqiqa',
+    image: '/images/tractor.jpg',
+    author: 'AgrozGO Tahlilchilari',
+  },
+];
 
 

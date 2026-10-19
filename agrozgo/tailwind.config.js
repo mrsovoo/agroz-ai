@@ -60,7 +60,8 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Manrope', 'Inter', 'system-ui', 'sans-serif'],
+        sans: ['"Plus Jakarta Sans"', 'Manrope', 'system-ui', 'sans-serif'],
+        display: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
         soft: '0 12px 36px -12px rgba(15, 35, 20, 0.12)',
