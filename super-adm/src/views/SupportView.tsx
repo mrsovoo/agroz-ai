@@ -13,7 +13,8 @@ import {
   Clock,
   Sparkles,
   ArrowUpRight,
-  Mail
+  Mail,
+  ArrowLeft
 } from 'lucide-react';
 
 const BIZ_MAP: Record<string, { label: string; color: string }> = {
@@ -190,7 +191,7 @@ export function SupportView() {
       {/* Main split content: List and Chat Thread */}
       <div className="flex-1 flex flex-col lg:flex-row gap-4 min-h-0">
         {/* Left Pane: Conversations List */}
-        <div className="w-full lg:w-96 flex flex-col bg-white rounded-[32px] border border-slate-200/60 shadow-xs overflow-hidden shrink-0">
+        <div className={`w-full lg:w-96 flex flex-col bg-white rounded-[32px] border border-slate-200/60 shadow-xs overflow-hidden shrink-0 ${selectedThread ? 'hidden lg:flex' : 'flex'}`}>
           {/* Search & Filters */}
           <div className="p-4 border-b border-slate-100 space-y-3 shrink-0">
             <div className="relative">
@@ -315,13 +316,21 @@ export function SupportView() {
         </div>
 
         {/* Right Pane: Active Thread Chat */}
-        <div className="flex-1 flex flex-col bg-white rounded-[32px] border border-slate-200/60 shadow-xs overflow-hidden min-h-0">
+        <div className={`flex-1 flex flex-col bg-white rounded-[32px] border border-slate-200/60 shadow-xs overflow-hidden min-h-0 ${!selectedThread ? 'hidden lg:flex' : 'flex'}`}>
           {selectedThread ? (
             <>
               {/* Thread Header */}
-              <div className="p-4 border-b border-slate-100 bg-white flex flex-wrap items-center justify-between gap-3 shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#F6F6F3] border border-slate-200 flex items-center justify-center text-slate-900 font-bold text-sm">
+              <div className="p-3 sm:p-4 border-b border-slate-100 bg-white flex flex-wrap items-center justify-between gap-2 sm:gap-3 shrink-0">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedThread(null)}
+                    className="lg:hidden p-2 rounded-full bg-slate-100 text-slate-700 hover:text-black hover:bg-slate-200 transition cursor-pointer shrink-0"
+                    title="Suhbatlar ro‘yxatiga qaytish"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </button>
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#F6F6F3] border border-slate-200 flex items-center justify-center text-slate-900 font-bold text-sm shrink-0">
                     {selectedThread.store_name ? selectedThread.store_name[0].toUpperCase() : 'M'}
                   </div>
                   <div>

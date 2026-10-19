@@ -49,7 +49,7 @@ export function App() {
           />
 
           {/* Main Scrollable View Area */}
-          <main className="flex-1 overflow-y-auto px-6 sm:px-10 pb-8">
+          <main className="flex-1 overflow-y-auto px-3 sm:px-10 pt-1 sm:pt-0 pb-24 sm:pb-8">
             {currentView === 'dashboard' && <DashboardView onNavigate={setCurrentView} />}
             {currentView === 'merchants' && <MerchantsView searchQuery={searchQuery} />}
             {currentView === 'map' && <MapView />}

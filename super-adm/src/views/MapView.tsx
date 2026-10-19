@@ -168,7 +168,7 @@ export const MapView: React.FC = () => {
       </div>
 
       {/* 4 ta Bento Statistik Kartochka */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Jami Do'konlar */}
         <div className="bg-white rounded-[28px] p-5 shadow-xs border border-slate-200/60 flex flex-col justify-between min-h-[120px]">
           <div className="flex items-center justify-between text-slate-400 text-xs">
@@ -236,7 +236,7 @@ export const MapView: React.FC = () => {
       {/* Asosiy 2 Ustun: Interaktiv Xarita + Viloyat Tafsiloti */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Chap 7 Ustun: Interaktiv O'zbekiston Sxematik Vektor Xaritasi */}
-        <div className="lg:col-span-7 bg-white rounded-[32px] p-6 sm:p-7 shadow-xs border border-slate-200/60 flex flex-col justify-between">
+        <div className="lg:col-span-7 bg-white rounded-[32px] p-4 sm:p-7 shadow-xs border border-slate-200/60 flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
@@ -381,7 +381,7 @@ export const MapView: React.FC = () => {
         </div>
 
         {/* O'ng 5 Ustun: Tanlangan Viloyat Tafsilotlari */}
-        <div className="lg:col-span-5 bg-white rounded-[32px] p-6 sm:p-7 shadow-xs border border-slate-200/60 flex flex-col justify-between">
+        <div className="lg:col-span-5 bg-white rounded-[32px] p-4 sm:p-7 shadow-xs border border-slate-200/60 flex flex-col justify-between">
           <div>
             {/* Viloyat Sarlavhasi */}
             <div className="flex items-start justify-between pb-4 border-b border-slate-100">

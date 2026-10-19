@@ -120,38 +120,39 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      <header className="h-20 bg-transparent flex items-center justify-between px-6 sm:px-10 shrink-0">
+      <header className="h-16 sm:h-20 bg-transparent flex items-center justify-between px-3 sm:px-10 gap-2 shrink-0">
         {/* Left: Search pill */}
-        <div className="relative w-72 sm:w-88">
-          <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+        <div className="relative flex-1 max-w-[190px] sm:max-w-xs md:max-w-sm">
+          <Search className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-slate-400 absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchVal}
             onChange={handleSearchChange}
             onKeyDown={handleSearchKeyDown}
-            placeholder="Do‘kon, telefon yoki tahlillarni qidirish..."
-            className="w-full pl-11 pr-4 py-2.5 bg-white/90 rounded-full text-xs text-slate-800 placeholder-slate-400 shadow-xs border border-slate-200/50 focus:outline-none focus:ring-2 focus:ring-black/10 transition"
+            placeholder="Do‘kon, telefon, tahlil..."
+            className="w-full pl-9 sm:pl-11 pr-3 sm:pr-4 py-2 sm:py-2.5 bg-white/90 rounded-full text-xs text-slate-800 placeholder-slate-400 shadow-xs border border-slate-200/50 focus:outline-none focus:ring-2 focus:ring-black/10 transition"
           />
         </div>
 
         {/* Right: Notifications & User Avatar */}
-        <div className="flex items-center gap-3 relative">
+        <div className="flex items-center gap-1.5 sm:gap-3 relative">
           {/* Notifications Pill */}
           <button
             onClick={() => setShowNotifications(!showNotifications)}
-            className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white/90 rounded-full text-xs font-medium text-slate-700 shadow-xs border border-slate-200/50 hover:bg-white transition cursor-pointer"
+            className="flex items-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white/90 rounded-full text-xs font-medium text-slate-700 shadow-xs border border-slate-200/50 hover:bg-white transition cursor-pointer"
+            title="Bildirishnomalar"
           >
             <Bell className="w-3.5 h-3.5 text-slate-600" />
-            <span>Bildirishnomalar</span>
-            <span className="w-5 h-5 rounded-full bg-[#22C55E] text-black text-[10px] font-black flex items-center justify-center">
+            <span className="hidden sm:inline">Bildirishnomalar</span>
+            <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#22C55E] text-black text-[9px] sm:text-[10px] font-black flex items-center justify-center">
               4
             </span>
           </button>
 
-          {/* Admin Status Pill */}
+          {/* Admin Status Pill (hidden on xs mobile) */}
           <button
             onClick={() => setShowKeyModal(true)}
-            className="flex items-center gap-2 px-3.5 py-1.5 bg-white rounded-full text-xs font-medium text-slate-700 shadow-xs border border-slate-200/50 hover:bg-slate-50 transition cursor-pointer"
+            className="hidden md:flex items-center gap-2 px-3.5 py-1.5 bg-white rounded-full text-xs font-medium text-slate-700 shadow-xs border border-slate-200/50 hover:bg-slate-50 transition cursor-pointer"
             title="Admin Kalitini tekshirish"
           >
             <span className="w-2 h-2 rounded-full bg-[#22C55E]"></span>
@@ -161,7 +162,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* User Profile Avatar */}
           <div 
             onClick={() => setShowKeyModal(true)}
-            className="w-9 h-9 rounded-full ring-2 ring-white shadow-xs overflow-hidden cursor-pointer" 
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-white shadow-xs overflow-hidden cursor-pointer shrink-0" 
             title="Super Admin Profili & Kalit"
           >
             <img
@@ -175,7 +176,7 @@ export const Header: React.FC<HeaderProps> = ({
           {onLogout && (
             <button
               onClick={onLogout}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-full text-xs font-bold transition cursor-pointer border border-rose-200 shadow-2xs"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-full text-xs font-bold transition cursor-pointer border border-rose-200 shadow-2xs shrink-0"
               title="Tizimdan chiqish"
             >
               <LogOut className="w-3.5 h-3.5" />
@@ -185,7 +186,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Bildirishnomalar Popover */}
           {showNotifications && (
-            <div className="absolute right-0 top-14 z-50 w-80 bg-white rounded-3xl shadow-2xl border border-slate-100 p-4 space-y-3">
+            <div className="absolute right-0 top-12 sm:top-14 z-50 w-[calc(100vw-1.5rem)] sm:w-80 max-w-sm bg-white rounded-3xl shadow-2xl border border-slate-100 p-4 space-y-3">
               <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                 <div className="flex items-center gap-2">
                   <Bell className="w-4 h-4 text-black" />
@@ -275,8 +276,8 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Super Admin Sozlamalari & Parol Yangilash Modali */}
       {showKeyModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-100 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3 sm:p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-2xl border border-slate-100 relative max-h-[92vh] overflow-y-auto">
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">

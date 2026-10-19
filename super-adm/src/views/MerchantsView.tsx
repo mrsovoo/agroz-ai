@@ -282,7 +282,7 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ searchQuery = '' }
           <select
             value={businessType}
             onChange={(e) => setBusinessType(e.target.value)}
-            className="bg-white border border-slate-200/80 rounded-full px-4 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-black cursor-pointer"
+            className="w-full sm:w-auto bg-white border border-slate-200/80 rounded-full px-4 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-black cursor-pointer"
           >
             <option value="">Barcha yo'nalishlar</option>
             <option value="agro_vet">Agro-Vet Dorixona</option>
@@ -295,7 +295,7 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ searchQuery = '' }
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="bg-white border border-slate-200/80 rounded-full px-4 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-black cursor-pointer"
+            className="w-full sm:w-auto bg-white border border-slate-200/80 rounded-full px-4 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-black cursor-pointer"
           >
             <option value="">Barcha statuslar</option>
             <option value="active">Faol do'konlar</option>
@@ -306,9 +306,9 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ searchQuery = '' }
       </div>
 
       {/* Merchants Bento Table */}
-      <div className="bg-white rounded-[32px] p-6 sm:p-7 shadow-xs border border-slate-200/60 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+      <div className="bg-white rounded-[32px] p-4 sm:p-7 shadow-xs border border-slate-200/60 overflow-hidden">
+        <div className="overflow-x-auto -webkit-overflow-scrolling-touch">
+          <table className="w-full text-left text-xs min-w-[760px]">
             <thead className="text-[11px] font-semibold uppercase text-slate-400 border-b border-slate-100">
               <tr>
                 <th className="pb-3 font-semibold">Do'kon / Egasi</th>

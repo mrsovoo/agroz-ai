@@ -79,7 +79,7 @@ export const BroadcastView: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Form */}
-        <form onSubmit={handleSend} className="lg:col-span-2 space-y-5 bg-white border border-slate-200/60 rounded-[32px] p-6 shadow-xs">
+        <form onSubmit={handleSend} className="lg:col-span-2 space-y-5 bg-white border border-slate-200/60 rounded-[32px] p-4 sm:p-6 shadow-xs">
           {error && (
             <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700">
               {error}

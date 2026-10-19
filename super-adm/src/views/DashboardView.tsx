@@ -354,7 +354,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           </div>
 
           {/* Diagramma ustunlari */}
-          <div className="h-60 flex items-end justify-between gap-3 px-3 pt-8 pb-2">
+          <div className="h-56 sm:h-60 flex items-end justify-between gap-1.5 sm:gap-3 px-1 sm:px-3 pt-8 pb-2">
             {days.map((d, idx) => (
               <div key={idx} className="flex-1 flex flex-col items-center gap-3 h-full justify-end">
                 {/* Ustun */}
@@ -464,8 +464,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         </div>
 
         {/* Jadval */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+        <div className="overflow-x-auto -webkit-overflow-scrolling-touch">
+          <table className="w-full text-left text-xs min-w-[620px]">
             <thead>
               <tr className="text-slate-400 border-b border-slate-100 text-[11px] font-semibold uppercase">
                 <th className="pb-3 font-semibold">Do‘kon / Hamkor</th>

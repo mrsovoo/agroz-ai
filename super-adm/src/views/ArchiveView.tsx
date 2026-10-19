@@ -197,8 +197,8 @@ export const ArchiveView: React.FC = () => {
 
       {/* Stats Summary Cards */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5">
-          <div className="p-5 rounded-[28px] bg-white border border-slate-200/60 shadow-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-3.5">
+          <div className="p-4 sm:p-5 rounded-[28px] bg-white border border-slate-200/60 shadow-xs">
             <div className="flex items-center justify-between text-slate-400 text-xs mb-2">
               <span className="font-semibold text-slate-500">Jami Yozuvlar</span>
               <div className="w-7 h-7 rounded-full bg-[#F6F6F3] flex items-center justify-center">
@@ -292,8 +292,8 @@ export const ArchiveView: React.FC = () => {
 
       {/* Main Archive Table */}
       <div className="rounded-[32px] bg-white border border-slate-200/60 overflow-hidden shadow-xs">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+        <div className="overflow-x-auto -webkit-overflow-scrolling-touch">
+          <table className="w-full text-left text-xs min-w-[720px]">
             <thead className="bg-[#F8F8F6] border-b border-slate-100 text-[11px] uppercase text-slate-400 font-bold tracking-wider">
               <tr>
                 <th className="px-5 py-3.5">Foydalanuvchi / Do'kon</th>
