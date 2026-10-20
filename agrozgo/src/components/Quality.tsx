@@ -364,7 +364,7 @@ export const Quality: React.FC = () => {
   );
 };
 
-/** "Qadriyatlarimiz" (Values) — 3 ta ixcham va soddalashtirilgan karta (karusel o'rniga barqaror grid) */
+/** "Qadriyatlarimiz" (Values) — Bron qilishda nimalar kiradi, Yetkazishda nimalar kiradi va Kafolat qoidalari */
 export const Values: React.FC = () => {
   return (
     <section className="pb-16 sm:pb-24">
@@ -380,33 +380,59 @@ export const Values: React.FC = () => {
               </h2>
             </div>
             <p className="text-xs sm:text-sm text-charcoal/65 max-w-sm">
-              Har bir xaridda ochiqlik, fermer manfaatini himoya qilish va sifat kafolati.
+              Bron qilishda nimalar olinadi, yirik yetkazib berishda nimalar kiradi va rasmiy kafolat qanday ishlaydi.
             </p>
           </div>
 
-          <div className="grid gap-5 md:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-3 items-stretch">
             {VALUES.map((v) => (
               <div
                 key={v.title}
-                className="flex flex-col justify-between rounded-3xl bg-white p-6 sm:p-7 border border-charcoal/10 shadow-xs hover:border-agroGreen/50 transition duration-200"
+                className="flex flex-col justify-between rounded-3xl bg-white p-6 sm:p-7 border border-charcoal/10 shadow-xs hover:border-agroGreen/50 hover:shadow-soft transition-all duration-200"
               >
                 <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="rounded-lg bg-agroGreen/15 text-agroGreen-900 px-2 py-0.5 text-xs font-black">
+                  {/* Yuqori qator: Raqam va Harakat belgisi */}
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <span className="rounded-lg bg-agroGreen/15 text-agroGreen-900 px-2.5 py-0.5 text-xs font-black">
                       {v.num}
                     </span>
-                    <h3 className="text-base font-black text-charcoal">{v.title}</h3>
+                    <span className="rounded-full bg-cream-soft border border-charcoal/5 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-charcoal/70">
+                      {v.action}
+                    </span>
                   </div>
-                  <p className="text-xs sm:text-sm leading-relaxed text-charcoal/70">
+
+                  {/* Sarlavha & Savol */}
+                  <h3 className="text-base sm:text-lg font-black text-charcoal leading-snug">
+                    {v.title}
+                  </h3>
+                  <p className="mt-1 text-xs font-black text-agroGreen-800">
+                    {v.subtitle}
+                  </p>
+
+                  {/* Qisqa tushuntirish */}
+                  <p className="mt-2.5 text-xs text-charcoal/70 leading-relaxed">
                     {v.text}
                   </p>
+
+                  {/* Nimalar kiradi punktlari */}
+                  {v.items && (
+                    <div className="mt-4 pt-3.5 border-t border-charcoal/10 space-y-2">
+                      {v.items.map((item, idx) => (
+                        <div key={idx} className="flex items-start gap-2 text-[11px] font-semibold text-charcoal/80 leading-tight">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-agroGreen-700 shrink-0 mt-0.5" />
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
+                {/* Pastki teglar */}
                 <div className="mt-6 flex flex-wrap gap-1.5 pt-4 border-t border-charcoal/5">
                   {v.chips.map((c) => (
                     <span
                       key={c}
-                      className="rounded-full bg-cream-soft px-2.5 py-1 text-[11px] font-bold text-charcoal/70 border border-charcoal/5"
+                      className="rounded-full bg-cream-soft px-2.5 py-1 text-[10px] font-bold text-charcoal/70 border border-charcoal/5"
                     >
                       {c}
                     </span>
