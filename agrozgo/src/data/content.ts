@@ -527,34 +527,67 @@ export const ORDER_FLOW_STEPS = [
   },
 ];
 
-/** O'zbekistonlik fermerlar uchun foydali agro-maslahatlar */
+/** O'zbekistonlik fermerlar uchun eng kerakli agro-yangiliklar va amaliy tavsiyalar */
 export const ARTICLES = [
   {
     id: 'autumn-wheat-fertilization',
-    title: 'Kuzgi bug‘doy ekishda Ammofos va fosforli o‘g‘itlarni solish me’yorlari hamda unuvchanlikni oshirish sirlari',
+    title: 'Kuzgi bug‘doy ekishda Ammofos va fosforli o‘g‘itlarni solish me’yorlari hamda unuvchanlikni oshirish',
     category: 'Urug‘chilik & O‘g‘itlar',
-    date: '18 Oktyabr, 2026',
+    date: '19 Oktyabr, 2026',
     readTime: '5 daqiqa',
     image: '/images/hero-wheat.jpg',
     author: 'Dilshod Qodirov (Q.x.f.n., bosh agronom)',
+    summary: 'Fosfor va azot balansi, gektariga to‘g‘ri me’yor va urug‘ unuvchanligini 98% ga yetkazish bo‘yicha mutaxassis tavsiyalari.',
+    tips: [
+      'Gektariga 150-180 kg fosforli o‘g‘it urug‘ bilan birga solinishi ildiz tizimini 2 barobar baquvvat qiladi.',
+      'Urug‘ni 4-5 sm chuqurlikka qadash va tuproq namligi yetarli bo‘lishini nazorat qilish shart.',
+      'Faqat sertifikatlangan, tozalik va unuvchanlik pasportiga ega bo‘lgan elita urug‘ partiyalarini tanlang.',
+    ],
   },
   {
     id: 'cattle-feed-ration',
-    title: 'Sut yo‘nalishidagi qoramollarda omuxta yem, kunjara va premikslar balansini to‘g‘ri taqsimlash qoidalari',
+    title: 'Sut va go‘sht yo‘nalishidagi mollarda to‘yimli yem ratsioni: Qoplab va kg-lab ozuqa taqsimoti',
     category: 'Yem va Ozuqa',
-    date: '15 Oktyabr, 2026',
+    date: '17 Oktyabr, 2026',
     readTime: '6 daqiqa',
     image: '/images/livestock.jpg',
     author: 'Jasur Ahmedov (Bosh zootexnik-mutaxassis)',
+    summary: 'Kundalik yem ratsionida oqsil, kalsiy va vitaminlar miqdorini to‘g‘ri taqsimlab, sut va vaznni 25% ga oshirish sirlari.',
+    tips: [
+      'Har 10 litr sut mahsuldorligi uchun 2.5-3 kg sifatli omuxta yem va paxta kunjara aralashmasi berilishi zarur.',
+      'Ratsionga kuniga 50-80 g vitamin-mineral premiksi qo‘shilsa, yem hazm bo‘lishi 30% ga yaxshilanadi.',
+      'Yaqin yem do‘konlaridan real kassa qoldig‘ini tekshirib, kerakli kilogrammda xarid qilish yo‘l xarajatini tejaydi.',
+    ],
   },
   {
     id: 'agro-vet-antibiotics-control',
-    title: 'Veterinariya dorilari: Partiya raqami, saqlash harorati va yaroqlilik muddatini tekshirish nima uchun hal qiluvchi omil?',
-    category: 'Agro-Vet',
-    date: '12 Oktyabr, 2026',
+    title: 'Veterinariya preparatlari: Soxta dorilardan saqlanish, partiya raqami va sovuq zanjir nazorati',
+    category: 'Agro-Vet & Dorixonalar',
+    date: '15 Oktyabr, 2026',
     readTime: '4 daqiqa',
     image: '/images/seedlings.jpg',
     author: 'Dr. Shavkat Ergashev (Bosh vet-vrach)',
+    summary: 'Vaksina va antibiotiklar partiya raqami, sovuq zanjir (+2...+8°C) va kassa cheki orqali haqiqiy dori kafolati.',
+    tips: [
+      'Tirik vaksinalar harorati +2°C dan +8°C gacha bo‘lgan maxsus sovutgichlarda saqlanishi shart.',
+      'Flakondagi partiya № kassa chekidagi raqam va muddat bilan to‘liq mos kelishini tekshirib oling.',
+      'Shoshilinch kasallikda yaqin vet-dorixonadan to‘g‘ridan-to‘g‘ri bepul bron qilib, o‘zingiz olib keting.',
+    ],
+  },
+  {
+    id: 'machinery-drip-irrigation',
+    title: 'Tomchilatib sug‘orish va issiqxona plyonkalari: Suvni 40% tejash va motobloklarga to‘g‘ri xizmat',
+    category: 'Agro-Texnika & Jihozlar',
+    date: '12 Oktyabr, 2026',
+    readTime: '5 daqiqa',
+    image: '/images/tractor.jpg',
+    author: 'Muzaffar Raimov (Agro-muhandis)',
+    summary: 'Tomchilatib sug‘orish tizimlari, ko‘p yillik plyonkalar va motobloklarning rasmiy seriya raqami (S/N) bilan kafolatlangan xizmati.',
+    tips: [
+      'Qum-shag‘alli va diskli filtrlar o‘rnatilishi tomchilatgichlarning tiqilib qolishini 100% bartaraf etadi.',
+      'Motobloklarda ilk 20 soatlik ishdan (obkatka) so‘ng motor moyi va havo filtrini almashtirish shart.',
+      'Yirik texnikalar hududiy sektor bazalaridan rasmiy chek va servis kafolati bilan bevosita dalaga yetkaziladi.',
+    ],
   },
 ];
 
