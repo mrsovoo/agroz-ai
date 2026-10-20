@@ -5,13 +5,13 @@ export default {
     extend: {
       colors: {
         canvas: {
-          DEFAULT: '#F9F8F3',
-          subtle: '#F2EFE9',
+          DEFAULT: '#FBF9F4',
+          subtle: '#F4F0E6',
           warm: '#FCFBF7',
         },
         cream: {
-          DEFAULT: '#F9F8F3', // Warm Cream (#F9F8F3)
-          soft: '#F2EFE9',
+          DEFAULT: '#FBF9F4', // Warm Cream (#FBF9F4) matching reference 1:1
+          soft: '#F4F0E6',
           warm: '#FCFBF7',
         },
         beige: {
@@ -19,44 +19,45 @@ export default {
           card: '#E4DFD3',
         },
         charcoal: {
-          DEFAULT: '#1A2218', // Deep Charcoal (#1A2218)
+          DEFAULT: '#1B211D', // Deep Charcoal (#1B211D)
           logo: '#383838', // Rasmiy logotipdagi AGROZ rangi
-          soft: '#253022',
-          muted: '#4B554B',
-          light: '#6E7A6E',
+          soft: '#242C27',
+          muted: '#4D5850',
+          light: '#727E76',
         },
+        // Brand Primary Accent: #FEAD32 (Golden Amber / Sun Wheat matching reference 1:1)
         agroGreen: {
-          50: '#F0FDF4',
-          100: '#DCFCE7',
-          200: '#BBF7D0',
-          300: '#86EFAC',
-          400: '#4ADE80',
-          500: '#35CA56', // Rasmiy brend yashil
-          600: '#22B343',
-          700: '#1A8F34',
-          800: '#15732A',
-          900: '#115820',
-          DEFAULT: '#35CA56',
-          light: '#EAFDF0',
-          hover: '#28B847',
-          dark: '#1C8A37',
+          50: '#FFFBEB',
+          100: '#FEF3C7',
+          200: '#FDE68A',
+          300: '#FCD34D',
+          400: '#FBBF24',
+          500: '#FEAD32', // Rasmiy brend oltin-sariq #FEAD32
+          600: '#E59B20',
+          700: '#C77F14',
+          800: '#A16207',
+          900: '#78350F',
+          DEFAULT: '#FEAD32',
+          light: '#FEF9EC',
+          hover: '#F59E0B',
+          dark: '#D97706',
         },
         forest: {
-          DEFAULT: '#1A2B1E', // Dark Contrast Section (#1A2B1E)
-          dark: '#0E1911',
-          card: '#142517',
-          border: '#224027',
-          badge: '#35CA56',
+          DEFAULT: '#1F2622', // Dark Contrast Section (#1F2622)
+          dark: '#141A16',
+          card: '#1B221E',
+          border: '#2E3831',
+          badge: '#FEAD32',
         },
         amber: {
-          DEFAULT: '#E2B23B', // Golden Accent (#E2B23B)
+          DEFAULT: '#FEAD32',
           soft: '#FEF9EC',
-          dark: '#C59520',
+          dark: '#C77F14',
         },
         gold: {
-          DEFAULT: '#E2B23B', // Golden Accent (#E2B23B)
+          DEFAULT: '#FEAD32',
           soft: '#FEF9EC',
-          dark: '#C59520',
+          dark: '#C77F14',
         },
       },
       fontFamily: {
@@ -64,10 +65,10 @@ export default {
         display: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
-        soft: '0 12px 36px -12px rgba(15, 35, 20, 0.12)',
-        card: '0 2px 14px -2px rgba(15, 35, 20, 0.06)',
-        'glow-green': '0 10px 30px -8px rgba(53, 202, 86, 0.35)',
-        'glow-subtle': '0 8px 24px -6px rgba(53, 202, 86, 0.18)',
+        soft: '0 12px 36px -12px rgba(27, 33, 29, 0.1)',
+        card: '0 2px 14px -2px rgba(27, 33, 29, 0.06)',
+        'glow-green': '0 10px 30px -8px rgba(254, 173, 50, 0.4)',
+        'glow-subtle': '0 8px 24px -6px rgba(254, 173, 50, 0.2)',
       },
       keyframes: {
         'fade-up': {

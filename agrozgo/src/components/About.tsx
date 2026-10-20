@@ -46,7 +46,7 @@ export const About: React.FC = () => {
 
               {/* BiznesGO Logosi */}
               <div className="mt-6 mb-4">
-                <BiznesGoLogo variant="full" textColor="#ffffff" iconColor="#35ca56" className="h-9 sm:h-10" />
+                <BiznesGoLogo variant="full" textColor="#ffffff" iconColor="#fead32" className="h-9 sm:h-10" />
               </div>
 
               <div className="mt-4">

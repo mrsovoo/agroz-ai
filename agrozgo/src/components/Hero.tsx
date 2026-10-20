@@ -53,7 +53,7 @@ export const Hero: React.FC = () => {
           <div className="relative p-6 sm:p-10 lg:p-14">
             <div className="max-w-3xl animate-fade-up">
               <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-bold text-white backdrop-blur-md shadow-sm">
-                <AgrozSymbol className="h-4 w-4" color="#35ca56" />
+                <AgrozSymbol className="h-4 w-4" color="#fead32" />
                 Agro-Marketplace & B2B Kassa Ekotizimi
               </span>
 

@@ -65,14 +65,14 @@ export const CentralAsiaMap: React.FC = () => {
               <circle cx="2" cy="2" r="1.1" fill="#C8C3B4" opacity="0.6" />
             </pattern>
 
-            {/* O'zbekiston uchun yashil dot-matrix */}
-            <pattern id="dotGridGreen" width="12" height="12" patternUnits="userSpaceOnUse">
-              <circle cx="2" cy="2" r="1.3" fill="#35CA56" opacity="0.55" />
+            {/* O'zbekiston uchun oltin dot-matrix */}
+            <pattern id="dotGridGold" width="12" height="12" patternUnits="userSpaceOnUse">
+              <circle cx="2" cy="2" r="1.3" fill="#fead32" opacity="0.65" />
             </pattern>
 
             {/* O'zbekiston konturi nuri */}
             <filter id="uzbDropGlow" x="-10%" y="-10%" width="120%" height="120%">
-              <feDropShadow dx="0" dy="4" stdDeviation="8" floodColor="#35CA56" floodOpacity="0.25" />
+              <feDropShadow dx="0" dy="4" stdDeviation="8" floodColor="#fead32" floodOpacity="0.3" />
               <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#162117" floodOpacity="0.1" />
             </filter>
           </defs>
@@ -150,21 +150,21 @@ export const CentralAsiaMap: React.FC = () => {
             </g>
           </g>
 
-          {/* --- 5. O‘ZBEKISTON SILUETI (Markazda yorqin zumrad rangda, ustida ortiqcha locationlarsiz) --- */}
+          {/* --- 5. O‘ZBEKISTON SILUETI (Markazda yorqin oltin-sariq #fead32 rangda, ustida ortiqcha locationlarsiz) --- */}
           <g>
-            {/* O'zbekiston yorqin foni va yashil konturi */}
+            {/* O'zbekiston yorqin foni va oltin konturi */}
             <path
               d={CENTRAL_ASIA_PATHS.uzbekistan}
               fill="#FFFFFF"
-              stroke="#22B343"
+              stroke="#fead32"
               strokeWidth="2.2"
               filter="url(#uzbDropGlow)"
             />
-            {/* Yashil dot-matrix naqshi */}
+            {/* Oltin dot-matrix naqshi */}
             <path
               d={CENTRAL_ASIA_PATHS.uzbekistan}
-              fill="url(#dotGridGreen)"
-              opacity="0.75"
+              fill="url(#dotGridGold)"
+              opacity="0.8"
             />
 
             {/* O'zbekiston markazidagi toza, ixcham brend badge */}
@@ -174,17 +174,17 @@ export const CentralAsiaMap: React.FC = () => {
                 height="34"
                 rx="17"
                 fill="#FFFFFF"
-                stroke="#22B343"
+                stroke="#fead32"
                 strokeWidth="1.5"
                 filter="drop-shadow(0 4px 6px rgba(0,0,0,0.08))"
               />
-              <circle cx="20" cy="17" r="5" fill="#35CA56" />
-              <circle cx="20" cy="17" r="9" fill="#35CA56" opacity="0.25" />
+              <circle cx="20" cy="17" r="5" fill="#fead32" />
+              <circle cx="20" cy="17" r="9" fill="#fead32" opacity="0.25" />
               <text x="36" y="21" fill="#1A2218" fontSize="11" fontWeight="900" letterSpacing="0.5">
                 O‘ZBEKISTON
               </text>
-              <rect x="114" y="9" width="46" height="16" rx="8" fill="#E8F8EC" />
-              <text x="137" y="20" textAnchor="middle" fill="#1C7E34" fontSize="8" fontWeight="800">
+              <rect x="114" y="9" width="46" height="16" rx="8" fill="#FEF3C7" />
+              <text x="137" y="20" textAnchor="middle" fill="#92400E" fontSize="8" fontWeight="800">
                 FAOL HUB
               </text>
             </g>

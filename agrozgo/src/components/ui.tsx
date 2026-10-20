@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 
-/** AgrozGO rasmiy brend logotipi: Dinamik ramz + AGROZ (#383838 / #fff) + GO (#35ca56). */
+/** AgrozGO rasmiy brend logotipi: Dinamik ramz (#fead32) + AGROZ (#383838 / #fff) + GO (#fead32). */
 export const Logo: React.FC<{ light?: boolean; className?: string }> = ({
   light,
   className = 'h-7 sm:h-8',
@@ -14,9 +14,9 @@ export const Logo: React.FC<{ light?: boolean; className?: string }> = ({
       role="img"
       aria-label="AgrozGO"
     >
-      {/* Rasmiy belgi / Ramz (Yashil #35ca56) */}
+      {/* Rasmiy belgi / Ramz (#fead32) */}
       <path
-        fill="#35ca56"
+        fill="#fead32"
         d="M237.47,165.96l-23.18-131.48C210.29,11.79,188.65-3.36,165.96.64L34.48,23.83C11.79,27.83-3.36,49.47.64,72.16l23.18,131.47c4,22.69,25.64,37.84,48.33,33.84l131.48-23.18c22.69-4.01,37.84-25.64,33.84-48.33ZM161.54,190.49h-84.97v-25.17h84.97v25.17ZM161.71,165.32l-.13-53.82c-.02-8.89-1.98-17.68-5.2-25.69-8.07-20.11-29.03-26.86-49.41-22-21.4,5.11-30.34,26.7-30.41,47.68l-.15,53.81-27.97-6.89.22-44.15c1.63-37.81,33.5-66.59,70.33-66.64,36.98-.04,68.75,28.77,70.47,66.65l.23,44.12-27.97,6.92Z"
       />
       <g>
@@ -28,8 +28,8 @@ export const Logo: React.FC<{ light?: boolean; className?: string }> = ({
           <path d="M763.96,65.61h-24.39c-35.23,0-55.86,21.38-55.86,53.3v.15c0,32.07,20.63,53.45,55.86,53.45h24.39c35.08,0,55.7-21.38,55.7-53.45v-.15c0-31.92-20.62-53.3-55.7-53.3ZM791.8,119.06c0,16.41-9.63,27.7-27.84,27.7h-24.39c-18.22,0-28.01-11.3-28.01-27.7v-.15c0-16.26,9.79-27.55,28.01-27.55h24.39c18.22,0,27.84,11.3,27.84,27.55v.15Z" />
           <path d="M872.21,146.61l6.63-4.97,63.08-50.13v-24.54h-110.2v24.54h69.1l-6.62,4.97-63.09,50.13v24.54h112.61v-24.54h-71.51Z" />
         </g>
-        {/* GO harflari (#35ca56) */}
-        <g fill="#35ca56">
+        {/* GO harflari (#fead32) */}
+        <g fill="#fead32">
           <path d="M1030.88,114.39v22.28h27.86v2.11c-3.47,5.57-11.89,7.98-22.43,7.98h-21.99c-18.07,0-28.3-11.45-28.3-27.7v-.15c0-16.56,10.23-27.55,29.05-27.55h23.34c10.99,0,18.82,2.11,25.3,7.98l15.8-20.48c-10.08-9.48-23.19-13.25-41.1-13.25h-23.34c-36.28,0-56.9,21.38-56.9,53.3v.15c0,32.07,20.32,53.45,54.35,53.45h21.99c13.4,0,23.04-3.31,29.5-10.99l1.51,9.64h16.71v-56.76h-51.34Z" />
           <path d="M1174.51,65.61h-24.39c-35.23,0-55.85,21.38-55.85,53.3v.15c0,32.07,20.62,53.45,55.85,53.45h24.39c35.08,0,55.71-21.38,55.71-53.45v-.15c0-31.92-20.63-53.3-55.71-53.3ZM1202.37,119.06c0,16.41-9.64,27.7-27.86,27.7h-24.39c-18.22,0-28-11.3-28-27.7v-.15c0-16.26,9.78-27.55,28-27.55h24.39c18.22,0,27.86,11.3,27.86,27.55v.15Z" />
         </g>
@@ -41,7 +41,7 @@ export const Logo: React.FC<{ light?: boolean; className?: string }> = ({
 /** AgrozGO rasmiy ramzi (icon ko‘rinishida) */
 export const AgrozSymbol: React.FC<{ className?: string; color?: string }> = ({
   className = 'h-6 w-6',
-  color = '#35ca56',
+  color = '#fead32',
 }) => (
   <svg viewBox="0 0 240 240" className={className} xmlns="http://www.w3.org/2000/svg">
     <path
@@ -61,7 +61,7 @@ export const BiznesGoLogo: React.FC<{
   variant = 'full',
   className = '',
   textColor = '#383838',
-  iconColor = '#35ca56',
+  iconColor = '#fead32',
 }) => {
   if (variant === 'icon') {
     return (
@@ -153,7 +153,7 @@ export const GreenButton: React.FC<{ href: string; children: React.ReactNode; ex
 
 export const Eyebrow: React.FC<{ children: React.ReactNode; light?: boolean }> = ({ children, light }) => (
   <span className={`eyebrow ${light ? 'text-white/60' : ''}`}>
-    <AgrozSymbol className="h-3.5 w-3.5" color="#35ca56" />
+    <AgrozSymbol className="h-3.5 w-3.5" color="#fead32" />
     {children}
   </span>
 );
