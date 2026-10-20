@@ -333,6 +333,47 @@ export const CentralAsiaMap: React.FC = () => {
         </div>
       </div>
 
+      {/* 2.5. MINTAQAVIY DINAMIKA PROGRESS KO'RSATKICHLARI (Referens dizayn namunasi kabi) */}
+      <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* O'zbekiston to'liq qamrovi */}
+        <div className="rounded-2xl bg-white p-4 border border-charcoal/10 shadow-xs">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-extrabold text-charcoal flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-agroGreen" />
+              O‘zbekiston (14/14 Viloyat)
+            </span>
+            <span className="font-black text-agroGreen-800 bg-agroGreen-50 px-2 py-0.5 rounded-md">
+              100% Qamrov
+            </span>
+          </div>
+          <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-cream-soft">
+            <div className="h-full w-full rounded-full bg-gradient-to-r from-agroGreen-400 to-agroGreen" />
+          </div>
+          <p className="mt-2 text-[11px] text-charcoal/60 font-medium">
+            Respublika bo‘ylab barcha tuman va qishloqlarda to‘liq faoliyat.
+          </p>
+        </div>
+
+        {/* O'rta Osiyo ekspansiyasi */}
+        <div className="rounded-2xl bg-white p-4 border border-charcoal/10 shadow-xs">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-extrabold text-charcoal flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-amber" />
+              O‘rta Osiyo Ekspansiyasi (KZ, KG, TJ, TM)
+            </span>
+            <span className="font-black text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md">
+              2027–2028 Reja
+            </span>
+          </div>
+          <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-cream-soft">
+            <div className="h-full w-1/3 rounded-full bg-gradient-to-r from-amber-400 to-amber" />
+          </div>
+          <p className="mt-2 text-[11px] text-charcoal/60 font-medium">
+            Qozog‘iston, Qirg‘iziston, Tojikiston va Turkmaniston bozorlariga kengayish.
+          </p>
+        </div>
+      </div>
+
       {/* 3. BOTTOM METRICS ROW (4 Stat Badges as shown in reference) */}
       <div className="mt-8 pt-6 border-t border-charcoal/10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {STAT_BADGES.map((b) => {
@@ -366,3 +407,4 @@ export const CentralAsiaMap: React.FC = () => {
     </div>
   );
 };
+
