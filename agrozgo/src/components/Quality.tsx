@@ -1,163 +1,239 @@
-import React, { useState } from 'react';
-import { CheckCircle2, ChevronLeft, ChevronRight, Wheat, Leaf, Sprout, ShieldCheck, Award, Layers } from 'lucide-react';
-import { AgroImage, Eyebrow, DarkButton } from './ui';
-import { IMAGES, QUALITY_BADGES, FEATURES, VALUES } from '../data/content';
+import React from 'react';
+import {
+  ShieldCheck,
+  Store,
+  Truck,
+  CheckCircle2,
+  Clock,
+  Sparkles,
+  MapPin,
+  FileCheck,
+  PackageCheck,
+  Wrench,
+  Boxes,
+  ArrowRight,
+} from 'lucide-react';
+import { Eyebrow, DarkButton } from './ui';
+import { VALUES, FEATURES, QUALITY_BADGES } from '../data/content';
 
-/** Fermer surati ustida sifat bayonoti + №1 badge'lar */
-export const Quality: React.FC = () => (
-  <section className="py-16 sm:py-24">
-    <div className="container-x">
-      <div className="relative min-h-[420px] sm:min-h-[480px] overflow-hidden rounded-3xl bg-forest-dark border border-forest-border shadow-soft">
-        <AgroImage
-          src={IMAGES.farmer}
-          alt="Planshet bilan fermer"
-          className="absolute inset-0 h-full w-full object-cover opacity-30 mix-blend-luminosity scale-105 transition-transform duration-1000"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-forest-dark via-forest-dark/80 to-forest-dark/50" />
-        <div className="absolute inset-0 bg-gradient-to-r from-forest-dark/85 via-transparent to-forest-dark/70" />
+/**
+ * STANDARTLAR & KAFOLAT:
+ * Sifat nazorati, shaffof narx va tartiblangan xarid tamoyillari:
+ * 1. Dorilar, yem-ozuqalar, urug'lar — yaqin agro-do'kondan bron qilinadi va o'zi olib ketiladi.
+ * 2. Yirik agro-texnikalar va issiqxona jihozlari — o'z hududiy katta sektorlaridan buyurtma beriladi va sektor logistikasi yetkazib beradi.
+ */
+export const Quality: React.FC = () => {
+  return (
+    <section id="standards" className="py-16 sm:py-24 bg-white/50 border-b border-charcoal/5 scroll-mt-24">
+      <div className="container-x">
+        {/* ASOSIY STANDARTLAR BANNERI */}
+        <div className="relative overflow-hidden rounded-[32px] bg-forest-dark border border-forest-border/40 p-6 sm:p-10 lg:p-12 text-white shadow-card">
+          {/* Fon yorug'lik effektlari */}
+          <div className="pointer-events-none absolute -top-24 -right-24 h-96 w-96 rounded-full bg-agroGreen/20 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-24 -left-24 h-80 w-80 rounded-full bg-agroGreen/15 blur-3xl" />
 
-        {/* Atmosferik zumrad nurlari */}
-        <div className="pointer-events-none absolute -top-24 -right-24 h-96 w-96 rounded-full bg-agroGreen/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 -left-24 h-80 w-80 rounded-full bg-agroGreen/15 blur-3xl" />
-
-        <div className="relative flex min-h-[420px] sm:min-h-[480px] flex-col justify-between gap-8 p-6 sm:p-10">
-          <div className="grid gap-6 lg:grid-cols-12">
-            <p className="text-xs uppercase tracking-widest text-agroGreen font-black lg:col-span-3 flex items-center gap-1.5">
-              <ShieldCheck className="h-4 w-4" /> Standartlar & Kafolat
-            </p>
-            <h2 className="text-2xl font-black leading-tight text-white sm:text-4xl lg:col-span-8">
-              Sifat nazorati, shaffof narx va ishonchli yetkazib berish — AgrozGO bosh tamoyillari.
+          {/* Sarlavha qismi */}
+          <div className="relative z-10 max-w-3xl">
+            <span className="inline-flex items-center gap-2 rounded-full border border-agroGreen/30 bg-agroGreen/15 px-3.5 py-1 text-xs font-black text-agroGreen">
+              <ShieldCheck className="h-4 w-4 text-agroGreen" />
+              STANDARTLAR & KAFOLAT
+            </span>
+            <h2 className="mt-4 text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight leading-[1.18]">
+              Sifat nazorati, shaffof narx va ishonchli xarid —{' '}
+              <span className="text-agroGreen">AgrozGO bosh tamoyillari.</span>
             </h2>
+            <p className="mt-3 text-xs sm:text-sm text-white/75 leading-relaxed max-w-2xl">
+              Mahsulot turiga qarab ikki xil oqilona xarid tizimi: kundalik mayda ehtiyojlar yaqin do‘kondan bron qilinadi,
+              yirik texnika va issiqxona jihozlari esa markaziy sektor bazalaridan yetkaziladi.
+            </p>
           </div>
 
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-            {/* Lucide iconlar (emojilar o'rniga) */}
-            <div className="flex gap-2.5">
-              <span className="grid h-11 w-11 place-items-center rounded-2xl border border-white/20 bg-white/10 text-agroGreen backdrop-blur-md">
-                <Wheat className="h-5 w-5" />
-              </span>
-              <span className="grid h-11 w-11 place-items-center rounded-2xl border border-white/20 bg-white/10 text-agroGreen backdrop-blur-md">
-                <Sprout className="h-5 w-5" />
-              </span>
-              <span className="grid h-11 w-11 place-items-center rounded-2xl border border-white/20 bg-white/10 text-agroGreen backdrop-blur-md">
-                <Leaf className="h-5 w-5" />
-              </span>
-            </div>
-
-            {/* Metrika nishonlari */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-3 w-full sm:w-auto">
-              {QUALITY_BADGES.map((b, i) => (
-                <div
-                  key={b.label}
-                  className={`flex-1 min-w-0 rounded-2xl p-3 sm:p-4 sm:w-40 border transition ${
-                    i === 0
-                      ? 'bg-agroGreen text-forest-dark border-agroGreen shadow-glow-subtle'
-                      : 'bg-white/10 text-white border-white/15 backdrop-blur-md'
-                  }`}
-                >
-                  <p className={`text-xl sm:text-2xl font-black ${i === 0 ? 'text-forest-dark' : 'text-agroGreen'}`}>{b.rank}</p>
-                  <p className={`mt-0.5 text-[10px] sm:text-[11px] font-semibold leading-tight ${i === 0 ? 'text-forest-dark/85' : 'text-white/70'}`}>{b.label}</p>
+          {/* 2 TA ANIQ TARTIBLANGAN MASTER KARTA */}
+          <div className="relative z-10 mt-10 grid gap-6 md:grid-cols-2">
+            {/* 1-KARTA: YAQIN DO'KONLARDAN BRON QILISH VA OLIB KETISH */}
+            <div className="rounded-3xl bg-white/10 backdrop-blur-md p-6 sm:p-7 border border-white/15 flex flex-col justify-between transition-all hover:bg-white/15 hover:border-agroGreen/50">
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-4">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-agroGreen/20 border border-agroGreen/30 px-3 py-0.5 text-[11px] font-black text-agroGreen">
+                    <Store className="h-3.5 w-3.5" /> 5–15 km Yaqin Radius
+                  </span>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-white/60 bg-white/10 px-2.5 py-0.5 rounded-full">
+                    O‘zi Olib Ketish
+                  </span>
                 </div>
-              ))}
+
+                <h3 className="text-lg sm:text-xl font-black text-white leading-snug">
+                  Dorilar, Yem-Ozuqa va Urug‘lar — Yaqin Do‘kondan Bron Qilish
+                </h3>
+                <p className="mt-2.5 text-xs text-white/75 leading-relaxed">
+                  Biz vet-dorixonalar, ozuqa yemlari va urug‘larni sizga <b>eng yaqin agro-do‘konlardan</b> ko‘rsatamiz.
+                  Saytda tovar mavjudligini ko‘rib, 1 tugma bilan bepul bron qilasiz va do‘konga borib navbatsiz olib ketasiz.
+                </p>
+
+                <div className="mt-5 space-y-2.5 border-t border-white/10 pt-4">
+                  {[
+                    '0 so‘m ortiqcha yetkazish to‘lovi va yo‘l xarajatini tejash',
+                    'Mahsulotning yaroqlilik muddati va qadog‘ini joyida ko‘rib olish',
+                    'Shoshilinch kasallik yoki yem tugaganda eng tezkor yechim',
+                  ].map((text) => (
+                    <div key={text} className="flex items-start gap-2 text-xs text-white/85 font-medium">
+                      <CheckCircle2 className="h-4 w-4 text-agroGreen shrink-0 mt-0.5" />
+                      <span>{text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-white/10 flex flex-wrap gap-1.5">
+                <span className="text-[10px] font-bold text-agroGreen bg-white/10 px-2 py-0.5 rounded-md">#VetDorixona</span>
+                <span className="text-[10px] font-bold text-agroGreen bg-white/10 px-2 py-0.5 rounded-md">#YemOzuqa</span>
+                <span className="text-[10px] font-bold text-agroGreen bg-white/10 px-2 py-0.5 rounded-md">#UrugChilik</span>
+                <span className="text-[10px] font-bold text-agroGreen bg-white/10 px-2 py-0.5 rounded-md">#BronQilish</span>
+              </div>
+            </div>
+
+            {/* 2-KARTA: YIRIK AGRO-TEXNIKA VA ISSIQXONA JIHOZLARI — SEKTOR YETKAZISHI */}
+            <div className="rounded-3xl bg-white/10 backdrop-blur-md p-6 sm:p-7 border border-white/15 flex flex-col justify-between transition-all hover:bg-white/15 hover:border-agroGreen/50">
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-4">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-amber/20 border border-amber/30 px-3 py-0.5 text-[11px] font-black text-amber-300">
+                    <Truck className="h-3.5 w-3.5" /> Hududiy Sektor Bazasi
+                  </span>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-white/60 bg-white/10 px-2.5 py-0.5 rounded-full">
+                    Sektor Yetkazib Berishi
+                  </span>
+                </div>
+
+                <h3 className="text-lg sm:text-xl font-black text-white leading-snug">
+                  Yirik Texnika & Issiqxona — Sektor Logistikasi
+                </h3>
+                <p className="mt-2.5 text-xs text-white/75 leading-relaxed">
+                  Motobloklar, purkagichlar, ko‘p yillik issiqxona plyonkalari va sug‘orish tizimlari oddiy do‘konda saqlanmaydi — ularning
+                  <b> maxsus hududiy yirik sektorlari</b> bor. Buyurtma berilganda, sektor transporti to‘g‘ridan-to‘g‘ri yetkazib beradi.
+                </p>
+
+                <div className="mt-5 space-y-2.5 border-t border-white/10 pt-4">
+                  {[
+                    'Zavod seriya raqami (S/N) va 12+ oylik rasmiy chek-kafolat',
+                    'Katta hajmdagi og‘ir yuklarni maxsus yuk mashinalarida tashish',
+                    'To‘g‘ridan-to‘g‘ri markaziy dilerlik narxi (vositachilarsiz)',
+                  ].map((text) => (
+                    <div key={text} className="flex items-start gap-2 text-xs text-white/85 font-medium">
+                      <CheckCircle2 className="h-4 w-4 text-amber-300 shrink-0 mt-0.5" />
+                      <span>{text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-white/10 flex flex-wrap gap-1.5">
+                <span className="text-[10px] font-bold text-amber-300 bg-white/10 px-2 py-0.5 rounded-md">#Motoblok</span>
+                <span className="text-[10px] font-bold text-amber-300 bg-white/10 px-2 py-0.5 rounded-md">#IssiqxonaPlyonka</span>
+                <span className="text-[10px] font-bold text-amber-300 bg-white/10 px-2 py-0.5 rounded-md">#SugorishTizimi</span>
+                <span className="text-[10px] font-bold text-amber-300 bg-white/10 px-2 py-0.5 rounded-md">#SektorTransporti</span>
+              </div>
+            </div>
+          </div>
+
+          {/* PASTKI 3 TA SIFAT METRIKASI */}
+          <div className="relative z-10 mt-8 pt-8 border-t border-white/10 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="rounded-2xl bg-white/5 p-4 border border-white/10">
+              <span className="text-2xl font-black text-agroGreen">№1</span>
+              <p className="mt-1 text-xs font-bold text-white">Do‘kondan Tekshirib Olish</p>
+              <p className="mt-0.5 text-[11px] text-white/60">Yaqin 5–15 km radiusda dori va yemlar zaxirada saqlanadi.</p>
+            </div>
+            <div className="rounded-2xl bg-white/5 p-4 border border-white/10">
+              <span className="text-2xl font-black text-amber-300">100%</span>
+              <p className="mt-1 text-xs font-bold text-white">Sektor Transport Kafolati</p>
+              <p className="mt-0.5 text-[11px] text-white/60">Yirik texnika va issiqxona jihozlari manzilgacha yetkaziladi.</p>
+            </div>
+            <div className="rounded-2xl bg-white/5 p-4 border border-white/10">
+              <span className="text-2xl font-black text-agroGreen">12+ oy</span>
+              <p className="mt-1 text-xs font-bold text-white">Rasmiy S/N Chek-Kafolati</p>
+              <p className="mt-0.5 text-[11px] text-white/60">Barcha texnikalar rasmiy servis markazi kafolati bilan beriladi.</p>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Imkoniyatlar (Features) */}
-      <div className="mt-16 grid gap-8 lg:grid-cols-12 lg:items-center">
-        <div className="lg:col-span-3">
-          <Eyebrow>Imkoniyatlar</Eyebrow>
-          <AgroImage src={IMAGES.livestock} alt="Yaylovdagi qoramollar" className="mt-6 hidden h-28 w-40 rounded-2xl lg:block shadow-xs" />
-        </div>
-        <div className="lg:col-span-6">
-          <h2 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl text-charcoal">
-            Zamonaviy texnologiya bilan <span className="font-semibold text-charcoal/50">qulay agro-xarid</span>
-          </h2>
-          <ul className="mt-6 grid gap-4 sm:grid-cols-2">
-            {FEATURES.map((f) => (
-              <li key={f.title} className="flex gap-3 rounded-2xl bg-white p-3.5 border border-charcoal/5 shadow-xs">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-agroGreen-700" />
+        {/* IMKONIYaTLAR (FEATURES RO'YXATI) */}
+        <div className="mt-14 sm:mt-20">
+          <div className="max-w-2xl mb-8">
+            <span className="text-xs font-black uppercase tracking-widest text-agroGreen-800">
+              Qulay Ekotizim
+            </span>
+            <h3 className="mt-2 text-2xl sm:text-3xl font-black text-charcoal tracking-tight">
+              Zamonaviy texnologiya bilan <span className="text-agroGreen">qulay agro-xarid</span>
+            </h3>
+            <p className="mt-2 text-xs sm:text-sm text-charcoal/70">
+              Fermer va chorvadorlar ortiqcha ovoragarchiliksiz to‘g‘ri qaror qabul qilishi uchun yaratilgan imkoniyatlar.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {FEATURES.map((f, i) => (
+              <div
+                key={f.title}
+                className="rounded-2xl bg-cream-soft p-5 border border-charcoal/8 shadow-xs hover:border-agroGreen/40 transition flex flex-col justify-between"
+              >
                 <div>
-                  <p className="text-sm font-bold text-charcoal">{f.title}</p>
-                  <p className="mt-1 text-xs leading-relaxed text-charcoal/65">{f.text}</p>
+                  <div className="grid h-8 w-8 place-items-center rounded-xl bg-agroGreen/15 text-agroGreen-800 text-xs font-black mb-3">
+                    0{i + 1}
+                  </div>
+                  <h4 className="text-sm font-black text-charcoal leading-snug">{f.title}</h4>
+                  <p className="mt-1.5 text-xs text-charcoal/70 leading-relaxed">{f.text}</p>
                 </div>
-              </li>
+              </div>
             ))}
-          </ul>
-          <div className="mt-7">
-            <DarkButton href="#contact">Bog‘lanish</DarkButton>
           </div>
         </div>
-        <div className="flex justify-end lg:col-span-3">
-          <AgroImage src={IMAGES.tractor} alt="Agro-texnika" className="h-28 w-40 rounded-2xl shadow-xs" />
-        </div>
       </div>
-    </div>
-  </section>
-);
+    </section>
+  );
+};
 
-/** "Qadriyatlarimiz" (Values) — 3 ta ixcham va soddalashtirilgan karta */
+/** "Qadriyatlarimiz" (Values) — 3 ta ixcham va soddalashtirilgan karta (karusel o'rniga barqaror grid) */
 export const Values: React.FC = () => {
-  const [offset, setOffset] = useState(0);
-  const ordered = [...VALUES.slice(offset), ...VALUES.slice(0, offset)];
-
   return (
     <section className="pb-16 sm:pb-24">
       <div className="container-x">
-        <div className="grid gap-6 rounded-3xl bg-cream-soft border border-charcoal/10 p-5 sm:p-8 lg:grid-cols-12 lg:p-10 shadow-xs">
-          <div className="flex flex-col justify-between gap-6 lg:col-span-3">
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-agroGreen-800">
-                Tamoyillarimiz
+        <div className="rounded-[32px] bg-cream-soft border border-charcoal/10 p-6 sm:p-9 lg:p-12 shadow-xs">
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-8 sm:mb-10">
+            <div className="max-w-2xl">
+              <span className="text-xs font-black uppercase tracking-wider text-agroGreen-800">
+                Bizning Tamoyillarimiz
               </span>
-              <h2 className="mt-2 text-2xl font-extrabold leading-tight sm:text-3xl text-charcoal">
-                Biz amal qiladigan <span className="font-semibold text-charcoal/50">qadriyatlar:</span>
+              <h2 className="mt-2 text-2xl sm:text-3xl lg:text-4xl font-black text-charcoal tracking-tight">
+                Biz amal qiladigan <span className="text-agroGreen">qadriyatlar:</span>
               </h2>
             </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                aria-label="Oldingi"
-                onClick={() => setOffset((o) => (o + VALUES.length - 1) % VALUES.length)}
-                className="grid h-10 w-10 place-items-center rounded-full border border-charcoal/15 bg-white transition hover:bg-cream cursor-pointer active:scale-95"
-              >
-                <ChevronLeft className="h-4 w-4 text-charcoal" />
-              </button>
-              <button
-                type="button"
-                aria-label="Keyingi"
-                onClick={() => setOffset((o) => (o + 1) % VALUES.length)}
-                className="grid h-10 w-10 place-items-center rounded-full bg-forest-dark text-white transition hover:bg-forest cursor-pointer active:scale-95 shadow-xs"
-              >
-                <ChevronRight className="h-4 w-4 text-agroGreen" />
-              </button>
-            </div>
+            <p className="text-xs sm:text-sm text-charcoal/65 max-w-sm">
+              Har bir xaridda ochiqlik, fermer manfaatini himoya qilish va sifat kafolati.
+            </p>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-3 lg:col-span-9">
-            {ordered.map((v) => (
+          <div className="grid gap-5 md:grid-cols-3">
+            {VALUES.map((v) => (
               <div
                 key={v.title}
-                className="flex flex-col justify-between rounded-3xl bg-white p-6 border border-charcoal/10 shadow-xs transition-colors duration-200 hover:border-agroGreen"
+                className="flex flex-col justify-between rounded-3xl bg-white p-6 sm:p-7 border border-charcoal/10 shadow-xs hover:border-agroGreen/50 transition duration-200"
               >
                 <div>
-                  <p className="text-sm font-black flex items-center gap-2 text-charcoal">
+                  <div className="flex items-center gap-2 mb-3">
                     <span className="rounded-lg bg-agroGreen/15 text-agroGreen-900 px-2 py-0.5 text-xs font-black">
                       {v.num}
                     </span>
-                    <span>{v.title}</span>
-                  </p>
-                  <p className="mt-3 text-xs leading-relaxed text-charcoal/70">
+                    <h3 className="text-base font-black text-charcoal">{v.title}</h3>
+                  </div>
+                  <p className="text-xs sm:text-sm leading-relaxed text-charcoal/70">
                     {v.text}
                   </p>
                 </div>
 
-                <div className="mt-5 flex flex-wrap gap-1.5 pt-3 border-t border-charcoal/5">
+                <div className="mt-6 flex flex-wrap gap-1.5 pt-4 border-t border-charcoal/5">
                   {v.chips.map((c) => (
                     <span
                       key={c}
-                      className="rounded-full bg-cream px-2 py-0.5 text-[10px] font-semibold text-charcoal/60"
+                      className="rounded-full bg-cream-soft px-2.5 py-1 text-[11px] font-bold text-charcoal/70 border border-charcoal/5"
                     >
                       {c}
                     </span>
