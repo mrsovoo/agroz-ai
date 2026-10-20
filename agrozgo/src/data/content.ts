@@ -34,7 +34,7 @@ export type SectorId = 'agro_vet' | 'feed' | 'warehouse' | 'seeds' | 'machinery'
 
 export interface Sector {
   id: SectorId;
-  emoji: string;
+  emoji?: string;
   icon: LucideIcon;
   title: string;
   subtitle: string;
@@ -47,7 +47,6 @@ export interface Sector {
 export const SECTORS: Sector[] = [
   {
     id: 'agro_vet',
-    emoji: '🌿',
     icon: Leaf,
     title: 'O‘g‘itlar va Vet-Dorilar',
     subtitle: 'Agro-Vet',
@@ -59,7 +58,6 @@ export const SECTORS: Sector[] = [
   },
   {
     id: 'feed',
-    emoji: '🌾',
     icon: Wheat,
     title: 'Yem va Ozuqalar',
     subtitle: 'Feed',
@@ -71,7 +69,6 @@ export const SECTORS: Sector[] = [
   },
   {
     id: 'warehouse',
-    emoji: '🏢',
     icon: Warehouse,
     title: 'Ombor va Qadoqlash',
     subtitle: 'Warehouse',
@@ -83,7 +80,6 @@ export const SECTORS: Sector[] = [
   },
   {
     id: 'seeds',
-    emoji: '🌱',
     icon: Sprout,
     title: 'Urug‘lar va Ko‘chatlar',
     subtitle: 'Seeds',
@@ -95,7 +91,6 @@ export const SECTORS: Sector[] = [
   },
   {
     id: 'machinery',
-    emoji: '🔧',
     icon: Wrench,
     title: 'Jihozlar va Agro-Texnika',
     subtitle: 'Machinery',

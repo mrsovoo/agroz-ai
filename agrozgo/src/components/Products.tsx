@@ -302,24 +302,24 @@ export const Products: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setDeliveryType('pickup')}
-                          className={`rounded-xl p-2.5 text-xs font-bold border transition cursor-pointer ${
+                          className={`flex items-center justify-center gap-1.5 rounded-xl p-2.5 text-xs font-bold border transition cursor-pointer ${
                             deliveryType === 'pickup'
                               ? 'bg-forest-dark text-white border-forest-dark'
                               : 'bg-white text-charcoal/70 border-charcoal/15'
                           }`}
                         >
-                          🏪 Do‘kondan olib ketish
+                          <Store className="h-3.5 w-3.5" /> Do‘kondan olib ketish
                         </button>
                         <button
                           type="button"
                           onClick={() => setDeliveryType('delivery')}
-                          className={`rounded-xl p-2.5 text-xs font-bold border transition cursor-pointer ${
+                          className={`flex items-center justify-center gap-1.5 rounded-xl p-2.5 text-xs font-bold border transition cursor-pointer ${
                             deliveryType === 'delivery'
                               ? 'bg-forest-dark text-white border-forest-dark'
                               : 'bg-white text-charcoal/70 border-charcoal/15'
                           }`}
                         >
-                          ⚡ Dalagacha yetkazish
+                          <Zap className="h-3.5 w-3.5 text-amber" /> Dalagacha yetkazish
                         </button>
                       </div>
                     </div>

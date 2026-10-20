@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Menu, X, Store, ChevronDown, Globe, Sparkles, Smartphone, ArrowRight } from 'lucide-react';
+import { Menu, X, Store, ChevronDown, Globe, Sparkles, Smartphone, ArrowRight, Leaf, Wheat, Warehouse, Sprout, Wrench } from 'lucide-react';
 import { Logo } from './ui';
 import { BIZNESGO_URL } from '../data/content';
 
@@ -29,11 +29,11 @@ export const Header: React.FC = () => {
   }, []);
 
   const SECTOR_SUBMENU = [
-    { label: 'O‘g‘itlar va Vet-Dorilar', tag: 'Agro-Vet', emoji: '🌿', href: '#sectors' },
-    { label: 'Yem va Ozuqalar', tag: 'Feed', emoji: '🌾', href: '#sectors' },
-    { label: 'Ombor va Qadoqlash', tag: 'Warehouse', emoji: '🏢', href: '#sectors' },
-    { label: 'Urug‘lar va Ko‘chatlar', tag: 'Seeds', emoji: '🌱', href: '#sectors' },
-    { label: 'Jihozlar va Agro-Texnika', tag: 'Machinery', emoji: '🔧', href: '#sectors' },
+    { label: 'O‘g‘itlar va Vet-Dorilar', tag: 'Agro-Vet', icon: Leaf, href: '#sectors' },
+    { label: 'Yem va Ozuqalar', tag: 'Feed', icon: Wheat, href: '#sectors' },
+    { label: 'Ombor va Qadoqlash', tag: 'Warehouse', icon: Warehouse, href: '#sectors' },
+    { label: 'Urug‘lar va Ko‘chatlar', tag: 'Seeds', icon: Sprout, href: '#sectors' },
+    { label: 'Jihozlar va Agro-Texnika', tag: 'Machinery', icon: Wrench, href: '#sectors' },
   ];
 
   return (
@@ -93,7 +93,9 @@ export const Header: React.FC = () => {
                     className="flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-charcoal hover:bg-agroGreen-50 hover:text-agroGreen-900 transition"
                   >
                     <span className="flex items-center gap-2">
-                      <span className="text-base">{item.emoji}</span>
+                      <span className="grid h-6 w-6 place-items-center rounded-lg bg-agroGreen-50 text-agroGreen-800">
+                        <item.icon className="h-3.5 w-3.5" />
+                      </span>
                       <span>{item.label}</span>
                     </span>
                     <span className="text-[10px] font-bold text-agroGreen-800 bg-agroGreen-100/60 px-1.5 py-0.5 rounded">
@@ -212,7 +214,9 @@ export const Header: React.FC = () => {
                       className="flex items-center justify-between rounded-xl px-2.5 py-2 text-xs font-semibold text-charcoal hover:bg-white transition"
                     >
                       <span className="flex items-center gap-2">
-                        <span>{item.emoji}</span>
+                        <span className="grid h-5 w-5 place-items-center rounded bg-agroGreen-100/60 text-agroGreen-900">
+                          <item.icon className="h-3 w-3" />
+                        </span>
                         <span>{item.label}</span>
                       </span>
                       <span className="text-[10px] font-bold text-agroGreen-800 bg-agroGreen-100 px-2 py-0.5 rounded">

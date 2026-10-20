@@ -57,29 +57,56 @@ export const Hero: React.FC = () => {
                 Agro-Marketplace & B2B Kassa Ekotizimi
               </span>
 
-              <h1 className="mt-5 text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-[1.08]">
-                Kelajak qishloq <br className="hidden sm:inline" />
-                xo‘jaligi{' '}
-                <span className="inline-grid h-10 w-10 sm:h-14 sm:w-14 place-items-center rounded-full border border-white/30 bg-white/10 backdrop-blur-md text-agroGreen align-middle shadow-glow-subtle">
-                  <Sparkles className="h-5 w-5 sm:h-7 sm:w-7" />
-                </span>
+              <h1 className="mt-5 text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.12]">
+                Fermer, Chorvador va Dehqonlar uchun <br className="hidden sm:inline" />
+                <span className="text-agroGreen">Agro-Marketplace</span>
               </h1>
 
-              <p className="mt-5 max-w-xl text-base sm:text-lg text-white/85 leading-relaxed font-medium">
-                Do‘konlar uchun raqamli kassa, fermerlar uchun esa eng yaqin dorixona, yem, urug‘ va texnikalarni bitta ilovada jamlagan yagona agro-platforma.
+              <p className="mt-4 max-w-2xl text-base sm:text-lg text-white/85 leading-relaxed font-medium">
+                Do‘konlar uchun raqamli POS kassa, fermerlar uchun esa eng yaqin dorixona, yem, urug‘ va texnikalarni bitta joyda jamlagan yagona ekotizim.
               </p>
 
-              <div className="mt-8 flex flex-wrap items-center gap-4">
+              {/* 3 TA ASOSIY METRIKA */}
+              <div className="mt-7 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="rounded-2xl border border-white/15 bg-white/10 backdrop-blur-md p-3.5 text-white">
+                  <div className="flex items-center gap-1.5">
+                    <Store className="h-4 w-4 text-agroGreen" />
+                    <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider">Ulangan Do‘konlar</span>
+                  </div>
+                  <p className="mt-1 text-2xl font-black text-white">618+</p>
+                  <p className="text-[11px] text-white/70 font-medium leading-snug">POS kassa & real ombor qoldig‘i</p>
+                </div>
+
+                <div className="rounded-2xl border border-white/15 bg-white/10 backdrop-blur-md p-3.5 text-white">
+                  <div className="flex items-center gap-1.5">
+                    <Users className="h-4 w-4 text-agroGreen" />
+                    <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider">Faol Fermerlar</span>
+                  </div>
+                  <p className="mt-1 text-2xl font-black text-white">40 800+</p>
+                  <p className="text-[11px] text-white/70 font-medium leading-snug">Respublika bo‘ylab xaridorlar</p>
+                </div>
+
+                <div className="rounded-2xl border border-white/15 bg-white/10 backdrop-blur-md p-3.5 text-white">
+                  <div className="flex items-center gap-1.5">
+                    <Navigation className="h-4 w-4 text-agroGreen" />
+                    <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider">Yetkazib Berish</span>
+                  </div>
+                  <p className="mt-1 text-2xl font-black text-white">1–3 soat</p>
+                  <p className="text-[11px] text-white/70 font-medium leading-snug">Dalagacha tez va ishonchli</p>
+                </div>
+              </div>
+
+              <div className="mt-7 flex flex-wrap items-center gap-4">
                 <a
                   href="#sectors"
-                  className="group inline-flex items-center gap-3 rounded-full border border-white/40 bg-white/15 px-6 py-3.5 text-sm font-extrabold text-white backdrop-blur-md transition hover:bg-white hover:text-forest-dark active:scale-95 shadow-sm"
+                  className="group inline-flex items-center gap-3 rounded-full border border-white/40 bg-white/15 px-6 py-3 text-sm font-extrabold text-white backdrop-blur-md transition hover:bg-white hover:text-forest-dark active:scale-95 shadow-sm"
                 >
                   Barcha 5 ta sektor
                   <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
                 </a>
                 <a
                   href="#products"
-                  className="inline-flex items-center gap-2 rounded-full bg-agroGreen hover:bg-agroGreen-hover text-forest-dark font-extrabold px-6 py-3.5 text-sm transition shadow-glow-green active:scale-95"
+                  className="inline-flex items-center gap-2 rounded-full bg-agroGreen hover:bg-agroGreen-hover text-forest-dark font-extrabold px-6 py-3 text-sm transition shadow-glow-green active:scale-95"
                 >
                   <ShoppingBag className="h-4 w-4" />
                   Mahsulotlar katalogi

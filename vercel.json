@@ -5,3 +5,4 @@
   "outputDirectory": "agrozgo/dist",
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }
+

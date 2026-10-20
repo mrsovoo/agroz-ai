@@ -1,7 +1,15 @@
 import React, { useState } from 'react';
-import { Store, Users, MapPin, Zap, ShieldCheck } from 'lucide-react';
+import { Store, Users, MapPin, Zap, ShieldCheck, Leaf, Wheat, Warehouse, Sprout, Wrench } from 'lucide-react';
 import { UZBEKISTAN_REGIONS, CENTRAL_ASIA_COUNTRIES, UZBEKISTAN_SECTOR_SUMMARY, type RegionInfo } from '../data/regions';
 import { CENTRAL_ASIA_PATHS } from '../data/centralAsiaPaths';
+
+const SECTOR_ICONS: Record<string, React.FC<{ className?: string }>> = {
+  agro_vet: Leaf,
+  feed: Wheat,
+  warehouse: Warehouse,
+  seeds: Sprout,
+  machinery: Wrench,
+};
 
 export const CentralAsiaMap: React.FC = () => {
   const [hoveredRegion, setHoveredRegion] = useState<RegionInfo | null>(UZBEKISTAN_REGIONS[0]);
@@ -260,17 +268,17 @@ export const CentralAsiaMap: React.FC = () => {
                         filter="drop-shadow(0px 8px 16px rgba(0,0,0,0.5))"
                       />
                       <text x="12" y="18" fill="#FFFFFF" fontSize="11" fontWeight="800">
-                        📍 {r.name}
+                        {r.name}
                       </text>
                       <text x="158" y="17" textAnchor="end" fill="#8CE8A0" fontSize="8.5" fontWeight="700">
                         {r.badge}
                       </text>
                       <line x1="12" y1="24" x2="158" y2="24" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
                       <text x="12" y="38" fill="#35CA56" fontSize="10" fontWeight="800">
-                        👥 {r.farmersCount} faol fermer
+                        {r.farmersCount} faol fermer
                       </text>
                       <text x="12" y="50" fill="#D1DFD5" fontSize="9" fontWeight="600">
-                        🏪 {r.storesCount}+ do‘kon • ⚡ {r.deliverySpeed}
+                        {r.storesCount}+ do‘kon • {r.deliverySpeed}
                       </text>
                     </g>
                   )}
@@ -339,18 +347,22 @@ export const CentralAsiaMap: React.FC = () => {
 
         {/* 5 Ta Sektor Bo'yicha B2B va B2C Bo'linishi */}
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          {UZBEKISTAN_SECTOR_SUMMARY.sectors.map((s) => (
-            <div
-              key={s.id}
-              className="flex flex-col justify-between rounded-2xl bg-white p-3.5 border border-charcoal/10 shadow-xs transition-colors duration-200 hover:border-agroGreen"
-            >
-              <div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xl">{s.emoji}</span>
-                  <span className="rounded-md bg-cream px-2 py-0.5 text-[10px] font-bold text-charcoal/60 border border-charcoal/5">
-                    {s.category}
-                  </span>
-                </div>
+          {UZBEKISTAN_SECTOR_SUMMARY.sectors.map((s) => {
+            const Icon = SECTOR_ICONS[s.id] || Store;
+            return (
+              <div
+                key={s.id}
+                className="flex flex-col justify-between rounded-2xl bg-white p-3.5 border border-charcoal/10 shadow-xs transition-colors duration-200 hover:border-agroGreen"
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="grid h-8 w-8 place-items-center rounded-xl bg-agroGreen-100/70 text-agroGreen-900 border border-agroGreen/20">
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="rounded-md bg-cream px-2 py-0.5 text-[10px] font-bold text-charcoal/60 border border-charcoal/5">
+                      {s.category}
+                    </span>
+                  </div>
 
                 <h5 className="mt-2 text-xs sm:text-sm font-extrabold text-charcoal">
                   {s.name}
@@ -375,7 +387,8 @@ export const CentralAsiaMap: React.FC = () => {
                 </div>
               </div>
             </div>
-          ))}
+          );
+        })}
         </div>
       </div>
     </div>

@@ -135,7 +135,7 @@ export interface SectorStat {
   id: string;
   name: string;
   category: string;
-  emoji: string;
+  emoji?: string;
   storesCount: number;
   farmersCount: string;
   highlight: string;
@@ -151,7 +151,6 @@ export const UZBEKISTAN_SECTOR_SUMMARY = {
       id: 'agro_vet',
       name: 'O‘g‘itlar va Vet-Dorilar',
       category: 'Agro-Vet',
-      emoji: '🌿',
       storesCount: 185,
       farmersCount: '14 200+',
       highlight: 'Biostimulyator & NPK',
@@ -160,7 +159,6 @@ export const UZBEKISTAN_SECTOR_SUMMARY = {
       id: 'feed',
       name: 'Yem va Ozuqalar',
       category: 'Feed',
-      emoji: '🌾',
       storesCount: 142,
       farmersCount: '11 500+',
       highlight: 'Qoplab va kg-lab',
@@ -169,7 +167,6 @@ export const UZBEKISTAN_SECTOR_SUMMARY = {
       id: 'warehouse',
       name: 'Ombor va Qadoqlash',
       category: 'Warehouse',
-      emoji: '🏢',
       storesCount: 88,
       farmersCount: '5 400+',
       highlight: 'Issiqxona & sug‘orish',
@@ -178,7 +175,6 @@ export const UZBEKISTAN_SECTOR_SUMMARY = {
       id: 'seeds',
       name: 'Urug‘lar va Ko‘chatlar',
       category: 'Seeds',
-      emoji: '🌱',
       storesCount: 125,
       farmersCount: '6 800+',
       highlight: '98% unuvchanlik navi',
@@ -187,7 +183,6 @@ export const UZBEKISTAN_SECTOR_SUMMARY = {
       id: 'machinery',
       name: 'Jihozlar va Texnika',
       category: 'Machinery',
-      emoji: '🔧',
       storesCount: 78,
       farmersCount: '2 900+',
       highlight: 'Motoblok & purkagich',
