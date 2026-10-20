@@ -230,7 +230,7 @@ export const UZBEKISTAN_SECTOR_SUMMARY = {
   totalB2B: 1213,
   totalB2C: '57 200+',
   totalRegions: 14,
-  deliveryAvg: '1-3 soat',
+  deliveryAvg: 'Bron & Sektor',
   sectors: [
     {
       id: 'agro_vet',

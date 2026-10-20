@@ -303,10 +303,10 @@ export const CentralAsiaMap: React.FC = () => {
               Faol Fermerlar: <tspan fill="#1C7E34" fontWeight="800">{activeRegion.farmersCount}</tspan>
             </text>
 
-            {/* Tezkor yetkazish statusi */}
-            <rect x="136" y="66" width="76" height="20" rx="10" fill="#FAF8F0" stroke="#E2B23B" strokeWidth="0.8" />
-            <text x="174" y="80" textAnchor="middle" fill="#996E0A" fontSize="9" fontWeight="800">
-              ⚡ {activeRegion.deliverySpeed}
+            {/* Xarid & Yetkazish statusi: Kichik = Bron qilish, Yirik = Sektor logistikasi */}
+            <rect x="130" y="66" width="86" height="20" rx="10" fill="#FAF8F0" stroke="#E2B23B" strokeWidth="0.8" />
+            <text x="173" y="80" textAnchor="middle" fill="#996E0A" fontSize="8.5" fontWeight="800">
+              Bron & Sektor
             </text>
           </g>
         </svg>

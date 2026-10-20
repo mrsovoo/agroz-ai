@@ -1,9 +1,9 @@
 import React from 'react';
-import { Search, ShoppingBag, ShieldCheck, ArrowRight, Store, Clock, CheckCircle2 } from 'lucide-react';
+import { Search, ShoppingBag, ShieldCheck, ArrowRight, Store, Clock, CheckCircle2, Truck } from 'lucide-react';
 import { Eyebrow, DarkButton } from './ui';
 import { ORDER_FLOW_STEPS, BIZNESGO_URL } from '../data/content';
 
-const ICONS = [Search, ShoppingBag, Clock, ShieldCheck];
+const ICONS = [Search, Store, Truck, ShieldCheck];
 
 export const OrderFlow: React.FC = () => {
   return (
@@ -12,14 +12,14 @@ export const OrderFlow: React.FC = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
-            <Eyebrow>B2C Xarid Oqimi</Eyebrow>
+            <Eyebrow>B2C Xarid & Logistika</Eyebrow>
             <h2 className="mt-4 max-w-2xl text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl text-charcoal">
-              To‘g‘ridan-to‘g‘ri do‘konga <br className="hidden sm:inline" />
-              <span className="font-semibold text-charcoal/50">buyurtma berish jarayoni</span>
+              Bron qilish va sektor <br className="hidden sm:inline" />
+              <span className="font-semibold text-charcoal/50">yetkazib berish jarayoni</span>
             </h2>
           </div>
           <p className="max-w-md text-xs sm:text-sm text-charcoal/70 leading-relaxed sm:text-right">
-            Fermer va chorvadorlar uchun vositachisiz, shaffof narxlar va do‘kon kassasi bilan real vaqtda bog‘langan 4 bosqichli qulay xarid tizimi.
+            Kichik tovarlarni yaqin do‘kondan bron qilib o‘zingiz olib ketasiz. Yirik partiya va boshqa viloyat buyurtmalarini esa sektorlarning o‘z maxsus xizmati yetkazadi.
           </p>
         </div>
 

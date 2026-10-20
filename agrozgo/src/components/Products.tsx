@@ -15,6 +15,7 @@ import {
   Sprout,
   Wrench,
   Layers,
+  Truck,
 } from 'lucide-react';
 import { AgroImage } from './ui';
 import { PRODUCTS } from '../data/content';
@@ -297,29 +298,43 @@ export const Products: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="text-xs font-bold text-charcoal/70">Olish usuli:</label>
-                      <div className="mt-1.5 grid grid-cols-2 gap-2">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-xs font-bold text-charcoal/80">Qabul qilish usuli:</label>
+                        <span className="text-[10px] text-charcoal/40 font-medium">Sektor qoidalari</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <button
                           type="button"
                           onClick={() => setDeliveryType('pickup')}
-                          className={`flex items-center justify-center gap-1.5 rounded-xl p-2.5 text-xs font-bold border transition cursor-pointer ${
+                          className={`flex flex-col items-start rounded-xl p-2.5 text-left border transition cursor-pointer ${
                             deliveryType === 'pickup'
-                              ? 'bg-forest-dark text-white border-forest-dark'
-                              : 'bg-white text-charcoal/70 border-charcoal/15'
+                              ? 'bg-forest-dark text-white border-forest-dark shadow-xs'
+                              : 'bg-white text-charcoal/80 border-charcoal/15 hover:border-agroGreen/40'
                           }`}
                         >
-                          <Store className="h-3.5 w-3.5" /> Do‘kondan olib ketish
+                          <span className="flex items-center gap-1.5 text-xs font-black">
+                            <Store className="h-3.5 w-3.5 text-agroGreen" /> Bron qilish & Olib ketish
+                          </span>
+                          <span className="mt-0.5 text-[10px] opacity-75 font-medium leading-tight">
+                            Kichik tovarlar: do‘kondan borib olasiz
+                          </span>
                         </button>
+
                         <button
                           type="button"
                           onClick={() => setDeliveryType('delivery')}
-                          className={`flex items-center justify-center gap-1.5 rounded-xl p-2.5 text-xs font-bold border transition cursor-pointer ${
+                          className={`flex flex-col items-start rounded-xl p-2.5 text-left border transition cursor-pointer ${
                             deliveryType === 'delivery'
-                              ? 'bg-forest-dark text-white border-forest-dark'
-                              : 'bg-white text-charcoal/70 border-charcoal/15'
+                              ? 'bg-forest-dark text-white border-forest-dark shadow-xs'
+                              : 'bg-white text-charcoal/80 border-charcoal/15 hover:border-agroGreen/40'
                           }`}
                         >
-                          <Zap className="h-3.5 w-3.5 text-amber" /> Dalagacha yetkazish
+                          <span className="flex items-center gap-1.5 text-xs font-black">
+                            <Truck className="h-3.5 w-3.5 text-amber" /> Sektor Logistikasi
+                          </span>
+                          <span className="mt-0.5 text-[10px] opacity-75 font-medium leading-tight">
+                            Yirik partiya / Boshqa viloyat: sektor yetkazadi
+                          </span>
                         </button>
                       </div>
                     </div>
@@ -328,7 +343,7 @@ export const Products: React.FC = () => {
                       type="submit"
                       className="w-full flex items-center justify-center gap-2 rounded-2xl bg-agroGreen hover:bg-agroGreen-hover text-forest-dark font-black py-3 text-sm transition shadow-glow-green cursor-pointer active:scale-95"
                     >
-                      <Send className="h-4 w-4" /> Do‘konga Buyurtma Yuborish
+                      <Send className="h-4 w-4" /> {deliveryType === 'pickup' ? 'Do‘konda Zaxiraga Bron Qilish' : 'Sektor Logistikasiga Buyurtma Berish'}
                     </button>
                   </form>
                 </div>
@@ -337,9 +352,19 @@ export const Products: React.FC = () => {
                   <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-agroGreen/20 text-agroGreen border border-agroGreen/30">
                     <Check className="h-7 w-7" />
                   </div>
-                  <h3 className="mt-4 text-lg font-black text-charcoal">Buyurtma Qabul Qilindi!</h3>
-                  <p className="mt-1 text-xs text-charcoal/60 max-w-sm mx-auto">
-                    Buyurtmangiz <b>{selectedProduct.store}</b> kassa tizimiga yetkazildi. Do‘kon xodimi tez orada siz bilan bog‘lanadi.
+                  <h3 className="mt-4 text-lg font-black text-charcoal">
+                    {deliveryType === 'pickup' ? 'Mahsulot Bron Qilindi!' : 'Sektor Logistikasiga Qabul Qilindi!'}
+                  </h3>
+                  <p className="mt-2 text-xs text-charcoal/70 max-w-sm mx-auto leading-relaxed">
+                    {deliveryType === 'pickup' ? (
+                      <>
+                        Buyurtmangiz <b>{selectedProduct.store}</b> kassa tizimida siz uchun zaxiraga olindi. Do‘konga borib navbatsiz olib ketishingiz mumkin.
+                      </>
+                    ) : (
+                      <>
+                        Yirik buyurtmangiz <b>{selectedProduct.store}</b> sektor transport bo‘limiga yetkazildi. Sektor xodimi yuk yetkazish vaqti va manzili bo‘yicha siz bilan bog‘lanadi.
+                      </>
+                    )}
                   </p>
                   <button
                     type="button"

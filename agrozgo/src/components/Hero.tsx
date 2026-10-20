@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, MapPin, Loader2, Navigation, ArrowRight, ArrowUpRight, Sparkles, Building2, Store, Users, ShoppingBag } from 'lucide-react';
+import { Search, MapPin, Loader2, Navigation, ArrowRight, ArrowUpRight, Sparkles, Building2, Store, Users, ShoppingBag, Truck } from 'lucide-react';
 import { AgroImage, AgrozSymbol } from './ui';
 import { IMAGES, SEARCH_SUGGESTIONS, DEMO_RESULTS, SECTORS, BIZNESGO_URL } from '../data/content';
 
@@ -88,11 +88,11 @@ export const Hero: React.FC = () => {
 
                 <div className="rounded-2xl border border-white/15 bg-white/10 backdrop-blur-md p-3.5 text-white">
                   <div className="flex items-center gap-1.5">
-                    <Navigation className="h-4 w-4 text-agroGreen" />
-                    <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider">Yetkazib Berish</span>
+                    <Truck className="h-4 w-4 text-agroGreen" />
+                    <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider">Xarid & Logistika</span>
                   </div>
-                  <p className="mt-1 text-2xl font-black text-white">1–3 soat</p>
-                  <p className="text-[11px] text-white/70 font-medium leading-snug">Dalagacha tez va ishonchli</p>
+                  <p className="mt-1 text-2xl font-black text-white">Bron & Sektor</p>
+                  <p className="text-[11px] text-white/70 font-medium leading-snug">Kichik: o‘zi olib ketadi • Yirik: sektor yetkazadi</p>
                 </div>
               </div>
 
@@ -138,10 +138,10 @@ export const Hero: React.FC = () => {
                       <Users className="h-3 w-3" /> AgrozGO (B2C) — Fermerlar Uchun
                     </span>
                     <h3 className="mt-2 text-lg font-black text-charcoal leading-snug">
-                      Yaqin do‘kondan to‘g‘ridan-to‘g‘ri arzon xarid
+                      Tezkor bron qilish & Sektor logistikasi
                     </h3>
                     <p className="mt-1 text-xs text-charcoal/70 leading-relaxed">
-                      Fermer va dehqonlar yaqin atrofdagi vet-dorixonalar, yem va urug‘ do‘konlaridan real vaqtdagi ombor qoldig‘i bilan vositachisiz xarid qiladi.
+                      Kichik tovarlarni yaqin do‘kondan zaxiraga bron qilib, o‘zingiz borib olasiz. Yirik partiya va texnikalarni esa sektorning o‘zi yetkazib beradi.
                     </p>
                     <a
                       href="#products"

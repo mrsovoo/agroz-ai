@@ -479,27 +479,27 @@ export const PRODUCTS = [
 export const ORDER_FLOW_STEPS = [
   {
     num: '01',
-    title: 'Qidirish va Tanlash',
-    desc: 'Yaqin atrofdagi vet-dorixona, yem yoki urug‘ do‘konlarini geolokatsiya bo‘yicha topasiz va kerakli mahsulotni tanlaysiz.',
-    badge: 'Geolokatsiya',
+    title: '5 Sektor Bo‘yicha Qidirish',
+    desc: 'Yaqin atrofdagi dorixona, yem, urug‘, ombor yoki texnika do‘konlaridagi 1:1 real ombor qoldig‘i va shaffof narxlarni ko‘rasiz.',
+    badge: '1:1 Kassa Qoldig‘i',
   },
   {
     num: '02',
-    title: 'Haqiqiy Qoldiq va Narx',
-    desc: 'BiznesGO POS kassa bilan 1:1 sinxron — do‘konda mavjud real qoldiq, qoplab yoki kg-lab narxlar ochiq ko‘rinadi.',
-    badge: '1:1 Kassa',
+    title: 'Kichik Tovarlar: Bron Qilish',
+    desc: 'Dori, urug‘ yoki kundalik yemni onlayn bron qilasiz. Do‘konda tovar sizga zaxiralanadi, borib navbatsiz olib ketasiz.',
+    badge: 'Bron & Olib Ketish',
   },
   {
     num: '03',
-    title: 'To‘g‘ridan-to‘g‘ri Buyurtma',
-    desc: 'Vositachilarsiz — buyurtma to‘g‘ridan-to‘g‘ri do‘kon kassasiga tushadi va tovar siz uchun zaxiralanadi.',
-    badge: 'Vositachisiz',
+    title: 'Yirik Partiyalar: Sektor Yetkazishi',
+    desc: 'Ko‘p tonnalik yem, o‘g‘it yoki yirik texnikalarni boshqa viloyatdan buyurtma qilsangiz, sektorlarning o‘z maxsus yuk xizmati yetkazishga mas’ul bo‘ladi.',
+    badge: 'Sektor Logistikasi',
   },
   {
     num: '04',
-    title: 'Kafolatli Qabul Qilish',
-    desc: 'Do‘kondan olib ketish yoki manzilga yetkazish. Mahsulot cheki va rasmiy kafolati bilan topshiriladi.',
-    badge: '100% Kafolat',
+    title: 'Kassa Cheki va Rasmiy Kafolat',
+    desc: 'Mahsulotni qabul qilib, BiznesGO POS kassa cheki, partiya sertifikati va rasmiy kafolati bilan xaridni yakunlaysiz.',
+    badge: '100% Rasmiy Chek',
   },
 ];
 
