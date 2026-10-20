@@ -73,7 +73,7 @@ export const Hero: React.FC = () => {
                     <Store className="h-4 w-4 text-agroGreen" />
                     <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider">Ulangan Do‘konlar</span>
                   </div>
-                  <p className="mt-1 text-2xl font-black text-white">618+</p>
+                  <p className="mt-1 text-2xl font-black text-white">1 200+</p>
                   <p className="text-[11px] text-white/70 font-medium leading-snug">POS kassa & real ombor qoldig‘i</p>
                 </div>
 
@@ -82,7 +82,7 @@ export const Hero: React.FC = () => {
                     <Users className="h-4 w-4 text-agroGreen" />
                     <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider">Faol Fermerlar</span>
                   </div>
-                  <p className="mt-1 text-2xl font-black text-white">40 800+</p>
+                  <p className="mt-1 text-2xl font-black text-white">50 000+</p>
                   <p className="text-[11px] text-white/70 font-medium leading-snug">Respublika bo‘ylab xaridorlar</p>
                 </div>
 

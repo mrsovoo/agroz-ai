@@ -311,25 +311,33 @@ export const CentralAsiaMap: React.FC = () => {
           </g>
         </svg>
 
-        {/* Mobil uchun pastki faol hudud selektori */}
-        <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between gap-2 overflow-x-auto py-1.5 px-3 rounded-xl bg-white/95 backdrop-blur-md border border-charcoal/10 text-[11px] sm:hidden">
-          <span className="font-extrabold text-charcoal/60 shrink-0">Hudud:</span>
-          <div className="flex gap-1 overflow-x-auto no-scrollbar">
-            {UZBEKISTAN_REGIONS.map((r) => (
-              <button
-                key={r.id}
-                type="button"
-                onClick={() => setActiveRegion(r)}
-                className={`px-2.5 py-1 rounded-full shrink-0 font-bold transition text-xs ${
-                  activeRegion.id === r.id
-                    ? 'bg-agroGreen text-forest-dark'
-                    : 'bg-cream text-charcoal/70'
-                }`}
-              >
-                {r.name.split(' ')[0]}
-              </button>
-            ))}
-          </div>
+        {/* Mobil uchun pastki xarita usti faol hudud indikatori */}
+        <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between gap-2 overflow-x-auto py-1 px-3 rounded-xl bg-white/90 backdrop-blur-md border border-charcoal/10 text-[11px] sm:hidden">
+          <span className="font-extrabold text-charcoal/60 shrink-0">Tanlangan:</span>
+          <span className="font-black text-forest-dark">{activeRegion.name.split(' ')[0]} ({activeRegion.storesCount} do‘kon)</span>
+        </div>
+      </div>
+
+      {/* 14 ta Hududni tezkor tanlash paneli (Desktop & Mobil) */}
+      <div className="mt-4 flex flex-wrap items-center gap-1.5 p-3 rounded-2xl bg-white border border-charcoal/10 shadow-xs">
+        <span className="text-xs font-black text-charcoal/70 mr-1 flex items-center gap-1 shrink-0">
+          <MapPin className="h-3.5 w-3.5 text-agroGreen-700" /> Hududni tanlang:
+        </span>
+        <div className="flex flex-wrap gap-1">
+          {UZBEKISTAN_REGIONS.map((r) => (
+            <button
+              key={r.id}
+              type="button"
+              onClick={() => setActiveRegion(r)}
+              className={`px-2.5 py-1 rounded-full font-bold transition text-xs cursor-pointer ${
+                activeRegion.id === r.id
+                  ? 'bg-forest-dark text-white shadow-xs'
+                  : 'bg-cream-soft text-charcoal/70 hover:bg-agroGreen-50 hover:text-agroGreen-900 border border-charcoal/5'
+              }`}
+            >
+              {r.name.split(' ')[0]} <span className="opacity-60 text-[10px]">({r.storesCount})</span>
+            </button>
+          ))}
         </div>
       </div>
 
