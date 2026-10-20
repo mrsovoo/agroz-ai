@@ -347,3 +347,4 @@ export const CentralAsiaMap: React.FC = () => {
     </div>
   );
 };
+

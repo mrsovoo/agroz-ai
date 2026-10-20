@@ -43,7 +43,7 @@ export const AppAndContact: React.FC = () => {
     <section id="contact" className="pb-16 sm:pb-24">
       <div className="container-x grid gap-4 lg:grid-cols-2">
         {/* Mobil ilova e'loni */}
-        <div className="relative flex flex-col overflow-hidden rounded-3xl bg-forest-dark border border-forest-border p-6 text-white shadow-soft sm:p-10">
+        <div id="app-showcase" className="relative flex flex-col overflow-hidden rounded-3xl bg-forest-dark border border-forest-border p-6 text-white shadow-soft sm:p-10 scroll-mt-28">
           <AgroImage src={IMAGES.hero} alt="" className="absolute inset-0 h-full w-full opacity-15 object-cover mix-blend-luminosity scale-105" />
           <div className="absolute inset-0 bg-gradient-to-br from-forest-dark via-forest-dark/95 to-forest-dark/75" />
 
