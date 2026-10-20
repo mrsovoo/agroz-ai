@@ -1,10 +1,9 @@
 import React from 'react';
-import { Users } from 'lucide-react';
-import { AgroImage, Eyebrow, DarkButton } from './ui';
+import { AgroImage, Eyebrow } from './ui';
 import { CentralAsiaMap } from './CentralAsiaMap';
-import { IMAGES, BIZNESGO_URL } from '../data/content';
+import { IMAGES } from '../data/content';
 
-/** "Bizning rivojlanish yo'limiz" — katta O'rta Osiyo xaritasi va ekotizim qamrovi */
+/** "Bizning rivojlanish yo'limiz" — sof O'rta Osiyo xaritasi va 5 ta sektor ko'lami */
 export const About: React.FC = () => {
   return (
     <section id="about" className="py-16 sm:py-24">
@@ -36,36 +35,9 @@ export const About: React.FC = () => {
           </div>
         </div>
 
-        {/* Katta Bento Blok: To'liq Kenglikdagi O'rta Osiyo Xaritasi */}
-        <div className="relative mt-12 overflow-hidden rounded-3xl bg-[#080D0A] border border-white/10 p-4 text-white shadow-2xl sm:p-6 lg:p-8">
-          {/* Atmosferik nozik yashil va oq nur effektlari */}
-          <div className="pointer-events-none absolute -top-32 -right-32 h-[450px] w-[450px] rounded-full bg-agroGreen/15 blur-[120px]" />
-          <div className="pointer-events-none absolute -bottom-32 -left-32 h-[400px] w-[400px] rounded-full bg-white/5 blur-[120px]" />
-
-          {/* Asosiy Katta Xarita Komponenti */}
-          <div className="relative w-full">
-            <CentralAsiaMap />
-          </div>
-
-          {/* Do'kon egalari uchun ixcham CTA strip */}
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl bg-white/[0.04] border border-white/10 p-4 sm:p-5 backdrop-blur-md">
-            <div className="flex items-center gap-3">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-agroGreen/20 text-agroGreen border border-agroGreen/30">
-                <Users className="h-5 w-5" />
-              </span>
-              <div>
-                <h4 className="text-sm sm:text-base font-bold text-white">
-                  Agro-do‘koningiz bormi? BiznesGO orqali AgrozGO vitrinasiga ulaning
-                </h4>
-                <p className="text-xs text-white/60">
-                  POS kassa va ombor hisobi BiznesGO’da, mahsulotlaringiz esa avtomatik AgrozGO xaridorlariga ko‘rinadi.
-                </p>
-              </div>
-            </div>
-            <DarkButton href={BIZNESGO_URL} external className="shrink-0 whitespace-nowrap">
-              BiznesGO’ga o‘tish
-            </DarkButton>
-          </div>
+        {/* Sof Xarita va Respublika bo'yicha 5 ta sektor ko'lami */}
+        <div className="mt-12">
+          <CentralAsiaMap />
         </div>
       </div>
     </section>

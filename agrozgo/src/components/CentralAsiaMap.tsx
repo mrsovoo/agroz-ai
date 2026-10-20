@@ -1,362 +1,386 @@
 import React, { useState } from 'react';
-import { MapPin, Store, Users, Layers, Zap, Globe2 } from 'lucide-react';
-import { UZBEKISTAN_REGIONS, CENTRAL_ASIA_COUNTRIES, type RegionInfo } from '../data/regions';
+import { Store, Users, MapPin, Zap, ShieldCheck } from 'lucide-react';
+import { UZBEKISTAN_REGIONS, CENTRAL_ASIA_COUNTRIES, UZBEKISTAN_SECTOR_SUMMARY, type RegionInfo } from '../data/regions';
 import { CENTRAL_ASIA_PATHS } from '../data/centralAsiaPaths';
 
 export const CentralAsiaMap: React.FC = () => {
-  const [selectedRegion, setSelectedRegion] = useState<RegionInfo>(UZBEKISTAN_REGIONS[0]);
+  const [hoveredRegion, setHoveredRegion] = useState<RegionInfo | null>(UZBEKISTAN_REGIONS[0]);
   const [hoveredCountry, setHoveredCountry] = useState<string | null>(null);
 
+  const activeRegion = hoveredRegion || UZBEKISTAN_REGIONS[0];
+
   return (
-    <div className="flex flex-col gap-6 w-full">
-      {/* Sarlavha & Ekotizim Ko'lami */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-white/10 pb-4">
-        <div>
+    <div className="flex flex-col gap-8 w-full">
+      {/* 1. ASOSIY XARITA KONTEYNERI (Loyiha Warm Cream foni + To'q zumrad O'zbekiston + Xira qo'shnilar) */}
+      <div className="relative overflow-hidden rounded-3xl bg-[#F5F4EE] border border-charcoal/10 p-3 sm:p-6 shadow-soft">
+        {/* Xarita ustidagi mini status sarlavhasi va davlatlar holati */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-charcoal/10 pb-3 mb-2">
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-agroGreen">
-              <span className="h-2 w-2 rounded-full bg-agroGreen animate-pulse" />
-              O‘zbekiston & O‘rta Osiyo Qamrovi
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 px-2.5 py-0.5 text-[11px] font-bold text-white/70 border border-white/10">
-              <Globe2 className="h-3 w-3 text-agroGreen" />
-              2026–2028 Reja
-            </span>
-          </div>
-
-          <h3 className="mt-2 text-2xl font-black leading-tight sm:text-3xl text-white">
-            O‘zbekiston bo‘ylab <span className="text-agroGreen">faol</span>,{' '}
-            <span className="text-white/40">O‘rta Osiyoga tayyor</span>
-          </h3>
-        </div>
-
-        <p className="text-xs text-white/60 max-w-md leading-relaxed sm:text-right">
-          AgrozGO hozirda butun O‘zbekistonning 14 hududida 5 ta sektor bo‘yicha ishlayapti. 2027–2028 yillarda butun Markaziy Osiyo bo‘ylab ekspansiya qilinadi.
-        </p>
-      </div>
-
-      {/* KATTA XARITA KONTEYNERI (Oq-qora opacity + zumrad glow) */}
-      <div className="relative overflow-hidden rounded-3xl bg-[#060A07]/90 border border-white/10 p-2 sm:p-5 shadow-2xl backdrop-blur-xl">
-        {/* Xarita ustidagi DAVLATLAR BLOKI (Floating Frosted Glass Pills) */}
-        <div className="absolute top-3 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
-          {/* Chap: O'zbekiston Faol status */}
-          <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-black/60 border border-white/10 px-3.5 py-1.5 backdrop-blur-md shadow-lg">
-            <span className="h-2 w-2 rounded-full bg-agroGreen animate-ping" />
-            <span className="text-xs font-black text-white flex items-center gap-1.5">
-              🇺🇿 O‘zbekiston <span className="text-agroGreen font-bold">● Faol (14 hudud)</span>
+            <span className="h-2.5 w-2.5 rounded-full bg-agroGreen animate-pulse" />
+            <h3 className="text-base sm:text-lg font-black text-charcoal">
+              O‘zbekiston va O‘rta Osiyo Qamrovi
+            </h3>
+            <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-agroGreen-100 px-2.5 py-0.5 text-[11px] font-bold text-agroGreen-900 border border-agroGreen/20">
+              14 hudud faol
             </span>
           </div>
 
-          {/* O'ng: O'rta Osiyo ekspansiya davlatlari nishoni */}
-          <div className="pointer-events-auto hidden md:flex items-center gap-1.5 rounded-full bg-black/60 border border-white/10 px-3 py-1.5 backdrop-blur-md shadow-lg">
+          {/* O'rta Osiyo davlatlari status pills */}
+          <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+            <span className="inline-flex items-center gap-1 rounded-full bg-agroGreen/15 px-2.5 py-1 font-bold text-agroGreen-800 border border-agroGreen/30">
+              🇺🇿 O‘zbekiston (● Faol)
+            </span>
             {CENTRAL_ASIA_COUNTRIES.slice(1).map((c) => (
               <span
                 key={c.name}
-                className="inline-flex items-center gap-1 rounded-full bg-white/[0.04] px-2.5 py-0.5 text-[10px] font-semibold text-white/60 border border-white/5"
+                className="inline-flex items-center gap-1 rounded-full bg-charcoal/5 px-2 py-0.5 text-[10px] font-medium text-charcoal/50 border border-charcoal/5"
               >
                 <span>{c.flag}</span>
                 <span>{c.name}</span>
-                <span className="text-white/30 text-[9px] font-medium">🔒 {c.statusText}</span>
+                <span className="text-charcoal/40 text-[9px]">🔒 {c.statusText}</span>
               </span>
             ))}
           </div>
         </div>
 
-        {/* Xarita SVG - Katta, keng va yuqori aniqlikda */}
-        <div className="relative w-full aspect-[917.5/540] select-none mt-10 md:mt-6">
+        {/* Xarita SVG — Toza, keng va aniq */}
+        <div className="relative w-full aspect-[917.5/540] select-none">
           <svg
             viewBox="0 0 917.5 593.94"
-            className="h-full w-full filter"
+            className="h-full w-full"
             xmlns="http://www.w3.org/2000/svg"
           >
             <defs>
-              {/* O'zbekiston yashil/zumrad chuqur gradienti */}
-              <linearGradient id="uzbGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#1E5A2E" stopOpacity="0.95" />
-                <stop offset="50%" stopColor="#133C1E" stopOpacity="0.9" />
-                <stop offset="100%" stopColor="#0A2211" stopOpacity="0.85" />
+              {/* O'zbekiston uchun to'q, aniq ko'rinadigan zumrad/charcoal gradient */}
+              <linearGradient id="uzbDeepGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#132B1A" />
+                <stop offset="50%" stopColor="#183622" />
+                <stop offset="100%" stopColor="#0F2416" />
               </linearGradient>
 
-              {/* Qo'shni davlatlar uchun oq-qora past opacity gradienti */}
-              <linearGradient id="lockedMonochrome" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.04" />
-                <stop offset="100%" stopColor="#000000" stopOpacity="0.5" />
+              {/* Qo'shni davlatlar uchun past opacity va engil soyalanish */}
+              <linearGradient id="neighborMuted" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#E2DED3" stopOpacity="0.45" />
+                <stop offset="100%" stopColor="#D5D0C3" stopOpacity="0.35" />
               </linearGradient>
 
-              {/* Kuchli zumrad neon nuri */}
-              <filter id="uzbNeonGlow" x="-20%" y="-20%" width="140%" height="140%">
-                <feDropShadow dx="0" dy="6" stdDeviation="14" floodColor="#35CA56" floodOpacity="0.4" />
-                <feDropShadow dx="0" dy="1" stdDeviation="4" floodColor="#35CA56" floodOpacity="0.3" />
+              {/* O'zbekiston chegarasi nuri */}
+              <filter id="uzbShadow" x="-10%" y="-10%" width="120%" height="120%">
+                <feDropShadow dx="0" dy="4" stdDeviation="10" floodColor="#183622" floodOpacity="0.3" />
+                <feDropShadow dx="0" dy="1" stdDeviation="4" floodColor="#35CA56" floodOpacity="0.35" />
               </filter>
             </defs>
 
-            {/* --- 1. QOZOG'ISTON (Shimol - Oq-qora past opacity) --- */}
+            {/* --- 1. QOZOG'ISTON (Shimol - Opacity pastroq, xira) --- */}
             <g
               onMouseEnter={() => setHoveredCountry('Qozog‘iston (2027 Rejada)')}
               onMouseLeave={() => setHoveredCountry(null)}
-              className="cursor-help transition-all duration-300 hover:opacity-90 opacity-40 group"
+              className="cursor-help transition-opacity duration-300 hover:opacity-80 opacity-40 group"
             >
               <path
                 d={CENTRAL_ASIA_PATHS.kazakhstan}
-                fill="url(#lockedMonochrome)"
-                stroke="rgba(255, 255, 255, 0.16)"
-                strokeWidth="1.6"
-                strokeDasharray="6 4"
-                className="transition-colors duration-300 group-hover:stroke-white/30"
+                fill="url(#neighborMuted)"
+                stroke="#A8A395"
+                strokeWidth="1.4"
+                strokeDasharray="5 4"
               />
-              <text x="450" y="155" textAnchor="middle" fill="rgba(255, 255, 255, 0.45)" fontSize="16" fontWeight="800" letterSpacing="4">
+              <text x="450" y="155" textAnchor="middle" fill="#6B6658" fontSize="15" fontWeight="800" letterSpacing="4">
                 QOZOG‘ISTON
               </text>
               <g transform="translate(405, 172)">
-                <rect width="90" height="22" rx="11" fill="rgba(0,0,0,0.6)" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
-                <text x="14" y="15" fill="rgba(255,255,255,0.65)" fontSize="10" fontWeight="700">🔒 2027 Reja</text>
+                <rect width="90" height="22" rx="11" fill="#ECE8DD" stroke="#B8B3A4" strokeWidth="1" />
+                <text x="14" y="15" fill="#5C5749" fontSize="10" fontWeight="700">🔒 2027 Reja</text>
               </g>
             </g>
 
-            {/* --- 2. TURKMANISTON (Janub-g'arb - Oq-qora past opacity) --- */}
+            {/* --- 2. TURKMANISTON (Janub-g'arb - Opacity pastroq) --- */}
             <g
               onMouseEnter={() => setHoveredCountry('Turkmaniston (2028 Rejada)')}
               onMouseLeave={() => setHoveredCountry(null)}
-              className="cursor-help transition-all duration-300 hover:opacity-90 opacity-40 group"
+              className="cursor-help transition-opacity duration-300 hover:opacity-80 opacity-40 group"
             >
               <path
                 d={CENTRAL_ASIA_PATHS.turkmenistan}
-                fill="url(#lockedMonochrome)"
-                stroke="rgba(255, 255, 255, 0.16)"
-                strokeWidth="1.6"
-                strokeDasharray="6 4"
-                className="transition-colors duration-300 group-hover:stroke-white/30"
+                fill="url(#neighborMuted)"
+                stroke="#A8A395"
+                strokeWidth="1.4"
+                strokeDasharray="5 4"
               />
-              <text x="270" y="475" textAnchor="middle" fill="rgba(255, 255, 255, 0.45)" fontSize="14" fontWeight="800" letterSpacing="3">
+              <text x="270" y="475" textAnchor="middle" fill="#6B6658" fontSize="13" fontWeight="800" letterSpacing="3">
                 TURKMANISTON
               </text>
               <g transform="translate(225, 492)">
-                <rect width="90" height="22" rx="11" fill="rgba(0,0,0,0.6)" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
-                <text x="14" y="15" fill="rgba(255,255,255,0.65)" fontSize="10" fontWeight="700">🔒 2028 Reja</text>
+                <rect width="90" height="22" rx="11" fill="#ECE8DD" stroke="#B8B3A4" strokeWidth="1" />
+                <text x="14" y="15" fill="#5C5749" fontSize="10" fontWeight="700">🔒 2028 Reja</text>
               </g>
             </g>
 
-            {/* --- 3. TOJIKISTON (Janub-sharq - Oq-qora past opacity) --- */}
+            {/* --- 3. TOJIKISTON (Janub-sharq - Opacity pastroq) --- */}
             <g
               onMouseEnter={() => setHoveredCountry('Tojikiston (2027 Rejada)')}
               onMouseLeave={() => setHoveredCountry(null)}
-              className="cursor-help transition-all duration-300 hover:opacity-90 opacity-40 group"
+              className="cursor-help transition-opacity duration-300 hover:opacity-80 opacity-40 group"
             >
               <path
                 d={CENTRAL_ASIA_PATHS.tajikistan}
-                fill="url(#lockedMonochrome)"
-                stroke="rgba(255, 255, 255, 0.16)"
-                strokeWidth="1.6"
-                strokeDasharray="6 4"
-                className="transition-colors duration-300 group-hover:stroke-white/30"
+                fill="url(#neighborMuted)"
+                stroke="#A8A395"
+                strokeWidth="1.4"
+                strokeDasharray="5 4"
               />
-              <text x="560" y="495" textAnchor="middle" fill="rgba(255, 255, 255, 0.45)" fontSize="13" fontWeight="800" letterSpacing="2">
+              <text x="560" y="495" textAnchor="middle" fill="#6B6658" fontSize="12" fontWeight="800" letterSpacing="2">
                 TOJIKISTON
               </text>
               <g transform="translate(525, 510)">
-                <rect width="70" height="20" rx="10" fill="rgba(0,0,0,0.6)" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
-                <text x="12" y="14" fill="rgba(255,255,255,0.65)" fontSize="9" fontWeight="700">🔒 2027</text>
+                <rect width="70" height="20" rx="10" fill="#ECE8DD" stroke="#B8B3A4" strokeWidth="1" />
+                <text x="12" y="14" fill="#5C5749" fontSize="9" fontWeight="700">🔒 2027</text>
               </g>
             </g>
 
-            {/* --- 4. QIRG'IZISTON (Sharq - Oq-qora past opacity) --- */}
+            {/* --- 4. QIRG'IZISTON (Sharq - Opacity pastroq) --- */}
             <g
               onMouseEnter={() => setHoveredCountry('Qirg‘iziston (2027 Rejada)')}
               onMouseLeave={() => setHoveredCountry(null)}
-              className="cursor-help transition-all duration-300 hover:opacity-90 opacity-40 group"
+              className="cursor-help transition-opacity duration-300 hover:opacity-80 opacity-40 group"
             >
               <path
                 d={CENTRAL_ASIA_PATHS.kyrgyzstan}
-                fill="url(#lockedMonochrome)"
-                stroke="rgba(255, 255, 255, 0.16)"
-                strokeWidth="1.6"
-                strokeDasharray="6 4"
-                className="transition-colors duration-300 group-hover:stroke-white/30"
+                fill="url(#neighborMuted)"
+                stroke="#A8A395"
+                strokeWidth="1.4"
+                strokeDasharray="5 4"
               />
-              <text x="645" y="420" textAnchor="middle" fill="rgba(255, 255, 255, 0.45)" fontSize="14" fontWeight="800" letterSpacing="3">
+              <text x="645" y="420" textAnchor="middle" fill="#6B6658" fontSize="13" fontWeight="800" letterSpacing="3">
                 QIRG‘IZISTON
               </text>
               <g transform="translate(605, 435)">
-                <rect width="80" height="22" rx="11" fill="rgba(0,0,0,0.6)" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
-                <text x="12" y="15" fill="rgba(255,255,255,0.65)" fontSize="10" fontWeight="700">🔒 2027 Reja</text>
+                <rect width="80" height="22" rx="11" fill="#ECE8DD" stroke="#B8B3A4" strokeWidth="1" />
+                <text x="12" y="15" fill="#5C5749" fontSize="10" fontWeight="700">🔒 2027 Reja</text>
               </g>
             </g>
 
-            {/* --- 5. O‘ZBEKISTON (ASOSIY FAOL DAVLAT - YASHIL YORQIN KONTUR & SHU’LA) --- */}
-            <g filter="url(#uzbNeonGlow)">
+            {/* --- 5. O‘ZBEKISTON (QORAROQ, ANIQLIK BILAN AJRALIB TURUVCHI ASOSIY DAVLAT) --- */}
+            <g filter="url(#uzbShadow)">
               <path
                 d={CENTRAL_ASIA_PATHS.uzbekistanMain}
-                fill="url(#uzbGradient)"
-                stroke="#35CA56"
+                fill="url(#uzbDeepGreen)"
+                stroke="#25B446"
                 strokeWidth="2.8"
                 className="transition-all duration-300 hover:brightness-110"
               />
               <path
                 d={CENTRAL_ASIA_PATHS.uzbekistanSub}
-                fill="url(#uzbGradient)"
-                stroke="#35CA56"
+                fill="url(#uzbDeepGreen)"
+                stroke="#25B446"
                 strokeWidth="2"
               />
             </g>
 
             {/* O'zbekiston markaziy yozuvi */}
-            <text x="345" y="340" fill="#35CA56" fontSize="19" fontWeight="900" letterSpacing="4" opacity="0.95">
+            <text x="345" y="340" fill="#35CA56" fontSize="18" fontWeight="900" letterSpacing="4" opacity="0.95">
               O‘ZBEKISTON
             </text>
             <text x="345" y="358" fill="#8CE8A0" fontSize="10.5" fontWeight="700" letterSpacing="1.5" opacity="0.85">
               ★ 100% FAOL EKOTIZIM (14 VILOYAT)
             </text>
 
-            {/* --- 6. HUDUDLAR BO'YICHA LOCATION PINLARI (7 TA MARKAZ) --- */}
+            {/* --- 6. HUDUDLAR BO'YICHA LOCATION PINLARI VA HOVER FOYDALANUVCHILAR POPUP'I --- */}
             {UZBEKISTAN_REGIONS.map((r) => {
-              const isSelected = selectedRegion.id === r.id;
+              const isHovered = activeRegion?.id === r.id;
               return (
                 <g
                   key={r.id}
-                  onClick={() => setSelectedRegion(r)}
+                  onMouseEnter={() => setHoveredRegion(r)}
+                  onClick={() => setHoveredRegion(r)}
                   className="cursor-pointer group"
                 >
                   {/* Ping to'lqini */}
-                  {isSelected && (
-                    <circle cx={r.x} cy={r.y} r="18" fill="#35CA56" opacity="0.35" className="animate-ping" />
+                  {isHovered && (
+                    <circle cx={r.x} cy={r.y} r="18" fill="#35CA56" opacity="0.4" className="animate-ping" />
                   )}
 
                   {/* Tashqi halo */}
                   <circle
                     cx={r.x}
                     cy={r.y}
-                    r={isSelected ? '11' : '7.5'}
-                    fill={isSelected ? '#35CA56' : '#22B343'}
-                    opacity={isSelected ? '0.35' : '0.15'}
-                    className="transition-all duration-300 group-hover:scale-150"
+                    r={isHovered ? '11' : '7'}
+                    fill={isHovered ? '#35CA56' : '#22B343'}
+                    opacity={isHovered ? '0.35' : '0.2'}
+                    className="transition-all duration-200 group-hover:scale-150"
                   />
 
                   {/* Asosiy nuqta / Pin */}
                   <circle
                     cx={r.x}
                     cy={r.y}
-                    r={isSelected ? '7.5' : '5'}
-                    fill={isSelected ? '#35CA56' : '#22B343'}
+                    r={isHovered ? '7.5' : '5'}
+                    fill={isHovered ? '#35CA56' : '#22B343'}
                     stroke="#FFFFFF"
-                    strokeWidth={isSelected ? '2.5' : '1.5'}
-                    className="transition-all duration-300 group-hover:scale-125 shadow-md"
+                    strokeWidth={isHovered ? '2.5' : '1.5'}
+                    className="transition-all duration-200 group-hover:scale-125 shadow-sm"
                   />
 
-                  {/* Pin tagidagi yorliq fon (Oq-qora glassmorphism) */}
+                  {/* Pin tagidagi hudud nomi nishoni */}
                   <rect
                     x={r.x - 36}
-                    y={r.y - 25}
+                    y={r.y - 24}
                     width="72"
                     height="16"
                     rx="8"
-                    fill={isSelected ? '#0F2B16' : 'rgba(0, 0, 0, 0.75)'}
-                    stroke={isSelected ? '#35CA56' : 'rgba(255, 255, 255, 0.2)'}
+                    fill={isHovered ? '#0F2416' : '#142B1A'}
+                    stroke={isHovered ? '#35CA56' : '#2B5735'}
                     strokeWidth="1"
                     className="transition-all duration-200 group-hover:stroke-agroGreen"
                   />
-
-                  {/* Pin yorlig'i matni */}
                   <text
                     x={r.x}
-                    y={r.y - 14}
+                    y={r.y - 13}
                     textAnchor="middle"
-                    fill={isSelected ? '#35CA56' : '#FFFFFF'}
+                    fill={isHovered ? '#35CA56' : '#E8F5EB'}
                     fontSize="9.5"
-                    fontWeight={isSelected ? '900' : '700'}
-                    className="select-none transition-all duration-200 pointer-events-none"
+                    fontWeight={isHovered ? '900' : '700'}
+                    className="select-none pointer-events-none"
                   >
                     {r.name.split(' ')[0]}
                   </text>
+
+                  {/* HOVER QILINGANDA TO'G'RIDAN-TO'G'RI XARITA USTIDA CHIQADIGAN FOYDALANUVCHILAR POPUP'I */}
+                  {isHovered && (
+                    <g
+                      transform={`translate(${r.x > 500 ? r.x - 170 : r.x - 10}, ${r.y > 450 ? r.y - 95 : r.y - 85})`}
+                      className="pointer-events-none transition-all duration-200"
+                    >
+                      {/* Popup card foni */}
+                      <rect
+                        width="180"
+                        height="68"
+                        rx="12"
+                        fill="#0A160E"
+                        stroke="#35CA56"
+                        strokeWidth="1.4"
+                        filter="drop-shadow(0px 8px 16px rgba(0,0,0,0.5))"
+                      />
+                      {/* Hudud nomi */}
+                      <text x="12" y="19" fill="#FFFFFF" fontSize="11.5" fontWeight="800">
+                        📍 {r.name}
+                      </text>
+                      {/* Badge */}
+                      <text x="168" y="18" textAnchor="end" fill="#8CE8A0" fontSize="9" fontWeight="700">
+                        {r.badge}
+                      </text>
+                      {/* Chiziq */}
+                      <line x1="12" y1="26" x2="168" y2="26" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+                      {/* Foydalanuvchilar soni (Fermerlar) */}
+                      <text x="12" y="42" fill="#35CA56" fontSize="10.5" fontWeight="800">
+                        👥 {r.farmersCount} faol fermer
+                      </text>
+                      {/* Do'konlar va Yetkazish */}
+                      <text x="12" y="58" fill="#D1DFD5" fontSize="9.5" fontWeight="600">
+                        🏪 {r.storesCount} do‘kon • ⚡ {r.deliverySpeed}
+                      </text>
+                    </g>
+                  )}
                 </g>
               );
             })}
           </svg>
         </div>
 
-        {/* Hoverda davlat haqida ma'lumot */}
+        {/* Qo'shni davlatga hover qilinganda bildirishnoma */}
         {hoveredCountry && (
-          <div className="absolute bottom-3 left-3 right-3 rounded-xl bg-black/90 border border-agroGreen/40 px-3 py-1.5 text-center text-xs text-agroGreen font-bold backdrop-blur-md shadow-xl">
-            🔒 {hoveredCountry} — 2-bosqichda Markaziy Osiyo bozoriga integratsiya
+          <div className="mt-2 text-center text-xs font-bold text-charcoal/70 bg-cream p-1.5 rounded-xl border border-charcoal/10">
+            🔒 {hoveredCountry} — 2-bosqichda Markaziy Osiyo bozoriga chiqish
           </div>
         )}
       </div>
 
-      {/* QISQAROQ VA IXCHAM TANLANGAN HUDUD STATISTIKASI (Glass Bento Strip) */}
-      <div className="rounded-2xl bg-white/[0.05] border border-white/10 p-3 sm:p-4 backdrop-blur-md">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          {/* Tanlangan hudud nomi va nishoni */}
-          <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-agroGreen/20 text-agroGreen border border-agroGreen/30">
-              <MapPin className="h-5 w-5" />
+      {/* 2. PASTIDA: 5 TA SEKTOR BO'YICHA BUTUN O'ZBEKISTON STATISTIKASI (B2B & B2C) */}
+      <div className="rounded-3xl bg-cream-soft border border-charcoal/10 p-5 sm:p-7 shadow-sm">
+        {/* Umumiy Respublika B2B & B2C Metrikalari */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-charcoal/10 pb-5">
+          <div>
+            <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-forest-dark">
+              <ShieldCheck className="h-4 w-4 text-agroGreen-700" />
+              Respublika Ekotizim Qamrovi
             </span>
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className="text-base sm:text-lg font-black text-white">{selectedRegion.name}</h4>
-                <span className="rounded-md bg-agroGreen/20 px-2 py-0.5 text-[10px] font-bold text-agroGreen border border-agroGreen/30">
-                  {selectedRegion.badge}
-                </span>
-              </div>
-              <p className="text-[11px] text-white/50">Hozirda faol B2B va B2C ma’lumotlari</p>
-            </div>
+            <h4 className="mt-1 text-xl sm:text-2xl font-black text-charcoal">
+              5 ta sektor bo‘yicha O‘zbekiston umumiy ko‘rsatkichlari
+            </h4>
           </div>
 
-          {/* 4 ta Ixcham Ko'rsatkichlar (Bir qatorda) */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center lg:flex-1 lg:max-w-2xl">
-            {/* Do'konlar */}
-            <div className="rounded-xl bg-white/[0.04] p-2 sm:p-2.5 border border-white/5">
-              <span className="flex items-center justify-center gap-1 text-[11px] font-medium text-white/50">
-                <Store className="h-3 w-3 text-agroGreen" /> Do‘konlar
-              </span>
-              <p className="mt-0.5 text-base sm:text-lg font-black text-white">{selectedRegion.storesCount}</p>
-              <p className="text-[9px] text-white/40">B2B kassa ulangan</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 border border-charcoal/10 shadow-xs">
+              <Store className="h-4 w-4 text-agroGreen-700" />
+              <div>
+                <p className="text-[10px] font-medium text-charcoal/50 leading-none">Jami B2B do‘konlar</p>
+                <p className="text-base font-black text-forest-dark mt-0.5">{UZBEKISTAN_SECTOR_SUMMARY.totalB2B}+</p>
+              </div>
             </div>
 
-            {/* Sektorlar */}
-            <div className="rounded-xl bg-white/[0.04] p-2 sm:p-2.5 border border-white/5">
-              <span className="flex items-center justify-center gap-1 text-[11px] font-medium text-white/50">
-                <Layers className="h-3 w-3 text-agroGreen" /> Sektorlar
-              </span>
-              <p className="mt-0.5 text-base sm:text-lg font-black text-agroGreen">{selectedRegion.sectorsCount}/5</p>
-              <p className="text-[9px] text-agroGreen/70 font-semibold">100% barcha yo‘nalish</p>
+            <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 border border-charcoal/10 shadow-xs">
+              <Users className="h-4 w-4 text-agroGreen-700" />
+              <div>
+                <p className="text-[10px] font-medium text-charcoal/50 leading-none">Jami B2C fermerlar</p>
+                <p className="text-base font-black text-forest-dark mt-0.5">{UZBEKISTAN_SECTOR_SUMMARY.totalB2C}</p>
+              </div>
             </div>
 
-            {/* Fermerlar */}
-            <div className="rounded-xl bg-white/[0.04] p-2 sm:p-2.5 border border-white/5">
-              <span className="flex items-center justify-center gap-1 text-[11px] font-medium text-white/50">
-                <Users className="h-3 w-3 text-agroGreen" /> Fermerlar
-              </span>
-              <p className="mt-0.5 text-base sm:text-lg font-black text-white">{selectedRegion.farmersCount}</p>
-              <p className="text-[9px] text-white/40">Faol xaridor</p>
+            <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 border border-charcoal/10 shadow-xs">
+              <MapPin className="h-4 w-4 text-agroGreen-700" />
+              <div>
+                <p className="text-[10px] font-medium text-charcoal/50 leading-none">Qamrov</p>
+                <p className="text-base font-black text-forest-dark mt-0.5">{UZBEKISTAN_SECTOR_SUMMARY.totalRegions} hudud</p>
+              </div>
             </div>
 
-            {/* Yetkazish & Ommabop */}
-            <div className="rounded-xl bg-white/[0.04] p-2 sm:p-2.5 border border-white/5 text-left">
-              <span className="flex items-center gap-1 text-[10px] font-semibold text-agroGreen">
-                <Zap className="h-3 w-3 shrink-0" /> {selectedRegion.deliverySpeed}
-              </span>
-              <p className="mt-0.5 text-[11px] font-bold text-white truncate" title={selectedRegion.popularSector}>
-                {selectedRegion.popularSector}
-              </p>
-              <p className="text-[9px] text-white/40">Eng ko‘p xarid</p>
+            <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 border border-charcoal/10 shadow-xs">
+              <Zap className="h-4 w-4 text-agroGreen-700" />
+              <div>
+                <p className="text-[10px] font-medium text-charcoal/50 leading-none">Yetkazish</p>
+                <p className="text-base font-black text-forest-dark mt-0.5">{UZBEKISTAN_SECTOR_SUMMARY.deliveryAvg}</p>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* 7 TA HUDUD TEZKOR TUGMALARI (Bir qatorda) */}
-        <div className="mt-3 pt-3 border-t border-white/5 flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] font-semibold text-white/40 mr-1">Hududni tanlang:</span>
-          {UZBEKISTAN_REGIONS.map((r) => (
-            <button
-              key={r.id}
-              type="button"
-              onClick={() => setSelectedRegion(r)}
-              className={`rounded-full px-3 py-1 text-[10px] font-bold transition cursor-pointer ${
-                selectedRegion.id === r.id
-                  ? 'bg-agroGreen text-forest-dark font-black shadow-glow-subtle'
-                  : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white border border-white/5'
-              }`}
+        {/* 5 Ta Sektor Bo'yicha B2B va B2C Bo'linishi */}
+        <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          {UZBEKISTAN_SECTOR_SUMMARY.sectors.map((s) => (
+            <div
+              key={s.id}
+              className="flex flex-col justify-between rounded-2xl bg-white p-4 border border-charcoal/10 shadow-xs transition-all duration-300 hover:shadow-soft hover:border-agroGreen/30 group"
             >
-              {r.name.split(' ')[0]} ({r.storesCount})
-            </button>
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-2xl">{s.emoji}</span>
+                  <span className="rounded-md bg-cream px-2 py-0.5 text-[10px] font-bold text-charcoal/60 border border-charcoal/5">
+                    {s.category}
+                  </span>
+                </div>
+
+                <h5 className="mt-2 text-sm font-extrabold text-charcoal group-hover:text-forest-dark transition-colors">
+                  {s.name}
+                </h5>
+                <p className="mt-0.5 text-[11px] text-charcoal/50 font-medium">
+                  {s.highlight}
+                </p>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-charcoal/10 space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-charcoal/60 font-medium flex items-center gap-1">
+                    <Store className="h-3 w-3 text-agroGreen-700" /> B2B do‘kon:
+                  </span>
+                  <span className="font-black text-forest-dark">{s.storesCount} ta</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-charcoal/60 font-medium flex items-center gap-1">
+                    <Users className="h-3 w-3 text-agroGreen-700" /> B2C xaridor:
+                  </span>
+                  <span className="font-black text-forest-dark">{s.farmersCount}</span>
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       </div>

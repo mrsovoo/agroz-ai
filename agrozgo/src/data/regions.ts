@@ -131,3 +131,67 @@ export const CENTRAL_ASIA_COUNTRIES = [
   },
 ];
 
+export interface SectorStat {
+  id: string;
+  name: string;
+  category: string;
+  emoji: string;
+  storesCount: number;
+  farmersCount: string;
+  highlight: string;
+}
+
+export const UZBEKISTAN_SECTOR_SUMMARY = {
+  totalB2B: 618,
+  totalB2C: '40 800+',
+  totalRegions: 14,
+  deliveryAvg: '1-3 soat',
+  sectors: [
+    {
+      id: 'agro_vet',
+      name: 'O‘g‘itlar va Vet-Dorilar',
+      category: 'Agro-Vet',
+      emoji: '🌿',
+      storesCount: 185,
+      farmersCount: '14 200+',
+      highlight: 'Biostimulyator & NPK',
+    },
+    {
+      id: 'feed',
+      name: 'Yem va Ozuqalar',
+      category: 'Feed',
+      emoji: '🌾',
+      storesCount: 142,
+      farmersCount: '11 500+',
+      highlight: 'Qoplab va kg-lab',
+    },
+    {
+      id: 'warehouse',
+      name: 'Ombor va Qadoqlash',
+      category: 'Warehouse',
+      emoji: '🏢',
+      storesCount: 88,
+      farmersCount: '5 400+',
+      highlight: 'Issiqxona & sug‘orish',
+    },
+    {
+      id: 'seeds',
+      name: 'Urug‘lar va Ko‘chatlar',
+      category: 'Seeds',
+      emoji: '🌱',
+      storesCount: 125,
+      farmersCount: '6 800+',
+      highlight: '98% unuvchanlik navi',
+    },
+    {
+      id: 'machinery',
+      name: 'Jihozlar va Texnika',
+      category: 'Machinery',
+      emoji: '🔧',
+      storesCount: 78,
+      farmersCount: '2 900+',
+      highlight: 'Motoblok & purkagich',
+    },
+  ] as SectorStat[],
+};
+
