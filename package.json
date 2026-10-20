@@ -8,7 +8,8 @@
     "build:admin": "cd super-adm && npm install && npm run build",
     "build:b2c": "cd agrozgo && npm install && npm run build",
     "build:all": "npm run build:b2b && npm run build:admin && npm run build:b2c",
-    "build": "npm run build:all",
+    "build": "cd agrozgo && npm install && npm run build",
+    "vercel-build": "cd agrozgo && npm install && npm run build",
     "test": "cd backend && npm test"
   }
 }

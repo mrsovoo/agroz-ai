@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, MapPin, Loader2, Navigation, ArrowRight, ArrowUpRight, Sparkles, Building2, Store } from 'lucide-react';
+import { Search, MapPin, Loader2, Navigation, ArrowRight, ArrowUpRight, Sparkles, Building2, Store, Users, ShoppingBag } from 'lucide-react';
 import { AgroImage, AgrozSymbol } from './ui';
 import { IMAGES, SEARCH_SUGGESTIONS, DEMO_RESULTS, SECTORS, BIZNESGO_URL } from '../data/content';
 
@@ -10,7 +10,6 @@ export const Hero: React.FC = () => {
   const [location, setLocation] = useState('Toshkent, Chilonzor');
   const [status, setStatus] = useState<Status>('idle');
 
-  // Standalone simulyatsiya: brauzer geolokatsiyasi so'raladi, natijalar statik.
   const detectLocation = () => {
     setStatus('locating');
     const finish = (label: string) => {
@@ -38,7 +37,7 @@ export const Hero: React.FC = () => {
   return (
     <section id="top" className="relative overflow-hidden pt-24 sm:pt-28 pb-10">
       <div className="container-x">
-        {/* Asosiy Katta Kavisli Bento Frama (Referens dizayn 1:1) */}
+        {/* Asosiy Katta Kavisli Bento Frama */}
         <div className="relative overflow-hidden rounded-[32px] sm:rounded-[44px] border border-forest-border/20 bg-forest-dark shadow-2xl">
           {/* Orqa fon: yam-yashil terrasa ekinzorlari manzarasi */}
           <AgroImage
@@ -55,7 +54,7 @@ export const Hero: React.FC = () => {
             <div className="max-w-3xl animate-fade-up">
               <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-bold text-white backdrop-blur-md shadow-sm">
                 <AgrozSymbol className="h-4 w-4" color="#35ca56" />
-                Kelajak Agro-Ekotizimi • B2C & B2B
+                Agro-Marketplace & B2B Kassa Ekotizimi
               </span>
 
               <h1 className="mt-5 text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-[1.08]">
@@ -67,8 +66,7 @@ export const Hero: React.FC = () => {
               </h1>
 
               <p className="mt-5 max-w-xl text-base sm:text-lg text-white/85 leading-relaxed font-medium">
-                Fermer, chorvador va dehqonlar uchun yagona aqlli Agro-Marketplace.
-                Eng yaqin vet-dorixonalar, yem, urug‘chilik va zamonaviy agro-texnikalar bir joyda.
+                Do‘konlar uchun raqamli kassa, fermerlar uchun esa eng yaqin dorixona, yem, urug‘ va texnikalarni bitta ilovada jamlagan yagona agro-platforma.
               </p>
 
               <div className="mt-8 flex flex-wrap items-center gap-4">
@@ -76,79 +74,92 @@ export const Hero: React.FC = () => {
                   href="#sectors"
                   className="group inline-flex items-center gap-3 rounded-full border border-white/40 bg-white/15 px-6 py-3.5 text-sm font-extrabold text-white backdrop-blur-md transition hover:bg-white hover:text-forest-dark active:scale-95 shadow-sm"
                 >
-                  Barcha mahsulotlar
+                  Barcha 5 ta sektor
                   <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
                 </a>
                 <a
-                  href="#technology"
+                  href="#products"
                   className="inline-flex items-center gap-2 rounded-full bg-agroGreen hover:bg-agroGreen-hover text-forest-dark font-extrabold px-6 py-3.5 text-sm transition shadow-glow-green active:scale-95"
                 >
-                  <Sparkles className="h-4 w-4" />
-                  Texnologiyalarni ko‘rish
+                  <ShoppingBag className="h-4 w-4" />
+                  Mahsulotlar katalogi
                 </a>
               </div>
             </div>
 
-            {/* Pastki Bento Kartochkalar (Real rasmlar va toza Lucide iconlar) */}
-            <div className="mt-12 grid gap-5 sm:grid-cols-2">
-              {/* Chap Karta: Agro-Vet */}
-              <div className="group relative flex flex-col sm:flex-row items-center gap-5 rounded-[28px] bg-[#F7F5EE] p-5 sm:p-6 text-charcoal shadow-xl transition-all duration-300 hover:shadow-2xl border border-charcoal/5">
-                <div className="relative h-36 w-full sm:w-40 shrink-0 overflow-hidden rounded-2xl bg-white border border-charcoal/5">
-                  <AgroImage
-                    src={IMAGES.livestock}
-                    alt="Agro-Vet va chorvachilik dorilari"
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-agroGreen-800 bg-agroGreen/15 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
-                    <Building2 className="h-3 w-3" /> Agro-Vet & Dorixonalar
-                  </span>
-                  <h3 className="mt-2 text-xl font-black text-charcoal">Enrofloksatsin & Dorilar</h3>
-                  <p className="mt-1 text-xs text-charcoal/70 leading-relaxed">
-                    Vaksinalar, antibiotiklar va premikslar — partiya raqami va yaroqlilik muddati nazorati bilan.
-                  </p>
-                  <a
-                    href="#products"
-                    className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-charcoal/20 bg-white px-4 py-2 text-xs font-bold text-charcoal hover:bg-forest-dark hover:text-white transition"
-                  >
-                    Mahsulotlarni ko‘rish
-                  </a>
-                </div>
-                <span className="absolute top-4 right-4 grid h-8 w-8 place-items-center rounded-full bg-agroGreen text-forest-dark shadow-sm group-hover:scale-110 transition">
-                  <ArrowUpRight className="h-4 w-4" />
-                </span>
+            {/* B2C va B2B ni BITTADA TUSHUNTIRUVCHI 2 TA ASOSIY BENTO KARTA */}
+            <div className="mt-12">
+              {/* Ekotizim tushuntiruvchi ixcham yashil strip */}
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-black/50 border border-white/15 px-4 py-1.5 text-xs text-white/80 backdrop-blur-md">
+                <span className="h-2 w-2 rounded-full bg-agroGreen" />
+                <span className="font-semibold text-agroGreen">Ekotizim qanday ishlaydi?</span>
+                <span className="hidden sm:inline text-white/70">Do‘konlar BiznesGO (B2B) da tovar kiritadi, Fermerlar esa AgrozGO (B2C) orqali xarid qiladi.</span>
               </div>
 
-              {/* O'ng Karta: Smart Remote Controller & BiznesGO */}
-              <div className="group relative flex flex-col sm:flex-row items-center gap-5 rounded-[28px] bg-[#F7F5EE] p-5 sm:p-6 text-charcoal shadow-xl transition-all duration-300 hover:shadow-2xl border border-charcoal/5">
-                <div className="flex-1 min-w-0 order-2 sm:order-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-agroGreen-800 bg-agroGreen/15 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
-                    <Store className="h-3 w-3" /> BiznesGO (B2B) Do‘konlar
+              <div className="grid gap-5 sm:grid-cols-2">
+                {/* 1. AGROZGO (B2C) — FERMERLAR UCHUN */}
+                <div className="group relative flex flex-col sm:flex-row items-center gap-5 rounded-[28px] bg-[#F7F5EE] p-5 sm:p-6 text-charcoal shadow-xl transition-all duration-300 hover:shadow-2xl border border-charcoal/5">
+                  <div className="relative h-36 w-full sm:w-40 shrink-0 overflow-hidden rounded-2xl bg-white border border-charcoal/5">
+                    <AgroImage
+                      src={IMAGES.livestock}
+                      alt="AgrozGO fermerlar ilovasi"
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-forest-dark bg-agroGreen px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 shadow-xs">
+                      <Users className="h-3 w-3" /> AgrozGO (B2C) — Fermerlar Uchun
+                    </span>
+                    <h3 className="mt-2 text-lg font-black text-charcoal leading-snug">
+                      Yaqin do‘kondan to‘g‘ridan-to‘g‘ri arzon xarid
+                    </h3>
+                    <p className="mt-1 text-xs text-charcoal/70 leading-relaxed">
+                      Fermer va dehqonlar yaqin atrofdagi vet-dorixonalar, yem va urug‘ do‘konlaridan real vaqtdagi ombor qoldig‘i bilan vositachisiz xarid qiladi.
+                    </p>
+                    <a
+                      href="#products"
+                      className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-charcoal/20 bg-white px-4 py-2 text-xs font-bold text-charcoal hover:bg-forest-dark hover:text-white transition"
+                    >
+                      Katalogda ko‘rish <ArrowRight className="h-3 w-3" />
+                    </a>
+                  </div>
+                  <span className="absolute top-4 right-4 grid h-8 w-8 place-items-center rounded-full bg-agroGreen text-forest-dark shadow-sm group-hover:scale-110 transition">
+                    <ArrowUpRight className="h-4 w-4" />
                   </span>
-                  <h3 className="mt-2 text-xl font-black text-charcoal">Smart POS & Kassa</h3>
-                  <p className="mt-1 text-xs text-charcoal/70 leading-relaxed">
-                    Do‘kon kassasi, ombor qoldiqlari va CRM qarz daftari AgrozGO marketplace bilan real vaqtda bog‘langan.
-                  </p>
-                  <a
-                    href={BIZNESGO_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-4 inline-flex items-center gap-2 rounded-full bg-forest-dark text-white px-5 py-2 text-xs font-bold hover:bg-forest transition shadow-sm"
-                  >
-                    Do‘konni ulash <ArrowRight className="h-3.5 w-3.5 text-agroGreen" />
-                  </a>
                 </div>
-                <div className="relative h-36 w-full sm:w-40 shrink-0 overflow-hidden rounded-2xl bg-white border border-charcoal/5 order-1 sm:order-2">
-                  <AgroImage
-                    src={IMAGES.controller}
-                    alt="BiznesGO Smart kassa boshqaruvi"
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
+
+                {/* 2. BIZNESGO (B2B) — DO'KONLAR VA DORIXONALAR UCHUN */}
+                <div className="group relative flex flex-col sm:flex-row items-center gap-5 rounded-[28px] bg-[#F7F5EE] p-5 sm:p-6 text-charcoal shadow-xl transition-all duration-300 hover:shadow-2xl border border-charcoal/5">
+                  <div className="flex-1 min-w-0 order-2 sm:order-1">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-white bg-forest-dark px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 shadow-xs">
+                      <Store className="h-3 w-3 text-agroGreen" /> BiznesGO (B2B) — Do‘konlar Uchun
+                    </span>
+                    <h3 className="mt-2 text-lg font-black text-charcoal leading-snug">
+                      Smart POS kassa, ombor va qarz daftari
+                    </h3>
+                    <p className="mt-1 text-xs text-charcoal/70 leading-relaxed">
+                      Agro-do‘kon egasi kassa va ombor hisobini BiznesGO’da yuritadi. Tizimdagi tovarlar avtomatik AgrozGO marketplace fermerlariga ko‘rinadi.
+                    </p>
+                    <a
+                      href={BIZNESGO_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-4 inline-flex items-center gap-2 rounded-full bg-forest-dark text-white px-5 py-2 text-xs font-bold hover:bg-forest transition shadow-sm"
+                    >
+                      Do‘konni ulash <ArrowRight className="h-3.5 w-3.5 text-agroGreen" />
+                    </a>
+                  </div>
+                  <div className="relative h-36 w-full sm:w-40 shrink-0 overflow-hidden rounded-2xl bg-white border border-charcoal/5 order-1 sm:order-2">
+                    <AgroImage
+                      src={IMAGES.controller}
+                      alt="BiznesGO Smart kassa boshqaruvi"
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  </div>
+                  <span className="absolute top-4 right-4 grid h-8 w-8 place-items-center rounded-full bg-forest-dark text-agroGreen shadow-sm group-hover:scale-110 transition">
+                    <ArrowUpRight className="h-4 w-4" />
+                  </span>
                 </div>
-                <span className="absolute top-4 right-4 grid h-8 w-8 place-items-center rounded-full bg-forest-dark text-agroGreen shadow-sm group-hover:scale-110 transition">
-                  <ArrowUpRight className="h-4 w-4" />
-                </span>
               </div>
             </div>
           </div>
