@@ -16,6 +16,27 @@
       rel="stylesheet"
     />
     <title>AgrozGO — Yagona Agro-Marketplace</title>
+    <!-- Telegram Mini App Detection & Seamless Launch -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+      (function() {
+        try {
+          var hash = window.location.hash || '';
+          var search = window.location.search || '';
+          var isTelegram = Boolean(
+            window.TelegramWebviewProxy ||
+            (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData && window.Telegram.WebApp.initData.length > 0) ||
+            hash.indexOf('tgWebAppData') !== -1 ||
+            search.indexOf('tgWebAppData') !== -1
+          );
+          if (isTelegram && !window.location.pathname.startsWith('/app')) {
+            window.location.replace('/app/' + search + hash);
+          }
+        } catch (e) {
+          console.warn("Telegram check failed:", e);
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
