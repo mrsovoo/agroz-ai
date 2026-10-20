@@ -10,7 +10,6 @@ dist/
 **/dist/
 biznesgo/dist/
 super-adm/dist/
-agrozgo/dist/
 
 .vercel
 package-lock.json
