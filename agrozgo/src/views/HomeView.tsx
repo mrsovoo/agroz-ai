@@ -1,9 +1,10 @@
 import React from 'react';
 import { Header } from '../components/Header';
 import { Hero } from '../components/Hero';
-import { Technology } from '../components/Technology';
 import { Sectors } from '../components/Sectors';
 import { Products } from '../components/Products';
+import { OrderFlow } from '../components/OrderFlow';
+import { Technology } from '../components/Technology';
 import { About } from '../components/About';
 import { Quality, Values } from '../components/Quality';
 import { Articles } from '../components/Articles';
@@ -20,9 +21,10 @@ export const HomeView: React.FC = () => (
     <Header />
     <main className="relative z-10 space-y-6 sm:space-y-10">
       <Hero />
-      <Technology />
       <Sectors />
       <Products />
+      <OrderFlow />
+      <Technology />
       <About />
       <Quality />
       <Values />
