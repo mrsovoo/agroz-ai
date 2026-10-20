@@ -61,7 +61,7 @@ export const SECTORS: Sector[] = [
     emoji: '🌾',
     icon: Wheat,
     title: 'Yem va Ozuqa',
-    subtitle: 'Feed',
+    subtitle: 'Yem va ozuqa mahsulotlari',
     description:
       "Omuxta yem, kepak, arpa va premikslar — butun 50 kg qop yoki kerakli kilogramm miqdorida bo'lib sotib olish imkoniyati.",
     guarantee: 'Qop yoki kg-lab xarid',
@@ -73,7 +73,7 @@ export const SECTORS: Sector[] = [
     emoji: '🏢',
     icon: Warehouse,
     title: 'Ulgurji Ombor',
-    subtitle: 'Warehouse',
+    subtitle: 'Ulgurji savdo omborlari',
     description:
       "Diler va ulgurji omborlar bilan to'g'ridan-to'g'ri aloqa. Chakana va ulgurji narxlar oldindan ochiq ko'rsatiladi.",
     guarantee: 'Shaffof ikki bosqichli narx',
@@ -85,7 +85,7 @@ export const SECTORS: Sector[] = [
     emoji: '🌱',
     icon: Sprout,
     title: "Urug' va Ko'chat",
-    subtitle: 'Seeds',
+    subtitle: 'Urug‘chilik va ko‘chatlar',
     description:
       "Sertifikatlangan navlar, unuvchanlik foizi va hosil yili ko'rsatilgan urug'lar hamda sog'lom ko'chatlar.",
     guarantee: 'Unuvchanlik % kafolati',
@@ -97,7 +97,7 @@ export const SECTORS: Sector[] = [
     emoji: '🔧',
     icon: Wrench,
     title: 'Texnika va Jihozlar',
-    subtitle: 'Machinery',
+    subtitle: 'Texnika va jihozlar',
     description:
       "Agro-texnika, nasoslar, motorli purkagichlar va ehtiyot qismlar — zavod seriya raqami va rasmiy kafolat bilan.",
     guarantee: 'S/N va kafolat nazorati',
@@ -223,8 +223,8 @@ export const CONTACT_INFO = {
 export const OPERATION_PILLARS = [
   {
     id: 'sync',
-    title: '1:1 Live Kassa Sinxronizatsiyasi',
-    en: 'Real-Time Inventory Sync',
+    title: '1:1 Jonli Kassa Sinxronizatsiyasi',
+    subtitle: 'Haqiqiy vaqtli ombor qoldig‘i',
     tag: '0 soniya kechikish',
     desc: 'BiznesGO POS kassa orqali do‘konda sotilgan har bir dori, urug‘ yoki yem AgrozGO qoldig‘idan avtomatik kamayadi. Fermer faqat do‘konda bor tovargagina buyurtma beradi.',
     image: '/images/smart-controller.jpg',
@@ -232,7 +232,7 @@ export const OPERATION_PILLARS = [
   {
     id: 'feed-calc',
     title: 'Qoplab yoki Kg-lab Bo‘lib Sotish',
-    en: 'Feed & Bulk Calculator',
+    subtitle: 'Ozuqa va yem kalkulyatori',
     tag: '1 kg dan boshlab',
     desc: 'Yem va ozuqa do‘konlarida 50 kg qopdagi yemni mijoz xohishiga ko‘ra 5–10 kg qilib bo‘lib sotish kalkulyatori. Tizim qoldiqni avtomatik to‘g‘ri hisoblab boradi.',
     image: '/images/livestock.jpg',
@@ -240,7 +240,7 @@ export const OPERATION_PILLARS = [
   {
     id: 'wholesale',
     title: 'Shaffof Ikki Bosqichli Narx',
-    en: 'Dual Retail & Wholesale',
+    subtitle: 'Chakana va ulgurji savdo',
     tag: 'Ulgurji chegirma',
     desc: 'Omborlar uchun chakana va minimal ulgurji partiyalar (masalan, 10 qopdan boshlab) narxi oldindan ochiq ko‘rsatiladi. Dilerlik va qarz daftari to‘liq avtomatlashtirilgan.',
     image: '/images/aerial-fields.jpg',

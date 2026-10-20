@@ -108,7 +108,7 @@ export const Technology: React.FC = () => {
                       {p.tag}
                     </span>
                     <h3 className="text-lg font-black leading-snug">{p.title}</h3>
-                    <p className="mt-1 text-xs text-white/70 font-medium">{p.en}</p>
+                    <p className="mt-1 text-xs text-white/80 font-medium">{p.subtitle}</p>
                   </div>
                 </div>
               );

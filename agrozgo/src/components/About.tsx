@@ -98,7 +98,7 @@ export const About: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="text-base font-extrabold text-charcoal">Sektorlar bo‘yicha buyurtmalar dinamikasi</h4>
-                  <p className="text-xs text-charcoal/50">Oylik buyurtmalar tahlili (demo)</p>
+                  <p className="text-xs text-charcoal/50">Oylik buyurtmalar tahlili (ko‘rgazmali)</p>
                 </div>
                 <span className="text-xs font-bold text-agroGreen-800 bg-agroGreen-50 px-2.5 py-1 rounded-full border border-agroGreen/20">
                   +24% o‘sish

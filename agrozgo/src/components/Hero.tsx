@@ -50,7 +50,7 @@ export const Hero: React.FC = () => {
           {/* Orqa fon: yam-yashil terrasa ekinzorlari manzarasi */}
           <AgroImage
             src={IMAGES.aerial}
-            alt="Lush green agricultural terraces"
+            alt="Yashil agro-ekinzorlar manzarasi"
             className="absolute inset-0 h-full w-full object-cover opacity-85 scale-105 transition-transform duration-1000"
           />
           {/* Yumshoq qoraytiruvchi va kontrast gradientlar */}
@@ -68,8 +68,8 @@ export const Hero: React.FC = () => {
                 </span>
 
                 <h1 className="mt-5 text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-[1.08]">
-                  Part of future <br className="hidden sm:inline" />
-                  Agriculture{' '}
+                  Kelajak qishloq <br className="hidden sm:inline" />
+                  xo‘jaligi{' '}
                   <span className="inline-grid h-10 w-10 sm:h-14 sm:w-14 place-items-center rounded-full border border-white/30 bg-white/10 backdrop-blur-md text-xl sm:text-2xl align-middle shadow-glow-subtle">
                     🌾
                   </span>
@@ -140,12 +140,12 @@ export const Hero: React.FC = () => {
 
             {/* Pastki Bento Kartochkalar (Referensdagi 2 ta Off-White Cream bento card) */}
             <div className="mt-12 grid gap-5 sm:grid-cols-2">
-              {/* Chap Karta: DJI Agras T50 */}
+              {/* Chap Karta: Agro-Vet */}
               <div className="group relative flex flex-col sm:flex-row items-center gap-5 rounded-[28px] bg-[#F7F5EE] p-5 sm:p-6 text-charcoal shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
                 <div className="relative h-36 w-full sm:w-40 shrink-0 overflow-hidden rounded-2xl bg-white border border-charcoal/5">
                   <AgroImage
                     src={IMAGES.drone}
-                    alt="DJI Agras T50"
+                    alt="Agro-Vet dori-darmonlari"
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                 </div>
@@ -192,7 +192,7 @@ export const Hero: React.FC = () => {
                 <div className="relative h-36 w-full sm:w-40 shrink-0 overflow-hidden rounded-2xl bg-white border border-charcoal/5 order-1 sm:order-2">
                   <AgroImage
                     src={IMAGES.controller}
-                    alt="Smart Controller"
+                    alt="BiznesGO Smart kassa boshqaruvi"
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                 </div>
@@ -271,7 +271,7 @@ export const Hero: React.FC = () => {
             <div className="mt-4 animate-fade-up rounded-2xl bg-white p-3.5 shadow-soft border border-agroGreen/30">
               <p className="px-2 pb-2 text-xs font-bold text-agroGreen-900 flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-agroGreen" />
-                “{query || 'Barcha mahsulotlar'}” — {location} yaqinida {results.length} ta do‘kon topildi (demo)
+                “{query || 'Barcha mahsulotlar'}” — {location} yaqinida {results.length} ta do‘kon topildi (ko‘rgazmali)
               </p>
               <ul className="divide-y divide-charcoal/5">
                 {results.map((r) => {
