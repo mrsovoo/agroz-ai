@@ -7,10 +7,10 @@
  */
 const http = require('http');
 const crypto = require('crypto');
-const config = require('./config');
-const { app } = require('./server');
-const { pool, query } = require('./db/pool');
-const { handleBiznesgoBotUpdate } = require('./services/telegramBot');
+const config = require('../config');
+const { app } = require('../server');
+const { pool, query } = require('../db/pool');
+const { handleBiznesgoBotUpdate } = require('../services/telegramBot');
 
 function makeRequest(server, options, body = null) {
   return new Promise((resolve, reject) => {

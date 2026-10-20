@@ -2,8 +2,8 @@
  * Agro-Vet MVP E2E Integratsiya Testi
  */
 const http = require('http');
-const { app } = require('./server');
-const { query } = require('./db/pool');
+const { app } = require('../server');
+const { query } = require('../db/pool');
 
 function request(server, path, options = {}) {
   return new Promise((resolve, reject) => {

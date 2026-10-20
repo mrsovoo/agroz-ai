@@ -4,8 +4,13 @@ node_modules/
 !.env.example
 env.md
 .DS_Store
+**/.DS_Store
 *.log
 dist/
+**/dist/
 biznesgo/dist/
+super-adm/dist/
+agrozgo/dist/
 
 .vercel
+package-lock.json

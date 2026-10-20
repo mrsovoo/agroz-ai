@@ -3,7 +3,7 @@
  * uchun MVP Integratsiya Testi
  */
 const http = require('http');
-const { app } = require('./server');
+const { app } = require('../server');
 
 function request(server, path, options = {}) {
   return new Promise((resolve, reject) => {

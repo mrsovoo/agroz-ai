@@ -3,8 +3,8 @@
  */
 const crypto = require('crypto');
 const http = require('http');
-const { app } = require('./server');
-const config = require('./config');
+const { app } = require('../server');
+const config = require('../config');
 
 function createTelegramInitData(botToken, user, authDate = Math.floor(Date.now() / 1000)) {
   const params = {

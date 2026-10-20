@@ -8,9 +8,9 @@
  */
 const http = require('http');
 const crypto = require('crypto');
-const { app } = require('./server');
-const config = require('./config');
-const { query } = require('./db/pool');
+const { app } = require('../server');
+const config = require('../config');
+const { query } = require('../db/pool');
 
 function makeRequest(server, options, body = null) {
   return new Promise((resolve, reject) => {

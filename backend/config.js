@@ -3,13 +3,20 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const isProd = process.env.NODE_ENV === 'production';
 
-// Production muhitida muhim kalitlar env sifatida bo'lishi shart
+// Production muhitida muhim kalitlar env sifatida bo'lishi shart va test fallbacklar taqiqlanadi
 if (isProd) {
   if (!process.env.DATABASE_URL) {
     throw new Error("Muhit o'zgaruvchisi topilmadi: DATABASE_URL (production uchun majburiy)");
   }
-  if (!process.env.AUTH_SECRET) {
-    throw new Error("Muhit o'zgaruvchisi topilmadi: AUTH_SECRET (production uchun majburiy)");
+  if (!process.env.AUTH_SECRET || process.env.AUTH_SECRET === 'dev_insecure_auth_secret_only_for_local_development') {
+    throw new Error("Xavfsizlik xatosi: AUTH_SECRET ishlab chiqarish (production) muhitida xavfsiz qiymat sifatida o'rnatilishi shart!");
+  }
+  if (!process.env.ADMIN_PASSWORD && !process.env.ADMIN_KEY) {
+    throw new Error("Muhit o'zgaruvchisi topilmadi: ADMIN_PASSWORD yoki ADMIN_KEY (production uchun majburiy)");
+  }
+  const currentAdminPass = process.env.ADMIN_PASSWORD || process.env.ADMIN_KEY;
+  if (currentAdminPass === 'AgrozAdmin_2026_Prod_9f3b8c') {
+    throw new Error("Xavfsizlik xatosi: ADMIN_PASSWORD ishlab chiqarish muhitida standart test paroli bilan ishlatilishi taqiqlangan!");
   }
 }
 
@@ -21,7 +28,7 @@ const config = {
   pgPoolMax: Number(process.env.PGPOOL_MAX || 5),
 
   // Token imzolash kaliti (HMAC-SHA256)
-  authSecret: process.env.AUTH_SECRET || 'dev_insecure_auth_secret_only_for_local_development',
+  authSecret: process.env.AUTH_SECRET || (isProd ? '' : 'dev_insecure_auth_secret_only_for_local_development'),
   tokenTtlSeconds: Number(process.env.AUTH_TOKEN_TTL || 60 * 60 * 24 * 7), // 7 kun
 
   // Telegram Mini App initData yaroqlilik muddati (standart: 24 soat)
@@ -44,8 +51,8 @@ const config = {
 
   // Admin autentifikatsiyasi (broadcast va boshqaruv uchun)
   adminUsername: process.env.ADMIN_USERNAME || 'admin',
-  adminPassword: process.env.ADMIN_PASSWORD || 'AgrozAdmin_2026_Prod_9f3b8c',
-  adminKey: process.env.ADMIN_KEY || process.env.ADMIN_PASSWORD || 'AgrozAdmin_2026_Prod_9f3b8c',
+  adminPassword: process.env.ADMIN_PASSWORD || (isProd ? '' : 'AgrozAdmin_2026_Prod_9f3b8c'),
+  adminKey: process.env.ADMIN_KEY || process.env.ADMIN_PASSWORD || (isProd ? '' : 'AgrozAdmin_2026_Prod_9f3b8c'),
 
   // Telegram Webhook Secret Token (qo'shimcha xavfsizlik uchun)
   telegramWebhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET || '',

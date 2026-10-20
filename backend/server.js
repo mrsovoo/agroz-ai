@@ -31,7 +31,7 @@ app.use((_req, res, next) => {
   next();
 });
 
-// Qat'iy va xavfsiz CORS tekshiruvi
+// Qat'iy va xavfsiz CORS tekshiruvi (B2B, Super Admin va B2C AgrozGO)
 const allowedOrigins = [
   'https://biznesgo.uz',
   'https://www.biznesgo.uz',
@@ -42,6 +42,9 @@ const allowedOrigins = [
   'https://agroz.uz',
   'https://www.agroz.uz',
   'https://admin.agroz.uz',
+  'https://agrozgo.uz',
+  'https://www.agrozgo.uz',
+  'https://agrozgo.vercel.app',
   ...config.corsOrigins,
 ];
 
@@ -55,6 +58,7 @@ function isOriginAllowed(origin) {
     if (host === 'vercel.app' || host.endsWith('.vercel.app')) return true;
     if (host === 'biznesgo.uz' || host.endsWith('.biznesgo.uz')) return true;
     if (host === 'agroz.uz' || host.endsWith('.agroz.uz')) return true;
+    if (host === 'agrozgo.uz' || host.endsWith('.agrozgo.uz')) return true;
     return allowedOrigins.some((ao) => {
       try {
         return new URL(ao).hostname.toLowerCase() === host;

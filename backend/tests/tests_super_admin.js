@@ -9,9 +9,9 @@
  *   - POST /api/super-adm/broadcast
  */
 const http = require('http');
-const config = require('./config');
-const { app } = require('./server');
-const { pool, query } = require('./db/pool');
+const config = require('../config');
+const { app } = require('../server');
+const { pool, query } = require('../db/pool');
 
 function makeRequest(server, options, body = null) {
   return new Promise((resolve, reject) => {

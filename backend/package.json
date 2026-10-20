@@ -13,13 +13,13 @@
     "dev": "node --watch server.js",
     "migrate": "node db/migrate.js",
     "inspect-db": "node db/inspect.js",
-    "test": "node tests_mvp_agro_vet.js && node tests_mvp_all_profiles.js && node tests_dual_bot.js && node tests_bot_redirect_push.js && node tests_super_admin.js && node tests_otp_cross_platform.js",
-    "test:agro-vet": "node tests_mvp_agro_vet.js",
-    "test:all-profiles": "node tests_mvp_all_profiles.js",
-    "test:dual-bot": "node tests_dual_bot.js",
-    "test:bot": "node tests_bot_redirect_push.js",
-    "test:super-admin": "node tests_super_admin.js",
-    "test:otp": "node tests_otp_cross_platform.js"
+    "test": "node tests/tests_mvp_agro_vet.js && node tests/tests_mvp_all_profiles.js && node tests/tests_dual_bot.js && node tests/tests_bot_redirect_push.js && node tests/tests_super_admin.js && node tests/tests_otp_cross_platform.js",
+    "test:agro-vet": "node tests/tests_mvp_agro_vet.js",
+    "test:all-profiles": "node tests/tests_mvp_all_profiles.js",
+    "test:dual-bot": "node tests/tests_dual_bot.js",
+    "test:bot": "node tests/tests_bot_redirect_push.js",
+    "test:super-admin": "node tests/tests_super_admin.js",
+    "test:otp": "node tests/tests_otp_cross_platform.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
