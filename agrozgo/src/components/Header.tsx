@@ -162,6 +162,15 @@ export const Header: React.FC = () => {
             </button>
           </div>
 
+          {/* AgrozGO (B2C) Ilovani ochish CTA */}
+          <a
+            href="/app"
+            className="inline-flex items-center gap-1.5 rounded-full bg-agroGreen hover:bg-agroGreen-hover text-forest-dark px-3.5 py-2 text-xs font-black transition shadow-sm hover:scale-105 active:scale-95"
+          >
+            <Smartphone className="h-3.5 w-3.5" />
+            <span>Ilovani ochish</span>
+          </a>
+
           {/* BiznesGO (B2B) Do'konlar Uchun CTA Tugmasi */}
           <a
             href={BIZNESGO_URL}
@@ -277,6 +286,15 @@ export const Header: React.FC = () => {
                   </button>
                 </div>
               </div>
+
+              {/* AgrozGO B2C App Mobile Button */}
+              <a
+                href="/app"
+                className="mt-3 flex items-center justify-center gap-2 rounded-2xl bg-agroGreen py-3.5 text-sm font-black text-forest-dark shadow-md active:scale-95"
+              >
+                <Smartphone className="h-4 w-4" />
+                AgrozGO Ilovasini Ishga Tushirish
+              </a>
 
               {/* BiznesGO Mobile Button */}
               <a

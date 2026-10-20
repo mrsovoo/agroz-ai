@@ -11,6 +11,7 @@ const { asyncHandler, HttpError } = require('../../lib/errors');
 const {
   handleAgrozAuthBotUpdate,
   handleBiznesgoBotUpdate,
+  handleAgrozgoBotUpdate,
   sendAdminBroadcast,
 } = require('../../services/telegramBot');
 
@@ -89,6 +90,9 @@ router.post(
       return res.json(result);
     } else if (botType === 'biznesgo' || botType === 'biznesgo_bot') {
       const result = await handleBiznesgoBotUpdate(update);
+      return res.json(result);
+    } else if (botType === 'agrozgo' || botType === 'agrozgo_bot' || botType === 'agrozai' || botType === 'agrozai_bot') {
+      const result = await handleAgrozgoBotUpdate(update);
       return res.json(result);
     } else {
       throw new HttpError(404, `Noma'lum bot turi: ${botType}`, 'BOT_TYPE_NOT_FOUND');

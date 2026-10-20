@@ -117,6 +117,89 @@ async function callTelegramApi(token, method, payload) {
 }
 
 /**
+ * agrozgo_bot (@agrozai_bot): AgrozGO B2C Platform Bot handler
+ * - Welcomes farmers, cattle breeders, and agricultural buyers
+ * - Launches full-screen B2C Web App with seamless location and offline fallbacks
+ */
+async function handleAgrozgoBotUpdate(update) {
+  const callbackQuery = update.callback_query;
+  const message = update.message || update.edited_message || (callbackQuery && callbackQuery.message);
+  if (!callbackQuery && (!message || !message.chat)) {
+    return { handled: false, reason: 'NO_MESSAGE' };
+  }
+
+  const chatId = message.chat.id;
+  const user = (update.message || update.edited_message || {}).from || (callbackQuery && callbackQuery.from) || {};
+  const firstName = user.first_name || 'Fermer';
+
+  if (callbackQuery) {
+    try {
+      await callTelegramApi(config.agrozgoBotToken, 'answerCallbackQuery', {
+        callback_query_id: callbackQuery.id,
+      });
+    } catch (_) {}
+  }
+
+  const welcomeText =
+    `Assalomu alaykum, <b>${firstName}</b>! 🌿\n\n` +
+    `<b>AgrozGO — B2C Agro Marketplace platformasiga xush kelibsiz!</b>\n\n` +
+    `🌱 <b>Yaqin agro-do‘konlar</b> — 5–15 km radiusdagi vet-dorixona, omuxta yem va urug‘lar\n` +
+    `⚡️ <b>Navbatsiz bron qilish</b> — Mahsulotni band qiling, borib tayyor holda olib keting\n` +
+    `🚜 <b>Sektor yetkazib berishi</b> — Katta agro-uskunalar va issiqxona jihozlari dalagacha\n` +
+    `👨‍⚕️ <b>Agro-mutaxassislar</b> — Agronom va veterinar konsultatsiyasi\n\n` +
+    `Quyidagi tugma orqali AgrozGO ilovasini oching:`;
+
+  const inlineKeyboard = {
+    inline_keyboard: [
+      [
+        {
+          text: "🚀 AgrozGO Ilovasini Ochish",
+          web_app: { url: config.agrozgoMiniAppUrl },
+        },
+      ],
+      [
+        {
+          text: "🌐 Rasmiy Veb-Sayt",
+          url: "https://agroz-ai.vercel.app",
+        },
+      ],
+    ],
+  };
+
+  const replyKeyboard = {
+    keyboard: [
+      [
+        {
+          text: "🚀 AgrozGO Ilovasini Ochish",
+          web_app: { url: config.agrozgoMiniAppUrl },
+        },
+      ],
+    ],
+    resize_keyboard: true,
+  };
+
+  try {
+    const res = await callTelegramApi(config.agrozgoBotToken, 'sendMessage', {
+      chat_id: chatId,
+      text: welcomeText,
+      parse_mode: 'HTML',
+      reply_markup: inlineKeyboard,
+    });
+
+    // Send persistent bottom keyboard if not already sent
+    await callTelegramApi(config.agrozgoBotToken, 'sendMessage', {
+      chat_id: chatId,
+      text: "Pastdagi tugma doimo ilovani tezkor ochish uchun faol:",
+      reply_markup: replyKeyboard,
+    }).catch(() => {});
+
+    return { handled: true, bot: 'agrozgo_bot', telegram_response: res };
+  } catch (err) {
+    return { handled: false, error: err.message };
+  }
+}
+
+/**
  * agroz_auth_bot: Legacy redirect handler
  */
 async function handleAgrozAuthBotUpdate(update) {
@@ -939,6 +1022,7 @@ module.exports = {
   callTelegramApi,
   handleAgrozAuthBotUpdate,
   handleBiznesgoBotUpdate,
+  handleAgrozgoBotUpdate,
   sendAdminBroadcast,
 };
 

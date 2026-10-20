@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, MapPin, Loader2, Navigation, ArrowRight, ArrowUpRight, Sparkles, Building2, Store, Users, ShoppingBag, Truck } from 'lucide-react';
+import { Search, MapPin, Loader2, Navigation, ArrowRight, ArrowUpRight, Sparkles, Building2, Store, Users, ShoppingBag, Truck, Smartphone } from 'lucide-react';
 import { AgroImage, AgrozSymbol } from './ui';
 import { IMAGES, SEARCH_SUGGESTIONS, DEMO_RESULTS, SECTORS, BIZNESGO_URL } from '../data/content';
 
@@ -96,20 +96,32 @@ export const Hero: React.FC = () => {
                 </div>
               </div>
 
-              <div className="mt-7 flex flex-wrap items-center gap-4">
+              <div className="mt-7 flex flex-wrap items-center gap-3">
                 <a
-                  href="#sectors"
-                  className="group inline-flex items-center gap-3 rounded-full border border-white/40 bg-white/15 px-6 py-3 text-sm font-extrabold text-white backdrop-blur-md transition hover:bg-white hover:text-forest-dark active:scale-95 shadow-sm"
+                  href="/app"
+                  className="inline-flex items-center gap-2 rounded-full bg-agroGreen hover:bg-agroGreen-hover text-forest-dark font-black px-6 py-3.5 text-sm transition shadow-glow-green hover:scale-105 active:scale-95"
                 >
-                  Barcha 5 ta sektor
+                  <Smartphone className="h-4 w-4" />
+                  AgrozGO Ilovasini Ishga Tushirish
+                </a>
+                <a
+                  href="https://t.me/agrozai_bot"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group inline-flex items-center gap-2.5 rounded-full border border-white/40 bg-white/15 px-5 py-3.5 text-sm font-extrabold text-white backdrop-blur-md transition hover:bg-white hover:text-forest-dark active:scale-95 shadow-sm"
+                >
+                  <span className="grid h-5 w-5 place-items-center rounded-full bg-agroGreen text-forest-dark text-[11px] font-black">
+                    TG
+                  </span>
+                  Telegram Bot (@agrozai_bot)
                   <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
                 </a>
                 <a
                   href="#products"
-                  className="inline-flex items-center gap-2 rounded-full bg-agroGreen hover:bg-agroGreen-hover text-forest-dark font-extrabold px-6 py-3 text-sm transition shadow-glow-green active:scale-95"
+                  className="hidden sm:inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 hover:bg-white/15 text-white/90 font-bold px-5 py-3.5 text-sm transition"
                 >
-                  <ShoppingBag className="h-4 w-4" />
-                  Mahsulotlar katalogi
+                  <ShoppingBag className="h-4 w-4 text-agroGreen" />
+                  Katalog
                 </a>
               </div>
             </div>
