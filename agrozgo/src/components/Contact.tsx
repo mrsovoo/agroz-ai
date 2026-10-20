@@ -267,11 +267,11 @@ export const Footer: React.FC = () => (
         <p className="text-xs font-semibold uppercase tracking-widest text-white/40">Do‘kon egalari uchun</p>
         <p className="mt-4 text-sm text-white/60">POS kassa, ombor va qarz daftarini BiznesGO’da yuriting.</p>
         <div className="mt-3 flex flex-col gap-1.5 text-xs text-white/70">
-          <a href={`tel:${CONTACT_INFO.phoneRaw}`} className="hover:text-agroGreen transition">
-            📞 {CONTACT_INFO.phone}
+          <a href={`tel:${CONTACT_INFO.phoneRaw}`} className="hover:text-agroGreen transition flex items-center gap-1.5">
+            <Phone className="h-3.5 w-3.5 text-agroGreen" /> {CONTACT_INFO.phone}
           </a>
-          <a href={`mailto:${CONTACT_INFO.email}`} className="hover:text-agroGreen transition">
-            ✉️ {CONTACT_INFO.email}
+          <a href={`mailto:${CONTACT_INFO.email}`} className="hover:text-agroGreen transition flex items-center gap-1.5">
+            <Mail className="h-3.5 w-3.5 text-agroGreen" /> {CONTACT_INFO.email}
           </a>
         </div>
         <a
@@ -285,20 +285,11 @@ export const Footer: React.FC = () => (
       </div>
     </div>
 
-    {/* Referensdagi ulkan brend imzosi: AgrozGO ↗ */}
-    <div className="border-t border-white/5 pt-6 pb-4">
-      <div className="container-x flex items-center justify-between text-xs text-white/40 mb-4">
+    {/* Footer mualliflik huquqi */}
+    <div className="border-t border-white/5 py-6">
+      <div className="container-x flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-white/40">
         <span>© {new Date().getFullYear()} AgrozGO. Barcha huquqlar himoyalangan.</span>
         <span>Ishlab chiqildi: BiznesGO jamoasi</span>
-      </div>
-
-      <div className="select-none overflow-hidden text-center py-4 sm:py-8">
-        <span className="inline-flex items-center gap-3 sm:gap-6 text-[15vw] font-black tracking-tighter text-white/10 hover:text-white/20 transition-all duration-700 leading-none">
-          AgrozGO
-          <span className="grid h-[8vw] w-[8vw] place-items-center rounded-full bg-agroGreen text-forest-dark text-[4vw] shadow-glow-green">
-            ↗
-          </span>
-        </span>
       </div>
     </div>
   </footer>

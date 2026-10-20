@@ -7,7 +7,7 @@ const ICONS = [Search, ShoppingBag, Clock, ShieldCheck];
 
 export const OrderFlow: React.FC = () => {
   return (
-    <section id="order-flow" className="py-16 sm:py-24 bg-cream border-t border-forest/5">
+    <section id="order-flow" className="py-16 sm:py-24 bg-cream border-t border-charcoal/5">
       <div className="container-x">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
@@ -18,19 +18,19 @@ export const OrderFlow: React.FC = () => {
               <span className="font-semibold text-charcoal/50">buyurtma berish jarayoni</span>
             </h2>
           </div>
-          <p className="max-w-md text-xs sm:text-sm text-charcoal/70 leading-relaxed">
+          <p className="max-w-md text-xs sm:text-sm text-charcoal/70 leading-relaxed sm:text-right">
             Fermer va chorvadorlar uchun vositachisiz, shaffof narxlar va do‘kon kassasi bilan real vaqtda bog‘langan 4 bosqichli qulay xarid tizimi.
           </p>
         </div>
 
-        {/* 4 ta Bento Kartochka */}
+        {/* 4 ta Bosqich Kartochkalari */}
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {ORDER_FLOW_STEPS.map((s, idx) => {
             const Icon = ICONS[idx] || CheckCircle2;
             return (
               <div
                 key={s.num}
-                className="group relative flex flex-col justify-between rounded-[28px] bg-white p-6 shadow-card border border-charcoal/5 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-soft"
+                className="group relative flex flex-col justify-between rounded-3xl bg-white p-6 shadow-xs border border-charcoal/10 transition-colors duration-200 hover:border-agroGreen hover:shadow-soft"
               >
                 <div>
                   <div className="flex items-center justify-between">
@@ -46,7 +46,7 @@ export const OrderFlow: React.FC = () => {
                     {s.badge}
                   </span>
 
-                  <h3 className="mt-2 text-lg font-black text-charcoal leading-snug">
+                  <h3 className="mt-2 text-base sm:text-lg font-black text-charcoal leading-snug">
                     {s.title}
                   </h3>
 
@@ -55,7 +55,7 @@ export const OrderFlow: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-charcoal/5 flex items-center justify-between text-[11px] font-bold text-agroGreen-800">
+                <div className="mt-6 pt-4 border-t border-charcoal/10 flex items-center justify-between text-[11px] font-bold text-agroGreen-800">
                   <span>Bosqich {s.num}</span>
                   <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-1" />
                 </div>
@@ -64,27 +64,27 @@ export const OrderFlow: React.FC = () => {
           })}
         </div>
 
-        {/* B2B va B2C Integratsiya Banneri */}
-        <div className="mt-10 rounded-[32px] bg-forest-dark border border-forest-border p-6 sm:p-8 text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-soft">
+        {/* B2B va B2C Integratsiya Banneri (Do'kon egalari uchun) */}
+        <div className="mt-10 rounded-3xl bg-forest-dark border border-forest-border p-6 sm:p-8 text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-soft">
           <div className="flex items-center gap-4">
-            <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-agroGreen text-forest-dark shadow-glow-green">
-              <Store className="h-7 w-7" />
+            <span className="grid h-12 w-12 sm:h-14 sm:w-14 shrink-0 place-items-center rounded-2xl bg-agroGreen text-forest-dark shadow-glow-green">
+              <Store className="h-6 w-6 sm:h-7 sm:w-7" />
             </span>
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-agroGreen">
                 Agro-Do‘konlar va Dorixonalar Uchun
               </p>
-              <h4 className="mt-1 text-lg sm:text-xl font-black">
+              <h4 className="mt-1 text-base sm:text-xl font-black">
                 O‘z tovarlaringizni AgrozGO (B2C) ilovasida sotasizmi?
               </h4>
-              <p className="mt-1 text-xs text-white/70">
+              <p className="mt-1 text-xs text-white/70 max-w-xl">
                 BiznesGO POS kassa dasturini do‘koningizga o‘rnating va barcha qoldiqlaringiz avtomatik tarzda marketplace vitrinasiga chiqadi.
               </p>
             </div>
           </div>
 
           <div className="shrink-0 w-full md:w-auto">
-            <DarkButton href={BIZNESGO_URL} external className="w-full justify-center md:w-auto !bg-agroGreen !text-forest-dark hover:!bg-agroGreen-hover shadow-glow-green font-black">
+            <DarkButton href={BIZNESGO_URL} external className="w-full justify-center md:w-auto !bg-agroGreen !text-forest-dark hover:!bg-agroGreen-hover shadow-glow-green font-black whitespace-nowrap">
               BiznesGO (B2B) Do‘kon ochish
             </DarkButton>
           </div>
@@ -93,4 +93,3 @@ export const OrderFlow: React.FC = () => {
     </section>
   );
 };
-

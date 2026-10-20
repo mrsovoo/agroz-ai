@@ -10,7 +10,7 @@ export const CentralAsiaMap: React.FC = () => {
   const activeRegion = hoveredRegion || UZBEKISTAN_REGIONS[0];
 
   return (
-    <div className="flex flex-col gap-8 w-full">
+    <div className="flex flex-col gap-6 w-full">
       {/* 1. ASOSIY XARITA KONTEYNERI (Loyiha Warm Cream foni + To'q zumrad O'zbekiston + Xira qo'shnilar) */}
       <div className="relative overflow-hidden rounded-3xl bg-[#F5F4EE] border border-charcoal/10 p-3 sm:p-6 shadow-soft">
         {/* Xarita ustidagi mini status sarlavhasi va davlatlar holati */}
@@ -196,14 +196,14 @@ export const CentralAsiaMap: React.FC = () => {
                 >
                   {/* Ping to'lqini */}
                   {isHovered && (
-                    <circle cx={r.x} cy={r.y} r="18" fill="#35CA56" opacity="0.4" className="animate-ping" />
+                    <circle cx={r.x} cy={r.y} r="16" fill="#35CA56" opacity="0.4" className="animate-ping" />
                   )}
 
                   {/* Tashqi halo */}
                   <circle
                     cx={r.x}
                     cy={r.y}
-                    r={isHovered ? '11' : '7'}
+                    r={isHovered ? '10' : '6.5'}
                     fill={isHovered ? '#35CA56' : '#22B343'}
                     opacity={isHovered ? '0.35' : '0.2'}
                     className="transition-all duration-200 group-hover:scale-150"
@@ -213,31 +213,31 @@ export const CentralAsiaMap: React.FC = () => {
                   <circle
                     cx={r.x}
                     cy={r.y}
-                    r={isHovered ? '7.5' : '5'}
+                    r={isHovered ? '7' : '4.5'}
                     fill={isHovered ? '#35CA56' : '#22B343'}
                     stroke="#FFFFFF"
-                    strokeWidth={isHovered ? '2.5' : '1.5'}
+                    strokeWidth={isHovered ? '2' : '1.2'}
                     className="transition-all duration-200 group-hover:scale-125 shadow-sm"
                   />
 
-                  {/* Pin tagidagi hudud nomi nishoni */}
+                  {/* Pin tagidagi mitti yorliq */}
                   <rect
-                    x={r.x - 36}
-                    y={r.y - 24}
-                    width="72"
-                    height="16"
-                    rx="8"
+                    x={r.x - 30}
+                    y={r.y - 20}
+                    width="60"
+                    height="14"
+                    rx="7"
                     fill={isHovered ? '#0F2416' : '#142B1A'}
                     stroke={isHovered ? '#35CA56' : '#2B5735'}
                     strokeWidth="1"
-                    className="transition-all duration-200 group-hover:stroke-agroGreen"
+                    className="transition-all duration-200"
                   />
                   <text
                     x={r.x}
-                    y={r.y - 13}
+                    y={r.y - 10}
                     textAnchor="middle"
                     fill={isHovered ? '#35CA56' : '#E8F5EB'}
-                    fontSize="9.5"
+                    fontSize="8.5"
                     fontWeight={isHovered ? '900' : '700'}
                     className="select-none pointer-events-none"
                   >
@@ -247,36 +247,30 @@ export const CentralAsiaMap: React.FC = () => {
                   {/* HOVER QILINGANDA TO'G'RIDAN-TO'G'RI XARITA USTIDA CHIQADIGAN FOYDALANUVCHILAR POPUP'I */}
                   {isHovered && (
                     <g
-                      transform={`translate(${r.x > 500 ? r.x - 170 : r.x - 10}, ${r.y > 450 ? r.y - 95 : r.y - 85})`}
+                      transform={`translate(${r.x > 500 ? r.x - 170 : r.x - 10}, ${r.y > 450 ? r.y - 85 : r.y - 75})`}
                       className="pointer-events-none transition-all duration-200"
                     >
-                      {/* Popup card foni */}
                       <rect
-                        width="180"
-                        height="68"
+                        width="170"
+                        height="58"
                         rx="12"
                         fill="#0A160E"
                         stroke="#35CA56"
-                        strokeWidth="1.4"
+                        strokeWidth="1.2"
                         filter="drop-shadow(0px 8px 16px rgba(0,0,0,0.5))"
                       />
-                      {/* Hudud nomi */}
-                      <text x="12" y="19" fill="#FFFFFF" fontSize="11.5" fontWeight="800">
+                      <text x="12" y="18" fill="#FFFFFF" fontSize="11" fontWeight="800">
                         📍 {r.name}
                       </text>
-                      {/* Badge */}
-                      <text x="168" y="18" textAnchor="end" fill="#8CE8A0" fontSize="9" fontWeight="700">
+                      <text x="158" y="17" textAnchor="end" fill="#8CE8A0" fontSize="8.5" fontWeight="700">
                         {r.badge}
                       </text>
-                      {/* Chiziq */}
-                      <line x1="12" y1="26" x2="168" y2="26" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
-                      {/* Foydalanuvchilar soni (Fermerlar) */}
-                      <text x="12" y="42" fill="#35CA56" fontSize="10.5" fontWeight="800">
+                      <line x1="12" y1="24" x2="158" y2="24" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+                      <text x="12" y="38" fill="#35CA56" fontSize="10" fontWeight="800">
                         👥 {r.farmersCount} faol fermer
                       </text>
-                      {/* Do'konlar va Yetkazish */}
-                      <text x="12" y="58" fill="#D1DFD5" fontSize="9.5" fontWeight="600">
-                        🏪 {r.storesCount} do‘kon • ⚡ {r.deliverySpeed}
+                      <text x="12" y="50" fill="#D1DFD5" fontSize="9" fontWeight="600">
+                        🏪 {r.storesCount}+ do‘kon • ⚡ {r.deliverySpeed}
                       </text>
                     </g>
                   )}
@@ -295,86 +289,86 @@ export const CentralAsiaMap: React.FC = () => {
       </div>
 
       {/* 2. PASTIDA: 5 TA SEKTOR BO'YICHA BUTUN O'ZBEKISTON STATISTIKASI (B2B & B2C) */}
-      <div className="rounded-3xl bg-cream-soft border border-charcoal/10 p-5 sm:p-7 shadow-sm">
+      <div className="rounded-3xl bg-cream-soft border border-charcoal/10 p-5 sm:p-6 shadow-xs">
         {/* Umumiy Respublika B2B & B2C Metrikalari */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-charcoal/10 pb-5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-charcoal/10 pb-4">
           <div>
             <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-forest-dark">
               <ShieldCheck className="h-4 w-4 text-agroGreen-700" />
               Respublika Ekotizim Qamrovi
             </span>
-            <h4 className="mt-1 text-xl sm:text-2xl font-black text-charcoal">
+            <h4 className="mt-1 text-lg sm:text-xl font-black text-charcoal">
               5 ta sektor bo‘yicha O‘zbekiston umumiy ko‘rsatkichlari
             </h4>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 border border-charcoal/10 shadow-xs">
+            <div className="flex items-center gap-2 rounded-2xl bg-white px-3.5 py-1.5 border border-charcoal/10 shadow-xs">
               <Store className="h-4 w-4 text-agroGreen-700" />
               <div>
                 <p className="text-[10px] font-medium text-charcoal/50 leading-none">Jami B2B do‘konlar</p>
-                <p className="text-base font-black text-forest-dark mt-0.5">{UZBEKISTAN_SECTOR_SUMMARY.totalB2B}+</p>
+                <p className="text-sm sm:text-base font-black text-forest-dark mt-0.5">{UZBEKISTAN_SECTOR_SUMMARY.totalB2B}+</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 border border-charcoal/10 shadow-xs">
+            <div className="flex items-center gap-2 rounded-2xl bg-white px-3.5 py-1.5 border border-charcoal/10 shadow-xs">
               <Users className="h-4 w-4 text-agroGreen-700" />
               <div>
                 <p className="text-[10px] font-medium text-charcoal/50 leading-none">Jami B2C fermerlar</p>
-                <p className="text-base font-black text-forest-dark mt-0.5">{UZBEKISTAN_SECTOR_SUMMARY.totalB2C}</p>
+                <p className="text-sm sm:text-base font-black text-forest-dark mt-0.5">{UZBEKISTAN_SECTOR_SUMMARY.totalB2C}</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 border border-charcoal/10 shadow-xs">
+            <div className="flex items-center gap-2 rounded-2xl bg-white px-3.5 py-1.5 border border-charcoal/10 shadow-xs">
               <MapPin className="h-4 w-4 text-agroGreen-700" />
               <div>
                 <p className="text-[10px] font-medium text-charcoal/50 leading-none">Qamrov</p>
-                <p className="text-base font-black text-forest-dark mt-0.5">{UZBEKISTAN_SECTOR_SUMMARY.totalRegions} hudud</p>
+                <p className="text-sm sm:text-base font-black text-forest-dark mt-0.5">{UZBEKISTAN_SECTOR_SUMMARY.totalRegions} hudud</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 border border-charcoal/10 shadow-xs">
+            <div className="flex items-center gap-2 rounded-2xl bg-white px-3.5 py-1.5 border border-charcoal/10 shadow-xs">
               <Zap className="h-4 w-4 text-agroGreen-700" />
               <div>
                 <p className="text-[10px] font-medium text-charcoal/50 leading-none">Yetkazish</p>
-                <p className="text-base font-black text-forest-dark mt-0.5">{UZBEKISTAN_SECTOR_SUMMARY.deliveryAvg}</p>
+                <p className="text-sm sm:text-base font-black text-forest-dark mt-0.5">{UZBEKISTAN_SECTOR_SUMMARY.deliveryAvg}</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* 5 Ta Sektor Bo'yicha B2B va B2C Bo'linishi */}
-        <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {UZBEKISTAN_SECTOR_SUMMARY.sectors.map((s) => (
             <div
               key={s.id}
-              className="flex flex-col justify-between rounded-2xl bg-white p-4 border border-charcoal/10 shadow-xs transition-all duration-300 hover:shadow-soft hover:border-agroGreen/30 group"
+              className="flex flex-col justify-between rounded-2xl bg-white p-3.5 border border-charcoal/10 shadow-xs transition-colors duration-200 hover:border-agroGreen"
             >
               <div>
                 <div className="flex items-center justify-between">
-                  <span className="text-2xl">{s.emoji}</span>
+                  <span className="text-xl">{s.emoji}</span>
                   <span className="rounded-md bg-cream px-2 py-0.5 text-[10px] font-bold text-charcoal/60 border border-charcoal/5">
                     {s.category}
                   </span>
                 </div>
 
-                <h5 className="mt-2 text-sm font-extrabold text-charcoal group-hover:text-forest-dark transition-colors">
+                <h5 className="mt-2 text-xs sm:text-sm font-extrabold text-charcoal">
                   {s.name}
                 </h5>
-                <p className="mt-0.5 text-[11px] text-charcoal/50 font-medium">
+                <p className="mt-0.5 text-[10px] text-charcoal/50 font-medium truncate">
                   {s.highlight}
                 </p>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-charcoal/10 space-y-1.5">
+              <div className="mt-3 pt-2.5 border-t border-charcoal/10 space-y-1">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-charcoal/60 font-medium flex items-center gap-1">
+                  <span className="text-charcoal/60 text-[11px] font-medium flex items-center gap-1">
                     <Store className="h-3 w-3 text-agroGreen-700" /> B2B do‘kon:
                   </span>
                   <span className="font-black text-forest-dark">{s.storesCount} ta</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-charcoal/60 font-medium flex items-center gap-1">
+                  <span className="text-charcoal/60 text-[11px] font-medium flex items-center gap-1">
                     <Users className="h-3 w-3 text-agroGreen-700" /> B2C xaridor:
                   </span>
                   <span className="font-black text-forest-dark">{s.farmersCount}</span>

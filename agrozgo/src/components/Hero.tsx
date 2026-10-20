@@ -1,16 +1,9 @@
 import React, { useState } from 'react';
-import { Search, MapPin, Loader2, Navigation, ArrowRight, ArrowUpRight, Sparkles, Star } from 'lucide-react';
+import { Search, MapPin, Loader2, Navigation, ArrowRight, ArrowUpRight, Sparkles, Building2, Store } from 'lucide-react';
 import { AgroImage, AgrozSymbol } from './ui';
 import { IMAGES, SEARCH_SUGGESTIONS, DEMO_RESULTS, SECTORS, BIZNESGO_URL } from '../data/content';
 
 type Status = 'idle' | 'locating' | 'searching' | 'done';
-
-const AVATARS = [
-  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=100&auto=format&fit=crop&q=80',
-];
 
 export const Hero: React.FC = () => {
   const [query, setQuery] = useState('');
@@ -55,103 +48,61 @@ export const Hero: React.FC = () => {
           />
           {/* Yumshoq qoraytiruvchi va kontrast gradientlar */}
           <div className="absolute inset-0 bg-gradient-to-t from-forest-dark/95 via-forest-dark/35 to-forest-dark/60" />
-          <div className="absolute inset-0 bg-gradient-to-r from-forest-dark/80 via-transparent to-forest-dark/70" />
+          <div className="absolute inset-0 bg-gradient-to-r from-forest-dark/85 via-forest-dark/40 to-forest-dark/75" />
 
-          {/* Yuqori qism: Sarlavha + O'ngdagi Yashil Rating Kartasi */}
+          {/* Yuqori qism: Sarlavha va Katta Hero Matni */}
           <div className="relative p-6 sm:p-10 lg:p-14">
-            <div className="grid gap-8 lg:grid-cols-12 lg:items-start">
-              {/* Chap Sarlavha */}
-              <div className="lg:col-span-8 animate-fade-up">
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-bold text-white backdrop-blur-md shadow-sm">
-                  <AgrozSymbol className="h-4 w-4" color="#35ca56" />
-                  Kelajak Agro-Ekotizimi • B2C & B2B
+            <div className="max-w-3xl animate-fade-up">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-bold text-white backdrop-blur-md shadow-sm">
+                <AgrozSymbol className="h-4 w-4" color="#35ca56" />
+                Kelajak Agro-Ekotizimi • B2C & B2B
+              </span>
+
+              <h1 className="mt-5 text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-[1.08]">
+                Kelajak qishloq <br className="hidden sm:inline" />
+                xo‘jaligi{' '}
+                <span className="inline-grid h-10 w-10 sm:h-14 sm:w-14 place-items-center rounded-full border border-white/30 bg-white/10 backdrop-blur-md text-agroGreen align-middle shadow-glow-subtle">
+                  <Sparkles className="h-5 w-5 sm:h-7 sm:w-7" />
                 </span>
+              </h1>
 
-                <h1 className="mt-5 text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-[1.08]">
-                  Kelajak qishloq <br className="hidden sm:inline" />
-                  xo‘jaligi{' '}
-                  <span className="inline-grid h-10 w-10 sm:h-14 sm:w-14 place-items-center rounded-full border border-white/30 bg-white/10 backdrop-blur-md text-xl sm:text-2xl align-middle shadow-glow-subtle">
-                    🌾
-                  </span>
-                </h1>
+              <p className="mt-5 max-w-xl text-base sm:text-lg text-white/85 leading-relaxed font-medium">
+                Fermer, chorvador va dehqonlar uchun yagona aqlli Agro-Marketplace.
+                Eng yaqin vet-dorixonalar, yem, urug‘chilik va zamonaviy agro-texnikalar bir joyda.
+              </p>
 
-                <p className="mt-5 max-w-xl text-base sm:text-lg text-white/85 leading-relaxed font-medium">
-                  Fermer, chorvador va dehqonlar uchun yagona aqlli Agro-Marketplace.
-                  Eng yaqin vet-dorixonalar, yem, urug‘chilik va zamonaviy agro-texnikalar bir joyda.
-                </p>
-
-                <div className="mt-8 flex flex-wrap items-center gap-4">
-                  <a
-                    href="#sectors"
-                    className="group inline-flex items-center gap-3 rounded-full border border-white/40 bg-white/15 px-6 py-3.5 text-sm font-extrabold text-white backdrop-blur-md transition hover:bg-white hover:text-forest-dark active:scale-95 shadow-sm"
-                  >
-                    Barcha mahsulotlar
-                    <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
-                  </a>
-                  <a
-                    href="#technology"
-                    className="inline-flex items-center gap-2 rounded-full bg-agroGreen hover:bg-agroGreen-hover text-forest-dark font-extrabold px-6 py-3.5 text-sm transition shadow-glow-green active:scale-95"
-                  >
-                    <Sparkles className="h-4 w-4" />
-                    Texnologiyalarni ko‘rish
-                  </a>
-                </div>
-              </div>
-
-              {/* O'ngdagi Yashil 4.9* Rating Kartasi (Referensdagi yorqin yashil bento card) */}
-              <div className="flex justify-start lg:justify-end lg:col-span-4">
-                <div className="w-full sm:w-72 rounded-[28px] bg-agroGreen p-6 text-forest-dark shadow-glow-green animate-fade-up [animation-delay:150ms] relative overflow-hidden">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-4xl font-black tracking-tight text-white flex items-center gap-1">
-                        4.9 <Star className="h-7 w-7 fill-white text-white inline" />
-                      </p>
-                      <p className="text-xs font-bold text-forest-dark/85 mt-1">1,200+ Fermerlar Bahosi</p>
-                    </div>
-                  </div>
-
-                  {/* Overlapping mijozlar avatarlari */}
-                  <div className="mt-5 flex -space-x-2.5 overflow-hidden">
-                    {AVATARS.map((src, i) => (
-                      <img
-                        key={i}
-                        src={src}
-                        alt="Fermer fikri"
-                        className="inline-block h-9 w-9 rounded-full ring-2 ring-agroGreen object-cover shadow-sm"
-                      />
-                    ))}
-                    <span className="grid h-9 w-9 place-items-center rounded-full bg-forest-dark text-[11px] font-black text-white ring-2 ring-agroGreen">
-                      +1k
-                    </span>
-                  </div>
-
-                  {/* Pastki: Google Review "G" va yulduzcha ramzi */}
-                  <div className="mt-6 flex items-center justify-between border-t border-forest-dark/15 pt-4">
-                    <span className="grid h-9 w-9 place-items-center rounded-full bg-white text-base font-black text-forest-dark shadow-sm">
-                      G
-                    </span>
-                    <span className="grid h-9 w-9 place-items-center rounded-full bg-forest-dark text-agroGreen shadow-sm">
-                      ✳
-                    </span>
-                  </div>
-                </div>
+              <div className="mt-8 flex flex-wrap items-center gap-4">
+                <a
+                  href="#sectors"
+                  className="group inline-flex items-center gap-3 rounded-full border border-white/40 bg-white/15 px-6 py-3.5 text-sm font-extrabold text-white backdrop-blur-md transition hover:bg-white hover:text-forest-dark active:scale-95 shadow-sm"
+                >
+                  Barcha mahsulotlar
+                  <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+                </a>
+                <a
+                  href="#technology"
+                  className="inline-flex items-center gap-2 rounded-full bg-agroGreen hover:bg-agroGreen-hover text-forest-dark font-extrabold px-6 py-3.5 text-sm transition shadow-glow-green active:scale-95"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Texnologiyalarni ko‘rish
+                </a>
               </div>
             </div>
 
-            {/* Pastki Bento Kartochkalar (Referensdagi 2 ta Off-White Cream bento card) */}
+            {/* Pastki Bento Kartochkalar (Real rasmlar va toza Lucide iconlar) */}
             <div className="mt-12 grid gap-5 sm:grid-cols-2">
               {/* Chap Karta: Agro-Vet */}
-              <div className="group relative flex flex-col sm:flex-row items-center gap-5 rounded-[28px] bg-[#F7F5EE] p-5 sm:p-6 text-charcoal shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
+              <div className="group relative flex flex-col sm:flex-row items-center gap-5 rounded-[28px] bg-[#F7F5EE] p-5 sm:p-6 text-charcoal shadow-xl transition-all duration-300 hover:shadow-2xl border border-charcoal/5">
                 <div className="relative h-36 w-full sm:w-40 shrink-0 overflow-hidden rounded-2xl bg-white border border-charcoal/5">
                   <AgroImage
-                    src={IMAGES.drone}
-                    alt="Agro-Vet dori-darmonlari"
+                    src={IMAGES.livestock}
+                    alt="Agro-Vet va chorvachilik dorilari"
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-agroGreen-800 bg-agroGreen/15 px-2.5 py-0.5 rounded-full">
-                    Agro-Vet & Dorixonalar
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-agroGreen-800 bg-agroGreen/15 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
+                    <Building2 className="h-3 w-3" /> Agro-Vet & Dorixonalar
                   </span>
                   <h3 className="mt-2 text-xl font-black text-charcoal">Enrofloksatsin & Dorilar</h3>
                   <p className="mt-1 text-xs text-charcoal/70 leading-relaxed">
@@ -164,17 +115,16 @@ export const Hero: React.FC = () => {
                     Mahsulotlarni ko‘rish
                   </a>
                 </div>
-                {/* Tepada ulagich yashil dumaloq belgi */}
                 <span className="absolute top-4 right-4 grid h-8 w-8 place-items-center rounded-full bg-agroGreen text-forest-dark shadow-sm group-hover:scale-110 transition">
                   <ArrowUpRight className="h-4 w-4" />
                 </span>
               </div>
 
               {/* O'ng Karta: Smart Remote Controller & BiznesGO */}
-              <div className="group relative flex flex-col sm:flex-row items-center gap-5 rounded-[28px] bg-[#F7F5EE] p-5 sm:p-6 text-charcoal shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
+              <div className="group relative flex flex-col sm:flex-row items-center gap-5 rounded-[28px] bg-[#F7F5EE] p-5 sm:p-6 text-charcoal shadow-xl transition-all duration-300 hover:shadow-2xl border border-charcoal/5">
                 <div className="flex-1 min-w-0 order-2 sm:order-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-agroGreen-800 bg-agroGreen/15 px-2.5 py-0.5 rounded-full">
-                    BiznesGO (B2B) Do‘konlar
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-agroGreen-800 bg-agroGreen/15 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
+                    <Store className="h-3 w-3" /> BiznesGO (B2B) Do‘konlar
                   </span>
                   <h3 className="mt-2 text-xl font-black text-charcoal">Smart POS & Kassa</h3>
                   <p className="mt-1 text-xs text-charcoal/70 leading-relaxed">
@@ -251,49 +201,54 @@ export const Hero: React.FC = () => {
             </button>
           </form>
 
-          {/* Ommabop qidiruvlar */}
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-semibold text-charcoal/50">Ommabop:</span>
+          {/* Qidiruv bo'yicha tezkor teglar */}
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-charcoal/60">
+            <span className="font-semibold text-charcoal/40">Ommabop qidiruvlar:</span>
             {SEARCH_SUGGESTIONS.map((s) => (
               <button
                 key={s}
                 type="button"
                 onClick={() => runSearch(undefined, s)}
-                className="rounded-full border border-charcoal/10 bg-white px-3 py-1 text-xs font-semibold text-charcoal/70 transition hover:border-agroGreen hover:bg-agroGreen-50 hover:text-agroGreen-900 cursor-pointer"
+                className="rounded-full bg-cream px-3 py-1 text-[11px] font-semibold text-charcoal/70 transition hover:bg-agroGreen hover:text-forest-dark cursor-pointer"
               >
                 {s}
               </button>
             ))}
           </div>
 
-          {/* Qidiruv natijalari popup */}
+          {/* Qidiruv natijalari simulyatsiyasi */}
           {status === 'done' && (
-            <div className="mt-4 animate-fade-up rounded-2xl bg-white p-3.5 shadow-soft border border-agroGreen/30">
-              <p className="px-2 pb-2 text-xs font-bold text-agroGreen-900 flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-agroGreen" />
-                “{query || 'Barcha mahsulotlar'}” — {location} yaqinida {results.length} ta do‘kon topildi (ko‘rgazmali)
-              </p>
-              <ul className="divide-y divide-charcoal/5">
+            <div className="mt-6 border-t border-charcoal/10 pt-5 animate-fade-up">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-xs font-bold uppercase tracking-wider text-charcoal/60">
+                  Topilgan natijalar ({results.length} ta do‘kon)
+                </p>
+                <span className="text-[11px] text-agroGreen-800 font-bold bg-agroGreen-50 px-2 py-0.5 rounded-md">
+                  Real ombor qoldig‘i
+                </span>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
                 {results.map((r) => {
                   const s = sectorOf(r.sector);
+                  const Icon = s?.icon || Store;
                   return (
-                    <li key={r.store} className="flex items-center gap-3 px-2 py-2.5">
-                      <span className="grid h-9 w-9 place-items-center rounded-xl bg-agroGreen-50 text-lg border border-agroGreen/20">
-                        {s?.emoji}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-bold text-charcoal">{r.store}</p>
-                        <p className="text-xs text-charcoal/60">
-                          {s?.title} • <span className="text-agroGreen-700 font-semibold">{r.distance}</span>
-                        </p>
+                    <div
+                      key={r.store}
+                      className="rounded-2xl border border-charcoal/10 bg-cream-soft p-4 transition hover:border-agroGreen/40 hover:bg-white"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-agroGreen-900 border border-charcoal/5">
+                          <Icon className="h-3 w-3 text-agroGreen-700" /> {s?.title.split(' ')[0]}
+                        </span>
+                        <span className="text-[11px] font-bold text-charcoal/50">{r.distance}</span>
                       </div>
-                      <span className="whitespace-nowrap text-sm font-extrabold text-agroGreen-800 bg-agroGreen/10 px-2.5 py-1 rounded-lg border border-agroGreen/20">
-                        {r.price}
-                      </span>
-                    </li>
+                      <p className="mt-2 text-sm font-extrabold text-charcoal">{r.store}</p>
+                      <p className="text-xs text-charcoal/60">{r.address}</p>
+                      <p className="mt-2 text-[11px] font-semibold text-agroGreen-800">✓ {r.price}</p>
+                    </div>
                   );
                 })}
-              </ul>
+              </div>
             </div>
           )}
         </div>
