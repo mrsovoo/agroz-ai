@@ -1,383 +1,280 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
+  Users,
   Store,
-  MapPin,
-  X,
+  ArrowRight,
+  ArrowUpRight,
   CheckCircle2,
   ShieldCheck,
-  Send,
-  Zap,
-  Filter,
-  Check,
-  Leaf,
-  Wheat,
-  Warehouse,
-  Sprout,
-  Wrench,
-  Layers,
   Truck,
+  Sparkles,
+  ShoppingBag,
+  Layers,
+  FileText,
+  Boxes,
+  Zap,
 } from 'lucide-react';
 import { AgroImage } from './ui';
-import { PRODUCTS } from '../data/content';
+import { IMAGES, BIZNESGO_URL } from '../data/content';
 
-type ProductType = (typeof PRODUCTS)[0];
-
-const formatUzPhone = (value: string) => {
-  let d = value.replace(/\D/g, '');
-  if (d.startsWith('998')) d = d.slice(3);
-  d = d.slice(0, 9);
-  if (!d) return '+998 ';
-  let r = '+998 ' + d.slice(0, 2);
-  if (d.length > 2) r += ' ' + d.slice(2, 5);
-  if (d.length > 5) r += ' ' + d.slice(5, 7);
-  if (d.length > 7) r += ' ' + d.slice(7, 9);
-  return r;
-};
-
-const CATEGORIES = [
-  { id: 'Barchasi', label: 'Barchasi', icon: Layers },
-  { id: 'Agro-Vet', label: 'Agro-Vet', icon: Leaf },
-  { id: 'Yem va Ozuqa', label: 'Yem va Ozuqa', icon: Wheat },
-  { id: "Urug'chilik", label: "Urug'chilik", icon: Sprout },
-  { id: 'Ulgurji Ombor', label: 'Ulgurji Ombor', icon: Warehouse },
-  { id: 'Texnika va Jihozlar', label: 'Texnika', icon: Wrench },
-];
-
+/**
+ * AgrozGO (B2C) va BiznesGO (B2B) farqi va bir-biriga bog'lanishini
+ * bittada tushuntiruvchi 2 ta asosiy master-karta bo'limi.
+ */
 export const Products: React.FC = () => {
-  const [filter, setFilter] = useState('Barchasi');
-  const [selectedProduct, setSelectedProduct] = useState<ProductType | null>(null);
-  const [orderQuantity, setOrderQuantity] = useState(1);
-  const [isKgMode, setIsKgMode] = useState(false);
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [deliveryType, setDeliveryType] = useState<'pickup' | 'delivery'>('pickup');
-  const [orderSubmitted, setOrderSubmitted] = useState(false);
-
-  const filtered =
-    filter === 'Barchasi' ? PRODUCTS : PRODUCTS.filter((p) => p.category === filter);
-
-  const openOrderModal = (p: ProductType) => {
-    setSelectedProduct(p);
-    setOrderQuantity(1);
-    setIsKgMode(false);
-    setOrderSubmitted(false);
-  };
-
-  const handleOrderSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customerPhone || customerPhone.replace(/\D/g, '').length < 9) return;
-    setOrderSubmitted(true);
-  };
-
   return (
-    <section id="products" className="py-16 sm:py-24 bg-cream-soft/60 border-y border-charcoal/5">
+    <section id="products" className="py-16 sm:py-24 bg-cream-soft/60 border-y border-charcoal/5 scroll-mt-24">
       <div className="container-x">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+        {/* Bo'lim Sarlavhasi */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10 sm:mb-14">
           <div>
-            <span className="text-xs font-bold uppercase tracking-widest text-agroGreen-800">
-              Katalog & Narxlar
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-agroGreen/15 border border-agroGreen/30 px-3.5 py-1 text-xs font-black text-agroGreen-800">
+              <span className="h-2 w-2 rounded-full bg-agroGreen animate-pulse" />
+              Yagona Agro-Tech Ekotizimi
             </span>
-            <h2 className="mt-2 text-3xl sm:text-4xl font-black tracking-tight text-charcoal">
-              Ommabop Mahsulotlar & Do‘konlar
+            <h2 className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-black text-charcoal tracking-tight leading-[1.12]">
+              AgrozGO (B2C) nima va <br className="hidden sm:inline" />
+              <span className="text-agroGreen">BiznesGO (B2B) nima?</span>
             </h2>
           </div>
-          <p className="text-xs sm:text-sm text-charcoal/60 max-w-sm sm:text-right">
-            BiznesGO POS kassa tizimiga ulangan agro-do‘konlarning real vaqtdagi ombor qoldiqlari va shaffof narxlari.
+          <p className="max-w-md text-xs sm:text-sm text-charcoal/70 leading-relaxed">
+            Fermer uchun eng yaqin do‘konlardan arzon xarid, do‘kon egalari uchun esa smart POS kassa va ombor hisobini birlashtirgan yaxlit platforma.
           </p>
         </div>
 
-        {/* Dashboard 2-Ustunli Tuzilma (Chapda Dashboard filtr paneli, o'ngda mahsulotlar) */}
-        <div className="grid gap-8 lg:grid-cols-12 lg:items-start">
-          {/* CHAP: Zamonaviy Agro-Dashboard Filtr va Holat Paneli */}
-          <aside className="lg:col-span-3 space-y-4">
-            <div className="rounded-3xl bg-white p-5 border border-charcoal/10 shadow-sm">
-              <div className="flex items-center gap-2 pb-3 mb-3 border-b border-charcoal/10 text-xs font-black uppercase tracking-wider text-charcoal">
-                <Filter className="h-4 w-4 text-agroGreen-700" /> Sektorlar Dashboardi
-              </div>
-
-              {/* Bo'limlar tugmalari */}
-              <div className="flex flex-col gap-1.5">
-                {CATEGORIES.map((c) => {
-                  const Icon = c.icon;
-                  const isSelected = filter === c.id;
-                  const count =
-                    c.id === 'Barchasi'
-                      ? PRODUCTS.length
-                      : PRODUCTS.filter((p) => p.category === c.id).length;
-
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => setFilter(c.id)}
-                      className={`flex items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-bold transition cursor-pointer text-left ${
-                        isSelected
-                          ? 'bg-forest-dark text-white shadow-sm'
-                          : 'bg-cream/50 text-charcoal/75 hover:bg-agroGreen-50 hover:text-agroGreen-900'
-                      }`}
-                    >
-                      <span className="flex items-center gap-2.5">
-                        <Icon className={`h-4 w-4 ${isSelected ? 'text-agroGreen' : 'text-charcoal/40'}`} />
-                        <span>{c.label}</span>
-                      </span>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
-                          isSelected ? 'bg-white/20 text-white' : 'bg-charcoal/5 text-charcoal/50'
-                        }`}
-                      >
-                        {count}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Tizim Jonli Holati Vidjeti */}
-              <div className="mt-5 pt-4 border-t border-charcoal/10 space-y-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-charcoal/40">
-                  Marketplace Holati
+        {/* 2 TA ASOSIY MASTER-KARTA (B2C vs B2B) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-stretch">
+          {/* ========================================================
+              1-KARTA: AGROZGO (B2C) — FERMERLAR VA DEHQONLAR UCHUN
+             ======================================================== */}
+          <div className="group relative flex flex-col justify-between rounded-[32px] bg-white p-6 sm:p-8 lg:p-10 border border-agroGreen/30 shadow-card transition-all duration-300 hover:border-agroGreen hover:shadow-soft">
+            <div>
+              {/* Karta yuqori statusi */}
+              <div className="flex items-center justify-between gap-3 pb-5 border-b border-charcoal/10">
+                <span className="inline-flex items-center gap-2 rounded-full bg-agroGreen/15 border border-agroGreen/30 px-3 py-1 text-xs font-black text-agroGreen-900">
+                  <Users className="h-3.5 w-3.5 text-agroGreen-700" />
+                  AgrozGO (B2C)
                 </span>
-
-                <div className="flex items-center justify-between text-xs py-1">
-                  <span className="text-charcoal/60 flex items-center gap-1.5">
-                    <Store className="h-3.5 w-3.5 text-agroGreen-700" /> B2B Do‘konlar:
-                  </span>
-                  <span className="font-extrabold text-forest-dark">618+ faol</span>
-                </div>
-
-                <div className="flex items-center justify-between text-xs py-1">
-                  <span className="text-charcoal/60 flex items-center gap-1.5">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-agroGreen-700" /> Ombor qoldig‘i:
-                  </span>
-                  <span className="font-extrabold text-agroGreen-800">100% Real-vaqt</span>
-                </div>
-
-                <div className="flex items-center justify-between text-xs py-1">
-                  <span className="text-charcoal/60 flex items-center gap-1.5">
-                    <Zap className="h-3.5 w-3.5 text-agroGreen-700" /> Yetkazish:
-                  </span>
-                  <span className="font-extrabold text-forest-dark">1-3 soat</span>
-                </div>
+                <span className="text-xs font-bold text-charcoal/50">
+                  Fermer, Chorvador, Dehqonlar
+                </span>
               </div>
-            </div>
-          </aside>
 
-          {/* O'NG: Sodda, Zamonaviy va Real Rasmli Mahsulot Kartochkalari */}
-          <main className="lg:col-span-9">
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((p) => (
-                <article
-                  key={p.id}
-                  className="group flex flex-col justify-between rounded-3xl bg-white p-4 border border-charcoal/10 shadow-xs transition-colors duration-200 hover:border-agroGreen hover:shadow-soft"
-                >
+              {/* Rasm va Mini-Badge */}
+              <div className="relative mt-6 h-48 sm:h-56 w-full overflow-hidden rounded-2xl bg-cream-soft border border-charcoal/5">
+                <AgroImage
+                  src={IMAGES.livestock}
+                  alt="AgrozGO fermerlar ilovasi"
+                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                <span className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-white/95 backdrop-blur-md px-3 py-1 text-[11px] font-black text-forest-dark shadow-sm">
+                  <span className="h-2 w-2 rounded-full bg-agroGreen" />
+                  1:1 Jonli ombor qoldig‘i bilan bog‘langan
+                </span>
+              </div>
+
+              {/* Sarlavha & Tushuntirish */}
+              <h3 className="mt-6 text-xl sm:text-2xl font-black text-charcoal leading-snug">
+                Yaqin do‘konlardan vositachisiz to‘g‘ridan-to‘g‘ri xarid
+              </h3>
+
+              <div className="mt-3 rounded-2xl bg-cream-soft/80 p-4 border border-charcoal/5">
+                <p className="text-xs font-black uppercase tracking-wider text-forest-dark mb-1">
+                  Nima bu?
+                </p>
+                <p className="text-xs sm:text-sm text-charcoal/75 leading-relaxed">
+                  Fermer va chorvadorlar uchun eng yaqin 5 ta agro-sektor do‘konlarini xaritadan topish, real ombor qoldiqlarini ko‘rish va mahsulotlarni asossiz ustamalarsiz arzon narxda xarid qilish marketplace platformasi.
+                </p>
+              </div>
+
+              {/* Qanday ishlaydi (Mexanizm va Logistika) */}
+              <div className="mt-4 space-y-2.5">
+                <p className="text-xs font-black uppercase tracking-wider text-charcoal/50">
+                  Qanday ishlaydi?
+                </p>
+                <div className="flex items-start gap-3 rounded-xl bg-white p-3 border border-charcoal/10 shadow-2xs">
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-agroGreen-50 text-agroGreen-800 font-black text-xs">
+                    01
+                  </span>
                   <div>
-                    {/* Real agro-surat */}
-                    <div className="relative h-44 w-full overflow-hidden rounded-2xl bg-cream-soft">
-                      <AgroImage
-                        src={p.image}
-                        alt={p.name}
-                        className="h-full w-full object-cover"
-                      />
-                      <span className="absolute top-2.5 left-2.5 rounded-full bg-forest-dark/85 text-white backdrop-blur-md px-2.5 py-0.5 text-[10px] font-bold">
-                        {p.category}
-                      </span>
-                    </div>
-
-                    {/* Do'kon nomi va joylashuvi */}
-                    <div className="mt-3 flex items-center justify-between text-[11px] text-charcoal/50">
-                      <span className="font-semibold text-charcoal/80 flex items-center gap-1">
-                        <Store className="h-3 w-3 text-agroGreen-700" /> {p.store}
-                      </span>
-                      <span className="flex items-center gap-0.5">
-                        <MapPin className="h-3 w-3" /> {p.location.split(',')[0]}
-                      </span>
-                    </div>
-
-                    {/* Mahsulot nomi */}
-                    <h4 className="mt-1.5 text-sm font-extrabold text-charcoal line-clamp-2 leading-snug">
-                      {p.name}
-                    </h4>
-
-                    {/* Xususiyat va nishon */}
-                    <p className="mt-1 text-[11px] text-agroGreen-800 font-semibold truncate">
-                      ✓ {p.badge}
+                    <p className="text-xs font-black text-charcoal">Kichik tovarlar: Bron qilish & Olib ketish</p>
+                    <p className="mt-0.5 text-[11px] text-charcoal/65 leading-relaxed">
+                      Dori-darmon, urug‘ yoki kundalik yem xaridlarini onlayn bron qilasiz. Do‘konda tovar zaxiralanadi, borib navbatsiz olib ketasiz.
                     </p>
                   </div>
+                </div>
 
-                  {/* Narx va Buyurtma Tugmasi */}
-                  <div className="mt-4 pt-3 border-t border-charcoal/10 flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-charcoal/40 line-through leading-none">{p.oldPrice}</p>
-                      <p className="text-base font-black text-forest-dark mt-0.5">
-                        {p.price} <span className="text-[10px] font-normal text-charcoal/50">/ {p.unit}</span>
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => openOrderModal(p)}
-                      className="rounded-full bg-forest-dark hover:bg-agroGreen hover:text-forest-dark text-white px-3.5 py-1.5 text-xs font-bold transition shadow-xs cursor-pointer active:scale-95"
-                    >
-                      Buyurtma
-                    </button>
+                <div className="flex items-start gap-3 rounded-xl bg-white p-3 border border-charcoal/10 shadow-2xs">
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-agroGreen-50 text-agroGreen-800 font-black text-xs">
+                    02
+                  </span>
+                  <div>
+                    <p className="text-xs font-black text-charcoal">Yirik buyurtmalar: Sektor logistikasi</p>
+                    <p className="mt-0.5 text-[11px] text-charcoal/65 leading-relaxed">
+                      Ko‘p tonnalik yem, ulgurji o‘g‘it yoki yirik texnikalarni boshqa viloyatdan xarid qilsangiz, sektorlarning o‘z transport xizmati yetkazadi.
+                    </p>
                   </div>
-                </article>
-              ))}
+                </div>
+              </div>
+
+              {/* 3 ta muhim afzallik */}
+              <ul className="mt-5 space-y-2 border-t border-charcoal/10 pt-4">
+                {[
+                  'Do‘konga borishdan oldin tovar bor-yo‘qligini 100% bilish',
+                  '1 kg dan boshlab bo‘lib olish va ochiq shaffof narxlar',
+                  'Partiya raqami, yaroqlilik muddati va rasmiy sifat kafolati',
+                ].map((item) => (
+                  <li key={item} className="flex items-center gap-2 text-xs font-bold text-charcoal/80">
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-agroGreen-700" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </main>
-        </div>
 
-        {/* Tezkor do'konga buyurtma berish modali */}
-        {selectedProduct && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in"
-            onClick={() => setSelectedProduct(null)}
-          >
-            <div
-              className="relative w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl border border-charcoal/10 animate-scale-up"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                type="button"
-                onClick={() => setSelectedProduct(null)}
-                className="absolute top-4 right-4 grid h-8 w-8 place-items-center rounded-full bg-cream hover:bg-charcoal/10 text-charcoal transition cursor-pointer"
+            {/* Pastki CTA Tugmasi */}
+            <div className="mt-8 pt-6 border-t border-charcoal/10">
+              <a
+                href="#app-showcase"
+                className="flex items-center justify-center gap-2 w-full rounded-2xl bg-forest-dark hover:bg-forest text-white font-black py-3.5 px-6 text-sm transition shadow-sm active:scale-95 group"
               >
-                <X className="h-4 w-4" />
-              </button>
-
-              {!orderSubmitted ? (
-                <div>
-                  <div className="flex items-center gap-3 border-b border-charcoal/10 pb-4">
-                    <span className="grid h-10 w-10 place-items-center rounded-2xl bg-agroGreen-50 text-agroGreen-800 border border-agroGreen/20">
-                      <Store className="h-5 w-5" />
-                    </span>
-                    <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-agroGreen-800">
-                        To‘g‘ridan-to‘g‘ri Do‘konga Buyurtma
-                      </span>
-                      <h3 className="text-base font-black text-charcoal">{selectedProduct.store}</h3>
-                      <p className="text-xs text-charcoal/50 flex items-center gap-1">
-                        <MapPin className="h-3 w-3" /> {selectedProduct.location}
-                      </p>
-                    </div>
-                  </div>
-
-                  <form onSubmit={handleOrderSubmit} className="mt-4 space-y-4">
-                    <div className="rounded-2xl bg-cream-soft p-3 border border-charcoal/5">
-                      <p className="text-xs font-bold text-charcoal">{selectedProduct.name}</p>
-                      <p className="text-sm font-black text-forest-dark mt-0.5">
-                        {selectedProduct.price} <span className="text-xs font-normal text-charcoal/50">/ {selectedProduct.unit}</span>
-                      </p>
-                      <p className="text-[11px] text-agroGreen-800 font-semibold mt-1">✓ {selectedProduct.stock}</p>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs font-bold text-charcoal/70">Ismingiz:</label>
-                        <input
-                          type="text"
-                          required
-                          value={customerName}
-                          onChange={(e) => setCustomerName(e.target.value)}
-                          placeholder="Azizbek"
-                          className="mt-1 w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2 text-xs outline-none focus:border-agroGreen"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-bold text-charcoal/70">Telefon raqamingiz:</label>
-                        <input
-                          type="tel"
-                          required
-                          value={customerPhone}
-                          onChange={(e) => setCustomerPhone(formatUzPhone(e.target.value))}
-                          placeholder="+998 90 123 45 67"
-                          className="mt-1 w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2 text-xs outline-none focus:border-agroGreen"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-xs font-bold text-charcoal/80">Qabul qilish usuli:</label>
-                        <span className="text-[10px] text-charcoal/40 font-medium">Sektor qoidalari</span>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setDeliveryType('pickup')}
-                          className={`flex flex-col items-start rounded-xl p-2.5 text-left border transition cursor-pointer ${
-                            deliveryType === 'pickup'
-                              ? 'bg-forest-dark text-white border-forest-dark shadow-xs'
-                              : 'bg-white text-charcoal/80 border-charcoal/15 hover:border-agroGreen/40'
-                          }`}
-                        >
-                          <span className="flex items-center gap-1.5 text-xs font-black">
-                            <Store className="h-3.5 w-3.5 text-agroGreen" /> Bron qilish & Olib ketish
-                          </span>
-                          <span className="mt-0.5 text-[10px] opacity-75 font-medium leading-tight">
-                            Kichik tovarlar: do‘kondan borib olasiz
-                          </span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setDeliveryType('delivery')}
-                          className={`flex flex-col items-start rounded-xl p-2.5 text-left border transition cursor-pointer ${
-                            deliveryType === 'delivery'
-                              ? 'bg-forest-dark text-white border-forest-dark shadow-xs'
-                              : 'bg-white text-charcoal/80 border-charcoal/15 hover:border-agroGreen/40'
-                          }`}
-                        >
-                          <span className="flex items-center gap-1.5 text-xs font-black">
-                            <Truck className="h-3.5 w-3.5 text-amber" /> Sektor Logistikasi
-                          </span>
-                          <span className="mt-0.5 text-[10px] opacity-75 font-medium leading-tight">
-                            Yirik partiya / Boshqa viloyat: sektor yetkazadi
-                          </span>
-                        </button>
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="w-full flex items-center justify-center gap-2 rounded-2xl bg-agroGreen hover:bg-agroGreen-hover text-forest-dark font-black py-3 text-sm transition shadow-glow-green cursor-pointer active:scale-95"
-                    >
-                      <Send className="h-4 w-4" /> {deliveryType === 'pickup' ? 'Do‘konda Zaxiraga Bron Qilish' : 'Sektor Logistikasiga Buyurtma Berish'}
-                    </button>
-                  </form>
-                </div>
-              ) : (
-                <div className="py-6 text-center animate-fade-up">
-                  <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-agroGreen/20 text-agroGreen border border-agroGreen/30">
-                    <Check className="h-7 w-7" />
-                  </div>
-                  <h3 className="mt-4 text-lg font-black text-charcoal">
-                    {deliveryType === 'pickup' ? 'Mahsulot Bron Qilindi!' : 'Sektor Logistikasiga Qabul Qilindi!'}
-                  </h3>
-                  <p className="mt-2 text-xs text-charcoal/70 max-w-sm mx-auto leading-relaxed">
-                    {deliveryType === 'pickup' ? (
-                      <>
-                        Buyurtmangiz <b>{selectedProduct.store}</b> kassa tizimida siz uchun zaxiraga olindi. Do‘konga borib navbatsiz olib ketishingiz mumkin.
-                      </>
-                    ) : (
-                      <>
-                        Yirik buyurtmangiz <b>{selectedProduct.store}</b> sektor transport bo‘limiga yetkazildi. Sektor xodimi yuk yetkazish vaqti va manzili bo‘yicha siz bilan bog‘lanadi.
-                      </>
-                    )}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedProduct(null)}
-                    className="mt-6 rounded-full bg-forest-dark text-white px-6 py-2 text-xs font-bold hover:bg-forest transition cursor-pointer"
-                  >
-                    Tushunarli
-                  </button>
-                </div>
-              )}
+                <span>AgrozGO Ilovasi Haqida</span>
+                <ArrowRight className="h-4 w-4 text-agroGreen transition-transform group-hover:translate-x-1" />
+              </a>
             </div>
           </div>
-        )}
+
+          {/* ========================================================
+              2-KARTA: BIZNESGO (B2B) — DO'KONLAR VA DORIXONALAR UCHUN
+             ======================================================== */}
+          <div className="group relative flex flex-col justify-between rounded-[32px] bg-forest-dark p-6 sm:p-8 lg:p-10 border border-forest-border text-white shadow-2xl transition-all duration-300 hover:border-agroGreen/50">
+            <div>
+              {/* Karta yuqori statusi */}
+              <div className="flex items-center justify-between gap-3 pb-5 border-b border-white/10">
+                <span className="inline-flex items-center gap-2 rounded-full bg-agroGreen px-3 py-1 text-xs font-black text-forest-dark shadow-glow-subtle">
+                  <Store className="h-3.5 w-3.5 text-forest-dark" />
+                  BiznesGO (B2B)
+                </span>
+                <span className="text-xs font-bold text-white/60">
+                  Agro-Do‘kon, Dorixona, Omborlar
+                </span>
+              </div>
+
+              {/* Rasm va Mini-Badge */}
+              <div className="relative mt-6 h-48 sm:h-56 w-full overflow-hidden rounded-2xl bg-black/40 border border-white/10">
+                <AgroImage
+                  src={IMAGES.controller}
+                  alt="BiznesGO Smart kassa boshqaruvi"
+                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" />
+                <span className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-forest-dark/95 border border-white/20 backdrop-blur-md px-3 py-1 text-[11px] font-black text-white shadow-sm">
+                  <span className="h-2 w-2 rounded-full bg-agroGreen" />
+                  Smart POS Kassa, Ombor & Qarz Daftari
+                </span>
+              </div>
+
+              {/* Sarlavha & Tushuntirish */}
+              <h3 className="mt-6 text-xl sm:text-2xl font-black text-white leading-snug">
+                Do‘kon kassasi, ombor hisobi va avtomatik sotuv
+              </h3>
+
+              <div className="mt-3 rounded-2xl bg-white/10 p-4 border border-white/10 backdrop-blur-md">
+                <p className="text-xs font-black uppercase tracking-wider text-agroGreen mb-1">
+                  Nima bu?
+                </p>
+                <p className="text-xs sm:text-sm text-white/80 leading-relaxed">
+                  Agro-do‘kon egalari uchun savdo, kassa, ombor qoldiqlari va CRM qarz daftarini raqamlashtiruvchi hamda tovarlarni avtomatik ravishda AgrozGO marketplace fermerlariga chiqaruvchi B2B boshqaruv tizimi.
+                </p>
+              </div>
+
+              {/* Qanday ishlaydi (Mexanizm va Integratsiya) */}
+              <div className="mt-4 space-y-2.5">
+                <p className="text-xs font-black uppercase tracking-wider text-white/50">
+                  Qanday ishlaydi?
+                </p>
+                <div className="flex items-start gap-3 rounded-xl bg-white/5 p-3 border border-white/10">
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-agroGreen text-forest-dark font-black text-xs">
+                    01
+                  </span>
+                  <div>
+                    <p className="text-xs font-black text-white">Smart POS Kassa & Ombor hisobi</p>
+                    <p className="mt-0.5 text-[11px] text-white/70 leading-relaxed">
+                      Do‘kon kassa dasturidan foydalanadi, shtrix-kod orqali savdoni yuritadi, chek chiqaradi va qarz daftarini avtomatlashtiradi.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 rounded-xl bg-white/5 p-3 border border-white/10">
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-agroGreen text-forest-dark font-black text-xs">
+                    02
+                  </span>
+                  <div>
+                    <p className="text-xs font-black text-white">Avtomatik AgrozGO Vitrinasi</p>
+                    <p className="mt-0.5 text-[11px] text-white/70 leading-relaxed">
+                      Kassaga kiritilgan barcha tovarlar va ularning real qoldiqlari 0 soniyada AgrozGO xaridorlariga ko‘rinadi va buyurtmalar kassaga tushadi.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3 ta muhim afzallik */}
+              <ul className="mt-5 space-y-2 border-t border-white/10 pt-4">
+                {[
+                  'Shtrix-kodli tezkor kassa va fiskal chek integratsiyasi',
+                  'CRM qarz daftari (Nasiya) va mijozlar shaxsiy hisoboti',
+                  '0 so‘m komissiya bilan AgrozGO dan yangi mijozlar oqimi',
+                ].map((item) => (
+                  <li key={item} className="flex items-center gap-2 text-xs font-bold text-white/85">
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-agroGreen" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Pastki CTA Tugmasi */}
+            <div className="mt-8 pt-6 border-t border-white/10">
+              <a
+                href={BIZNESGO_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full rounded-2xl bg-agroGreen hover:bg-agroGreen-hover text-forest-dark font-black py-3.5 px-6 text-sm transition shadow-glow-green active:scale-95 group"
+              >
+                <span>BiznesGO (B2B) Do‘kon Ochish</span>
+                <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* BOG'LOVCHI KO'PRIK BANNERI (Ecosystem Bridge Banner) */}
+        <div className="mt-8 rounded-2xl bg-white p-4 sm:p-5 border border-charcoal/10 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-agroGreen/15 text-agroGreen-800 border border-agroGreen/25">
+              <Sparkles className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-xs sm:text-sm font-black text-charcoal">
+                Ekotizim qanday bog‘langan?
+              </p>
+              <p className="text-[11px] sm:text-xs text-charcoal/65">
+                Do‘kon BiznesGO’da savdo qiladi — uning tovarlari avtomatik ravishda AgrozGO fermerlariga ko‘rinadi.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs font-bold shrink-0">
+            <span className="rounded-lg bg-forest-dark text-white px-2.5 py-1 text-[11px] font-bold">
+              BiznesGO (B2B)
+            </span>
+            <span className="text-agroGreen font-black">──►</span>
+            <span className="rounded-lg bg-agroGreen text-forest-dark px-2.5 py-1 text-[11px] font-black">
+              AgrozGO (B2C)
+            </span>
+          </div>
+        </div>
       </div>
     </section>
   );
