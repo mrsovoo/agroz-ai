@@ -30,13 +30,13 @@ const config = {
   // Telegram Mini App initData tekshiruvi uchun bot tokenlari (Multi-bot support)
   biznesgoBotToken: process.env.BIZNESGO_BOT_TOKEN || '',
   agrozAuthBotToken: process.env.AGROZ_AUTH_BOT_TOKEN || process.env.TELEGRAM_AUTH_BOT_TOKEN || '',
-  agrozgoBotToken: process.env.AGROZGO_BOT_TOKEN || '8805081951:AAFtJ5oHbzL-MK_6jW8f5ox0vvNbtnJOYXk',
+  agrozgoBotToken: process.env.AGROZGO_BOT_TOKEN || '',
   botToken: process.env.BIZNESGO_BOT_TOKEN || process.env.AGROZ_AUTH_BOT_TOKEN || process.env.TELEGRAM_AUTH_BOT_TOKEN || '',
   botTokens: [
     process.env.BIZNESGO_BOT_TOKEN,
     process.env.AGROZ_AUTH_BOT_TOKEN,
     process.env.TELEGRAM_AUTH_BOT_TOKEN,
-    process.env.AGROZGO_BOT_TOKEN || '8805081951:AAFtJ5oHbzL-MK_6jW8f5ox0vvNbtnJOYXk',
+    process.env.AGROZGO_BOT_TOKEN,
   ].filter(Boolean),
 
   // Telegram Bot usernames & URLs

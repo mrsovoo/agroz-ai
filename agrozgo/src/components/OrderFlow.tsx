@@ -75,7 +75,7 @@ export const OrderFlow: React.FC = () => {
                 Agro-Do‘konlar va Dorixonalar Uchun
               </p>
               <h4 className="mt-1 text-base sm:text-xl font-black">
-                O‘z tovarlaringizni AgrozGO (B2C) ilovasida sotasizmi?
+                O‘z tovarlaringizni AgrozGO (B2C) vitrinasida sotasizmi?
               </h4>
               <p className="mt-1 text-xs text-white/70 max-w-xl">
                 BiznesGO POS kassa dasturini do‘koningizga o‘rnating va barcha qoldiqlaringiz avtomatik tarzda marketplace vitrinasiga chiqadi.

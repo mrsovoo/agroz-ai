@@ -63,7 +63,7 @@ export const Products: React.FC = () => {
                   <div className="relative h-48 sm:h-56 w-full overflow-hidden rounded-2xl bg-cream-soft shadow-xs">
                     <AgroImage
                       src={IMAGES.livestock}
-                      alt="AgrozGO fermerlar ilovasi"
+                      alt="AgrozGO fermerlar platformasi"
                       className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />

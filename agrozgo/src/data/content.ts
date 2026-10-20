@@ -234,12 +234,12 @@ export const DEMO_RESULTS: Record<string, { store: string; distance: string; pri
 };
 
 export const CONTACT_INFO = {
-  email: 'info@agrozgo.uz',
-  phone: '+998 71 200 44 22',
-  phoneRaw: '+998712004422',
+  email: 'info@biznesgo.uz',
+  phone: '+998 90 838 37 72',
+  phoneRaw: '+998908383772',
   mobile: '+998 90 838 37 72',
-  address: 'Toshkent shahri, Chilonzor tumani, Bunyodkor shoh ko‘chasi, 42-uy (Agro-Tech Hub)',
-  workingHours: 'Dushanba – Shanba: 08:30 – 19:00',
+  address: 'Toshkent shahri, O‘zbekiston',
+  workingHours: 'Har kuni: 08:00 – 20:00 (24/7 aloqada)',
 };
 
 /** BiznesGO va AgrozGO ekotizimining 3 ta tayanch texnologik ustuni */

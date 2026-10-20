@@ -124,13 +124,12 @@ export const Header: React.FC = () => {
             Imkoniyatlar
           </a>
 
-          {/* AgrozGO App */}
+          {/* Bog'lanish */}
           <a
-            href="#app-showcase"
-            className="rounded-full px-3.5 py-1.5 text-xs font-bold text-charcoal/80 transition hover:bg-agroGreen-50 hover:text-agroGreen-900 flex items-center gap-1.5"
+            href="#contact"
+            className="rounded-full px-3.5 py-1.5 text-xs font-bold text-charcoal/80 transition hover:bg-agroGreen-50 hover:text-agroGreen-900"
           >
-            <Smartphone className="h-3 w-3 text-agroGreen-700" />
-            AgrozGO App
+            Bog‘lanish
           </a>
         </nav>
 
@@ -244,11 +243,11 @@ export const Header: React.FC = () => {
               </a>
 
               <a
-                href="#app-showcase"
+                href="#contact"
                 onClick={() => setOpen(false)}
                 className="block rounded-2xl px-4 py-3 text-sm font-bold text-charcoal hover:bg-agroGreen-50 hover:text-agroGreen-900 transition"
               >
-                AgrozGO Mobil Ilovasi
+                Bog‘lanish
               </a>
 
               {/* Mobil Til Tanlash */}
