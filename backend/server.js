@@ -124,6 +124,7 @@ app.post(['/api/agrozgo/telegram/webhook', '/api/telegram/agrozgo-webhook'], (re
 
 app.use('/api/biznesgo', require('./routes/biznesgo'));
 app.use('/api/super-adm', require('./routes/super-adm'));
+app.use('/api', require('./routes/agrozgo/b2c'));
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Endpoint topilmadi', code: 'NOT_FOUND' }));
 
 // Frontend (SPA)

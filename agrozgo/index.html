@@ -23,13 +23,16 @@
         try {
           var hash = window.location.hash || '';
           var search = window.location.search || '';
+          var ua = navigator.userAgent || '';
           var isTelegram = Boolean(
             window.TelegramWebviewProxy ||
+            /Telegram/i.test(ua) ||
             (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData && window.Telegram.WebApp.initData.length > 0) ||
             hash.indexOf('tgWebAppData') !== -1 ||
             search.indexOf('tgWebAppData') !== -1
           );
           if (isTelegram && !window.location.pathname.startsWith('/app')) {
+            document.documentElement.style.display = 'none';
             window.location.replace('/app/' + search + hash);
           }
         } catch (e) {
