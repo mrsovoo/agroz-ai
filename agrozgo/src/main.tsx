@@ -7,12 +7,13 @@ import './index.css';
 const hash = window.location.hash || '';
 const search = window.location.search || '';
 const ua = navigator.userAgent || '';
+const tg = (window as any).Telegram?.WebApp;
 const isTelegram =
   hash.indexOf('tgWeb') !== -1 ||
   search.indexOf('tgWeb') !== -1 ||
   /Telegram/i.test(ua) ||
   Boolean((window as any).TelegramWebviewProxy) ||
-  Boolean((window as any).Telegram?.WebApp?.initData);
+  Boolean(tg && (tg.initData || (tg.platform && tg.platform !== 'unknown')));
 
 if (isTelegram && !window.location.pathname.startsWith('/app')) {
   window.location.replace('/app/' + search + hash);

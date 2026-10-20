@@ -370,12 +370,6 @@ async function handleAgrozgoBotUpdate(update) {
             web_app: { url: `${config.agrozgoMiniAppUrl}/profile` },
           },
         ],
-        [
-          {
-            text: "🌐 Rasmiy Veb-Sayt",
-            url: "https://agroz-ai.vercel.app",
-          },
-        ],
       ],
     };
 
@@ -436,12 +430,6 @@ async function handleAgrozgoBotUpdate(update) {
         {
           text: "🚀 AgrozGO Ilovasini Ochish",
           web_app: { url: config.agrozgoMiniAppUrl },
-        },
-      ],
-      [
-        {
-          text: "🌐 Rasmiy Veb-Sayt",
-          url: "https://agroz-ai.vercel.app",
         },
       ],
     ],
