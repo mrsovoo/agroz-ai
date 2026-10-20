@@ -38,7 +38,9 @@ const SECTOR_STYLES: Record<SectorId, { bg: string; iconBg: string; textAccent: 
 
 export const Sectors: React.FC = () => {
   return (
-    <section id="sectors" className="py-12 sm:py-16 bg-cream-soft/50 border-y border-charcoal/5">
+    <section id="sectors" className="py-12 sm:py-16 bg-cream-soft/50 border-y border-charcoal/5 scroll-mt-24">
+      {/* Anchor target for #products */}
+      <div id="products" className="-top-24 relative" />
       <div className="container-x">
         {/* Minimal Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 mb-6">
