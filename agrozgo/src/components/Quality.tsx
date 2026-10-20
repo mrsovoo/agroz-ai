@@ -4,29 +4,33 @@ import {
   Store,
   Truck,
   CheckCircle2,
-  Clock,
-  Sparkles,
+  Users,
   MapPin,
-  FileCheck,
-  PackageCheck,
-  Wrench,
-  Boxes,
+  RefreshCw,
+  BookmarkCheck,
+  Send,
+  Receipt,
+  ShoppingBag,
+  CreditCard,
+  Scale,
   ArrowRight,
+  ArrowUpRight,
+  Sparkles,
 } from 'lucide-react';
-import { Eyebrow, DarkButton } from './ui';
-import { VALUES, FEATURES, QUALITY_BADGES } from '../data/content';
+import { VALUES, BIZNESGO_URL } from '../data/content';
 
 /**
  * STANDARTLAR & KAFOLAT:
- * Sifat nazorati, shaffof narx va tartiblangan xarid tamoyillari:
- * 1. Dorilar, yem-ozuqalar, urug'lar — yaqin agro-do'kondan bron qilinadi va o'zi olib ketiladi.
- * 2. Yirik agro-texnikalar va issiqxona jihozlari — o'z hududiy katta sektorlaridan buyurtma beriladi va sektor logistikasi yetkazib beradi.
+ * 1. Yuqori master-banner: Yaqin do'kondan bron qilish (Dori, yem, urug') vs Sektor yetkazib berishi (Yirik texnika, issiqxona).
+ * 2. Qulayliklar bo'limi:
+ *    - Chap bo'lim (B2C): Fermerlar uchun qulayliklar + pastida "Mahsulotlarni ko'rish" tugmasi.
+ *    - O'ng bo'lim (B2B): Agro-do'konlar uchun qulayliklar + pastida "BiznesGO'ni ko'rish" tugmasi.
  */
 export const Quality: React.FC = () => {
   return (
     <section id="standards" className="py-16 sm:py-24 bg-white/50 border-b border-charcoal/5 scroll-mt-24">
       <div className="container-x">
-        {/* ASOSIY STANDARTLAR BANNERI */}
+        {/* 1. ASOSIY STANDARTLAR BANNERI */}
         <div className="relative overflow-hidden rounded-[32px] bg-forest-dark border border-forest-border/40 p-6 sm:p-10 lg:p-12 text-white shadow-card">
           {/* Fon yorug'lik effektlari */}
           <div className="pointer-events-none absolute -top-24 -right-24 h-96 w-96 rounded-full bg-agroGreen/20 blur-3xl" />
@@ -155,35 +159,204 @@ export const Quality: React.FC = () => {
           </div>
         </div>
 
-        {/* IMKONIYaTLAR (FEATURES RO'YXATI) */}
-        <div className="mt-14 sm:mt-20">
-          <div className="max-w-2xl mb-8">
-            <span className="text-xs font-black uppercase tracking-widest text-agroGreen-800">
-              Qulay Ekotizim
+        {/* 2. QULAYLIKLAR BO'LIMI: CHAPDA B2C (FERMERLAR) VA O'NGDA B2B (DO'KONLAR) */}
+        <div className="mt-16 sm:mt-24">
+          <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-agroGreen/15 border border-agroGreen/30 px-3.5 py-1 text-xs font-black text-agroGreen-800">
+              <Sparkles className="h-3.5 w-3.5 text-agroGreen-700" />
+              Ekotizim Qulayliklari
             </span>
-            <h3 className="mt-2 text-2xl sm:text-3xl font-black text-charcoal tracking-tight">
-              Zamonaviy texnologiya bilan <span className="text-agroGreen">qulay agro-xarid</span>
+            <h3 className="mt-3 text-2xl sm:text-3xl lg:text-4xl font-black text-charcoal tracking-tight">
+              Zamonaviy texnologiya bilan <span className="text-agroGreen">qulay agro-savdo</span>
             </h3>
-            <p className="mt-2 text-xs sm:text-sm text-charcoal/70">
-              Fermer va chorvadorlar ortiqcha ovoragarchiliksiz to‘g‘ri qaror qabul qilishi uchun yaratilgan imkoniyatlar.
+            <p className="mt-2 text-xs sm:text-sm text-charcoal/70 leading-relaxed">
+              Fermerlar uchun tezkor xarid va tejamkorlik, do‘kon egalari uchun esa avtomatlashtirilgan kassa va yangi mijozlar oqimi.
             </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {FEATURES.map((f, i) => (
-              <div
-                key={f.title}
-                className="rounded-2xl bg-cream-soft p-5 border border-charcoal/8 shadow-xs hover:border-agroGreen/40 transition flex flex-col justify-between"
-              >
-                <div>
-                  <div className="grid h-8 w-8 place-items-center rounded-xl bg-agroGreen/15 text-agroGreen-800 text-xs font-black mb-3">
-                    0{i + 1}
+          <div className="grid gap-8 lg:grid-cols-2 items-stretch">
+            
+            {/* CHAP BO'LIM: AGROZGO (B2C) — FERMERLAR UCHUN QULAYLIKLAR */}
+            <div className="rounded-3xl bg-cream-soft/80 border border-charcoal/10 p-6 sm:p-8 flex flex-col justify-between shadow-xs hover:border-agroGreen/40 transition">
+              <div>
+                {/* Sarlavha & B2C Nishon */}
+                <div className="flex items-center justify-between gap-2 pb-4 border-b border-charcoal/10 mb-6">
+                  <div className="flex items-center gap-2.5">
+                    <span className="grid h-10 w-10 place-items-center rounded-2xl bg-agroGreen/15 text-agroGreen-800 border border-agroGreen/25">
+                      <Users className="h-5 w-5" />
+                    </span>
+                    <div>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-agroGreen-800 block">
+                        B2C • Xaridorlar Uchun
+                      </span>
+                      <h4 className="text-base sm:text-lg font-black text-charcoal">
+                        AgrozGO — Fermerlar Qulayliklari
+                      </h4>
+                    </div>
                   </div>
-                  <h4 className="text-sm font-black text-charcoal leading-snug">{f.title}</h4>
-                  <p className="mt-1.5 text-xs text-charcoal/70 leading-relaxed">{f.text}</p>
+                  <span className="rounded-full bg-agroGreen text-forest-dark px-3 py-1 text-[11px] font-black">
+                    Fermerga
+                  </span>
+                </div>
+
+                {/* 4 ta B2C qulaylik */}
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3.5 p-3 rounded-2xl bg-white border border-charcoal/5 shadow-xs">
+                    <span className="grid h-8 w-8 place-items-center rounded-xl bg-agroGreen/10 text-agroGreen-800 shrink-0 mt-0.5">
+                      <MapPin className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <h5 className="text-xs sm:text-sm font-black text-charcoal">Yaqin do‘konlarni xaritada topish</h5>
+                      <p className="mt-0.5 text-xs text-charcoal/70 leading-relaxed">
+                        Joylashuvingiz bo‘yicha 5–15 km radiusdagi vet-dorixona, yem va urug‘ do‘konlari ko‘rsatiladi.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3.5 p-3 rounded-2xl bg-white border border-charcoal/5 shadow-xs">
+                    <span className="grid h-8 w-8 place-items-center rounded-xl bg-agroGreen/10 text-agroGreen-800 shrink-0 mt-0.5">
+                      <RefreshCw className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <h5 className="text-xs sm:text-sm font-black text-charcoal">Real vaqtli ombor qoldig‘i</h5>
+                      <p className="mt-0.5 text-xs text-charcoal/70 leading-relaxed">
+                        BiznesGO kassasi bilan sinxron — faqat do‘konda amalda bor mahsulotgina ko‘rsatiladi.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3.5 p-3 rounded-2xl bg-white border border-charcoal/5 shadow-xs">
+                    <span className="grid h-8 w-8 place-items-center rounded-xl bg-agroGreen/10 text-agroGreen-800 shrink-0 mt-0.5">
+                      <BookmarkCheck className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <h5 className="text-xs sm:text-sm font-black text-charcoal">Onlayn buyurtma va bepul bron</h5>
+                      <p className="mt-0.5 text-xs text-charcoal/70 leading-relaxed">
+                        Mahsulotni saytda 1 bosishda oldindan bron qiling, do‘konga borib navbatsiz tayyor holda oling.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3.5 p-3 rounded-2xl bg-white border border-charcoal/5 shadow-xs">
+                    <span className="grid h-8 w-8 place-items-center rounded-xl bg-agroGreen/10 text-agroGreen-800 shrink-0 mt-0.5">
+                      <Send className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <h5 className="text-xs sm:text-sm font-black text-charcoal">Telegram orqali bildirishnoma</h5>
+                      <p className="mt-0.5 text-xs text-charcoal/70 leading-relaxed">
+                        Buyurtma holati, do‘kon manzili, aksiyalar va tayyorligi haqida darhol SMS va bot xabari.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            ))}
+
+              {/* Pastki Harakat Tugmasi (B2C) */}
+              <div className="mt-8 pt-5 border-t border-charcoal/10">
+                <a
+                  href="#products"
+                  className="inline-flex items-center justify-center gap-2 w-full rounded-2xl bg-forest-dark hover:bg-forest text-white font-black py-3.5 px-6 text-xs sm:text-sm transition shadow-xs active:scale-95 group"
+                >
+                  <ShoppingBag className="h-4 w-4 text-agroGreen" />
+                  <span>Mahsulot va Do‘konlarni Ko‘rish</span>
+                  <ArrowRight className="h-4 w-4 text-agroGreen transition-transform group-hover:translate-x-1" />
+                </a>
+              </div>
+            </div>
+
+            {/* O'NG BO'LIM: BIZNESGO (B2B) — DO'KONLAR UCHUN QULAYLIKLAR */}
+            <div className="rounded-3xl bg-forest-dark text-white border border-white/10 p-6 sm:p-8 flex flex-col justify-between shadow-card relative overflow-hidden group">
+              {/* Fon nuri */}
+              <div className="pointer-events-none absolute -right-12 -bottom-12 h-44 w-44 rounded-full bg-agroGreen/10 blur-2xl" />
+
+              <div>
+                {/* Sarlavha & B2B Nishon */}
+                <div className="flex items-center justify-between gap-2 pb-4 border-b border-white/10 mb-6">
+                  <div className="flex items-center gap-2.5">
+                    <span className="grid h-10 w-10 place-items-center rounded-2xl bg-white/10 text-agroGreen border border-white/15">
+                      <Store className="h-5 w-5" />
+                    </span>
+                    <div>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-agroGreen block">
+                        B2B • Agro-Do‘konlar Uchun
+                      </span>
+                      <h4 className="text-base sm:text-lg font-black text-white">
+                        BiznesGO — Kassa & Savdo Boshqaruvi
+                      </h4>
+                    </div>
+                  </div>
+                  <span className="rounded-full bg-white/15 text-white px-3 py-1 text-[11px] font-black border border-white/10">
+                    Do‘kondorga
+                  </span>
+                </div>
+
+                {/* 4 ta B2B qulaylik */}
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3.5 p-3 rounded-2xl bg-white/10 border border-white/10">
+                    <span className="grid h-8 w-8 place-items-center rounded-xl bg-agroGreen/20 text-agroGreen shrink-0 mt-0.5">
+                      <Receipt className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <h5 className="text-xs sm:text-sm font-black text-white">Smart POS kassa & tezkor savdo</h5>
+                      <p className="mt-0.5 text-xs text-white/70 leading-relaxed">
+                        Shtrix-kod o‘qitish, qulay chek chiqarish, fiskal kassa va tovarlarni oson kirim qilish.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3.5 p-3 rounded-2xl bg-white/10 border border-white/10">
+                    <span className="grid h-8 w-8 place-items-center rounded-xl bg-agroGreen/20 text-agroGreen shrink-0 mt-0.5">
+                      <ShoppingBag className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <h5 className="text-xs sm:text-sm font-black text-white">Avtomatik AgrozGO vitrinasi</h5>
+                      <p className="mt-0.5 text-xs text-white/70 leading-relaxed">
+                        Kassaga kiritilgan barcha tovarlar 0 so‘m komissiya bilan minglab fermerlarga ko‘rinadi.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3.5 p-3 rounded-2xl bg-white/10 border border-white/10">
+                    <span className="grid h-8 w-8 place-items-center rounded-xl bg-agroGreen/20 text-agroGreen shrink-0 mt-0.5">
+                      <CreditCard className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <h5 className="text-xs sm:text-sm font-black text-white">CRM Nasiya & Qarz daftari</h5>
+                      <p className="mt-0.5 text-xs text-white/70 leading-relaxed">
+                        Doimiy fermerlar qarzini SMS eslatmalar bilan tartibli yuritish va yo‘qotishlarning oldini olish.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3.5 p-3 rounded-2xl bg-white/10 border border-white/10">
+                    <span className="grid h-8 w-8 place-items-center rounded-xl bg-agroGreen/20 text-agroGreen shrink-0 mt-0.5">
+                      <Scale className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <h5 className="text-xs sm:text-sm font-black text-white">Ozuqa bo‘lib sotish & muddat nazorati</h5>
+                      <p className="mt-0.5 text-xs text-white/70 leading-relaxed">
+                        50 kg qopni kg-lab bo‘lib sotish kalkulyatori hamda muddati o‘tayotgan dorilarni oldindan ogohlantirish.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pastki Harakat Tugmasi (B2B) */}
+              <div className="mt-8 pt-5 border-t border-white/10">
+                <a
+                  href={BIZNESGO_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 w-full rounded-2xl bg-agroGreen hover:bg-agroGreen-hover text-forest-dark font-black py-3.5 px-6 text-xs sm:text-sm transition shadow-glow-green active:scale-95 group"
+                >
+                  <Store className="h-4 w-4" />
+                  <span>BiznesGO Tizimini Ko‘rish</span>
+                  <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                </a>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
