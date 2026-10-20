@@ -83,6 +83,44 @@
     <div class="loading-spinner"></div>
     <div class="loading-text">AgrozGO yuklanmoqda...</div>
   </div>
+  <script>
+    function removeLoader() {
+      const loader = document.getElementById('flutter-loading');
+      if (loader && !loader.dataset.hiding) {
+        loader.dataset.hiding = 'true';
+        loader.style.pointerEvents = 'none';
+        loader.style.opacity = '0';
+        setTimeout(function() {
+          if (loader.parentNode) loader.parentNode.removeChild(loader);
+        }, 320);
+      }
+    }
+
+    // 1. Listen for Flutter first render frame
+    window.addEventListener('flutter-first-frame', removeLoader);
+
+    // 2. Watch for Flutter canvas or view DOM injection
+    const observer = new MutationObserver(function(mutations) {
+      for (let i = 0; i < mutations.length; i++) {
+        const added = mutations[i].addedNodes;
+        for (let j = 0; j < added.length; j++) {
+          const node = added[j];
+          if (node.nodeType === 1) {
+            const tag = (node.tagName || '').toLowerCase();
+            if (tag.indexOf('flt-') === 0 || tag === 'flutter-view') {
+              setTimeout(removeLoader, 150);
+              observer.disconnect();
+              return;
+            }
+          }
+        }
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    // 3. Absolute safety timeout (3.5s fallback)
+    setTimeout(removeLoader, 3500);
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

@@ -9,7 +9,13 @@
     { "source": "/app/(.*\\.[a-zA-Z0-9]+)", "destination": "/app/$1" },
     { "source": "/app", "destination": "/app/index.html" },
     { "source": "/app/(.*)", "destination": "/app/index.html" },
-    { "source": "/((?!app).*)", "destination": "/index.html" }
+    { "source": "/((?!app|api).*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/app/(.*\\.wasm)",
+      "headers": [{ "key": "Content-Type", "value": "application/wasm" }]
+    }
   ]
 }
 

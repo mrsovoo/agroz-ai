@@ -27,7 +27,7 @@ class AppConfig {
 
   static const String apiUrl = String.fromEnvironment(
     'API_URL',
-    defaultValue: '',
+    defaultValue: 'https://backend-production-96bd5.up.railway.app',
   );
 
   static bool get hasValidApiUrl => apiUrl.trim().isNotEmpty;

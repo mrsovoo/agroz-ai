@@ -40,6 +40,7 @@
       padding: 0;
       width: 100%;
       height: 100%;
+      height: 100dvh;
       overflow: hidden;
       background-color: #F8FAF7;
       touch-action: pan-x pan-y;
@@ -59,8 +60,8 @@
       transition: opacity 0.3s ease;
     }
     .loading-spinner {
-      width: 32px;
-      height: 32px;
+      width: 36px;
+      height: 36px;
       border: 3.5px solid rgba(53, 202, 86, 0.2);
       border-top-color: #35CA56;
       border-radius: 50%;
@@ -68,7 +69,7 @@
     }
     .loading-text {
       margin-top: 14px;
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 700;
       color: #1B211D;
       letter-spacing: -0.2px;
@@ -83,6 +84,42 @@
     <div class="loading-spinner"></div>
     <div class="loading-text">AgrozGO yuklanmoqda...</div>
   </div>
+  <script>
+    function removeLoader() {
+      const loader = document.getElementById('flutter-loading');
+      if (loader && !loader.dataset.hiding) {
+        loader.dataset.hiding = 'true';
+        loader.style.pointerEvents = 'none';
+        loader.style.opacity = '0';
+        setTimeout(() => {
+          if (loader.parentNode) loader.parentNode.removeChild(loader);
+        }, 320);
+      }
+    }
+
+    // 1. Listen for Flutter first render frame
+    window.addEventListener('flutter-first-frame', removeLoader);
+
+    // 2. Watch for Flutter canvas or view DOM injection
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        for (const node of m.addedNodes) {
+          if (node.nodeType === 1) {
+            const tag = (node.tagName || '').toLowerCase();
+            if (tag.startsWith('flt-') || tag === 'flutter-view') {
+              setTimeout(removeLoader, 150);
+              observer.disconnect();
+              return;
+            }
+          }
+        }
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    // 3. Absolute safety timeout (3.5s fallback)
+    setTimeout(removeLoader, 3500);
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
