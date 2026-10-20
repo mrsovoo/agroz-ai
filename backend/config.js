@@ -30,21 +30,17 @@ const config = {
   // Telegram Mini App initData tekshiruvi uchun bot tokenlari (Multi-bot support)
   biznesgoBotToken: process.env.BIZNESGO_BOT_TOKEN || '',
   agrozAuthBotToken: process.env.AGROZ_AUTH_BOT_TOKEN || process.env.TELEGRAM_AUTH_BOT_TOKEN || '',
-  agrozgoBotToken: process.env.AGROZGO_BOT_TOKEN || '',
   botToken: process.env.BIZNESGO_BOT_TOKEN || process.env.AGROZ_AUTH_BOT_TOKEN || process.env.TELEGRAM_AUTH_BOT_TOKEN || '',
   botTokens: [
     process.env.BIZNESGO_BOT_TOKEN,
     process.env.AGROZ_AUTH_BOT_TOKEN,
     process.env.TELEGRAM_AUTH_BOT_TOKEN,
-    process.env.AGROZGO_BOT_TOKEN,
   ].filter(Boolean),
 
   // Telegram Bot usernames & URLs
   biznesgoBotUsername: process.env.BIZNESGO_BOT_USERNAME || 'biznesgo_bot',
   agrozAuthBotUsername: process.env.AGROZ_AUTH_BOT_USERNAME || 'agroz_auth_bot',
-  agrozgoBotUsername: process.env.AGROZGO_BOT_USERNAME || 'agrozai_bot',
   miniAppUrl: process.env.BIZNESGO_MINI_APP_URL || 'https://biznesgo.uz',
-  agrozgoMiniAppUrl: process.env.AGROZGO_MINI_APP_URL || 'https://agroz-ai.vercel.app',
 
   // Admin autentifikatsiyasi (broadcast va boshqaruv uchun)
   adminUsername: process.env.ADMIN_USERNAME || 'admin',

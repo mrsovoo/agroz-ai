@@ -42,9 +42,6 @@ const allowedOrigins = [
   'https://agroz.uz',
   'https://www.agroz.uz',
   'https://admin.agroz.uz',
-  'https://agrozgo.uz',
-  'https://www.agrozgo.uz',
-  'https://agrozgo.vercel.app',
   ...config.corsOrigins,
 ];
 
@@ -58,7 +55,6 @@ function isOriginAllowed(origin) {
     if (host === 'vercel.app' || host.endsWith('.vercel.app')) return true;
     if (host === 'biznesgo.uz' || host.endsWith('.biznesgo.uz')) return true;
     if (host === 'agroz.uz' || host.endsWith('.agroz.uz')) return true;
-    if (host === 'agrozgo.uz' || host.endsWith('.agrozgo.uz')) return true;
     return allowedOrigins.some((ao) => {
       try {
         return new URL(ao).hostname.toLowerCase() === host;
@@ -117,13 +113,8 @@ app.post(['/api/telegram/auth-webhook', '/api/biznesgo/telegram/auth-webhook'], 
   req.url = '/webhook/agroz_auth';
   botRouter(req, res, next);
 });
-app.post(['/api/agrozgo/telegram/webhook', '/api/telegram/agrozgo-webhook'], (_req, res) => {
-  res.json({ ok: true, active: false, message: 'AgrozGO bot vaqtinchalik o‘chirilgan' });
-});
-
 app.use('/api/biznesgo', require('./routes/biznesgo'));
 app.use('/api/super-adm', require('./routes/super-adm'));
-app.use('/api', require('./routes/agrozgo/b2c'));
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Endpoint topilmadi', code: 'NOT_FOUND' }));
 
 // Frontend (SPA)

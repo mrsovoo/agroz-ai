@@ -15,7 +15,6 @@ const { query, withTransaction, NOW } = require('../../db/pool');
 const { HttpError, asyncHandler } = require('../../lib/errors');
 const v = require('../../lib/validate');
 const { restoreStock } = require('../../services/sales');
-const { notifyAgrozgo } = require('../../services/agrozgo');
 
 const router = express.Router();
 
@@ -126,12 +125,6 @@ router.patch(
       return { ...rows[0], items: await loadItems(client, id), stock_restored: RESTORE_ON.has(next) };
     });
 
-    notifyAgrozgo('order.status_changed', {
-      order_id: order.id,
-      external_ref: order.external_ref,
-      merchant_id: req.merchant.id,
-      status: order.status,
-    });
     res.json({ order });
   })
 );

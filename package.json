@@ -1,15 +1,14 @@
 {
-  "name": "agroz-ai-workspace",
+  "name": "biznesgo-workspace",
   "version": "1.0.0",
   "private": true,
-  "description": "BiznesGO B2B, Super-Admin & AgrozGO B2C Monorepo",
+  "description": "BiznesGO B2B Platform & Super-Admin Monorepo",
   "scripts": {
     "build:b2b": "cd biznesgo && npm install && npm run build",
     "build:admin": "cd super-adm && npm install && npm run build",
-    "build:b2c": "cd agrozgo && npm install && npm run build && cd .. && rm -rf dist && cp -R agrozgo/dist dist",
-    "build:all": "npm run build:b2b && npm run build:admin && npm run build:b2c",
-    "build": "cd agrozgo && npm install && npm run build && cd .. && rm -rf dist && cp -R agrozgo/dist dist",
-    "vercel-build": "cd agrozgo && npm install && npm run build && cd .. && rm -rf dist && cp -R agrozgo/dist dist",
+    "build:all": "npm run build:b2b && npm run build:admin",
+    "build": "cd biznesgo && npm install && npm run build && cd .. && rm -rf dist && cp -R biznesgo/dist dist",
+    "vercel-build": "cd biznesgo && npm install && npm run build && cd .. && rm -rf dist && cp -R biznesgo/dist dist",
     "test": "cd backend && npm test"
   }
 }
