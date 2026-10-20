@@ -117,9 +117,8 @@ app.post(['/api/telegram/auth-webhook', '/api/biznesgo/telegram/auth-webhook'], 
   req.url = '/webhook/agroz_auth';
   botRouter(req, res, next);
 });
-app.post(['/api/agrozgo/telegram/webhook', '/api/telegram/agrozgo-webhook'], (req, res, next) => {
-  req.url = '/webhook/agrozgo';
-  botRouter(req, res, next);
+app.post(['/api/agrozgo/telegram/webhook', '/api/telegram/agrozgo-webhook'], (_req, res) => {
+  res.json({ ok: true, active: false, message: 'AgrozGO bot vaqtinchalik o‘chirilgan' });
 });
 
 app.use('/api/biznesgo', require('./routes/biznesgo'));

@@ -92,8 +92,7 @@ router.post(
       const result = await handleBiznesgoBotUpdate(update);
       return res.json(result);
     } else if (botType === 'agrozgo' || botType === 'agrozgo_bot' || botType === 'agrozai' || botType === 'agrozai_bot') {
-      const result = await handleAgrozgoBotUpdate(update);
-      return res.json(result);
+      return res.json({ ok: true, active: false, message: "AgrozGO bot vaqtinchalik to'xtatilgan" });
     } else {
       throw new HttpError(404, `Noma'lum bot turi: ${botType}`, 'BOT_TYPE_NOT_FOUND');
     }
