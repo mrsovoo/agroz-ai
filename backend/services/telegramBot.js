@@ -190,18 +190,8 @@ async function handleAgrozgoBotUpdate(update) {
           inline_keyboard: [
             [
               {
-                text: "🚀 AgrozGO Ilovasiga Kirish",
+                text: "🌐 AgrozGO Platformasini Ochish",
                 web_app: { url: config.agrozgoMiniAppUrl },
-              },
-            ],
-            [
-              {
-                text: "🛒 Savat & Buyurtmalar",
-                web_app: { url: `${config.agrozgoMiniAppUrl}/cart` },
-              },
-              {
-                text: "👤 Mening Profilim",
-                web_app: { url: `${config.agrozgoMiniAppUrl}/profile` },
               },
             ],
           ],
@@ -211,7 +201,7 @@ async function handleAgrozgoBotUpdate(update) {
           keyboard: [
             [
               {
-                text: "🚀 AgrozGO Ilovasini Ochish",
+                text: "🌐 AgrozGO Platformasi",
                 web_app: { url: config.agrozgoMiniAppUrl },
               },
             ],
@@ -356,18 +346,8 @@ async function handleAgrozgoBotUpdate(update) {
       inline_keyboard: [
         [
           {
-            text: "🚀 AgrozGO Ilovasiga Kirish",
+            text: "🌐 AgrozGO Platformasini Ochish",
             web_app: { url: config.agrozgoMiniAppUrl },
-          },
-        ],
-        [
-          {
-            text: "🛒 Savat va Buyurtmalar",
-            web_app: { url: `${config.agrozgoMiniAppUrl}/cart` },
-          },
-          {
-            text: "👤 Mening Profilim",
-            web_app: { url: `${config.agrozgoMiniAppUrl}/profile` },
           },
         ],
       ],
@@ -377,7 +357,7 @@ async function handleAgrozgoBotUpdate(update) {
       keyboard: [
         [
           {
-            text: "🚀 AgrozGO Ilovasini Ochish",
+            text: "🌐 AgrozGO Platformasi",
             web_app: { url: config.agrozgoMiniAppUrl },
           },
         ],
@@ -428,7 +408,7 @@ async function handleAgrozgoBotUpdate(update) {
     inline_keyboard: [
       [
         {
-          text: "🚀 AgrozGO Ilovasini Ochish",
+          text: "🌐 AgrozGO Saytini Ochish",
           web_app: { url: config.agrozgoMiniAppUrl },
         },
       ],
@@ -439,7 +419,7 @@ async function handleAgrozgoBotUpdate(update) {
     keyboard: [
       [
         {
-          text: "🚀 AgrozGO Ilovasini Ochish",
+          text: "🌐 AgrozGO Sayti",
           web_app: { url: config.agrozgoMiniAppUrl },
         },
       ],

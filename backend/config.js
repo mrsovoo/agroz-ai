@@ -44,7 +44,7 @@ const config = {
   agrozAuthBotUsername: process.env.AGROZ_AUTH_BOT_USERNAME || 'agroz_auth_bot',
   agrozgoBotUsername: process.env.AGROZGO_BOT_USERNAME || 'agrozai_bot',
   miniAppUrl: process.env.BIZNESGO_MINI_APP_URL || 'https://biznesgo.uz',
-  agrozgoMiniAppUrl: process.env.AGROZGO_MINI_APP_URL || 'https://agroz-ai.vercel.app/app',
+  agrozgoMiniAppUrl: process.env.AGROZGO_MINI_APP_URL || 'https://agroz-ai.vercel.app',
 
   // Admin autentifikatsiyasi (broadcast va boshqaruv uchun)
   adminUsername: process.env.ADMIN_USERNAME || 'admin',
