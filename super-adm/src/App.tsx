@@ -10,7 +10,7 @@ export const App: React.FC = () => {
           <p className="text-xs text-slate-400 font-medium">{uzLocale.subtitle}</p>
         </div>
         <span className="text-xs bg-slate-800 text-slate-300 px-3 py-1.5 rounded-full border border-slate-700">
-          v0.0.0
+          v0.0.1
         </span>
       </header>
 
@@ -21,8 +21,9 @@ export const App: React.FC = () => {
         </p>
       </main>
 
-      <footer className="text-center text-xs text-slate-400 border-t border-slate-900 pt-4">
-        &copy; 2026 AgrozGO Super Admin. Barcha huquqlar himoyalangan.
+      <footer className="text-center text-xs text-slate-400 border-t border-slate-900 pt-4 flex items-center justify-between">
+        <span>&copy; 2026 AgrozGO Super Admin. Barcha huquqlar himoyalangan.</span>
+        <span className="font-mono text-[10px] text-slate-400">v0.0.1</span>
       </footer>
     </div>
   );

@@ -23,3 +23,4 @@ export class TelegramController {
     return this.telegramService.createLinkToken(userId, phone);
   }
 }
+

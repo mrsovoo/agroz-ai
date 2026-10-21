@@ -310,3 +310,4 @@ model TelegramLinkToken {
   @@map("telegram_link_tokens")
   @@index([token, is_used])
 }
+

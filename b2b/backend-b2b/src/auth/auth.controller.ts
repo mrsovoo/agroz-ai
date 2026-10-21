@@ -39,3 +39,4 @@ export class AuthController {
     return this.authService.superAdminLogin(dto, ip);
   }
 }
+

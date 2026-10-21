@@ -19,3 +19,4 @@ export interface OtpChannel {
     metadata?: Record<string, unknown>,
   ): Promise<OtpSendResult>;
 }
+

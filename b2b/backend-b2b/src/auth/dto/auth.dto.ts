@@ -53,3 +53,4 @@ export class ConfirmTotpSetupDto {
   @Length(6, 6)
   totp_code!: string;
 }
+
