@@ -72,3 +72,4 @@ export class AdminBusinessController {
     return this.businessService.adminUpdateBusinessStatus(id, dto.is_active, adminUserId, ip);
   }
 }
+

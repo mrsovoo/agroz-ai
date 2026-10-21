@@ -38,3 +38,4 @@ BiznesGO platformasi minglab mustaqil dorixonalar va agro/vet tadbirkorlariga xi
 ## Natijalar
 - Multi-tenant izolyatsiya va rollar bo'yicha ruxsatlar to'liq kafolatlandi.
 - Testlar bilan multi-tenant buzilishlarining oldi olindi.
+

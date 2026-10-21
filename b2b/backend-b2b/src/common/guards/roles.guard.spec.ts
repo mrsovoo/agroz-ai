@@ -45,3 +45,4 @@ describe('RolesGuard (RBAC)', () => {
     expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
   });
 });
+
