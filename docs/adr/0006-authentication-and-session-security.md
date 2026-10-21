@@ -43,3 +43,4 @@ AgrozGO / BiznesGO platformasida merchantlar (dorixona egalari va sotuvchilar) m
 - Tizim xavfsizligi yuqori darajaga yetkazildi, hisoblarni egallab olish xavfi (account takeover) minimal darajaga tushirildi.
 - Merchantlar uchun Telegram orqali oddiy va qulay kirish ta'minlandi.
 - Barcha amallar `audit_logs` ga toza, nozik ma'lumotlarsiz qayd etiladi.
+

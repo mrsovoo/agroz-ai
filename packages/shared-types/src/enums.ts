@@ -11,6 +11,14 @@ export enum Sector {
   GREENHOUSE = 'greenhouse',
   SEEDS = 'seeds',
   MACHINERY = 'machinery',
+  SPECIALIST = 'specialist',
+}
+
+export enum ContactType {
+  CUSTOMER = 'customer',
+  DEBTOR = 'debtor',
+  SERVICE_RECIPIENT = 'service_recipient',
+  SUPPLIER = 'supplier',
 }
 
 export enum CountryCode {
@@ -50,9 +58,7 @@ export enum DebtTransactionType {
 }
 
 export enum OutboxStatus {
-  PENDING = 'pending',
-  PROCESSING = 'processing',
-  PUBLISHED = 'published',
-  FAILED = 'failed',
+  PENDING = 'PENDING',
+  PROCESSED = 'PROCESSED',
+  FAILED = 'FAILED',
 }
-

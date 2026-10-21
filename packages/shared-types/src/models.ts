@@ -1,4 +1,5 @@
 import {
+  ContactType,
   CountryCode,
   Currency,
   DebtTransactionType,
@@ -22,12 +23,13 @@ export interface UserSummary {
   phone: string;
   first_name: string;
   last_name?: string | null;
+  email?: string | null;
   role: UserRole;
   is_active: boolean;
   country_id: CountryCode;
 }
 
-export interface ShopSummary {
+export interface BusinessSummary {
   id: string;
   name: string;
   sector: Sector;
@@ -39,6 +41,13 @@ export interface ShopSummary {
   longitude?: number | null;
   phone?: string | null;
   is_active: boolean;
+}
+
+export interface BusinessUserSummary {
+  id: string;
+  business_id: string;
+  user_id: string;
+  role: string;
 }
 
 export interface CatalogProductSummary {
@@ -54,9 +63,19 @@ export interface CatalogProductSummary {
   is_verified: boolean;
 }
 
+export interface BusinessProductSummary {
+  id: string;
+  business_id: string;
+  catalog_product_id?: string | null;
+  custom_name?: string | null;
+  price: number; // Integer (tiyin/cents)
+  currency: Currency;
+  is_active: boolean;
+}
+
 export interface ProductBatchSummary {
   id: string;
-  shop_product_id: string;
+  business_product_id: string;
   batch_no: string;
   expiry_date: Date;
   quantity: number;
@@ -64,11 +83,22 @@ export interface ProductBatchSummary {
   currency: Currency;
 }
 
+export interface ContactSummary {
+  id: string;
+  business_id: string;
+  name: string;
+  phone?: string | null;
+  type: ContactType;
+  balance: number; // Integer (tiyin)
+  currency: Currency;
+  country_id: CountryCode;
+}
+
 export interface SaleSummary {
   id: string;
-  shop_id: string;
+  business_id: string;
   seller_id: string;
-  customer_id?: string | null;
+  contact_id?: string | null;
   total_amount: number; // Integer (tiyin)
   discount_amount: number; // Integer (tiyin)
   paid_amount: number; // Integer (tiyin)
@@ -81,8 +111,8 @@ export interface SaleSummary {
 
 export interface DebtTransactionSummary {
   id: string;
-  shop_id: string;
-  customer_id: string;
+  business_id: string;
+  contact_id: string;
   type: DebtTransactionType;
   amount: number; // Integer (tiyin)
   currency: Currency;

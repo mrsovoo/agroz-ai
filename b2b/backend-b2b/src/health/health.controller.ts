@@ -10,10 +10,9 @@ export class HealthController {
   check() {
     return {
       status: 'ok',
-      version: '0.0.1',
+      version: '0.0.0',
       timestamp: new Date().toISOString(),
       service: 'backend-b2b',
     };
   }
 }
-

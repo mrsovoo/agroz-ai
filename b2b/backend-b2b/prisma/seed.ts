@@ -1,4 +1,4 @@
-import { PrismaClient, UserRole } from '@prisma/client';
+import { BusinessSector, PrismaClient, UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { authenticator } from 'otplib';
 
@@ -17,6 +17,7 @@ async function main() {
     update: {},
     create: {
       phone: superAdminPhone,
+      email: 'admin@biznesgo.uz',
       first_name: 'Super',
       last_name: 'Admin',
       role: UserRole.super_admin,
@@ -29,11 +30,11 @@ async function main() {
   console.log(`✓ Super Admin created: ${superAdmin.phone} (Role: super_admin)`);
   console.log(`  TOTP Secret: ${superAdminTotpSecret}`);
 
-  // 2. Demo Vet & Agro Pharmacy Shop
-  const shop = await prisma.shop.create({
+  // 2. Demo Vet & Agro Pharmacy Business
+  const business = await prisma.business.create({
     data: {
       name: 'AgroVet Markaz Do‘koni',
-      sector: 'pharmacy',
+      sector: BusinessSector.pharmacy,
       country_id: 'UZ',
       currency: 'UZS',
       language: 'uz',
@@ -43,13 +44,13 @@ async function main() {
       phone: '+998901234567',
     },
   });
-  console.log(`✓ Demo Pharmacy Shop created: ${shop.name} (Sector: ${shop.sector})`);
+  console.log(`✓ Demo Pharmacy Business created: ${business.name} (Sector: ${business.sector})`);
 
   // 3. Demo Catalog Product (Veterinary Medicine)
   const product = await prisma.catalogProduct.create({
     data: {
       name: 'Oksitetratsiklin 20% LA',
-      sector: 'pharmacy',
+      sector: BusinessSector.pharmacy,
       category: 'Antibiotiklar',
       active_substance: 'Oxytetracycline dihydrate',
       manufacturer: 'Bioveta, Chexiya',
@@ -61,10 +62,10 @@ async function main() {
   });
   console.log(`✓ Catalog Product created: ${product.name} (Active: ${product.active_substance})`);
 
-  // 4. Shop Product & Batch
-  const shopProduct = await prisma.shopProduct.create({
+  // 4. Business Product & Batch
+  const businessProduct = await prisma.businessProduct.create({
     data: {
-      shop_id: shop.id,
+      business_id: business.id,
       catalog_product_id: product.id,
       custom_name: 'Oksitetratsiklin 20% LA (100ml)',
       price: BigInt(8500000), // 85,000 UZS (8500000 tiyin)
@@ -75,7 +76,7 @@ async function main() {
 
   await prisma.productBatch.create({
     data: {
-      shop_product_id: shopProduct.id,
+      business_product_id: businessProduct.id,
       batch_no: 'B-2026-041',
       expiry_date: new Date('2028-06-30'),
       quantity: 50,
@@ -83,7 +84,21 @@ async function main() {
       currency: 'UZS',
     },
   });
-  console.log(`✓ Inventory batch added for: ${shopProduct.custom_name}`);
+  console.log(`✓ Inventory batch added for: ${businessProduct.custom_name}`);
+
+  // 5. Demo Contact
+  const contact = await prisma.contact.create({
+    data: {
+      business_id: business.id,
+      name: 'Ali Qosimov (Fermer)',
+      phone: '+998909876543',
+      type: 'customer',
+      balance: BigInt(0),
+      currency: 'UZS',
+      country_id: 'UZ',
+    },
+  });
+  console.log(`✓ Demo Contact created: ${contact.name} (Type: ${contact.type})`);
 
   console.log('\nSeed completed successfully!');
 }
@@ -96,4 +111,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
-

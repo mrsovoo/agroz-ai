@@ -6,7 +6,7 @@ export interface CreateAuditLogParams {
   action: string;
   entityName: string;
   entityId?: string;
-  shopId?: string;
+  businessId?: string;
   userId?: string;
   details?: Record<string, unknown>;
   ipAddress?: string;
@@ -26,7 +26,7 @@ export class AuditService {
           action: params.action,
           entity_name: params.entityName,
           entity_id: params.entityId,
-          shop_id: params.shopId,
+          business_id: params.businessId,
           user_id: params.userId,
           details: params.details as Prisma.InputJsonValue | undefined,
           ip_address: params.ipAddress,
@@ -39,4 +39,3 @@ export class AuditService {
     }
   }
 }
-

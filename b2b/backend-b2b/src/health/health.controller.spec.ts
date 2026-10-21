@@ -16,10 +16,10 @@ describe('HealthController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('should return health payload with version 0.0.1', () => {
+  it('should return health payload with version 0.0.0', () => {
     const result = controller.check();
     expect(result.status).toBe('ok');
-    expect(result.version).toBe('0.0.1');
+    expect(result.version).toBe('0.0.0');
     expect(result.service).toBe('backend-b2b');
     expect(typeof result.timestamp).toBe('string');
   });

@@ -52,3 +52,4 @@ export class AdminAuthController {
     return this.authService.adminVerify2Fa(dto, ip, userAgent);
   }
 }
+
