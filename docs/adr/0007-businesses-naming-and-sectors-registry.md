@@ -39,3 +39,4 @@ Boshlang'ich loyihalashda B2B subyektlari `shops` (do'konlar) va xaridorlar `cus
 ## Natijalar
 - Tizim keyinchalik arxitekturani qayta yozmasdan har qanday agro/vet biznesi va mutaxassisini qamrab oladigan darajada kengayuvchan bo'ldi.
 - Barcha nomlashlar Prisma sxemasida, TypeScript turlarida, seed skriptida va testlarda bir xillashtirildi.
+

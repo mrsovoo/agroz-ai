@@ -55,3 +55,4 @@ export const SECTOR_REGISTRY: Record<BusinessSector, SectorConfig> = {
 export function isSectorEnabled(sector: string): boolean {
   return SECTOR_REGISTRY[sector as BusinessSector]?.enabled ?? false;
 }
+

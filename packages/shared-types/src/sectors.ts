@@ -50,3 +50,4 @@ export function isSectorEnabled(sector: Sector | string): boolean {
   const found = SECTOR_REGISTRY[sector as Sector];
   return found?.enabled ?? false;
 }
+

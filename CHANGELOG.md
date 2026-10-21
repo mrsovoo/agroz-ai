@@ -4,6 +4,33 @@ All notable changes to the AgrozGO platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.1] - 2026-10-21
+
+### Added
+- Business & Pharmacy Profile Management (`b2b/backend-b2b`):
+  - `POST /v1/business`: Creates a business entity and automatically binds the creator as `owner`.
+  - Enforced Rule 2: Strictly validates sector against `sector.registry.ts` (currently only `pharmacy` is active).
+  - `GET /v1/business`: Retrieves current user's business profile and staff count.
+  - `PATCH /v1/business`: Updates business details (name, address, coordinates, working hours).
+- Staff Lifecycle & Team Management:
+  - `GET /v1/business/staff`: Lists all team members associated with the business.
+  - `POST /v1/business/staff`: Invites/adds staff via E.164 phone number with `seller` role.
+  - `PATCH /v1/business/staff/:id/role`: Allows owner to adjust staff role.
+  - `DELETE /v1/business/staff/:id`: Removes staff from business with safety checks preventing owner self-deletion.
+- Multi-Tenant Isolation & Security Guards:
+  - Dedicated `TenantGuard` enforcing strict data isolation at request boundary.
+  - Automated security test suite (`tenant.guard.spec.ts`) proving that Business A cannot access or mutate Business B resources.
+  - Role-Based Access Control (`RolesGuard`, `@Roles()`, `@CurrentUser()`) protecting endpoints across `super_admin`, `admin`, `owner`, and `seller`.
+- Super Administrator Business Governance:
+  - `GET /v1/admin/businesses`: Paginated directory of registered businesses with sector and name filters.
+  - `PATCH /v1/admin/businesses/:id/status`: Ability to activate or suspend/block businesses with audit trace.
+- One-time Super Admin CLI Generator:
+  - `npm run super-admin:create`: Standalone interactive/arg-driven script generating Argon2/Bcrypt hash, TOTP secret, and 8 single-use hashed recovery codes without hardcoding credentials into seed scripts.
+- Audit Logging:
+  - Complete structured audit coverage for `BUSINESS_CREATED`, `BUSINESS_UPDATED`, `BUSINESS_STAFF_ADDED`, `BUSINESS_STAFF_REMOVED`, and `ADMIN_BUSINESS_STATUS_UPDATED`.
+- Architectural Decision Records:
+  - ADR 0008: Multi-Tenant Data Isolation, RBAC Matrix and Staff Management.
+
 ## [0.0.0] - 2026-10-21
 
 ### Added

@@ -31,3 +31,4 @@ describe('Sector Registry', () => {
     expect(isSectorEnabled('')).toBe(false);
   });
 });
+
