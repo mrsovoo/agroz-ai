@@ -1,0 +1,10 @@
+{
+  "name": "@agrozgo/api-contracts",
+  "version": "0.0.0",
+  "private": true,
+  "description": "OpenAPI definitions and HTTP contract documentation for AgrozGO",
+  "main": "index.js",
+  "scripts": {
+    "lint": "echo 'Contracts OK'"
+  }
+}
