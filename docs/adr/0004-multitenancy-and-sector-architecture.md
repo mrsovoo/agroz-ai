@@ -28,3 +28,4 @@ The platform must avoid premature complexity while designing clean architectural
 ## Consequences
 - Clean, focused delivery of the pharmacy sector with 0 dead code or premature bloat.
 - Straightforward onboarding for upcoming sectors without data migration friction.
+

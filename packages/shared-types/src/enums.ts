@@ -55,3 +55,4 @@ export enum OutboxStatus {
   PUBLISHED = 'published',
   FAILED = 'failed',
 }
+

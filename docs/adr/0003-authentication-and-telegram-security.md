@@ -27,3 +27,4 @@ Merchants access BiznesGO primarily through mobile web browsers on smartphones i
 ## Consequences
 - Independent, resilient user identity model not locked into any single messaging platform.
 - Zero forged Telegram session vulnerabilities.
+

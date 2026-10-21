@@ -21,3 +21,4 @@ AgrozGO aims to serve 100K+ agricultural businesses across Central Asia. The sol
 ## Consequences
 - Fast local builds and clear workspace package dependency sharing (`workspace:*`).
 - Consistent coding patterns and strict type validation between backend and frontend.
+

@@ -1,0 +1,312 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  super_admin
+  admin
+  owner
+  seller
+}
+
+model User {
+  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  phone           String      @unique
+  telegram_id     BigInt?     @unique
+  first_name      String
+  last_name       String?
+  role            UserRole    @default(seller)
+  password_hash   String?
+  totp_secret     String?
+  is_totp_enabled Boolean     @default(false)
+  is_active       Boolean     @default(true)
+  country_id      String      @default("UZ")
+  created_at      DateTime    @default(now())
+  updated_at      DateTime    @updatedAt
+  deleted_at      DateTime?
+
+  shop_users      ShopUser[]
+  sales           Sale[]
+  audit_logs      AuditLog[]
+
+  @@map("users")
+  @@index([phone])
+  @@index([telegram_id])
+}
+
+model Shop {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  sector      String      @default("pharmacy") // 'pharmacy' (active), 'feed', 'greenhouse', 'seeds', 'machinery'
+  country_id  String      @default("UZ")
+  latitude    Float?
+  longitude   Float?
+  currency    String      @default("UZS")
+  language    String      @default("uz")
+  address     String?
+  phone       String?
+  is_active   Boolean     @default(true)
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
+  deleted_at  DateTime?
+
+  shop_users  ShopUser[]
+  products    ShopProduct[]
+  sales       Sale[]
+  customers   Customer[]
+  debts       DebtTransaction[]
+  audit_logs  AuditLog[]
+
+  @@map("shops")
+  @@index([sector])
+  @@index([country_id])
+}
+
+model ShopUser {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shop_id     String      @db.Uuid
+  user_id     String      @db.Uuid
+  role        String      @default("seller")
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
+
+  shop        Shop        @relation(fields: [shop_id], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([shop_id, user_id])
+  @@map("shop_users")
+}
+
+model CatalogProduct {
+  id               String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String
+  sector           String      @default("pharmacy")
+  category         String
+  active_substance String?
+  manufacturer     String?
+  unit             String      @default("dona")
+  barcode          String?     @unique
+  target_species   String[]    @default([])
+  country_id       String      @default("UZ")
+  created_at       DateTime    @default(now())
+  updated_at       DateTime    @updatedAt
+  deleted_at       DateTime?
+
+  shop_products    ShopProduct[]
+
+  @@map("catalog_products")
+  @@index([sector, category])
+  @@index([barcode])
+  @@index([active_substance])
+}
+
+model ShopProduct {
+  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shop_id            String           @db.Uuid
+  catalog_product_id String?          @db.Uuid
+  custom_name        String?
+  price              BigInt           // Integer tiyin/cents (e.g., 100000 = 1000.00 UZS)
+  currency           String           @default("UZS")
+  is_active          Boolean          @default(true)
+  country_id         String           @default("UZ")
+  created_at         DateTime         @default(now())
+  updated_at         DateTime         @updatedAt
+  deleted_at         DateTime?
+
+  shop               Shop             @relation(fields: [shop_id], references: [id], onDelete: Cascade)
+  catalog_product    CatalogProduct?  @relation(fields: [catalog_product_id], references: [id], onDelete: SetNull)
+  batches            ProductBatch[]
+  sale_items         SaleItem[]
+
+  @@map("shop_products")
+  @@index([shop_id, is_active])
+  @@index([catalog_product_id])
+}
+
+model ProductBatch {
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shop_product_id String       @db.Uuid
+  batch_no        String
+  expiry_date     DateTime
+  quantity        Int          @default(0)
+  cost_price      BigInt       @default(0) // Integer tiyin/cents
+  currency        String       @default("UZS")
+  created_at      DateTime     @default(now())
+  updated_at      DateTime     @updatedAt
+
+  shop_product    ShopProduct  @relation(fields: [shop_product_id], references: [id], onDelete: Cascade)
+  sale_items      SaleItem[]
+
+  @@map("product_batches")
+  @@index([shop_product_id, expiry_date])
+}
+
+model Customer {
+  id          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shop_id     String            @db.Uuid
+  name        String
+  phone       String?
+  balance     BigInt            @default(0) // Nasiya qoldig'i (tiyin)
+  currency    String            @default("UZS")
+  country_id  String            @default("UZ")
+  created_at  DateTime          @default(now())
+  updated_at  DateTime          @updatedAt
+  deleted_at  DateTime?
+
+  shop        Shop              @relation(fields: [shop_id], references: [id], onDelete: Cascade)
+  sales       Sale[]
+  debts       DebtTransaction[]
+
+  @@map("customers")
+  @@index([shop_id, phone])
+}
+
+model Sale {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shop_id         String            @db.Uuid
+  seller_id       String            @db.Uuid
+  customer_id     String?           @db.Uuid
+  total_amount    BigInt            // Jami summa (tiyin)
+  discount_amount BigInt            @default(0)
+  paid_amount     BigInt            @default(0)
+  debt_amount     BigInt            @default(0)
+  currency        String            @default("UZS")
+  payment_method  String            @default("cash") // cash, card, debt, transfer, mixed
+  status          String            @default("completed") // completed, refunded, cancelled
+  country_id      String            @default("UZ")
+  created_at      DateTime          @default(now())
+  updated_at      DateTime          @updatedAt
+
+  shop            Shop              @relation(fields: [shop_id], references: [id], onDelete: Cascade)
+  seller          User              @relation(fields: [seller_id], references: [id])
+  customer        Customer?         @relation(fields: [customer_id], references: [id], onDelete: SetNull)
+  items           SaleItem[]
+  debts           DebtTransaction[]
+
+  @@map("sales")
+  @@index([shop_id, created_at])
+  @@index([created_at, id]) // Partitioning readiness index
+}
+
+model SaleItem {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sale_id         String        @db.Uuid
+  shop_product_id String        @db.Uuid
+  batch_id        String?       @db.Uuid
+  quantity        Int
+  unit_price      BigInt        // Birlik narxi (tiyin)
+  total_price     BigInt        // Qator jami summasi (tiyin)
+  created_at      DateTime      @default(now())
+
+  sale            Sale          @relation(fields: [sale_id], references: [id], onDelete: Cascade)
+  shop_product    ShopProduct   @relation(fields: [shop_product_id], references: [id])
+  batch           ProductBatch? @relation(fields: [batch_id], references: [id], onDelete: SetNull)
+
+  @@map("sale_items")
+  @@index([sale_id])
+}
+
+model DebtTransaction {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shop_id     String      @db.Uuid
+  customer_id String      @db.Uuid
+  sale_id     String?     @db.Uuid
+  type        String      // 'credit' (qarz berildi), 'payment' (to'landi), 'adjustment'
+  amount      BigInt      // Integer tiyin
+  currency    String      @default("UZS")
+  notes       String?
+  country_id  String      @default("UZ")
+  created_at  DateTime    @default(now())
+
+  shop        Shop        @relation(fields: [shop_id], references: [id], onDelete: Cascade)
+  customer    Customer    @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  sale        Sale?       @relation(fields: [sale_id], references: [id], onDelete: SetNull)
+
+  @@map("debt_transactions")
+  @@index([shop_id, customer_id, created_at])
+}
+
+model AuditLog {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shop_id     String?     @db.Uuid
+  user_id     String?     @db.Uuid
+  action      String      // 'AUTH_OTP_SENT', 'AUTH_LOGIN_SUCCESS', 'TELEGRAM_LINKED', etc.
+  entity_name String
+  entity_id   String?
+  details     Json?
+  ip_address  String?
+  country_id  String      @default("UZ")
+  created_at  DateTime    @default(now())
+
+  shop        Shop?       @relation(fields: [shop_id], references: [id], onDelete: SetNull)
+  user        User?       @relation(fields: [user_id], references: [id], onDelete: SetNull)
+
+  @@map("audit_logs")
+  @@index([action, created_at])
+  @@index([created_at, id]) // Partitioning readiness index
+}
+
+model OutboxEvent {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  event_type    String
+  aggregate_id  String
+  payload       Json
+  status        String      @default("pending") // pending, processing, published, failed
+  retry_count   Int         @default(0)
+  error_message String?
+  created_at    DateTime    @default(now())
+  processed_at  DateTime?
+
+  @@map("outbox_events")
+  @@index([status, created_at])
+}
+
+model IdempotencyKey {
+  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key             String      @unique
+  request_path    String
+  response_status Int?
+  response_body   Json?
+  created_at      DateTime    @default(now())
+  expires_at      DateTime
+
+  @@map("idempotency_keys")
+  @@index([key, expires_at])
+}
+
+model OtpVerification {
+  id           String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  phone        String      // E.164 formati: +998901234567
+  code_hash    String      // Hashlangan 6 xonali kod
+  channel      String      @default("telegram") // 'telegram', 'sms'
+  attempts     Int         @default(0)
+  max_attempts Int         @default(5)
+  is_used      Boolean     @default(false)
+  expires_at   DateTime
+  locked_until DateTime?
+  ip_address   String?
+  country_id   String      @default("UZ")
+  created_at   DateTime    @default(now())
+
+  @@map("otp_verifications")
+  @@index([phone, is_used, expires_at])
+  @@index([ip_address, created_at])
+}
+
+model TelegramLinkToken {
+  id         String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  token      String      @unique
+  user_id    String?     @db.Uuid
+  phone      String?     // E.164
+  is_used    Boolean     @default(false)
+  expires_at DateTime
+  created_at DateTime    @default(now())
+
+  @@map("telegram_link_tokens")
+  @@index([token, is_used])
+}
