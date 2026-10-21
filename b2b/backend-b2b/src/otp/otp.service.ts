@@ -10,6 +10,7 @@ import * as crypto from 'crypto';
 import { AuditService } from '../audit/audit.service';
 import { normalizeE164 } from '../common/utils/phone';
 import { PrismaService } from '../prisma/prisma.service';
+import { ConsoleOtpChannel } from './channels/console-otp.channel';
 import { SmsOtpChannel } from './channels/sms-otp.channel';
 import { TelegramOtpChannel } from './channels/telegram-otp.channel';
 import { OtpChannel } from './interfaces/otp-channel.interface';
@@ -19,7 +20,9 @@ export interface RequestOtpResult {
   channel: string;
   cooldownSeconds: number;
   message: string;
-  debugCode?: string; // Only returned in non-production development mode if telegram is unlinked
+  errorCode?: string;
+  linkUrl?: string;
+  debugCode?: string;
 }
 
 @Injectable()
@@ -34,10 +37,12 @@ export class OtpService {
     private readonly audit: AuditService,
     telegramChannel: TelegramOtpChannel,
     smsChannel: SmsOtpChannel,
+    consoleChannel: ConsoleOtpChannel,
   ) {
     this.salt = this.config.get<string>('OTP_SALT', 'agroz_default_salt_2026');
     this.registerChannel(telegramChannel);
     this.registerChannel(smsChannel);
+    this.registerChannel(consoleChannel);
   }
 
   registerChannel(channel: OtpChannel): void {
@@ -55,25 +60,41 @@ export class OtpService {
     const phone = normalizeE164(rawPhone);
     const now = new Date();
 
-    // 1. IP-based rate limiting (Max 5 requests per minute per IP)
+    // 1. IP-based rate limiting (Max 10 requests per 10 minutes per IP)
     if (ipAddress) {
-      const oneMinuteAgo = new Date(now.getTime() - 60 * 1000);
+      const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
       const ipRecentCount = await this.prisma.otpVerification.count({
         where: {
           ip_address: ipAddress,
-          created_at: { gte: oneMinuteAgo },
+          created_at: { gte: tenMinutesAgo },
         },
       });
 
-      if (ipRecentCount >= 5) {
+      if (ipRecentCount >= 10) {
         throw new HttpException(
-          'Juda ko‘p so‘rov yuborildi. Iltimos, 1 daqiqadan so‘ng qayta urinib ko‘ring.',
+          'Juda ko‘p so‘rov yuborildi. Iltimos, 10 daqiqadan so‘ng qayta urinib ko‘ring.',
           HttpStatus.TOO_MANY_REQUESTS,
         );
       }
     }
 
-    // 2. Check existing active OTP for this phone (Account Lock check & 60s Cooldown)
+    // 2. Phone-based hourly rate limit (Max 5 requests per hour per phone)
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+    const hourlyPhoneRequests = await this.prisma.otpVerification.count({
+      where: {
+        phone,
+        created_at: { gte: oneHourAgo },
+      },
+    });
+
+    if (hourlyPhoneRequests >= 5) {
+      throw new HttpException(
+        'Ushbu telefon raqam uchun soatlik so‘rovlar limiti (5 ta) tugadi. Iltimos, keyinroq urinib ko‘ring.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
+    // 3. Check existing active OTP for this phone (Account Lock check & 60s Cooldown)
     const activeOtp = await this.prisma.otpVerification.findFirst({
       where: {
         phone,
@@ -105,12 +126,12 @@ export class OtpService {
       }
     }
 
-    // 3. Generate 6-digit code and calculate hash
+    // 4. Generate 6-digit code and calculate hash
     const rawCode = String(crypto.randomInt(100000, 1000000));
     const codeHash = this.hashCode(rawCode);
     const expiresAt = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes validity
 
-    // 4. Save new OTP challenge in database
+    // 5. Save new OTP challenge in database
     await this.prisma.otpVerification.create({
       data: {
         phone,
@@ -125,7 +146,7 @@ export class OtpService {
       },
     });
 
-    // 5. Find if user has a linked telegram_id
+    // 6. Find if user exists and has a linked telegram_id
     const user = await this.prisma.user.findUnique({
       where: { phone },
       select: { id: true, telegram_id: true, role: true },
@@ -138,33 +159,63 @@ export class OtpService {
       );
     }
 
-    let channelName = 'telegram';
+    const isDev = this.config.get<string>('NODE_ENV') !== 'production';
+    const botUsername = this.config.get<string>('TELEGRAM_BOT_USERNAME', 'biznesgo_bot');
+
+    // In dev mode, always log to ConsoleOtpChannel
+    if (isDev) {
+      const consoleChannel = this.channels.get('console');
+      if (consoleChannel) {
+        await consoleChannel.sendOtp(phone, rawCode);
+      }
+    }
+
+    // 7. Check if Telegram is linked
+    if (!user?.telegram_id) {
+      // Explicit error code for frontend to initiate Telegram binding flow
+      const linkUrl = `https://t.me/${botUsername}`;
+
+      await this.audit.log({
+        action: 'AUTH_OTP_REQUESTED',
+        entityName: 'otp_verification',
+        userId: user?.id,
+        details: { phone, channel: 'telegram', telegramLinked: false, ip: ipAddress },
+        ipAddress,
+      });
+
+      return {
+        success: isDev,
+        channel: 'telegram',
+        errorCode: 'TELEGRAM_NOT_LINKED',
+        cooldownSeconds: 60,
+        message: isDev
+          ? `[DEV REJIM] Telegram ulanmagan. Konsolga kod chiqarildi: ${rawCode}`
+          : 'Telegram profilingiz hali ulanmagan. Iltimos, Telegram orqali profilingizni ulang.',
+        linkUrl,
+        debugCode: isDev ? rawCode : undefined,
+      };
+    }
+
+    // 8. Telegram is linked: send via TelegramOtpChannel
+    const telegramChannel = this.channels.get('telegram');
     let sendSuccess = false;
     let sendError: string | undefined;
 
-    const telegramChannel = this.channels.get('telegram');
-    if (telegramChannel && user?.telegram_id) {
+    if (telegramChannel) {
       const result = await telegramChannel.sendOtp(phone, rawCode, {
         telegram_id: String(user.telegram_id),
       });
       sendSuccess = result.success;
       sendError = result.error;
-    } else {
-      // User is not yet linked to Telegram
-      channelName = 'telegram';
-      sendSuccess = false;
-      sendError =
-        'Telegram profilingiz hali ulanmagan. Iltimos, Telegram orqali akkauntingizni ulang.';
     }
 
-    // 6. Record in Audit Log
     await this.audit.log({
       action: 'AUTH_OTP_REQUESTED',
       entityName: 'otp_verification',
-      userId: user?.id,
+      userId: user.id,
       details: {
         phone,
-        channel: channelName,
+        channel: 'telegram',
         success: sendSuccess,
         error: sendError,
         ip: ipAddress,
@@ -172,17 +223,14 @@ export class OtpService {
       ipAddress,
     });
 
-    // In local dev without bot, provide friendly developer convenience
-    const isDev = this.config.get<string>('NODE_ENV') !== 'production';
-
     return {
       success: sendSuccess || isDev,
-      channel: channelName,
+      channel: 'telegram',
       cooldownSeconds: 60,
       message: sendSuccess
         ? 'Tasdiqlash kodi Telegram orqali yuborildi.'
         : isDev
-          ? `[DEV REJIM] Telegram ulanmagan. Test kodi: ${rawCode}`
+          ? `[DEV REJIM] Telegram xatolik. Konsol kodi: ${rawCode}`
           : sendError || 'Tasdiqlash kodi yuborilmadi.',
       debugCode: isDev && !sendSuccess ? rawCode : undefined,
     };
@@ -284,4 +332,3 @@ export class OtpService {
     return true;
   }
 }
-

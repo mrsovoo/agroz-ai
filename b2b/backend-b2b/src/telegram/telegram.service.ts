@@ -49,18 +49,21 @@ export class TelegramService {
 
   /**
    * Generates a 15-minute one-time link token and returns the t.me/bot?start=TOKEN deep link
+   * Token is stored in database as a secure SHA-256 hash
    */
   async createLinkToken(
     userId?: string,
     rawPhone?: string,
   ): Promise<{ token: string; linkUrl: string; expiresAt: Date }> {
     const token = crypto.randomBytes(16).toString('hex');
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
     const phone = rawPhone ? normalizeE164(rawPhone) : undefined;
 
     await this.prisma.telegramLinkToken.create({
       data: {
         token,
+        token_hash: tokenHash,
         user_id: userId,
         phone,
         is_used: false,
@@ -123,15 +126,21 @@ export class TelegramService {
           chatId,
           `👋 <b>BiznesGO botiga xush kelibsiz!</b>\n\nPlatformaga kirish uchun veb-sayt orqali ro‘yxatdan o‘ting va havola orqali kiring.`,
         );
-        return { handled: true };
+        return { handled: true, reason: 'Account successfully linked' };
       }
 
+      const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
       // Verify token
-      const linkRecord = await this.prisma.telegramLinkToken.findUnique({
-        where: { token },
+      const linkRecord = await this.prisma.telegramLinkToken.findFirst({
+        where: {
+          OR: [{ token_hash: tokenHash }, { token }],
+          is_used: false,
+          expires_at: { gte: new Date() },
+        },
       });
 
-      if (!linkRecord || linkRecord.is_used || linkRecord.expires_at < new Date()) {
+      if (!linkRecord) {
         await this.sendMessage(
           chatId,
           `⚠️ <b>Ulanish havolasi eskirgan yoki foydalanilgan.</b>\n\nIltimos, saytdan yangi havola oling.`,
@@ -167,7 +176,7 @@ export class TelegramService {
     if (msg.contact) {
       const contact = msg.contact;
 
-      // ⚠️ STRICT SECURITY CHECK: Contact MUST belong to the sender!
+      // ⚠️ STRICT SECURITY CHECK 1: Contact MUST belong to the sender!
       // Forwarded contacts or contacts with different user_id are strictly rejected.
       if (contact.user_id !== fromId) {
         this.logger.warn(
@@ -197,6 +206,16 @@ export class TelegramService {
         await this.sendMessage(chatId, `❌ Noto‘g‘ri telefon raqam formati.`);
         return { handled: true, reason: e.message };
       }
+
+      // Find active link token for this phone
+      const activeLinkToken = await this.prisma.telegramLinkToken.findFirst({
+        where: {
+          phone,
+          is_used: false,
+          expires_at: { gte: new Date() },
+        },
+        orderBy: { created_at: 'desc' },
+      });
 
       // Find user or create seller user
       let user = await this.prisma.user.findUnique({
@@ -251,7 +270,6 @@ export class TelegramService {
       return { handled: true, reason: 'Account successfully linked' };
     }
 
-    return { handled: false, reason: 'Unhandled message type' };
+    return { handled: false, reason: 'Unsupported message type' };
   }
 }
-

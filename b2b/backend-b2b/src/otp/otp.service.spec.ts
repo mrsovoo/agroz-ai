@@ -4,6 +4,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import * as crypto from 'crypto';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ConsoleOtpChannel } from './channels/console-otp.channel';
 import { SmsOtpChannel } from './channels/sms-otp.channel';
 import { TelegramOtpChannel } from './channels/telegram-otp.channel';
 import { OtpService } from './otp.service';
@@ -40,6 +41,7 @@ describe('OtpService', () => {
             get: jest.fn((key: string, def?: any) => {
               if (key === 'OTP_SALT') return 'test_salt';
               if (key === 'NODE_ENV') return 'test';
+              if (key === 'TELEGRAM_BOT_USERNAME') return 'biznesgo_bot';
               return def;
             }),
           },
@@ -56,6 +58,13 @@ describe('OtpService', () => {
           provide: SmsOtpChannel,
           useValue: {
             name: 'sms',
+            sendOtp: jest.fn().mockResolvedValue({ success: true }),
+          },
+        },
+        {
+          provide: ConsoleOtpChannel,
+          useValue: {
+            name: 'console',
             sendOtp: jest.fn().mockResolvedValue({ success: true }),
           },
         },
@@ -93,18 +102,41 @@ describe('OtpService', () => {
     await expect(service.requestOtp('+998901234567')).rejects.toThrow(HttpException);
   });
 
+  it('should enforce 5 requests per hour rate limit per phone', async () => {
+    prisma.otpVerification.count.mockImplementation(async (args: any) => {
+      if (args.where?.phone) {
+        return 5; // 5 requests reached
+      }
+      return 0;
+    });
+
+    await expect(service.requestOtp('+998901234567')).rejects.toThrow(HttpException);
+  });
+
+  it('should return TELEGRAM_NOT_LINKED error code if user has no telegram_id', async () => {
+    prisma.user.findUnique.mockResolvedValueOnce({
+      id: 'user-no-tg',
+      telegram_id: null,
+      role: 'seller',
+    });
+
+    const result = await service.requestOtp('+998901234567');
+    expect(result.errorCode).toBe('TELEGRAM_NOT_LINKED');
+    expect(result.linkUrl).toContain('t.me/biznesgo_bot');
+  });
+
   it('should reject verification if code is invalid and lock after 5 attempts', async () => {
     const salt = 'test_salt';
     const validHash = crypto.createHmac('sha256', salt).update('123456').digest('hex');
 
     prisma.otpVerification.findFirst.mockResolvedValueOnce({
-      id: 'active-id',
+      id: 'challenge-id',
       phone: '+998901234567',
       code_hash: validHash,
-      attempts: 4, // 5th attempt will fail and lock
+      attempts: 4, // 5th attempt will lock
       max_attempts: 5,
       is_used: false,
-      expires_at: new Date(Date.now() + 5 * 60 * 1000),
+      expires_at: new Date(Date.now() + 2 * 60 * 1000),
       locked_until: null,
     });
 
@@ -112,7 +144,7 @@ describe('OtpService', () => {
 
     expect(prisma.otpVerification.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 'active-id' },
+        where: { id: 'challenge-id' },
         data: expect.objectContaining({
           attempts: 5,
           locked_until: expect.any(Date),
@@ -121,27 +153,26 @@ describe('OtpService', () => {
     );
   });
 
-  it('should verify OTP successfully and mark is_used to true', async () => {
+  it('should consume OTP on successful verification', async () => {
     const salt = 'test_salt';
     const validHash = crypto.createHmac('sha256', salt).update('654321').digest('hex');
 
     prisma.otpVerification.findFirst.mockResolvedValueOnce({
-      id: 'active-id',
+      id: 'challenge-id',
       phone: '+998901234567',
       code_hash: validHash,
       attempts: 0,
       max_attempts: 5,
       is_used: false,
-      expires_at: new Date(Date.now() + 5 * 60 * 1000),
+      expires_at: new Date(Date.now() + 2 * 60 * 1000),
       locked_until: null,
     });
 
-    const success = await service.verifyOtp('+998901234567', '654321');
-    expect(success).toBe(true);
+    const ok = await service.verifyOtp('+998901234567', '654321');
+    expect(ok).toBe(true);
     expect(prisma.otpVerification.update).toHaveBeenCalledWith({
-      where: { id: 'active-id' },
+      where: { id: 'challenge-id' },
       data: { is_used: true },
     });
   });
 });
-

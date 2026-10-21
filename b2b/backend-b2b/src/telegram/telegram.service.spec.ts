@@ -14,6 +14,7 @@ describe('TelegramService', () => {
       telegramLinkToken: {
         create: jest.fn().mockResolvedValue({ id: 'mock-id' }),
         findUnique: jest.fn().mockResolvedValue(null),
+        findFirst: jest.fn().mockResolvedValue(null),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       user: {

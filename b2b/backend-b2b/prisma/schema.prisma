@@ -20,6 +20,7 @@ model User {
   telegram_id     BigInt?     @unique
   first_name      String
   last_name       String?
+  email           String?     @unique
   role            UserRole    @default(seller)
   password_hash   String?
   totp_secret     String?
@@ -30,9 +31,11 @@ model User {
   updated_at      DateTime    @updatedAt
   deleted_at      DateTime?
 
-  shop_users      ShopUser[]
-  sales           Sale[]
-  audit_logs      AuditLog[]
+  shop_users           ShopUser[]
+  sales                Sale[]
+  audit_logs           AuditLog[]
+  refresh_tokens       RefreshToken[]
+  admin_recovery_codes AdminRecoveryCode[]
 
   @@map("users")
   @@index([phone])
@@ -301,6 +304,7 @@ model OtpVerification {
 model TelegramLinkToken {
   id         String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   token      String      @unique
+  token_hash String?     @unique
   user_id    String?     @db.Uuid
   phone      String?     // E.164
   is_used    Boolean     @default(false)
@@ -309,5 +313,36 @@ model TelegramLinkToken {
 
   @@map("telegram_link_tokens")
   @@index([token, is_used])
+  @@index([token_hash, is_used])
+}
+
+model RefreshToken {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String   @db.Uuid
+  token_hash  String   @unique
+  revoked     Boolean  @default(false)
+  expires_at  DateTime
+  ip_address  String?
+  user_agent  String?
+  created_at  DateTime @default(now())
+
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+  @@index([user_id, revoked])
+}
+
+model AdminRecoveryCode {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String    @db.Uuid
+  code_hash  String    @unique
+  is_used    Boolean   @default(false)
+  used_at    DateTime?
+  created_at DateTime  @default(now())
+
+  user       User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("admin_recovery_codes")
+  @@index([user_id, is_used])
 }
 
