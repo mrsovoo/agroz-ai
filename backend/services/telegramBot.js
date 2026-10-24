@@ -11,6 +11,7 @@ function getBotToken() {
   return DEFAULT_BOT_TOKEN;
 }
 const registrationSessions = new Map();
+const phoneChatMap = new Map();
 
 // Telegram Bot API Native Client
 class TelegramApiClient {
@@ -215,6 +216,9 @@ async function handleTelegramMessage(client, msg) {
   if (msg.contact) {
     let phone = msg.contact.phone_number;
     if (!phone.startsWith('+')) phone = `+${phone}`;
+    const cleanDigits = phone.replace(/\D/g, '');
+    phoneChatMap.set(cleanDigits, chatId);
+    if (tgUserId) phoneChatMap.set(String(tgUserId), chatId);
 
     try {
       let isRegistered = false;
@@ -562,4 +566,46 @@ function initTelegramBot() {
   return client;
 }
 
-module.exports = { initTelegramBot, handleTelegramUpdate, TelegramApiClient };
+async function sendOtpToTelegram(phone, code) {
+  const clean = (phone || '').replace(/\D/g, '');
+  let chatId = phoneChatMap.get(clean);
+
+  // Agar xotirada bo'lmasa, ma'lumotlar bazasidan tekshiramiz
+  if (!chatId) {
+    try {
+      const res = await pool.query(
+        "SELECT address FROM merchants WHERE phone LIKE $1 AND address LIKE 'tg:%' LIMIT 1",
+        [`%${clean.slice(-9)}%`]
+      );
+      if (res.rows.length > 0) {
+        chatId = res.rows[0].address.replace('tg:', '');
+      }
+    } catch (_) {}
+  }
+
+  // Oxirgi 9 raqam bo'yicha moslik tekshirish
+  if (!chatId) {
+    for (const [p, cId] of phoneChatMap.entries()) {
+      if (p.endsWith(clean.slice(-9)) || clean.endsWith(p.slice(-9))) {
+        chatId = cId;
+        break;
+      }
+    }
+  }
+
+  if (globalBotClient && chatId) {
+    const text = `🔐 *BiznesGO Kirish Kodi:* \`${code}\`\n\n` +
+      `Ushbu kodni veb brauzerga kiriting.\n` +
+      `⏱ Amal qilish muddati: *5 daqiqa*.\n` +
+      `⚠️ *Xavfsizlik:* Ushbu kodni hech kimga bermang!`;
+    const res = await globalBotClient.sendMessage(chatId, text, { parse_mode: 'Markdown' });
+    return { sent: Boolean(res.ok), chatId };
+  }
+
+  return {
+    sent: false,
+    reason: 'Telegram Chat ID topilmadi. Iltimos avval @biznesgo_bot ga /start bosing.'
+  };
+}
+
+module.exports = { initTelegramBot, handleTelegramUpdate, TelegramApiClient, sendOtpToTelegram, phoneChatMap };

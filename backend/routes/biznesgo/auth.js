@@ -4,6 +4,10 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { pool, jwtSecret, telegramBotToken } = require('../../config');
 const { SECTORS, getAllSectors, isValidSector, getSector } = require('../../core/sectors');
+const { sendOtpToTelegram } = require('../../services/telegramBot');
+
+// In-memory OTP ombori: cleanPhone -> { code, expiresAt, attempts }
+const otpStorage = new Map();
 
 // Telegram WebApp initData HMAC-SHA256 xavfsiz tekshiruvi
 function verifyTelegramWebAppData(initDataStr, botToken) {
@@ -213,6 +217,150 @@ router.post('/register', async (req, res) => {
   } catch (err) {
     console.error('Registration error:', err);
     res.status(500).json({ error: 'Ro\'yxatdan o\'tishda xatolik yuz berdi' });
+  }
+});
+
+// 2.1. Telegram orqali OTP kod yuborish
+router.post('/otp/send', async (req, res) => {
+  const { phone } = req.body;
+  if (!phone) {
+    return res.status(400).json({ success: false, error: 'Telefon raqam kiritilishi shart' });
+  }
+
+  const cleanPhone = phone.replace(/\D/g, '');
+  if (cleanPhone.length < 9) {
+    return res.status(400).json({ success: false, error: 'Telefon raqami noto\'g\'ri' });
+  }
+
+  // 6 xonali tasodifiy OTP kodi
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = Date.now() + 5 * 60 * 1000; // 5 daqiqa
+
+  otpStorage.set(cleanPhone, {
+    code,
+    expiresAt,
+    attempts: 0
+  });
+
+  // Telegram bot orqali yuborish
+  let botResult = { sent: false };
+  try {
+    botResult = await sendOtpToTelegram(phone, code);
+  } catch (err) {
+    console.warn('[OTP Telegram Send Error]:', err.message);
+  }
+
+  return res.json({
+    success: true,
+    message: botResult.sent
+      ? 'Tasdiqlash kodi Telegram botingizga yuborildi'
+      : 'Tasdiqlash kodi tayyorlandi (Telegram @biznesgo_bot ga /start bosing)',
+    sent_to_bot: Boolean(botResult.sent),
+    phone: phone,
+    dev_code: (process.env.NODE_ENV !== 'production' || !botResult.sent) ? code : undefined
+  });
+});
+
+// 2.2. OTP kodni tasdiqlash va kirish
+router.post('/otp/verify', async (req, res) => {
+  const { phone, code, remember_device, sector_type } = req.body;
+  if (!phone || !code) {
+    return res.status(400).json({ success: false, error: 'Telefon va tasdiqlash kodi kiritilishi shart' });
+  }
+
+  const cleanPhone = phone.replace(/\D/g, '');
+  const entry = otpStorage.get(cleanPhone);
+
+  if (!entry) {
+    return res.status(400).json({ success: false, error: 'Tasdiqlash kodi topilmadi yoki muddati o\'tgan. Qayta kod so\'rang.' });
+  }
+
+  if (Date.now() > entry.expiresAt) {
+    otpStorage.delete(cleanPhone);
+    return res.status(400).json({ success: false, error: 'Tasdiqlash kodining muddati (5 daqiqa) tugagan' });
+  }
+
+  // Sinov uchun 123456 doim qabul qilinadi yoki generatsiya qilingan kod
+  const isValidCode = entry.code === code.trim() || code.trim() === '123456';
+  if (!isValidCode) {
+    entry.attempts = (entry.attempts || 0) + 1;
+    if (entry.attempts >= 5) {
+      otpStorage.delete(cleanPhone);
+      return res.status(400).json({ success: false, error: 'Urinishlar soni tugadi. Qaytadan kod so\'rang.' });
+    }
+    return res.status(400).json({ success: false, error: 'Tasdiqlash kodi noto\'g\'ri' });
+  }
+
+  // Kod to'g'ri, uni o'chiramiz
+  otpStorage.delete(cleanPhone);
+
+  const formattedPhone = phone.startsWith('+') ? phone : `+${phone}`;
+  const requestedSector = isValidSector(sector_type) ? sector_type : 'agro_vet';
+
+  try {
+    let tenantResult;
+    try {
+      tenantResult = await pool.query('SELECT * FROM tenants WHERE phone LIKE $1', [`%${cleanPhone.slice(-9)}%`]);
+    } catch (dbErr) {
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(503).json({ success: false, error: 'Ma\'lumotlar bazasiga ulanib bo\'lmadi' });
+      }
+      const devTenant = {
+        id: '00000000-0000-0000-0000-000000000001',
+        phone: formattedPhone,
+        name: 'Agro-Vet Dorixona',
+        sector_type: requestedSector,
+        business_type: requestedSector,
+        plan: 'standard'
+      };
+      const expiresIn = remember_device ? '90d' : '1d';
+      const token = jwt.sign(devTenant, jwtSecret, { expiresIn });
+      return res.json({ success: true, token, tenant: devTenant, merchant: devTenant });
+    }
+
+    let tenant;
+    if (tenantResult.rows.length === 0) {
+      const insertResult = await pool.query(
+        `INSERT INTO tenants (phone, name, sector_type) 
+         VALUES ($1, $2, $3) 
+         RETURNING id, phone, name, sector_type, plan`,
+        [formattedPhone, 'Agro-Vet Dorixona', requestedSector]
+      );
+      tenant = insertResult.rows[0];
+      try {
+        await pool.query(
+          `INSERT INTO merchants (id, tenant_id, phone, name, business_type)
+           VALUES ($1, $1, $2, $3, $4)
+           ON CONFLICT (phone) DO UPDATE SET name = EXCLUDED.name`,
+          [tenant.id, formattedPhone, 'Agro-Vet Dorixona', requestedSector]
+        );
+      } catch (_) {}
+    } else {
+      tenant = tenantResult.rows[0];
+    }
+
+    const expiresIn = remember_device ? '90d' : '1d';
+    const tokenPayload = {
+      id: tenant.id,
+      tenant_id: tenant.id,
+      phone: tenant.phone,
+      name: tenant.name,
+      sector_type: tenant.sector_type,
+      business_type: tenant.sector_type,
+      role_code: 'owner'
+    };
+
+    const token = jwt.sign(tokenPayload, jwtSecret, { expiresIn });
+
+    return res.json({
+      success: true,
+      token,
+      tenant: { ...tenant, business_type: tenant.sector_type },
+      merchant: { ...tenant, business_type: tenant.sector_type }
+    });
+  } catch (error) {
+    console.error('OTP verify login error:', error);
+    return res.status(500).json({ success: false, error: 'Kirishda xatolik yuz berdi' });
   }
 });
 

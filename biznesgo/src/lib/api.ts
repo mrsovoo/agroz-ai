@@ -33,18 +33,24 @@ export function cleanPhone(val: string): string {
   return `+998${digits.slice(0, 9)}`;
 }
 
-// Token va Foydalanuvchi Sessiyasini boshqarish (LocalStorage)
+// Token va Foydalanuvchi Sessiyasini boshqarish (LocalStorage va SessionStorage)
 export function getToken(): string | null {
   try {
-    return localStorage.getItem('biznesgo_token');
+    return localStorage.getItem('biznesgo_token') || sessionStorage.getItem('biznesgo_token');
   } catch (_) {
     return null;
   }
 }
 
-export function setToken(token: string): void {
+export function setToken(token: string, remember: boolean = true): void {
   try {
-    localStorage.setItem('biznesgo_token', token);
+    if (remember) {
+      localStorage.setItem('biznesgo_token', token);
+      sessionStorage.removeItem('biznesgo_token');
+    } else {
+      sessionStorage.setItem('biznesgo_token', token);
+      localStorage.removeItem('biznesgo_token');
+    }
   } catch (_) {}
 }
 
@@ -53,21 +59,30 @@ export function removeToken(): void {
     localStorage.removeItem('biznesgo_token');
     localStorage.removeItem('biznesgo_user');
     localStorage.removeItem('biznesgo_store_name');
+    sessionStorage.removeItem('biznesgo_token');
+    sessionStorage.removeItem('biznesgo_user');
+    sessionStorage.removeItem('biznesgo_store_name');
   } catch (_) {}
 }
 
 export function getUser(): any | null {
   try {
-    const raw = localStorage.getItem('biznesgo_user');
+    const raw = localStorage.getItem('biznesgo_user') || sessionStorage.getItem('biznesgo_user');
     return raw ? JSON.parse(raw) : null;
   } catch (_) {
     return null;
   }
 }
 
-export function setUser(user: any): void {
+export function setUser(user: any, remember: boolean = true): void {
   try {
-    localStorage.setItem('biznesgo_user', JSON.stringify(user));
+    if (remember) {
+      localStorage.setItem('biznesgo_user', JSON.stringify(user));
+      sessionStorage.removeItem('biznesgo_user');
+    } else {
+      sessionStorage.setItem('biznesgo_user', JSON.stringify(user));
+      localStorage.removeItem('biznesgo_user');
+    }
   } catch (_) {}
 }
 
@@ -105,8 +120,8 @@ export const api = {
       });
       if (res.ok) {
         const json = await res.json();
-        if (json.token) setToken(json.token);
-        if (json.tenant) setUser(json.tenant);
+        if (json.token) setToken(json.token, true);
+        if (json.tenant) setUser(json.tenant, true);
         return json;
       }
     } catch (_) {}
@@ -119,9 +134,37 @@ export const api = {
       sector_type: 'agro_vet'
     };
     const fallbackToken = 'demo-token';
-    setToken(fallbackToken);
-    setUser(fallbackTenant);
+    setToken(fallbackToken, true);
+    setUser(fallbackTenant, true);
     return { token: fallbackToken, tenant: fallbackTenant };
+  },
+
+  async sendOtp(phone: string): Promise<{ success: boolean; message: string; sent_to_bot?: boolean; dev_code?: string }> {
+    const res = await fetch(`${API_BASE}/auth/otp/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone })
+    });
+    const json = await res.json();
+    if (!res.ok || json.success === false) {
+      throw new Error(json.error || 'OTP kod yuborishda xatolik yuz berdi');
+    }
+    return json;
+  },
+
+  async verifyOtp(phone: string, code: string, rememberDevice: boolean = true): Promise<{ token: string; tenant: any }> {
+    const res = await fetch(`${API_BASE}/auth/otp/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, code, remember_device: rememberDevice, sector_type: 'agro_vet' })
+    });
+    const json = await res.json();
+    if (!res.ok || json.success === false) {
+      throw new Error(json.error || 'Tasdiqlash kodi noto\'g\'ri');
+    }
+    if (json.token) setToken(json.token, rememberDevice);
+    if (json.tenant) setUser(json.tenant, rememberDevice);
+    return json;
   },
 
   async login(phone: string): Promise<{ token: string; tenant: any }> {
