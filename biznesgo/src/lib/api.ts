@@ -1,8 +1,25 @@
 import { Product, Customer, DashboardMetrics, SectorType, SectorMeta, Warehouse, Supplier, CashAccount } from '../types';
 import { demoStore } from './demoStore';
 
-const BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+// Production muhitda agar VITE_API_URL berilmagan bo'lsa, Railway backendiga murojaat qilish:
+const DEFAULT_API_URL = 'https://backend-production-96bd5.up.railway.app';
+const BASE_URL = (import.meta.env.VITE_API_URL || (typeof window !== 'undefined' && window.location.hostname.includes('localhost') ? 'http://localhost:5001' : DEFAULT_API_URL)).replace(/\/+$/, '');
 const API_BASE = `${BASE_URL}/api/biznesgo`;
+
+// Xavfsiz JSON parser: Safari "The string did not match the expected pattern" xatosini oldini olish
+async function safeJsonFetch(url: string, options: RequestInit = {}): Promise<any> {
+  const res = await fetch(url, options);
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    const text = await res.text();
+    throw new Error(`Server kutilmagan javob qaytardi (${res.status}): ${text.slice(0, 100)}`);
+  }
+  const json = await res.json();
+  if (!res.ok || json.success === false) {
+    throw new Error(json.error || `Server xatoligi (${res.status})`);
+  }
+  return json;
+}
 
 export function formatUZS(val: number): string {
   return new Intl.NumberFormat('uz-UZ').format(Math.round(val || 0)) + " so'm";
@@ -140,51 +157,35 @@ export const api = {
   },
 
   async sendOtp(phone: string): Promise<{ success: boolean; message: string; sent_to_bot?: boolean; dev_code?: string }> {
-    const res = await fetch(`${API_BASE}/auth/otp/send`, {
+    return safeJsonFetch(`${API_BASE}/auth/otp/send`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone })
     });
-    const json = await res.json();
-    if (!res.ok || json.success === false) {
-      throw new Error(json.error || 'OTP kod yuborishda xatolik yuz berdi');
-    }
-    return json;
   },
 
   async verifyOtp(phone: string, code: string, rememberDevice: boolean = true): Promise<{ token: string; tenant: any }> {
-    const res = await fetch(`${API_BASE}/auth/otp/verify`, {
+    const json = await safeJsonFetch(`${API_BASE}/auth/otp/verify`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone, code, remember_device: rememberDevice, sector_type: 'agro_vet' })
     });
-    const json = await res.json();
-    if (!res.ok || json.success === false) {
-      throw new Error(json.error || 'Tasdiqlash kodi noto\'g\'ri');
-    }
     if (json.token) setToken(json.token, rememberDevice);
     if (json.tenant) setUser(json.tenant, rememberDevice);
     return json;
   },
 
   async createRegisterSession(payload: { name: string; owner_name?: string; phone: string; address?: string }): Promise<{ token: string; bot_url: string }> {
-    const res = await fetch(`${API_BASE}/auth/register-session`, {
+    return safeJsonFetch(`${API_BASE}/auth/register-session`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...payload, sector_type: 'agro_vet' })
     });
-    const json = await res.json();
-    if (!res.ok || json.success === false) {
-      throw new Error(json.error || 'Sessiya yaratishda xatolik yuz berdi');
-    }
-    return json;
   },
 
   async checkSessionStatus(token: string): Promise<{ status: 'pending' | 'approved' | 'expired'; token?: string; tenant?: any }> {
     try {
-      const res = await fetch(`${API_BASE}/auth/session/status?token=${encodeURIComponent(token)}`);
-      const json = await res.json();
-      return json;
+      return await safeJsonFetch(`${API_BASE}/auth/session/status?token=${encodeURIComponent(token)}`);
     } catch (err) {
       return { status: 'pending' };
     }
