@@ -5,7 +5,14 @@ const USER_KEY = 'biznesgo_admin_user';
 
 // Production muhitda agar VITE_API_URL berilmagan bo'lsa, Railway backendiga murojaat qilish:
 const DEFAULT_API_URL = 'https://backend-production-96bd5.up.railway.app';
-const BASE_URL = (import.meta.env.VITE_API_URL || (typeof window !== 'undefined' && window.location.hostname.includes('localhost') ? 'http://localhost:5001' : DEFAULT_API_URL)).replace(/\/+$/, '');
+const rawEnvUrl = (import.meta.env.VITE_API_URL || '').trim();
+const BASE_URL = (
+  rawEnvUrl && rawEnvUrl.startsWith('http')
+    ? rawEnvUrl
+    : (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+      ? 'http://localhost:5001'
+      : DEFAULT_API_URL
+).replace(/\/+$/, '');
 
 export const authStorage = {
   getToken: () => localStorage.getItem(TOKEN_KEY),
@@ -39,22 +46,36 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
 
   const url = BASE_URL ? `${BASE_URL}${endpoint}` : endpoint;
 
-  const response = await fetch(url, {
-    ...options,
-    headers
-  });
-
-  let data: any;
-  const contentType = response.headers.get('content-type') || '';
-  if (contentType.includes('application/json')) {
-    data = await response.json();
-  } else {
-    const text = await response.text();
-    throw new Error(`Server kutilmagan javob qaytardi (${response.status}): ${text.slice(0, 100)}`);
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers
+    });
+  } catch (netErr: any) {
+    throw new Error('Server yoki internet bilan aloqa uzildi. Iltimos qaytadan urinib ko\'ring.');
   }
 
-  if (!response.ok || !data.success) {
-    throw new Error(data.error || 'Server xatosi ro\'y berdi');
+  const text = await response.text();
+  let data: any = null;
+  if (text && text.trim().length > 0) {
+    try {
+      data = JSON.parse(text);
+    } catch (_) {
+      if (!response.ok) {
+        throw new Error(`Server xatoligi (${response.status})`);
+      }
+      return text as unknown as T;
+    }
+  } else {
+    if (!response.ok) {
+      throw new Error(`Server xatoligi (${response.status})`);
+    }
+    return {} as T;
+  }
+
+  if (!response.ok || data?.success === false) {
+    throw new Error(data?.error || data?.message || `Server xatoligi (${response.status})`);
   }
 
   return data;

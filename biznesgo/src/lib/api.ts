@@ -3,22 +3,65 @@ import { demoStore } from './demoStore';
 
 // Production muhitda agar VITE_API_URL berilmagan bo'lsa, Railway backendiga murojaat qilish:
 const DEFAULT_API_URL = 'https://backend-production-96bd5.up.railway.app';
-const BASE_URL = (import.meta.env.VITE_API_URL || (typeof window !== 'undefined' && window.location.hostname.includes('localhost') ? 'http://localhost:5001' : DEFAULT_API_URL)).replace(/\/+$/, '');
+const rawEnvUrl = (import.meta.env.VITE_API_URL || '').trim();
+const BASE_URL = (
+  rawEnvUrl && rawEnvUrl.startsWith('http')
+    ? rawEnvUrl
+    : (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+      ? 'http://localhost:5001'
+      : DEFAULT_API_URL
+).replace(/\/+$/, '');
 const API_BASE = `${BASE_URL}/api/biznesgo`;
 
-// Xavfsiz JSON parser: Safari "The string did not match the expected pattern" xatosini oldini olish
+// Xavfsiz JSON parser: Safari "The string did not match the expected pattern" xatosini butunlay bartaraf etish
 async function safeJsonFetch(url: string, options: RequestInit = {}): Promise<any> {
-  const res = await fetch(url, options);
-  const contentType = res.headers.get('content-type') || '';
-  if (!contentType.includes('application/json')) {
-    const text = await res.text();
-    throw new Error(`Server kutilmagan javob qaytardi (${res.status}): ${text.slice(0, 100)}`);
+  let res: Response;
+  try {
+    res = await fetch(url, options);
+  } catch (netErr: any) {
+    throw new Error('Internet yoki server bilan aloqa uzildi. Iltimos, qaytadan urinib ko\'ring.');
   }
-  const json = await res.json();
-  if (!res.ok || json.success === false) {
-    throw new Error(json.error || `Server xatoligi (${res.status})`);
+
+  let text = '';
+  try {
+    text = await res.text();
+  } catch (_) {
+    throw new Error(`Server javobini o'qib bo'lmadi (${res.status})`);
+  }
+
+  let json: any = null;
+  if (text && text.trim().length > 0) {
+    try {
+      json = JSON.parse(text);
+    } catch (_) {
+      // Agar javob JSON emas, balki HTML yoki boshqa matn bo'lsa (masalan 404/502/HTML)
+      if (!res.ok) {
+        throw new Error(`Server xatoligi yuz berdi (${res.status}). Iltimos, keyinroq qayta urinib ko'ring.`);
+      }
+      return { success: true, raw: text };
+    }
+  } else {
+    if (!res.ok) {
+      throw new Error(`Server xatoligi (${res.status})`);
+    }
+    return { success: true };
+  }
+
+  if (!res.ok || json?.success === false) {
+    throw new Error(json?.error || json?.message || `Server xatoligi (${res.status})`);
   }
   return json;
+}
+
+// Avtorizatsiyalangan xavfsiz so'rov
+async function safeAuthJsonFetch(url: string, options: RequestInit = {}): Promise<any> {
+  const token = getToken();
+  const headers = new Headers(options.headers || {});
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  headers.set('x-sector-type', 'agro_vet');
+  return safeJsonFetch(url, { ...options, headers });
 }
 
 export function formatUZS(val: number): string {
@@ -130,17 +173,14 @@ export const api = {
   // 0. Auth & Sessiya
   async telegramAuth(initData: string): Promise<{ token: string; tenant: any }> {
     try {
-      const res = await fetch(`${API_BASE}/auth/telegram`, {
+      const json = await safeJsonFetch(`${API_BASE}/auth/telegram`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ initData, sector_type: 'agro_vet' })
       });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.token) setToken(json.token, true);
-        if (json.tenant) setUser(json.tenant, true);
-        return json;
-      }
+      if (json.token) setToken(json.token, true);
+      if (json.tenant) setUser(json.tenant, true);
+      return json;
     } catch (_) {}
 
     // Fallback: local dev
@@ -193,17 +233,14 @@ export const api = {
 
   async login(phone: string): Promise<{ token: string; tenant: any }> {
     try {
-      const res = await fetch(`${API_BASE}/auth/login`, {
+      const json = await safeJsonFetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, sector_type: 'agro_vet' })
       });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.token) setToken(json.token);
-        if (json.tenant) setUser(json.tenant);
-        return json;
-      }
+      if (json.token) setToken(json.token);
+      if (json.tenant) setUser(json.tenant);
+      return json;
     } catch (_) {}
 
     // Local / Offline demo login
@@ -226,17 +263,14 @@ export const api = {
     tax_id?: string;
   }): Promise<{ token: string; tenant: any; user: any }> {
     try {
-      const res = await fetch(`${API_BASE}/auth/register`, {
+      const json = await safeJsonFetch(`${API_BASE}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...data, sector_type: 'agro_vet' })
       });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.token) setToken(json.token);
-        if (json.tenant) setUser(json.tenant);
-        return json;
-      }
+      if (json.token) setToken(json.token);
+      if (json.tenant) setUser(json.tenant);
+      return json;
     } catch (_) {}
 
     // Local fallback
@@ -259,8 +293,7 @@ export const api = {
 
   async getMe(): Promise<any> {
     try {
-      const res = await authFetch(`${API_BASE}/auth/me`);
-      if (res.ok) return await res.json();
+      return await safeAuthJsonFetch(`${API_BASE}/auth/me`);
     } catch (_) {}
     return {
       id: 'usr-1',
@@ -278,8 +311,8 @@ export const api = {
   // 1. Dashboard
   async getDashboardMetrics(): Promise<DashboardMetrics> {
     try {
-      const res = await authFetch(`${API_BASE}/dashboard/metrics`);
-      if (res.ok) return await res.json();
+      const data = await safeAuthJsonFetch(`${API_BASE}/dashboard/metrics`);
+      if (data && typeof data.today_revenue === 'number') return data;
     } catch (_) {}
     return {
       today_revenue: 0,
@@ -306,8 +339,8 @@ export const api = {
 
   async getSalesHistory(): Promise<{ sales: any[] }> {
     try {
-      const res = await authFetch(`${API_BASE}/sales/history`);
-      if (res.ok) return await res.json();
+      const data = await safeAuthJsonFetch(`${API_BASE}/sales/history`);
+      if (data && Array.isArray(data.sales)) return data;
     } catch (_) {}
     return { sales: [] };
   },
@@ -319,11 +352,8 @@ export const api = {
       if (search) params.append('search', search);
       if (filter) params.append('filter', filter);
       params.append('sector_type', sectorType || 'agro_vet');
-      const res = await authFetch(`${API_BASE}/products?${params.toString()}`);
-      if (res.ok) {
-        const json = await res.json();
-        if (Array.isArray(json.products)) return json;
-      }
+      const json = await safeAuthJsonFetch(`${API_BASE}/products?${params.toString()}`);
+      if (json && Array.isArray(json.products)) return json;
     } catch (_) {}
     // Agar serverda tovarlar bo'lmasa, do'kon toza 0 full holatda bo'ladi
     return { products: [], sector_type: sectorType || 'agro_vet' };
@@ -351,12 +381,11 @@ export const api = {
     min_stock?: number;
   }): Promise<{ product: Product; message: string }> {
     try {
-      const res = await authFetch(`${API_BASE}/products`, {
+      return await safeAuthJsonFetch(`${API_BASE}/products`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...data, sector_type: 'agro_vet' })
       });
-      if (res.ok) return await res.json();
     } catch (_) {}
 
     const newProd = demoStore.addProduct(data);
@@ -378,12 +407,11 @@ export const api = {
     notes?: string;
   }): Promise<{ success: boolean; receipt_number: string; message: string }> {
     try {
-      const res = await authFetch(`${API_BASE}/sales/checkout`, {
+      return await safeAuthJsonFetch(`${API_BASE}/sales/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-      if (res.ok) return await res.json();
     } catch (_) {}
 
     return demoStore.checkout(data.items, data.payment_type, data.customer_id, data.customer_name);
@@ -392,11 +420,8 @@ export const api = {
   // 4. Qarz Daftari (CRM)
   async getCustomers(): Promise<{ customers: Customer[] }> {
     try {
-      const res = await authFetch(`${API_BASE}/debts/customers`);
-      if (res.ok) {
-        const json = await res.json();
-        if (Array.isArray(json.customers)) return json;
-      }
+      const json = await safeAuthJsonFetch(`${API_BASE}/debts/customers`);
+      if (json && Array.isArray(json.customers)) return json;
     } catch (_) {}
     return { customers: [] };
   },
@@ -411,12 +436,11 @@ export const api = {
     notes?: string;
   }): Promise<{ customer: Customer }> {
     try {
-      const res = await authFetch(`${API_BASE}/debts/customers`, {
+      return await safeAuthJsonFetch(`${API_BASE}/debts/customers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-      if (res.ok) return await res.json();
     } catch (_) {}
 
     const debt = Number(data.debt_balance) || 0;
@@ -446,12 +470,11 @@ export const api = {
     notes?: string;
   }): Promise<{ success: boolean; message: string; remaining_balance: number }> {
     try {
-      const res = await authFetch(`${API_BASE}/debts/repay`, {
+      return await safeAuthJsonFetch(`${API_BASE}/debts/repay`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-      if (res.ok) return await res.json();
     } catch (_) {}
 
     return demoStore.repayDebt(data.customer_id, data.amount, data.new_due_date);
@@ -460,8 +483,7 @@ export const api = {
   // 5. Ombor & Inventory
   async getWarehouses(): Promise<{ warehouses: Warehouse[] }> {
     try {
-      const res = await authFetch(`${API_BASE}/inventory/warehouses`);
-      if (res.ok) return await res.json();
+      return await safeAuthJsonFetch(`${API_BASE}/inventory/warehouses`);
     } catch (_) {}
     return {
       warehouses: [
@@ -481,11 +503,8 @@ export const api = {
       const params = new URLSearchParams();
       if (filter) params.append('filter', filter);
       if (productId) params.append('product_id', productId);
-      const res = await authFetch(`${API_BASE}/inventory/batches?${params.toString()}`);
-      if (res.ok) {
-        const json = await res.json();
-        if (json.batches) return json;
-      }
+      const json = await safeAuthJsonFetch(`${API_BASE}/inventory/batches?${params.toString()}`);
+      if (json && Array.isArray(json.batches)) return json;
     } catch (_) {}
     return { batches: [] };
   },
@@ -496,12 +515,11 @@ export const api = {
     recall_reason: string;
   }): Promise<{ message: string; batch: any; affected_sales_count: number; affected_customers: any[] }> {
     try {
-      const res = await authFetch(`${API_BASE}/inventory/recall`, {
+      return await safeAuthJsonFetch(`${API_BASE}/inventory/recall`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-      if (res.ok) return await res.json();
     } catch (_) {}
 
     const b = demoStore.batches.find(x => x.batch_number === data.batch_number);
@@ -523,12 +541,11 @@ export const api = {
     disposal_method?: string;
   }): Promise<{ message: string; loss_amount: number; remaining_stock: number }> {
     try {
-      const res = await authFetch(`${API_BASE}/inventory/dispose`, {
+      return await safeAuthJsonFetch(`${API_BASE}/inventory/dispose`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-      if (res.ok) return await res.json();
     } catch (_) {}
 
     return {
@@ -549,12 +566,11 @@ export const api = {
     notes?: string;
   }): Promise<{ message: string }> {
     try {
-      const res = await authFetch(`${API_BASE}/inventory/receipt`, {
+      return await safeAuthJsonFetch(`${API_BASE}/inventory/receipt`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-      if (res.ok) return await res.json();
     } catch (_) {}
 
     const prod = demoStore.products.find(p => p.id === data.product_id);
@@ -567,8 +583,7 @@ export const api = {
   // 6. Xaridlar & Supplierlar
   async getSuppliers(): Promise<{ suppliers: Supplier[] }> {
     try {
-      const res = await authFetch(`${API_BASE}/purchasing/suppliers`);
-      if (res.ok) return await res.json();
+      return await safeAuthJsonFetch(`${API_BASE}/purchasing/suppliers`);
     } catch (_) {}
     return {
       suppliers: [
@@ -581,8 +596,7 @@ export const api = {
   // 7. Moliya & Kassalar
   async getCashAccounts(): Promise<{ accounts: CashAccount[] }> {
     try {
-      const res = await authFetch(`${API_BASE}/finance/accounts`);
-      if (res.ok) return await res.json();
+      return await safeAuthJsonFetch(`${API_BASE}/finance/accounts`);
     } catch (_) {}
     return {
       accounts: [
@@ -595,8 +609,7 @@ export const api = {
   // 8. Sozlamalar
   async getSettings(): Promise<any> {
     try {
-      const res = await authFetch(`${API_BASE}/settings`);
-      if (res.ok) return await res.json();
+      return await safeAuthJsonFetch(`${API_BASE}/settings`);
     } catch (_) {}
     return {
       store_name: 'Agro-Vet Markaz',
@@ -608,12 +621,11 @@ export const api = {
 
   async updateSettings(data: any): Promise<any> {
     try {
-      const res = await authFetch(`${API_BASE}/settings`, {
+      return await safeAuthJsonFetch(`${API_BASE}/settings`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-      if (res.ok) return await res.json();
     } catch (_) {}
     return data;
   }
