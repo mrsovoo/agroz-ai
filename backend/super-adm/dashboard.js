@@ -31,7 +31,7 @@ router.get('/metrics', requireAdminAuth, requirePermission('dashboard:view'), as
 
     try {
       const tRes = await pool.query(`
-        SELECT t.id, t.name, t.phone, t.address, t.sector_type, t.is_active, t.created_at,
+        SELECT t.id, t.name, t.phone, t.address, t.sector_type, t.is_active, t.settings, t.created_at,
                m.address as merchant_addr
         FROM tenants t
         LEFT JOIN merchants m ON m.tenant_id = t.id OR m.phone = t.phone
@@ -70,10 +70,14 @@ router.get('/metrics', requireAdminAuth, requirePermission('dashboard:view'), as
     let telegramCount = 0;
     let webCount = 0;
 
+    const checkIsTg = (t) => Boolean(
+      (t.merchant_addr && String(t.merchant_addr).includes('tg:')) ||
+      (t.address && String(t.address).includes('tg:')) ||
+      (t.settings && t.settings.telegram_id)
+    );
+
     tenants.forEach(t => {
-      const isTg = (t.merchant_addr && t.merchant_addr.includes('tg:')) || 
-                   (t.address && t.address.includes('tg:'));
-      if (isTg) {
+      if (checkIsTg(t)) {
         telegramCount++;
       } else {
         webCount++;
@@ -90,7 +94,8 @@ router.get('/metrics', requireAdminAuth, requirePermission('dashboard:view'), as
     sales.forEach(s => {
       const amount = Number(s.total_amount) || 0;
       totalRevenue += amount;
-      if (s.created_at && s.created_at.startsWith(todayStr)) {
+      const createdStr = s.created_at instanceof Date ? s.created_at.toISOString() : String(s.created_at || '');
+      if (createdStr.startsWith(todayStr)) {
         todayRevenue += amount;
       }
 
@@ -121,8 +126,7 @@ router.get('/metrics', requireAdminAuth, requirePermission('dashboard:view'), as
     const topEarningTenants = tenants.map(t => {
       const rev = tenantRevenueMap.get(t.id) || 0;
       const salesCount = tenantSalesCountMap.get(t.id) || 0;
-      const isTg = (t.merchant_addr && t.merchant_addr.includes('tg:')) || 
-                   (t.address && t.address.includes('tg:'));
+      const isTg = checkIsTg(t);
       return {
         id: t.id,
         name: t.name,
@@ -138,8 +142,7 @@ router.get('/metrics', requireAdminAuth, requirePermission('dashboard:view'), as
 
     // 5. So'nggi ro'yxatdan o'tganlar
     const recentTenants = tenants.slice(0, 5).map(t => {
-      const isTg = (t.merchant_addr && t.merchant_addr.includes('tg:')) || 
-                   (t.address && t.address.includes('tg:'));
+      const isTg = checkIsTg(t);
       return {
         id: t.id,
         name: t.name,

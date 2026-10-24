@@ -3,15 +3,14 @@ import { AdminUser, AuditLog, AdminRole, Tenant, DashboardData } from '../types'
 const TOKEN_KEY = 'biznesgo_admin_token';
 const USER_KEY = 'biznesgo_admin_user';
 
-// Production muhitda agar VITE_API_URL berilmagan bo'lsa, Railway backendiga murojaat qilish:
-const DEFAULT_API_URL = 'https://backend-production-96bd5.up.railway.app';
+const RAILWAY_API_URL = 'https://backend-production-96bd5.up.railway.app';
 const rawEnvUrl = (import.meta.env.VITE_API_URL || '').trim();
 const BASE_URL = (
   rawEnvUrl && rawEnvUrl.startsWith('http')
     ? rawEnvUrl
     : (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
       ? 'http://localhost:5001'
-      : DEFAULT_API_URL
+      : ''
 ).replace(/\/+$/, '');
 
 export const authStorage = {
@@ -238,6 +237,41 @@ export const adminApi = {
       success: boolean;
       archive: any;
     }>(`/v1/admin/tenants/${id}/archive`);
+  },
+
+  async getNeonArchiveAll() {
+    return apiRequest<{
+      success: boolean;
+      summary: {
+        total_records: number;
+        biznesgo_stores_count: number;
+        legacy_merchants_count: number;
+        farmer_users_count: number;
+        specialists_count: number;
+        consents_count: number;
+        bot_sessions_count: number;
+      };
+      items: any[];
+      tables: Record<string, any[]>;
+    }>('/v1/admin/tenants/neon-archive/all');
+  },
+
+  async activateNeonArchiveItem(payload: {
+    phone: string;
+    name: string;
+    owner_name?: string;
+    address?: string;
+    telegram_id?: string | null;
+    sector_type?: string;
+  }) {
+    return apiRequest<{
+      success: boolean;
+      message: string;
+      tenant: any;
+    }>('/v1/admin/tenants/neon-archive/activate', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
   },
 
   async toggleTenantStatus(id: string, status: 'active' | 'suspended', reason?: string) {

@@ -13,6 +13,14 @@
     "build:super-adm": "cd super-adm && npm install && npm run build",
     "build:all": "cd backend && npm install && cd ../biznesgo && npm install && npm run build && cd ../super-adm && npm install && npm run build",
     "build:vercel": "cd biznesgo && npm install && npm run build && cd ../super-adm && npm install && npm run build && rm -rf ../dist_combined && mkdir -p ../dist_combined/admin && cp -r ../biznesgo/dist/* ../dist_combined/ && cp -r ../super-adm/dist/* ../dist_combined/admin/"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.1"
   }
 }
 

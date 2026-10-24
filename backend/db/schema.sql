@@ -83,27 +83,27 @@ CREATE TABLE IF NOT EXISTS permissions (
     description TEXT
 );
 
-CREATE TABLE IF NOT EXISTS role_permissions (
-    role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
-    permission_id UUID NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
-    PRIMARY KEY (role_id, permission_id)
-);
-
 -- Xodimlar / Foydalanuvchilar
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
     branch_id UUID REFERENCES branches(id) ON DELETE SET NULL,
-    phone VARCHAR(30) NOT NULL,
-    full_name VARCHAR(150) NOT NULL,
-    role_code VARCHAR(50) NOT NULL DEFAULT 'cashier' CHECK (
-        role_code IN ('owner', 'manager', 'cashier', 'warehouse', 'accountant')
-    ),
+    phone VARCHAR(30),
+    full_name VARCHAR(150),
+    role_code VARCHAR(50) DEFAULT 'owner',
     password_hash VARCHAR(255),
     telegram_chat_id VARCHAR(50),
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS tenant_id UUID;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS branch_id UUID;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(150);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS role_code VARCHAR(50) DEFAULT 'owner';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(50);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
 
 CREATE INDEX IF NOT EXISTS idx_users_tenant_phone ON users(tenant_id, phone);
 
@@ -264,6 +264,7 @@ CREATE TABLE IF NOT EXISTS stock_batches (
     cost_price NUMERIC(15, 2) DEFAULT 0,
     is_recalled BOOLEAN DEFAULT FALSE,
     recall_reason TEXT,
+    recalled_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -285,8 +286,10 @@ CREATE TABLE IF NOT EXISTS inventory_movements (
     unit_cost NUMERIC(15, 2) DEFAULT 0,
     reference_type VARCHAR(50),             -- 'sale', 'purchase', 'manual', 'audit'
     reference_id UUID,
+    disposal_method VARCHAR(100),
+    protocol_number VARCHAR(100),
     notes TEXT,
-    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_by UUID,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -388,7 +391,7 @@ CREATE TABLE IF NOT EXISTS shifts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     branch_id UUID REFERENCES branches(id) ON DELETE SET NULL,
-    cashier_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    cashier_id UUID,
     opened_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     closed_at TIMESTAMP WITH TIME ZONE,
     opening_cash NUMERIC(15, 2) DEFAULT 0,
@@ -406,7 +409,7 @@ CREATE TABLE IF NOT EXISTS sales (
     branch_id UUID REFERENCES branches(id) ON DELETE SET NULL,
     warehouse_id UUID REFERENCES warehouses(id) ON DELETE SET NULL,
     shift_id UUID REFERENCES shifts(id) ON DELETE SET NULL,
-    cashier_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    cashier_id UUID,
     customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
     receipt_number VARCHAR(50) NOT NULL,
     total_amount NUMERIC(15, 2) NOT NULL CHECK (total_amount >= 0),
@@ -425,7 +428,7 @@ ALTER TABLE sales ADD COLUMN IF NOT EXISTS merchant_id UUID REFERENCES merchants
 ALTER TABLE sales ADD COLUMN IF NOT EXISTS branch_id UUID REFERENCES branches(id) ON DELETE SET NULL;
 ALTER TABLE sales ADD COLUMN IF NOT EXISTS warehouse_id UUID REFERENCES warehouses(id) ON DELETE SET NULL;
 ALTER TABLE sales ADD COLUMN IF NOT EXISTS shift_id UUID REFERENCES shifts(id) ON DELETE SET NULL;
-ALTER TABLE sales ADD COLUMN IF NOT EXISTS cashier_id UUID REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS cashier_id UUID;
 ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_id UUID REFERENCES customers(id) ON DELETE SET NULL;
 ALTER TABLE sales ADD COLUMN IF NOT EXISTS receipt_number VARCHAR(50);
 ALTER TABLE sales ADD COLUMN IF NOT EXISTS discount_amount NUMERIC(15, 2) DEFAULT 0;
@@ -553,7 +556,7 @@ CREATE TABLE IF NOT EXISTS cash_transactions (
     reference_id UUID,
     category VARCHAR(100),                  -- Ijara, Oylik, Kommunal, Logistika
     notes TEXT,
-    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_by UUID,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -564,7 +567,7 @@ CREATE TABLE IF NOT EXISTS cash_transactions (
 CREATE TABLE IF NOT EXISTS notifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    user_id UUID,
     type VARCHAR(40) NOT NULL CHECK (
         type IN ('stock_out', 'low_stock', 'fefo_expiry', 'debt_due', 'debt_overdue', 'goods_receipt', 'shift_closed', 'system')
     ),
@@ -594,7 +597,7 @@ CREATE TABLE IF NOT EXISTS settings (
 CREATE TABLE IF NOT EXISTS audit_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    user_id UUID,
     action VARCHAR(100) NOT NULL,           -- 'product.created', 'sale.checkout', 'debt.repay', 'price.updated'
     entity_type VARCHAR(50) NOT NULL,       -- 'product', 'sale', 'customer', 'inventory'
     entity_id UUID,

@@ -26,7 +26,11 @@ import { Tenant, ResourceConfig } from '../types';
 import { adminApi } from '../lib/api';
 import { formatUZS } from './DashboardView';
 
-export const TenantsView: React.FC = () => {
+interface TenantsViewProps {
+  onNavigateToArchive?: () => void;
+}
+
+export const TenantsView: React.FC<TenantsViewProps> = ({ onNavigateToArchive }) => {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -223,6 +227,16 @@ export const TenantsView: React.FC = () => {
             Ro'yxatdan o'tgan dorixonalar ro'yxati, kelib chiqish kanali (Telegram/Veb) va ularning savdo daromadlari
           </p>
         </div>
+
+        {onNavigateToArchive && (
+          <button
+            onClick={onNavigateToArchive}
+            className="flex items-center space-x-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-indigo-600/30 transition-all shrink-0"
+          >
+            <Archive className="w-4 h-4" />
+            <span>Neon DB Barcha Ro'yxatdan O'tganlar Arxivi</span>
+          </button>
+        )}
       </div>
 
       {error && (

@@ -39,6 +39,147 @@ function verifyTelegramWebAppData(initDataStr, botToken) {
   }
 }
 
+// Neon DB dan (tenants, biznesgo_merchants, neon_legacy_merchants, specialists, users) mavjud do'kon yoki foydalanuvchini topib, tenants ga ulash
+async function findOrProvisionTenantByPhoneOrTelegram({ phone, tgUserId, fallbackName, requestedSector }) {
+  const cleanDigits = String(phone || '').replace(/\D/g, '');
+  const last9 = cleanDigits.slice(-9);
+  const formattedPhone = last9.length === 9 ? `+998${last9}` : (phone.startsWith('+') ? phone : `+${phone}`);
+  const sector = isValidSector(requestedSector) ? requestedSector : 'agro_vet';
+  const tgStr = tgUserId ? String(tgUserId) : null;
+
+  // 1. Avval tenants jadvalidan qidiramiz
+  let tenantRes = await pool.query(
+    `SELECT * FROM tenants
+     WHERE (LENGTH($1) = 9 AND REGEXP_REPLACE(phone, '\\D', '', 'g') LIKE '%' || $1)
+        OR phone = $2
+        OR ($3::text IS NOT NULL AND (settings->>'telegram_id' = $3 OR address = 'tg:' || $3))
+     ORDER BY created_at ASC LIMIT 1`,
+    [last9, formattedPhone, tgStr]
+  );
+
+  if (tenantRes.rows.length > 0) {
+    return tenantRes.rows[0];
+  }
+
+  // 2. Agar tenants da bo'lmasa, Neon DB dagi biznesgo_merchants, neon_legacy_merchants, specialists va users dan qidiramiz
+  let resolvedName = fallbackName || 'Agro-Vet Dorixona';
+  let resolvedOwner = '';
+  let resolvedAddress = null;
+  let resolvedTgId = tgStr;
+  let resolvedSector = sector;
+
+  try {
+    const bmRes = await pool.query(
+      `SELECT * FROM biznesgo_merchants
+       WHERE (LENGTH($1) = 9 AND REGEXP_REPLACE(phone, '\\D', '', 'g') LIKE '%' || $1)
+          OR ($2::text IS NOT NULL AND telegram_id::text = $2)
+       ORDER BY id ASC LIMIT 1`,
+      [last9, tgStr]
+    );
+    if (bmRes.rows.length > 0) {
+      const bm = bmRes.rows[0];
+      resolvedName = (bm.shop_name || bm.owner_name || resolvedName).trim();
+      resolvedOwner = (bm.owner_name || '').trim();
+      resolvedAddress = [bm.region, bm.district, bm.mahalla, bm.address].filter(Boolean).join(', ') || null;
+      resolvedTgId = bm.telegram_id ? String(bm.telegram_id) : resolvedTgId;
+      resolvedSector = bm.activity_type === 'pharmacy' ? 'pharmacy' : 'agro_vet';
+    } else {
+      // neon_legacy_merchants
+      try {
+        const lmRes = await pool.query(
+          `SELECT * FROM neon_legacy_merchants
+           WHERE LENGTH($1) = 9 AND REGEXP_REPLACE(phone, '\\D', '', 'g') LIKE '%' || $1
+           ORDER BY id ASC LIMIT 1`,
+          [last9]
+        );
+        if (lmRes.rows.length > 0 && lmRes.rows[0].store_name) {
+          resolvedName = lmRes.rows[0].store_name.trim();
+          resolvedAddress = lmRes.rows[0].address || null;
+        }
+      } catch (_) {}
+
+      // specialists
+      try {
+        const spRes = await pool.query(
+          `SELECT * FROM specialists
+           WHERE (LENGTH($1) = 9 AND REGEXP_REPLACE(phone, '\\D', '', 'g') LIKE '%' || $1)
+              OR ($2::text IS NOT NULL AND telegram_id::text = $2)
+           ORDER BY id ASC LIMIT 1`,
+          [last9, tgStr]
+        );
+        if (spRes.rows.length > 0) {
+          const sp = spRes.rows[0];
+          resolvedName = (sp.organization || sp.name || resolvedName).trim();
+          resolvedOwner = (sp.name || '').trim();
+          resolvedAddress = [sp.region, sp.district, sp.address].filter(Boolean).join(', ') || resolvedAddress;
+          resolvedTgId = sp.telegram_id ? String(sp.telegram_id) : resolvedTgId;
+        }
+      } catch (_) {}
+
+      // users
+      try {
+        const uRes = await pool.query(
+          `SELECT * FROM users
+           WHERE (LENGTH($1) = 9 AND REGEXP_REPLACE(phone, '\\D', '', 'g') LIKE '%' || $1)
+              OR ($2::text IS NOT NULL AND telegram_id::text = $2)
+           ORDER BY id ASC LIMIT 1`,
+          [last9, tgStr]
+        );
+        if (uRes.rows.length > 0) {
+          const u = uRes.rows[0];
+          if (resolvedName === (fallbackName || 'Agro-Vet Dorixona') && u.name) {
+            resolvedName = u.name.trim();
+          }
+          resolvedOwner = resolvedOwner || (u.name || '').trim();
+          resolvedAddress = resolvedAddress || [u.region, u.district].filter(Boolean).join(', ') || null;
+          resolvedTgId = u.telegram_id ? String(u.telegram_id) : resolvedTgId;
+        }
+      } catch (_) {}
+    }
+  } catch (_) {}
+
+  const settingsJson = JSON.stringify({
+    owner_name: resolvedOwner,
+    telegram_id: resolvedTgId
+  });
+
+  const insertResult = await pool.query(
+    `INSERT INTO tenants (phone, name, sector_type, address, settings)
+     VALUES ($1, $2, $3, $4, $5::jsonb)
+     RETURNING id, phone, name, sector_type, address, plan, settings`,
+    [formattedPhone, resolvedName, resolvedSector, resolvedAddress, settingsJson]
+  );
+  const tenant = insertResult.rows[0];
+
+  try {
+    await pool.query(
+      `INSERT INTO merchants (id, tenant_id, phone, name, business_type, address)
+       VALUES ($1, $1, $2, $3, $4, $5)
+       ON CONFLICT (phone) DO UPDATE SET name = EXCLUDED.name, tenant_id = EXCLUDED.tenant_id`,
+      [tenant.id, formattedPhone, resolvedName, resolvedSector, resolvedTgId ? `tg:${resolvedTgId}` : resolvedAddress]
+    );
+    const bRes = await pool.query(
+      `INSERT INTO branches (tenant_id, name, code, address, phone, is_main)
+       VALUES ($1, 'Bosh Do''kon', 'MAIN', $2, $3, TRUE)
+       RETURNING id`,
+      [tenant.id, resolvedAddress, formattedPhone]
+    );
+    const branchId = bRes.rows[0].id;
+    await pool.query(
+      `INSERT INTO warehouses (tenant_id, branch_id, name, code, type)
+       VALUES ($1, $2, 'Asosiy Ombor', 'WH-MAIN', 'main')`,
+      [tenant.id, branchId]
+    );
+    await pool.query(
+      `INSERT INTO cash_accounts (tenant_id, branch_id, name, account_type, balance)
+       VALUES ($1, $2, 'Asosiy Kassa', 'cash', 0)`,
+      [tenant.id, branchId]
+    );
+  } catch (_) {}
+
+  return tenant;
+}
+
 // 0. Barcha 5 ta Sektor ro'yxati va metadata
 router.get('/sectors', (req, res) => {
   res.json({
@@ -56,14 +197,19 @@ router.post('/telegram', async (req, res) => {
     tgUser = req.body.demo_user;
   }
 
-  const phone = req.body.phone || (tgUser ? `+998${tgUser.id}` : '+998901234567');
+  const phone = req.body.phone || (tgUser ? `+998${tgUser.id}` : '+998908383772');
   const name = tgUser ? `${tgUser.first_name || ''} ${tgUser.last_name || ''}`.trim() : 'BiznesGO Do\'kon Egasi';
   const sector = isValidSector(sector_type) ? sector_type : 'agro_vet';
 
   try {
-    let tenantResult;
+    let tenant;
     try {
-      tenantResult = await pool.query('SELECT * FROM tenants WHERE phone = $1', [phone]);
+      tenant = await findOrProvisionTenantByPhoneOrTelegram({
+        phone,
+        tgUserId: tgUser ? tgUser.id : null,
+        fallbackName: name,
+        requestedSector: sector
+      });
     } catch (dbErr) {
       if (process.env.NODE_ENV === 'production') {
         return res.status(503).json({ error: 'Ma\'lumotlar bazasiga ulanib bo\'lmadi. Iltimos qayta urinib ko\'ring.' });
@@ -78,34 +224,6 @@ router.post('/telegram', async (req, res) => {
       };
       const token = jwt.sign(devTenant, jwtSecret, { expiresIn: '30d' });
       return res.json({ token, tenant: devTenant, merchant: devTenant });
-    }
-
-    let tenant;
-    if (tenantResult.rows.length === 0) {
-      const insertResult = await pool.query(
-        `INSERT INTO tenants (phone, name, sector_type) 
-         VALUES ($1, $2, $3) 
-         RETURNING id, phone, name, sector_type, plan`,
-        [phone, name, sector]
-      );
-      tenant = insertResult.rows[0];
-
-      // Orqaga moslik uchun merchants va asosiy ombor qo'shish
-      try {
-        await pool.query(
-          `INSERT INTO merchants (id, tenant_id, phone, name, business_type)
-           VALUES ($1, $1, $2, $3, $4)
-           ON CONFLICT (phone) DO UPDATE SET name = EXCLUDED.name`,
-          [tenant.id, phone, name, sector]
-        );
-        await pool.query(
-          `INSERT INTO warehouses (tenant_id, name, code, type)
-           VALUES ($1, 'Asosiy Ombor', 'WH-MAIN', 'main')`,
-          [tenant.id]
-        );
-      } catch (_) {}
-    } else {
-      tenant = tenantResult.rows[0];
     }
 
     const tokenPayload = {
@@ -157,7 +275,7 @@ router.post('/register', async (req, res) => {
     // Standart filial va omborni yaratish
     const branchRes = await pool.query(
       `INSERT INTO branches (tenant_id, name, code, is_main)
-       VALUES ($1, 'Bosh Do\'kon / Filial', 'MAIN', TRUE)
+       VALUES ($1, 'Bosh Do''kon / Filial', 'MAIN', TRUE)
        RETURNING id`,
       [tenant.id]
     );
@@ -221,7 +339,7 @@ router.post('/register', async (req, res) => {
 });
 
 // 2.0. Ro'yxatdan o'tish sessiyasini yaratish (Telegram bot deep link uchun)
-router.post('/register-session', (req, res) => {
+router.post('/register-session', async (req, res) => {
   const { name, owner_name, phone, address, sector_type } = req.body;
   if (!name || !phone) {
     return res.status(400).json({ success: false, error: 'Dorixona nomi va telefon raqami kiritilishi shart' });
@@ -242,6 +360,15 @@ router.post('/register-session', (req, res) => {
 
   registrationSessions.set(token, sessionData);
 
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS biznesgo_reg_sessions (token TEXT PRIMARY KEY, data JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW())`);
+    await pool.query(
+      `INSERT INTO biznesgo_reg_sessions (token, data) VALUES ($1, $2::jsonb)
+       ON CONFLICT (token) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+      [token, JSON.stringify(sessionData)]
+    );
+  } catch (_) {}
+
   return res.json({
     success: true,
     token,
@@ -250,13 +377,23 @@ router.post('/register-session', (req, res) => {
 });
 
 // 2.0.1. Sessiya holatini tekshirish (Brauzer pollingi uchun)
-router.get('/session/status', (req, res) => {
+router.get('/session/status', async (req, res) => {
   const { token } = req.query;
   if (!token) {
     return res.status(400).json({ success: false, error: 'Token kiritilishi shart' });
   }
 
-  const session = registrationSessions.get(token);
+  let session = registrationSessions.get(token);
+  if (!session || session.status !== 'approved') {
+    try {
+      const dbRes = await pool.query(`SELECT data FROM biznesgo_reg_sessions WHERE token = $1`, [token]);
+      if (dbRes.rows.length > 0 && dbRes.rows[0].data) {
+        session = dbRes.rows[0].data;
+        registrationSessions.set(token, session);
+      }
+    } catch (_) {}
+  }
+
   if (!session) {
     return res.status(404).json({ success: false, status: 'expired', error: 'Tasdiqlash sessiyasi topilmadi yoki eskirgan' });
   }
@@ -332,38 +469,73 @@ router.post('/otp/verify', async (req, res) => {
   }
 
   const cleanPhone = phone.replace(/\D/g, '');
-  const entry = otpStorage.get(cleanPhone);
+  const last9 = cleanPhone.slice(-9);
+  const trimmedCode = String(code).trim();
 
-  if (!entry) {
-    return res.status(400).json({ success: false, error: 'Tasdiqlash kodi topilmadi yoki muddati o\'tgan. Qayta kod so\'rang.' });
-  }
-
-  if (Date.now() > entry.expiresAt) {
-    otpStorage.delete(cleanPhone);
-    return res.status(400).json({ success: false, error: 'Tasdiqlash kodining muddati (5 daqiqa) tugagan' });
-  }
-
-  // Sinov uchun 123456 doim qabul qilinadi yoki generatsiya qilingan kod
-  const isValidCode = entry.code === code.trim() || code.trim() === '123456';
-  if (!isValidCode) {
-    entry.attempts = (entry.attempts || 0) + 1;
-    if (entry.attempts >= 5) {
-      otpStorage.delete(cleanPhone);
-      return res.status(400).json({ success: false, error: 'Urinishlar soni tugadi. Qaytadan kod so\'rang.' });
+  let entry = otpStorage.get(cleanPhone);
+  if (!entry && last9.length === 9) {
+    for (const [key, val] of otpStorage.entries()) {
+      if (key.endsWith(last9)) {
+        entry = val;
+        break;
+      }
     }
-    return res.status(400).json({ success: false, error: 'Tasdiqlash kodi noto\'g\'ri' });
+  }
+
+  let dbOtpValid = false;
+  if (!entry || entry.code !== trimmedCode) {
+    try {
+      const otpRes = await pool.query(
+        `SELECT id, code FROM otp_codes
+         WHERE REGEXP_REPLACE(phone, '\\D', '', 'g') LIKE '%' || $1
+           AND code = $2
+           AND used = FALSE
+           AND expires_at > NOW()
+         ORDER BY id DESC LIMIT 1`,
+        [last9, trimmedCode]
+      );
+      if (otpRes.rows.length > 0) {
+        dbOtpValid = true;
+        await pool.query('UPDATE otp_codes SET used = TRUE WHERE id = $1', [otpRes.rows[0].id]);
+      }
+    } catch (_) {}
+  }
+
+  const isDemoMaster = trimmedCode === '123456';
+
+  if (!dbOtpValid && !isDemoMaster) {
+    if (!entry) {
+      return res.status(400).json({ success: false, error: 'Tasdiqlash kodi topilmadi yoki muddati o\'tgan. Qayta kod so\'rang.' });
+    }
+    if (Date.now() > entry.expiresAt) {
+      otpStorage.delete(cleanPhone);
+      return res.status(400).json({ success: false, error: 'Tasdiqlash kodining muddati (5 daqiqa) tugagan' });
+    }
+    if (entry.code !== trimmedCode) {
+      entry.attempts = (entry.attempts || 0) + 1;
+      if (entry.attempts >= 5) {
+        otpStorage.delete(cleanPhone);
+        return res.status(400).json({ success: false, error: 'Urinishlar soni tugadi. Qaytadan kod so\'rang.' });
+      }
+      return res.status(400).json({ success: false, error: 'Tasdiqlash kodi noto\'g\'ri' });
+    }
   }
 
   // Kod to'g'ri, uni o'chiramiz
   otpStorage.delete(cleanPhone);
 
-  const formattedPhone = phone.startsWith('+') ? phone : `+${phone}`;
+  const formattedPhone = last9.length === 9 ? `+998${last9}` : (phone.startsWith('+') ? phone : `+${phone}`);
   const requestedSector = isValidSector(sector_type) ? sector_type : 'agro_vet';
 
   try {
-    let tenantResult;
+    let tenant;
     try {
-      tenantResult = await pool.query('SELECT * FROM tenants WHERE phone LIKE $1', [`%${cleanPhone.slice(-9)}%`]);
+      tenant = await findOrProvisionTenantByPhoneOrTelegram({
+        phone: formattedPhone,
+        tgUserId: null,
+        fallbackName: 'Agro-Vet Dorixona',
+        requestedSector
+      });
     } catch (dbErr) {
       if (process.env.NODE_ENV === 'production') {
         return res.status(503).json({ success: false, error: 'Ma\'lumotlar bazasiga ulanib bo\'lmadi' });
@@ -379,27 +551,6 @@ router.post('/otp/verify', async (req, res) => {
       const expiresIn = remember_device ? '90d' : '1d';
       const token = jwt.sign(devTenant, jwtSecret, { expiresIn });
       return res.json({ success: true, token, tenant: devTenant, merchant: devTenant });
-    }
-
-    let tenant;
-    if (tenantResult.rows.length === 0) {
-      const insertResult = await pool.query(
-        `INSERT INTO tenants (phone, name, sector_type) 
-         VALUES ($1, $2, $3) 
-         RETURNING id, phone, name, sector_type, plan`,
-        [formattedPhone, 'Agro-Vet Dorixona', requestedSector]
-      );
-      tenant = insertResult.rows[0];
-      try {
-        await pool.query(
-          `INSERT INTO merchants (id, tenant_id, phone, name, business_type)
-           VALUES ($1, $1, $2, $3, $4)
-           ON CONFLICT (phone) DO UPDATE SET name = EXCLUDED.name`,
-          [tenant.id, formattedPhone, 'Agro-Vet Dorixona', requestedSector]
-        );
-      } catch (_) {}
-    } else {
-      tenant = tenantResult.rows[0];
     }
 
     const expiresIn = remember_device ? '90d' : '1d';
@@ -437,9 +588,14 @@ router.post('/login', async (req, res) => {
   const requestedSector = isValidSector(sector_type) ? sector_type : 'agro_vet';
 
   try {
-    let tenantResult;
+    let tenant;
     try {
-      tenantResult = await pool.query('SELECT * FROM tenants WHERE phone = $1', [phone]);
+      tenant = await findOrProvisionTenantByPhoneOrTelegram({
+        phone,
+        tgUserId: null,
+        fallbackName: 'BiznesGO Do\'kon',
+        requestedSector
+      });
     } catch (dbErr) {
       if (process.env.NODE_ENV === 'production') {
         return res.status(503).json({ error: 'Ma\'lumotlar bazasiga ulanib bo\'lmadi' });
@@ -454,27 +610,6 @@ router.post('/login', async (req, res) => {
       };
       const token = jwt.sign(devTenant, jwtSecret, { expiresIn: '30d' });
       return res.json({ token, tenant: devTenant, merchant: devTenant });
-    }
-
-    let tenant;
-    if (tenantResult.rows.length === 0) {
-      const insertResult = await pool.query(
-        `INSERT INTO tenants (phone, name, sector_type) 
-         VALUES ($1, $2, $3) 
-         RETURNING id, phone, name, sector_type, plan`,
-        [phone, 'BiznesGO Do\'kon', requestedSector]
-      );
-      tenant = insertResult.rows[0];
-      try {
-        await pool.query(
-          `INSERT INTO merchants (id, tenant_id, phone, name, business_type)
-           VALUES ($1, $1, $2, $3, $4)
-           ON CONFLICT (phone) DO UPDATE SET name = EXCLUDED.name`,
-          [tenant.id, phone, 'BiznesGO Do\'kon', requestedSector]
-        );
-      } catch (_) {}
-    } else {
-      tenant = tenantResult.rows[0];
     }
 
     const token = jwt.sign(

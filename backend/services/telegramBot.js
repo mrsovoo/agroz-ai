@@ -1,15 +1,15 @@
-const { pool, jwtSecret } = require('../config');
+const { pool, jwtSecret, telegramBotToken } = require('../config');
 const jwt = require('jsonwebtoken');
-
-const DEFAULT_BOT_TOKEN = '8546564636:AAE8WDjtaFDMr4Mb35KX4uBfPD5b-dB28LM';
+const crypto = require('crypto');
 
 function getBotToken() {
-  const envToken = process.env.TELEGRAM_BOT_TOKEN || '';
-  // Agar Railway'da eski bot tokeni saqlanib qolgan bo'lsa ham, qat'iy @biznesgo_bot tokenini ishlatish:
-  if (envToken && envToken.startsWith('8546564636')) {
-    return envToken;
-  }
-  return DEFAULT_BOT_TOKEN;
+  return telegramBotToken || (process.env.TELEGRAM_BOT_TOKEN || '').trim();
+}
+
+function getWebhookSecretToken() {
+  const token = getBotToken();
+  if (!token) return '';
+  return crypto.createHmac('sha256', jwtSecret || 'biznesgo').update(token).digest('hex').slice(0, 48);
 }
 const registrationSessions = new Map();
 const phoneChatMap = new Map();
@@ -72,8 +72,20 @@ class TelegramApiClient {
     });
   }
 
-  async setWebhook(url) {
-    return this.call('setWebhook', { url });
+  async setWebhook(url, secretToken) {
+    const payload = {
+      url,
+      allowed_updates: ['message', 'callback_query'],
+      drop_pending_updates: true
+    };
+    if (secretToken) {
+      payload.secret_token = secretToken;
+    }
+    return this.call('setWebhook', payload);
+  }
+
+  async getWebhookInfo() {
+    return this.call('getWebhookInfo');
   }
 
   async deleteWebhook() {
@@ -174,12 +186,27 @@ async function handleTelegramMessage(client, msg) {
 
       // Agar start payload ro'yxatdan o'tish sessiyasi bo'lsa (masalan: reg_abcdef)
       if (startPayload && startPayload.startsWith('reg_')) {
-        const session = registrationSessions.get(startPayload);
+        let session = registrationSessions.get(startPayload);
+        if (!session) {
+          try {
+            const dbRes = await pool.query(`SELECT data FROM biznesgo_reg_sessions WHERE token = $1`, [startPayload]);
+            if (dbRes.rows.length > 0 && dbRes.rows[0].data) {
+              session = dbRes.rows[0].data;
+              registrationSessions.set(startPayload, session);
+            }
+          } catch (_) {}
+        }
         if (session) {
           session.tgUserId = tgUserId;
           session.tgChatId = chatId;
           phoneChatMap.set(session.phone.replace(/\D/g, ''), chatId);
           if (tgUserId) phoneChatMap.set(String(tgUserId), chatId);
+          try {
+            await pool.query(
+              `UPDATE biznesgo_reg_sessions SET data = $2::jsonb, updated_at = NOW() WHERE token = $1`,
+              [startPayload, JSON.stringify(session)]
+            );
+          } catch (_) {}
 
           return client.sendMessage(
             chatId,
@@ -208,19 +235,77 @@ async function handleTelegramMessage(client, msg) {
 
       let userExists = false;
       let merchantName = 'Agro-Vet Dorixona';
+      let matchedPhone = null;
 
       try {
-        const userRes = await pool.query(
-          'SELECT * FROM merchants WHERE phone LIKE $1 OR address LIKE $2 LIMIT 1',
-          [`%${tgUserId}%`, `%tg:${tgUserId}%`]
+        const tRes = await pool.query(
+          `SELECT name, phone FROM tenants 
+           WHERE settings->>'telegram_id' = $1 OR address LIKE $2 OR phone LIKE $3
+           LIMIT 1`,
+          [String(tgUserId), `%tg:${tgUserId}%`, `%${tgUserId}%`]
         );
-        if (userRes.rows.length > 0) {
+        if (tRes.rows.length > 0) {
           userExists = true;
-          merchantName = userRes.rows[0].name;
+          merchantName = tRes.rows[0].name;
+          matchedPhone = tRes.rows[0].phone;
         }
-      } catch (dbErr) {
-        // DB ulanishi bo'lmasa fallback rejim
+      } catch (_) {}
+
+      if (!userExists) {
+        try {
+          const userRes = await pool.query(
+            'SELECT * FROM merchants WHERE phone LIKE $1 OR address LIKE $2 LIMIT 1',
+            [`%${tgUserId}%`, `%tg:${tgUserId}%`]
+          );
+          if (userRes.rows.length > 0) {
+            userExists = true;
+            merchantName = userRes.rows[0].name || userRes.rows[0].store_name || merchantName;
+            matchedPhone = userRes.rows[0].phone;
+          }
+        } catch (_) {}
       }
+
+      if (!userExists) {
+        try {
+          const bmRes = await pool.query(
+            'SELECT organization_name, name, phone FROM biznesgo_merchants WHERE telegram_id::text = $1 LIMIT 1',
+            [String(tgUserId)]
+          );
+          if (bmRes.rows.length > 0) {
+            userExists = true;
+            merchantName = bmRes.rows[0].organization_name || bmRes.rows[0].name;
+            matchedPhone = bmRes.rows[0].phone;
+          }
+        } catch (_) {}
+      }
+
+      if (matchedPhone) {
+        phoneChatMap.set(String(matchedPhone).replace(/\D/g, ''), chatId);
+      }
+      if (tgUserId) {
+        phoneChatMap.set(String(tgUserId), chatId);
+      }
+
+      // Agar foydalanuvchi veb-brauzerda OTP so'ragan bo'lsa, /start bosishi bilan kodni yuboramiz
+      try {
+        const last9 = matchedPhone ? String(matchedPhone).replace(/\D/g, '').slice(-9) : null;
+        const otpRes = await pool.query(
+          `SELECT id, code FROM otp_codes
+           WHERE used = FALSE AND expires_at > NOW()
+             AND (telegram_id::text = $1 OR ($2::text IS NOT NULL AND REGEXP_REPLACE(phone, '\\D', '', 'g') LIKE '%' || $2))
+           ORDER BY created_at DESC LIMIT 1`,
+          [String(tgUserId), last9]
+        );
+        if (otpRes.rows.length > 0) {
+          await client.sendMessage(
+            chatId,
+            `🔐 *BiznesGO Kirish Kodi:* \`${otpRes.rows[0].code}\`\n\n` +
+            `Ushbu kodni veb brauzerga (biznesgo.uz) kiriting.\n` +
+            `⏱ Amal qilish muddati: *5 daqiqa*.`,
+            { parse_mode: 'Markdown' }
+          );
+        }
+      } catch (_) {}
 
       if (userExists) {
         return client.sendMessage(
@@ -278,18 +363,56 @@ async function handleTelegramMessage(client, msg) {
     let phone = msg.contact.phone_number;
     if (!phone.startsWith('+')) phone = `+${phone}`;
     const cleanDigits = phone.replace(/\D/g, '');
+    const last9 = cleanDigits.slice(-9);
     phoneChatMap.set(cleanDigits, chatId);
     if (tgUserId) phoneChatMap.set(String(tgUserId), chatId);
 
     try {
+      // Agar foydalanuvchiga aktiv OTP kodi kutayotgan bo'lsa, uni ham yuboramiz
+      try {
+        const otpRes = await pool.query(
+          `SELECT code FROM otp_codes
+           WHERE used = FALSE AND expires_at > NOW()
+             AND REGEXP_REPLACE(phone, '\\D', '', 'g') LIKE '%' || $1
+           ORDER BY created_at DESC LIMIT 1`,
+          [last9]
+        );
+        if (otpRes.rows.length > 0) {
+          await client.sendMessage(
+            chatId,
+            `🔐 *BiznesGO Kirish Kodi:* \`${otpRes.rows[0].code}\`\n\n` +
+            `Ushbu kodni veb brauzerga (biznesgo.uz) kiriting.`,
+            { parse_mode: 'Markdown' }
+          );
+        }
+      } catch (_) {}
+
       let isRegistered = false;
       let merchantName = '';
 
       try {
-        const checkRes = await pool.query('SELECT * FROM merchants WHERE phone = $1', [phone]);
+        const tCheck = await pool.query(
+          `SELECT id, name FROM tenants WHERE REGEXP_REPLACE(phone, '\\D', '', 'g') LIKE '%' || $1 LIMIT 1`,
+          [last9]
+        );
+        if (tCheck.rows.length > 0) {
+          isRegistered = true;
+          merchantName = tCheck.rows[0].name;
+          await pool.query(
+            `UPDATE tenants SET settings = settings || $1::jsonb WHERE id = $2`,
+            [JSON.stringify({ telegram_id: String(tgUserId || chatId) }), tCheck.rows[0].id]
+          );
+        }
+      } catch (_) {}
+
+      try {
+        const checkRes = await pool.query(
+          `SELECT * FROM merchants WHERE REGEXP_REPLACE(phone, '\\D', '', 'g') LIKE '%' || $1 LIMIT 1`,
+          [last9]
+        );
         if (checkRes.rows.length > 0) {
           isRegistered = true;
-          merchantName = checkRes.rows[0].name;
+          if (!merchantName) merchantName = checkRes.rows[0].name;
           await pool.query('UPDATE merchants SET address = $1 WHERE id = $2', [
             `tg:${tgUserId}`,
             checkRes.rows[0].id
@@ -313,14 +436,14 @@ async function handleTelegramMessage(client, msg) {
       // Yangi do'kon nomi so'rash
       registrationSessions.set(chatId, {
         step: 'awaiting_store_name',
-        phone,
+        phone: `+998${last9}`,
         tgUserId,
         ownerName: `${msg.from.first_name || ''} ${msg.from.last_name || ''}`.trim() || 'Do\'kon Egasi'
       });
 
       return client.sendMessage(
         chatId,
-        `✅ Telefon raqamingiz qabul qilindi: *${phone}*\n\n` +
+        `✅ Telefon raqamingiz qabul qilindi: *+998${last9}*\n\n` +
         `🏢 Endi agro-vet dorixonangiz nomini kiriting:\n` +
         `_(Masalan: Agro-Vet Fayz, Baraka Veterinariya, Chinoz O'g'itlar)_`,
         {
@@ -342,15 +465,17 @@ async function handleTelegramMessage(client, msg) {
   if (session && session.step === 'awaiting_store_name') {
     const storeName = text;
     try {
-      try {
-        await pool.query(
-          `INSERT INTO merchants (phone, name, business_type, address)
-           VALUES ($1, $2, 'agro_vet', $3)`,
-          [session.phone, storeName, `tg:${session.tgUserId}`]
-        );
-      } catch (dbErr) {
-        console.warn('DB merchant saqlashda xatolik (mock rejimda ishlaydi):', dbErr.message);
-      }
+      await finalizeRegistration(
+        {
+          phone: session.phone,
+          name: storeName,
+          owner_name: session.ownerName,
+          sector_type: 'agro_vet',
+          address: `tg:${session.tgUserId || chatId}`
+        },
+        session.tgUserId,
+        chatId
+      );
 
       registrationSessions.delete(chatId);
 
@@ -800,7 +925,16 @@ async function handleTelegramCallbackQuery(client, cb) {
 
   if (data.startsWith('approve_reg_')) {
     const token = data.replace('approve_', '');
-    const session = registrationSessions.get(token);
+    let session = registrationSessions.get(token);
+    if (!session) {
+      try {
+        const dbRes = await pool.query(`SELECT data FROM biznesgo_reg_sessions WHERE token = $1`, [token]);
+        if (dbRes.rows.length > 0 && dbRes.rows[0].data) {
+          session = dbRes.rows[0].data;
+          registrationSessions.set(token, session);
+        }
+      } catch (_) {}
+    }
     if (!session) {
       return client.answerCallbackQuery(cbId, 'Sessiya topilmadi yoki muddati tugagan', true);
     }
@@ -810,6 +944,13 @@ async function handleTelegramCallbackQuery(client, cb) {
       session.status = 'approved';
       session.tenant = tenant;
       session.jwtToken = jwtToken;
+      registrationSessions.set(token, session);
+      try {
+        await pool.query(
+          `UPDATE biznesgo_reg_sessions SET data = $2::jsonb, updated_at = NOW() WHERE token = $1`,
+          [token, JSON.stringify(session)]
+        );
+      } catch (_) {}
 
       await client.answerCallbackQuery(cbId, '✅ Dorixona muvaffaqiyatli tasdiqlandi!', false);
 
@@ -889,10 +1030,22 @@ function initTelegramBot() {
 
   if (railwayDomain && process.env.NODE_ENV === 'production') {
     const fullWebhookUrl = `https://${railwayDomain.replace(/^https?:\/\//, '')}/api/biznesgo/telegram/webhook`;
+    const secretToken = getWebhookSecretToken();
     console.log(`[Telegram Bot] Production Webhook ulanmoqda: ${fullWebhookUrl}`);
-    client.setWebhook(fullWebhookUrl)
+    client.setWebhook(fullWebhookUrl, secretToken)
       .then(r => console.log('[Telegram Bot] Webhook natijasi:', r))
       .catch(err => console.warn('[Telegram Bot] Webhook sozlashda xato:', err.message));
+
+    // Har 60 soniyada Webhook xavfsizligini nazorat qilish (tashqi o'zgarish bo'lsa avtomatik qayta tiklash)
+    setInterval(async () => {
+      try {
+        const info = await client.getWebhookInfo();
+        if (info && info.ok && info.result && info.result.url !== fullWebhookUrl) {
+          console.warn(`[Telegram Bot Xavfsizlik] Begona webhook aniqlandi (${info.result.url})! BiznesGO webhooki qayta tiklanmoqda...`);
+          await client.setWebhook(fullWebhookUrl, secretToken);
+        }
+      } catch (_) {}
+    }, 60 * 1000);
   } else {
     // Local development: Webhookni tozalab polling ishga tushirish
     client.deleteWebhook()
@@ -916,28 +1069,57 @@ function initTelegramBot() {
 
 async function sendOtpToTelegram(phone, code) {
   const clean = (phone || '').replace(/\D/g, '');
+  const last9 = clean.slice(-9);
   let chatId = phoneChatMap.get(clean);
 
-  // Agar xotirada bo'lmasa, ma'lumotlar bazasidan tekshiramiz
-  if (!chatId) {
+  // Oxirgi 9 raqam bo'yicha xotiradan moslik tekshirish
+  if (!chatId && last9.length === 9) {
+    for (const [p, cId] of phoneChatMap.entries()) {
+      if (p.endsWith(last9) || clean.endsWith(p.slice(-9))) {
+        chatId = cId;
+        break;
+      }
+    }
+  }
+
+  // Agar xotirada bo'lmasa, Neon ma'lumotlar bazasidagi barcha jadvallardan qidiramiz
+  if (!chatId && last9.length === 9) {
     try {
-      const res = await pool.query(
-        "SELECT address FROM merchants WHERE phone LIKE $1 AND address LIKE 'tg:%' LIMIT 1",
-        [`%${clean.slice(-9)}%`]
-      );
-      if (res.rows.length > 0) {
-        chatId = res.rows[0].address.replace('tg:', '');
+      const queries = [
+        `SELECT COALESCE(settings->>'telegram_id', CASE WHEN address LIKE 'tg:%' THEN REPLACE(address, 'tg:', '') ELSE NULL END) AS tg_id FROM tenants WHERE REGEXP_REPLACE(phone, '\\D', '', 'g') LIKE $1 LIMIT 1`,
+        `SELECT REPLACE(address, 'tg:', '') AS tg_id FROM merchants WHERE REGEXP_REPLACE(phone, '\\D', '', 'g') LIKE $1 AND address LIKE 'tg:%' LIMIT 1`,
+        `SELECT telegram_id::text AS tg_id FROM biznesgo_merchants WHERE REGEXP_REPLACE(phone, '\\D', '', 'g') LIKE $1 AND telegram_id IS NOT NULL LIMIT 1`,
+        `SELECT telegram_id::text AS tg_id FROM specialists WHERE REGEXP_REPLACE(phone, '\\D', '', 'g') LIKE $1 AND telegram_id IS NOT NULL LIMIT 1`,
+        `SELECT telegram_id::text AS tg_id FROM users WHERE REGEXP_REPLACE(phone, '\\D', '', 'g') LIKE $1 AND telegram_id IS NOT NULL LIMIT 1`,
+        `SELECT telegram_id::text AS tg_id FROM data_consents WHERE REGEXP_REPLACE(phone, '\\D', '', 'g') LIKE $1 AND telegram_id IS NOT NULL ORDER BY id DESC LIMIT 1`,
+        `SELECT telegram_id::text AS tg_id FROM otp_codes WHERE REGEXP_REPLACE(phone, '\\D', '', 'g') LIKE $1 AND telegram_id IS NOT NULL ORDER BY id DESC LIMIT 1`
+      ];
+      for (const q of queries) {
+        try {
+          const res = await pool.query(q, [`%${last9}`]);
+          if (res.rows.length > 0 && res.rows[0].tg_id) {
+            chatId = String(res.rows[0].tg_id).trim();
+            phoneChatMap.set(clean, chatId);
+            break;
+          }
+        } catch (_) {}
       }
     } catch (_) {}
   }
 
-  // Oxirgi 9 raqam bo'yicha moslik tekshirish
-  if (!chatId) {
-    for (const [p, cId] of phoneChatMap.entries()) {
-      if (p.endsWith(clean.slice(-9)) || clean.endsWith(p.slice(-9))) {
-        chatId = cId;
-        break;
-      }
+  // OTP kodni Neon DB otp_codes jadvaliga ham yozib qo'yamiz (foydalanuvchi botga /start bossa darhol yuborilishi uchun)
+  try {
+    await pool.query(
+      `INSERT INTO otp_codes (phone, code, used, attempts, telegram_id, expires_at)
+       VALUES ($1, $2, FALSE, 0, $3, NOW() + INTERVAL '5 minutes')`,
+      [`+998${last9}`, code, chatId && /^\d+$/.test(String(chatId)) ? Number(chatId) : null]
+    );
+  } catch (_) {}
+
+  if (!globalBotClient) {
+    const token = getBotToken();
+    if (token) {
+      globalBotClient = new TelegramApiClient(token);
     }
   }
 
@@ -964,5 +1146,6 @@ module.exports = {
   phoneChatMap,
   registrationSessions,
   finalizeRegistration,
-  handleTelegramCallbackQuery
+  handleTelegramCallbackQuery,
+  getWebhookSecretToken
 };

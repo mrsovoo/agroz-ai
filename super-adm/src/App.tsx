@@ -6,6 +6,7 @@ import { AdminsView } from './views/AdminsView';
 import { AuditView } from './views/AuditView';
 import { DashboardView } from './views/DashboardView';
 import { TenantsView } from './views/TenantsView';
+import { ArchiveView } from './views/ArchiveView';
 import { Sidebar } from './components/Layout/Sidebar';
 import { TopBar } from './components/Layout/TopBar';
 import { VersionFooter } from './components/Layout/VersionFooter';
@@ -65,6 +66,8 @@ export function App() {
         return 'B2B Katta Data va Boshqaruv Paneli';
       case 'tenants':
         return 'B2B Dorixonalar va Bizneslar (Aylanma & Manba)';
+      case 'archive':
+        return 'Neon PostgreSQL Ro\'yxatdan O\'tganlar Arxivi';
       case 'admins':
         return 'Adminlar va Rollar (RBAC)';
       case 'audit':
@@ -94,9 +97,15 @@ export function App() {
 
         <main className="flex-1 p-8 overflow-y-auto">
           {currentTab === 'dashboard' && (
-            <DashboardView onNavigateToTenants={() => setCurrentTab('tenants')} />
+            <DashboardView
+              onNavigateToTenants={() => setCurrentTab('tenants')}
+              onNavigateToArchive={() => setCurrentTab('archive')}
+            />
           )}
-          {currentTab === 'tenants' && <TenantsView />}
+          {currentTab === 'tenants' && (
+            <TenantsView onNavigateToArchive={() => setCurrentTab('archive')} />
+          )}
+          {currentTab === 'archive' && <ArchiveView />}
           {currentTab === 'admins' && <AdminsView />}
           {currentTab === 'audit' && <AuditView />}
         </main>

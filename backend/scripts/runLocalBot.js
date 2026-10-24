@@ -1,12 +1,15 @@
 // Local Telegram Bot Runner for @biznesgo_bot testing
 const { TelegramApiClient, handleTelegramUpdate } = require('../services/telegramBot');
 
-const token = process.env.TELEGRAM_BOT_TOKEN || '8546564636:AAE8WDjtaFDMr4Mb35KX4uBfPD5b-dB28LM';
+const token = process.env.TELEGRAM_BOT_TOKEN || '';
+if (!token) {
+  console.error('❌ TELEGRAM_BOT_TOKEN environment variable is required');
+  process.exit(1);
+}
 const client = new TelegramApiClient(token);
 
 async function main() {
   console.log('🤖 Starting Local Telegram Bot Polling for @biznesgo_bot...');
-  console.log('Bot token: 8546564636:***');
   
   // 1. Get bot info
   const me = await client.call('getMe');

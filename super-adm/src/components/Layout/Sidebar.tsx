@@ -9,7 +9,8 @@ import {
   MessageSquare, 
   Sliders, 
   Sparkles,
-  Lock
+  Lock,
+  Archive
 } from 'lucide-react';
 import { AdminUser } from '../../types';
 
@@ -76,6 +77,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onTabChange, user 
               </div>
               <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-mono">
                 B2B
+              </span>
+            </button>
+
+            <button
+              onClick={() => onTabChange('archive')}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg font-medium transition-all ${
+                currentTab === 'archive'
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                  : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+              }`}
+            >
+              <div className="flex items-center space-x-2.5">
+                <Archive className="w-4 h-4 text-indigo-400" />
+                <span>Arxiv (Neon DB)</span>
+              </div>
+              <span className="text-[9px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded font-mono">
+                Neon
               </span>
             </button>
           </div>

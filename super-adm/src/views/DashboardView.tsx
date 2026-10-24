@@ -11,20 +11,22 @@ import {
   ArrowUpRight, 
   ShieldCheck, 
   Clock,
-  ChevronRight
+  ChevronRight,
+  Archive
 } from 'lucide-react';
 import { adminApi } from '../lib/api';
 import { DashboardData } from '../types';
 
 interface DashboardViewProps {
   onNavigateToTenants: () => void;
+  onNavigateToArchive?: () => void;
 }
 
 export function formatUZS(amount: number): string {
   return new Intl.NumberFormat('uz-UZ').format(Math.round(amount || 0)) + " so'm";
 }
 
-export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateToTenants }) => {
+export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateToTenants, onNavigateToArchive }) => {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -95,6 +97,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateToTenant
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>Yangilash</span>
           </button>
+
+          {onNavigateToArchive && (
+            <button
+              onClick={onNavigateToArchive}
+              className="flex items-center space-x-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow-lg shadow-indigo-600/30 transition-all"
+            >
+              <Archive className="w-4 h-4" />
+              <span>Neon DB Arxivi</span>
+            </button>
+          )}
 
           <button
             onClick={onNavigateToTenants}

@@ -8,11 +8,21 @@ import { ProductsView } from './views/ProductsView';
 import { DebtsView } from './views/DebtsView';
 import { ReportsView } from './views/ReportsView';
 import { AuthView } from './views/AuthView';
-import { api, getToken, getUser } from './lib/api';
+import { api, getToken, setToken, getUser, setUser } from './lib/api';
 import { DashboardMetrics } from './types';
 
 export const App: React.FC = () => {
-  const [token, setTokenState] = useState<string | null>(() => getToken());
+  const [token, setTokenState] = useState<string | null>(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const urlToken = params.get('token');
+      if (urlToken) {
+        setToken(urlToken, true);
+        return urlToken;
+      }
+    } catch (_) {}
+    return getToken();
+  });
   const [currentUser, setCurrentUser] = useState<any | null>(() => getUser());
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
@@ -66,6 +76,17 @@ export const App: React.FC = () => {
     }
 
     if (token) {
+      api.getMe().then((me) => {
+        if (me && me.name && me.id !== 'usr-1') {
+          setCurrentUser(me);
+          setUser(me, true);
+          setStoreName(me.name);
+          try {
+            localStorage.setItem('biznesgo_store_name', me.name);
+          } catch (_) {}
+        }
+      }).catch(() => {});
+
       loadGlobalMetrics();
       const interval = setInterval(loadGlobalMetrics, 30000);
       return () => clearInterval(interval);
