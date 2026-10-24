@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
-const { port } = require('./config');
+const { port, pool } = require('./config');
+const fs = require('fs');
+const path = require('path');
 
 const authMiddleware = require('./middleware/auth');
 const authRoutes = require('./routes/biznesgo/auth');
@@ -11,6 +13,20 @@ const dashboardRoutes = require('./routes/biznesgo/dashboard');
 const { initTelegramBot } = require('./services/telegramBot');
 
 const app = express();
+
+// Neon / PostgreSQL sxemasini avtomatik ishga tushirish (Auto-migration)
+async function initDatabase() {
+  try {
+    const schemaPath = path.join(__dirname, 'db', 'schema.sql');
+    if (fs.existsSync(schemaPath)) {
+      const sql = fs.readFileSync(schemaPath, 'utf8');
+      await pool.query(sql);
+      console.log('[Database] Neon PostgreSQL sxemasi va jadvallari muvaffaqiyatli sinxronlandi.');
+    }
+  } catch (err) {
+    console.warn('[Database] Sxema sinxronlash ogohlantirishi:', err.message);
+  }
+}
 
 // Middleware
 app.use(cors());
@@ -49,6 +65,7 @@ app.use((err, req, res, next) => {
 
 app.listen(port, () => {
   console.log(`[BiznesGO B2B Agro-Vet] Server listening on port ${port}`);
+  initDatabase();
   initTelegramBot();
 });
 
