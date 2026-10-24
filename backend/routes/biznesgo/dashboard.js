@@ -71,8 +71,26 @@ router.get('/metrics', async (req, res) => {
       urgent_expiry_drugs: urgentDrugsRes.rows
     });
   } catch (error) {
-    console.error('Dashboard metrics error:', error);
-    // Mock metrics
+    console.error('Dashboard metrics error:', error.message);
+    
+    // Production muhitida hech qanday demo sonlar chiqmaydi
+    if (process.env.NODE_ENV === 'production') {
+      return res.json({
+        today_revenue: 0,
+        cash_revenue: 0,
+        card_revenue: 0,
+        debt_revenue: 0,
+        total_receipts: 0,
+        critical_expiry_count: 0,
+        out_of_stock_count: 0,
+        low_stock_count: 0,
+        total_debt: 0,
+        debtor_count: 0,
+        urgent_expiry_drugs: []
+      });
+    }
+
+    // Faqat lokal sinov (Local Dev) uchun:
     res.json({
       today_revenue: 3450000,
       cash_revenue: 2100000,

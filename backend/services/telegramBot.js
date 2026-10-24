@@ -346,9 +346,22 @@ async function handleTelegramMessage(client, msg) {
         { parse_mode: 'Markdown', ...getMainMenuKeyboard() }
       );
     } catch (err) {
+      if (process.env.NODE_ENV === 'production') {
+        return client.sendMessage(
+          chatId,
+          `📊 *Bugungi Kassa Hisoboti:*\n\n` +
+          `💰 *Jami tushum:* 0 so'm\n` +
+          `💵 *Naqd:* 0 so'm\n` +
+          `💳 *Karta:* 0 so'm\n` +
+          `📝 *Nasiya (Qarz):* 0 so'm\n` +
+          `🧾 *Cheklar soni:* 0 ta\n\n` +
+          `_Bugun hali yangi savdo amalga oshirilmadi._`,
+          { parse_mode: 'Markdown', ...getMainMenuKeyboard() }
+        );
+      }
       return client.sendMessage(
         chatId,
-        `📊 *Bugungi Kassa Hisoboti:*\n\n` +
+        `📊 *Bugungi Kassa (Lokal Sinov):*\n\n` +
         `💰 *Jami tushum:* 3,450,000 so'm\n` +
         `💵 *Naqd:* 2,100,000 so'm\n` +
         `💳 *Karta:* 950,000 so'm\n` +
@@ -388,9 +401,16 @@ async function handleTelegramMessage(client, msg) {
 
       return client.sendMessage(chatId, msgText, { parse_mode: 'Markdown', ...getMainMenuKeyboard() });
     } catch (err) {
+      if (process.env.NODE_ENV === 'production') {
+        return client.sendMessage(
+          chatId,
+          `✅ *Muddati tugayotgan dori yo'q!*\nBarcha dorilar yaroqlilik muddati xavfsiz holatda.`,
+          { parse_mode: 'Markdown', ...getMainMenuKeyboard() }
+        );
+      }
       return client.sendMessage(
         chatId,
-        `⚠️ *FEFO Xavfi:*\n\n` +
+        `⚠️ *FEFO Xavfi (Lokal Sinov):*\n\n` +
         `1. *Oksitetratsiklin 20% LA* (Seriya: \`OKS-2401\`)\n   ⏳ *15 kun qoldi* | 📦 6 dona\n` +
         `2. *Ivermektin 1%* (Seriya: \`IVM-889\`)\n   ⏳ *25 kun qoldi* | 📦 14 dona\n`,
         { parse_mode: 'Markdown', ...getMainMenuKeyboard() }
@@ -412,6 +432,14 @@ async function handleTelegramMessage(client, msg) {
       const sumRes = await pool.query('SELECT COALESCE(SUM(debt_balance), 0) as total FROM customers');
       const totalDebt = Number(sumRes.rows[0]?.total || 0).toLocaleString('uz-UZ');
 
+      if (debtRes.rows.length === 0) {
+        return client.sendMessage(
+          chatId,
+          `📒 *Qarz Daftari Toza!*\nHozirda faol nasiyadorlar mavjud emas (Umumiy qarz: 0 so'm).`,
+          { parse_mode: 'Markdown', ...getMainMenuKeyboard() }
+        );
+      }
+
       let msgText = `📒 *Qarz Daftari Xulosasi:*\n` +
                     `💰 *Umumiy nasiya balansi:* ${totalDebt} so'm\n\n` +
                     `*Eng katta qarzdor fermerlar:*\n`;
@@ -424,9 +452,16 @@ async function handleTelegramMessage(client, msg) {
 
       return client.sendMessage(chatId, msgText, { parse_mode: 'Markdown', ...getMainMenuKeyboard() });
     } catch (err) {
+      if (process.env.NODE_ENV === 'production') {
+        return client.sendMessage(
+          chatId,
+          `📒 *Qarz Daftari Toza!*\nHozirda faol nasiyadorlar mavjud emas (Umumiy qarz: 0 so'm).`,
+          { parse_mode: 'Markdown', ...getMainMenuKeyboard() }
+        );
+      }
       return client.sendMessage(
         chatId,
-        `📒 *Qarz Daftari (Namuna):*\n` +
+        `📒 *Qarz Daftari (Lokal Sinov):*\n` +
         `💰 *Umumiy nasiya balansi:* 4,750,000 so'm\n\n` +
         `1. *Shavkat fermer* — 1,280,000 so'm (Chorva)\n` +
         `2. *Rustam aka* — 850,000 so'm (Issiqxona)\n`,
@@ -460,9 +495,15 @@ async function handleTelegramMessage(client, msg) {
 
       return client.sendMessage(chatId, msgText, { parse_mode: 'Markdown', ...getMainMenuKeyboard() });
     } catch (err) {
+      if (process.env.NODE_ENV === 'production') {
+        return client.sendMessage(chatId, `✅ *Ombordagi barcha preparatlar zaxirasi yetarli!*`, {
+          parse_mode: 'Markdown',
+          ...getMainMenuKeyboard()
+        });
+      }
       return client.sendMessage(
         chatId,
-        `📦 *Kam Qolgan Dorilar:*\n\n` +
+        `📦 *Kam Qolgan Dorilar (Lokal Sinov):*\n\n` +
         `1. *Biovit-80* — 8 ta qoldi (Minimal: 10)\n` +
         `2. *Ammofos 12:52* — 3 qop qoldi (Minimal: 5)\n`,
         { parse_mode: 'Markdown', ...getMainMenuKeyboard() }

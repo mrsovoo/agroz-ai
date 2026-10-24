@@ -24,7 +24,14 @@ router.get('/customers', async (req, res) => {
     const result = await pool.query(query, [merchantId]);
     res.json({ customers: result.rows });
   } catch (error) {
-    console.error('Debts customers fetch error:', error);
+    console.error('Debts customers fetch error:', error.message);
+    
+    // Production muhitida hech qanday demo qarzdorlar chiqmaydi
+    if (process.env.NODE_ENV === 'production') {
+      return res.json({ customers: [] });
+    }
+
+    // Faqat lokal sinov (Local Dev) uchun:
     res.json({
       customers: [
         {

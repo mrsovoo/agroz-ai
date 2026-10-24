@@ -53,14 +53,18 @@ router.post('/telegram', async (req, res) => {
     try {
       merchantResult = await pool.query('SELECT * FROM merchants WHERE phone = $1', [phone]);
     } catch (dbErr) {
-      const demoMerchant = {
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(503).json({ error: 'Ma\'lumotlar bazasiga ulanib bo\'lmadi. Iltimos qayta urinib ko\'ring.' });
+      }
+      // Faqat lokal sinov uchun:
+      const devMerchant = {
         id: '00000000-0000-0000-0000-000000000001',
         phone,
         name,
         business_type: 'agro_vet'
       };
-      const token = jwt.sign(demoMerchant, jwtSecret, { expiresIn: '30d' });
-      return res.json({ token, merchant: demoMerchant });
+      const token = jwt.sign(devMerchant, jwtSecret, { expiresIn: '30d' });
+      return res.json({ token, merchant: devMerchant });
     }
 
     let merchant;
@@ -102,14 +106,17 @@ router.post('/login', async (req, res) => {
     try {
       merchantResult = await pool.query('SELECT * FROM merchants WHERE phone = $1', [phone]);
     } catch (dbErr) {
-      const demoMerchant = {
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(503).json({ error: 'Ma\'lumotlar bazasiga ulanib bo\'lmadi' });
+      }
+      const devMerchant = {
         id: '00000000-0000-0000-0000-000000000001',
         phone,
-        name: 'Agro-Vet Markaz Dorixonasi',
+        name: 'Agro-Vet Lokal Sinov',
         business_type: 'agro_vet'
       };
-      const token = jwt.sign(demoMerchant, jwtSecret, { expiresIn: '30d' });
-      return res.json({ token, merchant: demoMerchant });
+      const token = jwt.sign(devMerchant, jwtSecret, { expiresIn: '30d' });
+      return res.json({ token, merchant: devMerchant });
     }
 
     let merchant;

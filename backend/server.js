@@ -31,7 +31,7 @@ async function initDatabase() {
 // Middleware
 app.use(cors());
 app.use(express.json());
-
+ 
 // Telegram Bot Webhook (Railway va Telegram o'rtasida real-time aloqa)
 app.post(['/api/biznesgo/telegram/webhook', '/api/biznesgo/bot/webhook'], async (req, res) => {
   res.status(200).send('OK');

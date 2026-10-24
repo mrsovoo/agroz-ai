@@ -3,12 +3,19 @@ const { jwtSecret } = require('../config');
 
 function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
+  const isProduction = process.env.NODE_ENV === 'production';
+
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    // Agar Authorization header berilmagan bo'lsa, demo do'kon bilan davom etishga imkon beramiz
+    // Production muhitida hech qanday demo do'konga ruxsat yo'q
+    if (isProduction) {
+      return res.status(401).json({ error: 'Avtorizatsiyadan o\'tilmagan. Iltimos, tizimga kiring.' });
+    }
+
+    // Faqat lokal ishlab chiqish (Local Dev) uchun:
     req.merchant = {
       id: '00000000-0000-0000-0000-000000000001',
       phone: '+998901234567',
-      name: 'AgroVet Markaz Dorixonasi',
+      name: 'Agro-Vet Lokal Sinov',
       business_type: 'agro_vet'
     };
     return next();

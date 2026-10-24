@@ -27,10 +27,13 @@ router.post('/checkout', async (req, res) => {
   try {
     client = await pool.connect();
   } catch (connErr) {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(503).json({ error: 'Ma\'lumotlar bazasiga ulanib bo\'lmadi. To\'lov amalga oshirilmadi.' });
+    }
     return res.json({
       success: true,
       receipt_number: 'CHK-' + Math.floor(100000 + Math.random() * 900000),
-      message: 'Sotuv muvaffaqiyatli amalga oshirildi (Demo rejim)'
+      message: 'Sotuv muvaffaqiyatli amalga oshirildi (Lokal sinov rejimi)'
     });
   }
 

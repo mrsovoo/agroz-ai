@@ -165,9 +165,14 @@ router.get('/', async (req, res) => {
     const result = await pool.query(query, params);
     res.json({ products: result.rows });
   } catch (error) {
-    console.error('Products fetch fallback (DB offline or local):', error.message);
+    console.error('Products fetch error:', error.message);
     
-    // Standart Agro-Vet dorilar real-time search va filter fallback
+    // Production muhitida hech qanday demo mahsulotlar ko'rsatilmaydi
+    if (process.env.NODE_ENV === 'production') {
+      return res.json({ products: [] });
+    }
+
+    // Faqat lokal sinov (Local Dev) uchun:
     let filtered = [...fallbackProducts];
 
     if (search) {

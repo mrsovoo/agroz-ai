@@ -54,14 +54,12 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ onNavigateTab }) => {
   const cardRevenue = Math.round((metrics?.card_revenue || 0) * periodMultiplier);
   const debtRevenue = Math.round((metrics?.debt_revenue || 0) * periodMultiplier);
 
-  // Top preparatlar hisoboti
-  const topProducts = [
+  // Faqat lokal sinov (Local Dev) uchun namuna, productionda toza bo'ladi
+  const topProducts = import.meta.env.DEV ? [
     { name: 'Oksitetratsiklin 20% LA', active: 'Oxytetracycline dihydrate', category: 'Antibiotik (Vet)', qty: 38 * (period === 'today' ? 1 : period === 'week' ? 4 : 15), total: 1710000 * (period === 'today' ? 1 : period === 'week' ? 4 : 15) },
     { name: 'Ivermektin 1%', active: 'Ivermectin 10 mg/ml', category: 'Antiparasitik', qty: 26 * (period === 'today' ? 1 : period === 'week' ? 4 : 15), total: 988000 * (period === 'today' ? 1 : period === 'week' ? 4 : 15) },
-    { name: 'Biovit-80', active: 'Chlortetracycline + Vit B12', category: 'Premiks', qty: 45 * (period === 'today' ? 1 : period === 'week' ? 4 : 15), total: 1125000 * (period === 'today' ? 1 : period === 'week' ? 4 : 15) },
-    { name: 'Ammofos 12:52', active: 'Azot 12% + Fosfor 52%', category: 'Mineral O\'g\'it', qty: 15 * (period === 'today' ? 1 : period === 'week' ? 4 : 15), total: 1275000 * (period === 'today' ? 1 : period === 'week' ? 4 : 15) },
-    { name: 'Alben Granula 20%', active: 'Albendazole 200 mg/g', category: 'Antigelment', qty: 22 * (period === 'today' ? 1 : period === 'week' ? 4 : 15), total: 616000 * (period === 'today' ? 1 : period === 'week' ? 4 : 15) },
-  ];
+    { name: 'Biovit-80', active: 'Chlortetracycline + Vit B12', category: 'Premiks', qty: 45 * (period === 'today' ? 1 : period === 'week' ? 4 : 15), total: 1125000 * (period === 'today' ? 1 : period === 'week' ? 4 : 15) }
+  ] : [];
 
   const handleExportCSV = () => {
     const csvContent =
@@ -253,7 +251,14 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ onNavigateTab }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {topProducts.map((p, idx) => (
+              {topProducts.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center text-slate-400 text-xs">
+                    Ushbu davr bo'yicha sotuv hisobotlari mavjud emas
+                  </td>
+                </tr>
+              ) : (
+                topProducts.map((p, idx) => (
                 <tr key={idx} className="hover:bg-slate-50/70 transition">
                   <td className="py-3.5 px-4 font-bold text-slate-900">
                     <div className="flex items-center space-x-2.5">
@@ -276,7 +281,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ onNavigateTab }) => {
                     {formatUZS(p.total)}
                   </td>
                 </tr>
-              ))}
+              ))
+            )}
             </tbody>
           </table>
         </div>

@@ -52,55 +52,30 @@ export const TopBar: React.FC<TopBarProps> = ({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Bildirishnomalar holati
+  // Bildirishnomalar holati (Productionda faqat real ogohlantirishlar)
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([
-    {
-      id: 'notif-1',
-      type: 'expiry',
-      title: 'FEFO: Muddati Tugayotgan Dori',
-      message: 'Oksitetratsiklin 20% LA (Partiya: OKS-2401) muddatiga 15 kun qoldi. Birinchi bo\'lib sotilishi shart!',
-      time: 'Bugun, 09:30',
-      isRead: false,
-      actionTab: 'products'
-    },
-    {
-      id: 'notif-2',
-      type: 'debt',
-      title: 'Nasiya Qaytarish Muddati Bugun',
-      message: 'Shavkat fermer (Chorva profili) nasiya to\'lovi bugun kutilmoqda: 280,000 so\'m',
-      time: 'Bugun, 10:15',
-      isRead: false,
-      actionTab: 'debts'
-    },
-    {
-      id: 'notif-3',
-      type: 'expiry',
-      title: 'FEFO Xavfi (25 kun qoldi)',
-      message: 'Ivermektin 1% (Partiya: IVM-889) muddatiga 25 kun qoldi. Qoldiq: 14 dona.',
-      time: 'Kecha, 17:40',
-      isRead: false,
-      actionTab: 'products'
-    },
-    {
-      id: 'notif-4',
-      type: 'stock',
-      title: 'Ombor: Qoldiq Kamaydi',
-      message: 'Biovit-80 qoldig\'i 8 ta qoldi (minimal chegara: 10 ta). Buyurtma bering.',
-      time: 'Kecha, 14:20',
-      isRead: false,
-      actionTab: 'products'
-    },
-    {
-      id: 'notif-5',
-      type: 'sale',
-      title: 'Kassa Sotuv Amali',
-      message: 'CHK-894102 orqali 145,000 so\'m naqd kassa tranzaksiyasi muvaffaqiyatli amalga oshirildi',
-      time: 'Bugun, 11:10',
-      isRead: true,
-      actionTab: 'pos'
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
+  // Real FEFO xavfi bo'lganda bildirishnoma yaratish
+  useEffect(() => {
+    if (criticalCount > 0) {
+      setNotifications(prev => {
+        if (prev.some(n => n.id === 'fefo-critical-alert')) return prev;
+        return [
+          {
+            id: 'fefo-critical-alert',
+            type: 'expiry',
+            title: 'FEFO: Muddati Tugayotgan Dori',
+            message: `${criticalCount} ta preparatning yaroqlilik muddatiga 30 kun yoki undan kam qoldi. Birinchi bo'lib sotilishi shart!`,
+            time: 'Hozir',
+            isRead: false,
+            actionTab: 'products'
+          },
+          ...prev
+        ];
+      });
     }
-  ]);
+  }, [criticalCount]);
 
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
@@ -435,7 +410,12 @@ export const TopBar: React.FC<TopBarProps> = ({
 
                 {/* Ro'yxat */}
                 <div className="max-h-[360px] overflow-y-auto divide-y divide-slate-100">
-                  {notifications.map((item) => {
+                  {notifications.length === 0 ? (
+                    <div className="py-10 text-center text-xs text-slate-400">
+                      Hozircha yangi bildirishnomalar yo'q
+                    </div>
+                  ) : (
+                    notifications.map((item) => {
                     const isExpiry = item.type === 'expiry';
                     const isDebt = item.type === 'debt';
                     const isStock = item.type === 'stock';
@@ -500,7 +480,8 @@ export const TopBar: React.FC<TopBarProps> = ({
                         </div>
                       </div>
                     );
-                  })}
+                  })
+                )}
                 </div>
 
                 {/* Footer */}

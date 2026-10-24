@@ -69,8 +69,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     { label: 'Sat', value: 58, amount: '1.7M', isPeak: false },
   ];
 
-  // Namuna oxirgi sotuvlar (agar DB ulanmagan bo'lsa zaxira)
-  const displaySales = salesHistory.length > 0 ? salesHistory : [
+  // Faqat lokal sinov (Local Dev) uchun fallback, productionda toza bo'ladi
+  const displaySales = salesHistory.length > 0 
+    ? salesHistory 
+    : (import.meta.env.DEV ? [
     {
       id: 's-1',
       receipt_number: 'CHK-894102',
@@ -81,41 +83,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       debt_amount: 0,
       customer_name: 'Rustam aka',
       created_at: new Date(Date.now() - 10 * 60000).toISOString()
-    },
-    {
-      id: 's-2',
-      receipt_number: 'CHK-894101',
-      total_amount: 280000,
-      payment_type: 'debt' as const,
-      cash_amount: 0,
-      card_amount: 0,
-      debt_amount: 280000,
-      customer_name: 'Shavkat fermer (Nasiya)',
-      created_at: new Date(Date.now() - 35 * 60000).toISOString()
-    },
-    {
-      id: 's-3',
-      receipt_number: 'CHK-894100',
-      total_amount: 85000,
-      payment_type: 'card' as const,
-      cash_amount: 0,
-      card_amount: 85000,
-      debt_amount: 0,
-      customer_name: 'Humoyun',
-      created_at: new Date(Date.now() - 70 * 60000).toISOString()
-    },
-    {
-      id: 's-4',
-      receipt_number: 'CHK-894099',
-      total_amount: 350000,
-      payment_type: 'cash' as const,
-      cash_amount: 350000,
-      card_amount: 0,
-      debt_amount: 0,
-      customer_name: 'Bahrom aka (Issiqxona)',
-      created_at: new Date(Date.now() - 110 * 60000).toISOString()
     }
-  ];
+  ] : []);
 
   const periodMultiplier = period === 'today' ? 1 : period === 'week' ? 4.8 : 18.5;
   const currentRevenue = Math.round((metrics?.today_revenue || 0) * periodMultiplier);
@@ -384,7 +353,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           {/* Oxirgi Sotuvlar Ro'yxati */}
           <div className="divide-y divide-slate-100 max-h-[220px] overflow-y-auto pr-1">
-            {displaySales.slice(0, 5).map((sale) => {
+            {displaySales.length === 0 ? (
+              <div className="py-10 text-center text-slate-400 text-xs">
+                Hozircha sotuvlar amalga oshirilmagan
+              </div>
+            ) : (
+              displaySales.slice(0, 5).map((sale) => {
               const isDebt = sale.payment_type === 'debt';
               const isCard = sale.payment_type === 'card';
 
@@ -429,7 +403,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   </div>
                 </div>
               );
-            })}
+            })
+          )}
           </div>
         </div>
       </div>
