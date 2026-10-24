@@ -1,6 +1,7 @@
 import { Product, Customer, DashboardMetrics } from '../types';
 
-const API_BASE = '/api/biznesgo';
+const BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+const API_BASE = `${BASE_URL}/api/biznesgo`;
 
 export function formatUZS(val: number): string {
   return new Intl.NumberFormat('uz-UZ').format(Math.round(val || 0)) + " so'm";
@@ -11,6 +12,12 @@ export const api = {
   async getDashboardMetrics(): Promise<DashboardMetrics> {
     const res = await fetch(`${API_BASE}/dashboard/metrics`);
     if (!res.ok) throw new Error('Dashboard ma\'lumotlarini yuklab bo\'lmadi');
+    return res.json();
+  },
+
+  async getSalesHistory(): Promise<{ sales: any[] }> {
+    const res = await fetch(`${API_BASE}/sales/history`);
+    if (!res.ok) throw new Error('Sotuvlar tarixini yuklab bo\'lmadi');
     return res.json();
   },
 

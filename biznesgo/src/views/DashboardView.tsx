@@ -46,11 +46,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       setMetrics(metricsData);
 
       // Eng so'nggi sotuvlar tarixini olish
-      const historyRes = await fetch('/api/biznesgo/sales/history');
-      if (historyRes.ok) {
-        const histData = await historyRes.json();
-        setSalesHistory(histData.sales || []);
-      }
+      const histData = await api.getSalesHistory();
+      setSalesHistory(histData.sales || []);
     } catch (err) {
       console.error(err);
     } finally {
