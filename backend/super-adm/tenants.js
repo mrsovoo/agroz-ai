@@ -222,14 +222,6 @@ router.get('/', requireAdminAuth, requirePermission('tenants:view'), async (req,
         }
       };
     });
-        source_label: isTg ? 'Telegram Bot (@biznesgo_bot)' : 'Veb Brauzer',
-        total_revenue: rev,
-        sales_count: cnt,
-        is_active: t.is_active !== false,
-        status: t.is_active !== false ? 'active' : 'suspended',
-        created_at: t.created_at
-      };
-    });
 
     // Qidiruv va filtrlar
     if (search && search.trim()) {
