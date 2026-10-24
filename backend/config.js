@@ -3,11 +3,20 @@ const { Pool } = require('pg');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
+let sslConfig = false;
+if (process.env.DATABASE_URL) {
+  if (process.env.DATABASE_URL.includes('railway.internal')) {
+    sslConfig = false;
+  } else if (process.env.DATABASE_URL.includes('sslmode=require') || process.env.DATABASE_URL.includes('neon.tech') || process.env.DATABASE_URL.includes('supabase.co')) {
+    sslConfig = { rejectUnauthorized: false };
+  } else if (isProduction && !process.env.DATABASE_URL.includes('localhost') && !process.env.DATABASE_URL.includes('127.0.0.1')) {
+    sslConfig = { rejectUnauthorized: false };
+  }
+}
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/biznesgo',
-  ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes('neon.tech') 
-    ? { rejectUnauthorized: false } 
-    : (isProduction ? { rejectUnauthorized: false } : false)
+  ssl: sslConfig
 });
 
 // Pool xatoliklarini ushlash

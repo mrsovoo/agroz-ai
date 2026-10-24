@@ -4,6 +4,7 @@
   "private": true,
   "description": "BiznesGO B2B Platform - Phase 1: Agro-Vet Sector Only",
   "scripts": {
+    "postinstall": "cd backend && npm install",
     "build": "cd biznesgo && npm install && npm run build",
     "start": "cd backend && npm start",
     "start:backend": "cd backend && npm start",

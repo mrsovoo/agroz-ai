@@ -16,14 +16,22 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Health Check
-app.get('/health', (req, res) => {
-  res.json({
+// Health Check (Railway, Vercel va monitoring barcha yo'llari uchun)
+const healthHandler = (req, res) => {
+  res.status(200).json({
     status: 'ok',
     platform: 'BiznesGO B2B',
     active_sector: 'agro_vet',
-    version: '1.0.0-agrovet'
+    version: '1.0.0-agrovet',
+    uptime: Math.round(process.uptime())
   });
+};
+
+app.get('/health', healthHandler);
+app.get('/healthz', healthHandler);
+app.get('/api/health', healthHandler);
+app.get('/', (req, res) => {
+  res.status(200).send('BiznesGO B2B Agro-Vet API is running.');
 });
 
 // B2B Agro-Vet API yo'nalishlari
