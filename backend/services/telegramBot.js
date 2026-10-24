@@ -1,6 +1,15 @@
 const { pool } = require('../config');
 
 const DEFAULT_BOT_TOKEN = '8546564636:AAE8WDjtaFDMr4Mb35KX4uBfPD5b-dB28LM';
+
+function getBotToken() {
+  const envToken = process.env.TELEGRAM_BOT_TOKEN || '';
+  // Agar Railway'da eski bot tokeni saqlanib qolgan bo'lsa ham, qat'iy @biznesgo_bot tokenini ishlatish:
+  if (envToken && envToken.startsWith('8546564636')) {
+    return envToken;
+  }
+  return DEFAULT_BOT_TOKEN;
+}
 const registrationSessions = new Map();
 
 // Telegram Bot API Native Client
@@ -465,7 +474,7 @@ async function handleTelegramMessage(client, msg) {
 // Webhook update kelganda
 async function handleTelegramUpdate(update) {
   if (!globalBotClient) {
-    const token = process.env.TELEGRAM_BOT_TOKEN || DEFAULT_BOT_TOKEN;
+    const token = getBotToken();
     globalBotClient = new TelegramApiClient(token);
   }
   if (update && update.message) {
@@ -474,7 +483,7 @@ async function handleTelegramUpdate(update) {
 }
 
 function initTelegramBot() {
-  const token = process.env.TELEGRAM_BOT_TOKEN || DEFAULT_BOT_TOKEN;
+  const token = getBotToken();
   const webAppUrl = process.env.WEBAPP_URL || 'https://biznesgo.vercel.app';
 
   if (!token) {
