@@ -1,12 +1,19 @@
 {
-  "buildCommand": "cd biznesgo && npm install && npm run build",
-  "outputDirectory": "biznesgo/dist",
+  "buildCommand": "npm run build:vercel",
+  "outputDirectory": "dist_combined",
   "framework": "vite",
   "rewrites": [
+    {
+      "source": "/admin",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin/(.*)",
+      "destination": "/admin/index.html"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
     }
   ]
 }
-

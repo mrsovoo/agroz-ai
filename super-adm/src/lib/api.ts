@@ -3,6 +3,8 @@ import { AdminUser, AuditLog, AdminRole, Tenant, DashboardData } from '../types'
 const TOKEN_KEY = 'biznesgo_admin_token';
 const USER_KEY = 'biznesgo_admin_user';
 
+const BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+
 export const authStorage = {
   getToken: () => localStorage.getItem(TOKEN_KEY),
   setToken: (token: string) => localStorage.setItem(TOKEN_KEY, token),
@@ -33,7 +35,9 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(endpoint, {
+  const url = BASE_URL ? `${BASE_URL}${endpoint}` : endpoint;
+
+  const response = await fetch(url, {
     ...options,
     headers
   });

@@ -113,6 +113,15 @@ app.use('/api/biznesgo/settings', authMiddleware, settingsRoutes);
 const superAdminRoutes = require('./super-adm');
 app.use(['/v1/admin', '/api/v1/admin'], superAdminRoutes);
 
+// Super Admin Frontend Static Serving (/admin)
+const adminDistPath = path.join(__dirname, 'public', 'admin');
+if (fs.existsSync(adminDistPath)) {
+  app.use('/admin', express.static(adminDistPath));
+  app.get(['/admin', '/admin/*'], (req, res) => {
+    res.sendFile(path.join(adminDistPath, 'index.html'));
+  });
+}
+
 // Global xatoliklarni ushlash
 app.use((err, req, res, next) => {
   console.error('Unhandled server error:', err);
