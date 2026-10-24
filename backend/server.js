@@ -8,6 +8,7 @@ const productsRoutes = require('./routes/biznesgo/products');
 const salesRoutes = require('./routes/biznesgo/sales');
 const debtsRoutes = require('./routes/biznesgo/debts');
 const dashboardRoutes = require('./routes/biznesgo/dashboard');
+const { initTelegramBot } = require('./services/telegramBot');
 
 const app = express();
 
@@ -40,5 +41,6 @@ app.use((err, req, res, next) => {
 
 app.listen(port, () => {
   console.log(`[BiznesGO B2B Agro-Vet] Server listening on port ${port}`);
+  initTelegramBot();
 });
 

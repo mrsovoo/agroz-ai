@@ -27,6 +27,20 @@ export const App: React.FC = () => {
   };
 
   useEffect(() => {
+    // Telegram WebApp orqali ochilganda to'liq mobil ilova rejimiga o'tkazish
+    if (window.Telegram?.WebApp) {
+      const tg = window.Telegram.WebApp;
+      tg.ready();
+      tg.expand();
+      try {
+        tg.setHeaderColor('#fafafa');
+        tg.setBackgroundColor('#fafafa');
+        tg.enableClosingConfirmation();
+      } catch (err) {
+        console.warn('Telegram WebApp custom styling qo\'llab-quvvatlanmadi:', err);
+      }
+    }
+
     loadGlobalMetrics();
     const interval = setInterval(loadGlobalMetrics, 30000);
     return () => clearInterval(interval);
