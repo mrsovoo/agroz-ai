@@ -167,6 +167,29 @@ export const api = {
     return json;
   },
 
+  async createRegisterSession(payload: { name: string; owner_name?: string; phone: string; address?: string }): Promise<{ token: string; bot_url: string }> {
+    const res = await fetch(`${API_BASE}/auth/register-session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...payload, sector_type: 'agro_vet' })
+    });
+    const json = await res.json();
+    if (!res.ok || json.success === false) {
+      throw new Error(json.error || 'Sessiya yaratishda xatolik yuz berdi');
+    }
+    return json;
+  },
+
+  async checkSessionStatus(token: string): Promise<{ status: 'pending' | 'approved' | 'expired'; token?: string; tenant?: any }> {
+    try {
+      const res = await fetch(`${API_BASE}/auth/session/status?token=${encodeURIComponent(token)}`);
+      const json = await res.json();
+      return json;
+    } catch (err) {
+      return { status: 'pending' };
+    }
+  },
+
   async login(phone: string): Promise<{ token: string; tenant: any }> {
     try {
       const res = await fetch(`${API_BASE}/auth/login`, {

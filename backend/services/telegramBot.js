@@ -1,4 +1,5 @@
-const { pool } = require('../config');
+const { pool, jwtSecret } = require('../config');
+const jwt = require('jsonwebtoken');
 
 const DEFAULT_BOT_TOKEN = '8546564636:AAE8WDjtaFDMr4Mb35KX4uBfPD5b-dB28LM';
 
@@ -44,6 +45,23 @@ class TelegramApiClient {
     });
   }
 
+  async answerCallbackQuery(callbackQueryId, text = '', showAlert = false) {
+    return this.call('answerCallbackQuery', {
+      callback_query_id: callbackQueryId,
+      text,
+      show_alert: showAlert
+    });
+  }
+
+  async editMessageText(chatId, messageId, text, options = {}) {
+    return this.call('editMessageText', {
+      chat_id: chatId,
+      message_id: messageId,
+      text,
+      ...options
+    });
+  }
+
   async setChatMenuButton(webAppUrl) {
     return this.call('setChatMenuButton', {
       menu_button: {
@@ -73,7 +91,7 @@ class TelegramApiClient {
     }
   }
 
-  startPolling(onMessage) {
+  startPolling(onMessage, onCallback) {
     if (this.isPolling) return;
     this.isPolling = true;
 
@@ -84,8 +102,10 @@ class TelegramApiClient {
         if (data.ok && Array.isArray(data.result)) {
           for (const update of data.result) {
             this.offset = update.update_id + 1;
-            if (update.message) {
+            if (update.message && onMessage) {
               await onMessage(update.message);
+            } else if (update.callback_query && onCallback) {
+              await onCallback(update.callback_query);
             }
           }
         }
@@ -145,6 +165,43 @@ async function handleTelegramMessage(client, msg) {
   // 1. /start buyrug'i
   if (text.startsWith('/start')) {
     try {
+      const parts = text.split(' ');
+      const startPayload = parts[1] ? parts[1].trim() : '';
+
+      // Agar start payload ro'yxatdan o'tish sessiyasi bo'lsa (masalan: reg_abcdef)
+      if (startPayload && startPayload.startsWith('reg_')) {
+        const session = registrationSessions.get(startPayload);
+        if (session) {
+          session.tgUserId = tgUserId;
+          session.tgChatId = chatId;
+          phoneChatMap.set(session.phone.replace(/\D/g, ''), chatId);
+          if (tgUserId) phoneChatMap.set(String(tgUserId), chatId);
+
+          return client.sendMessage(
+            chatId,
+            `🌿💊 *BiznesGO: Yangi Dorixonani Tasdiqlash*\n\n` +
+            `🏢 *Dorixona:* ${session.name}\n` +
+            `👤 *Mas'ul:* ${session.owner_name || firstName}\n` +
+            `📱 *Telefon:* \`${session.phone}\`\n` +
+            (session.address ? `📍 *Manzil:* ${session.address}\n\n` : `\n`) +
+            `Barcha ma'lumotlar to'g'ri bo'lsa, pastdagi tugmani bosing va faollashtiring:`,
+            {
+              parse_mode: 'Markdown',
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    {
+                      text: '✅ Tasdiqlash va Faollashtirish',
+                      callback_data: `approve_${startPayload}`
+                    }
+                  ]
+                ]
+              }
+            }
+          );
+        }
+      }
+
       let userExists = false;
       let merchantName = 'Agro-Vet Dorixona';
 
@@ -512,6 +569,143 @@ async function handleTelegramMessage(client, msg) {
   }
 }
 
+// Ro'yxatdan o'tishni tasdiqlash va toza 0-holatdagi do'konni yaratish
+async function finalizeRegistration(session, tgUserId, chatId) {
+  const phone = session.phone.startsWith('+') ? session.phone : `+${session.phone}`;
+  const name = session.name || 'Agro-Vet Dorixona';
+  const sector = session.sector_type || 'agro_vet';
+  const address = session.address || '';
+  const ownerName = session.owner_name || name;
+
+  let tenant;
+  try {
+    const existing = await pool.query('SELECT * FROM tenants WHERE phone = $1', [phone]);
+    if (existing.rows.length > 0) {
+      tenant = existing.rows[0];
+      await pool.query('UPDATE tenants SET name = $1, address = $2 WHERE id = $3', [name, address, tenant.id]);
+    } else {
+      const tenantRes = await pool.query(
+        `INSERT INTO tenants (name, phone, sector_type, address)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id, name, phone, sector_type, plan`,
+        [name, phone, sector, address]
+      );
+      tenant = tenantRes.rows[0];
+
+      // 0-holatdagi filial va ombor
+      const branchRes = await pool.query(
+        `INSERT INTO branches (tenant_id, name, code, is_main)
+         VALUES ($1, 'Bosh Do\'kon', 'MAIN', TRUE)
+         RETURNING id`,
+        [tenant.id]
+      );
+      const branchId = branchRes.rows[0].id;
+
+      await pool.query(
+        `INSERT INTO warehouses (tenant_id, branch_id, name, code, type)
+         VALUES ($1, $2, 'Asosiy Ombor', 'WH-01', 'main')`,
+        [tenant.id, branchId]
+      );
+
+      // Kassa (0 balans)
+      await pool.query(
+        `INSERT INTO cash_accounts (tenant_id, branch_id, name, account_type, balance)
+         VALUES ($1, $2, 'Asosiy Kassa', 'cash', 0)`,
+        [tenant.id, branchId]
+      );
+
+      // Bosh foydalanuvchi
+      await pool.query(
+        `INSERT INTO users (tenant_id, branch_id, phone, full_name, role_code)
+         VALUES ($1, $2, $3, $4, 'owner')`,
+        [tenant.id, branchId, phone, ownerName]
+      );
+    }
+
+    // Merchants jadvaliga tg bog'lash
+    await pool.query(
+      `INSERT INTO merchants (id, tenant_id, phone, name, business_type, address)
+       VALUES ($1, $1, $2, $3, $4, $5)
+       ON CONFLICT (phone) DO UPDATE SET name = EXCLUDED.name, address = EXCLUDED.address`,
+      [tenant.id, phone, name, sector, `tg:${tgUserId || chatId}`]
+    );
+  } catch (dbErr) {
+    console.warn('[finalizeRegistration DB fallback]:', dbErr.message);
+    tenant = {
+      id: '00000000-0000-0000-0000-000000000001',
+      name,
+      phone,
+      sector_type: sector,
+      business_type: sector,
+      plan: 'standard'
+    };
+  }
+
+  const tokenPayload = {
+    id: tenant.id,
+    tenant_id: tenant.id,
+    phone: tenant.phone,
+    name: tenant.name,
+    sector_type: tenant.sector_type || sector,
+    business_type: tenant.sector_type || sector,
+    role_code: 'owner'
+  };
+
+  const jwtToken = jwt.sign(tokenPayload, jwtSecret, { expiresIn: '90d' });
+  return { tenant: { ...tenant, business_type: sector }, jwtToken };
+}
+
+// Telegram Inline tugma bosilganda (Callback Query)
+async function handleTelegramCallbackQuery(client, cb) {
+  const data = cb.data || '';
+  const chatId = cb.message?.chat?.id;
+  const messageId = cb.message?.message_id;
+  const cbId = cb.id;
+
+  if (data.startsWith('approve_reg_')) {
+    const token = data.replace('approve_', '');
+    const session = registrationSessions.get(token);
+    if (!session) {
+      return client.answerCallbackQuery(cbId, 'Sessiya topilmadi yoki muddati tugagan', true);
+    }
+
+    try {
+      const { tenant, jwtToken } = await finalizeRegistration(session, cb.from?.id, chatId);
+      session.status = 'approved';
+      session.tenant = tenant;
+      session.jwtToken = jwtToken;
+
+      await client.answerCallbackQuery(cbId, '✅ Dorixona muvaffaqiyatli tasdiqlandi!', false);
+
+      const webAppUrl = process.env.WEBAPP_URL || 'https://biznesgo.vercel.app';
+      await client.editMessageText(
+        chatId,
+        messageId,
+        `✅ *Dorixona muvaffaqiyatli tasdiqlandi va faollashtirildi!* 🌿💊\n\n` +
+        `🏢 *${session.name}*\n` +
+        `📱 *${session.phone}*\n\n` +
+        `Brauzeringizda boshqaruv paneli toza (0) holatda ochildi. Xush kelibsiz!`,
+        {
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: '🚀 BiznesGO Mobil Appni Ochish',
+                  web_app: { url: `${webAppUrl}?token=${jwtToken}&store=${encodeURIComponent(session.name)}` }
+                }
+              ]
+            ]
+          }
+        }
+      );
+    } catch (err) {
+      console.error('Approve error:', err);
+      await client.answerCallbackQuery(cbId, 'Xatolik: ' + err.message, true);
+    }
+  }
+}
+
 // Webhook update kelganda
 async function handleTelegramUpdate(update) {
   if (!globalBotClient) {
@@ -520,6 +714,8 @@ async function handleTelegramUpdate(update) {
   }
   if (update && update.message) {
     await handleTelegramMessage(globalBotClient, update.message);
+  } else if (update && update.callback_query) {
+    await handleTelegramCallbackQuery(globalBotClient, update.callback_query);
   }
 }
 
@@ -556,10 +752,16 @@ function initTelegramBot() {
     client.deleteWebhook()
       .then(() => {
         console.log('[Telegram Bot] Local rejim: Polling ishga tushirildi.');
-        client.startPolling((msg) => handleTelegramMessage(client, msg));
+        client.startPolling(
+          (msg) => handleTelegramMessage(client, msg),
+          (cb) => handleTelegramCallbackQuery(client, cb)
+        );
       })
       .catch(() => {
-        client.startPolling((msg) => handleTelegramMessage(client, msg));
+        client.startPolling(
+          (msg) => handleTelegramMessage(client, msg),
+          (cb) => handleTelegramCallbackQuery(client, cb)
+        );
       });
   }
 
@@ -608,4 +810,13 @@ async function sendOtpToTelegram(phone, code) {
   };
 }
 
-module.exports = { initTelegramBot, handleTelegramUpdate, TelegramApiClient, sendOtpToTelegram, phoneChatMap };
+module.exports = {
+  initTelegramBot,
+  handleTelegramUpdate,
+  TelegramApiClient,
+  sendOtpToTelegram,
+  phoneChatMap,
+  registrationSessions,
+  finalizeRegistration,
+  handleTelegramCallbackQuery
+};

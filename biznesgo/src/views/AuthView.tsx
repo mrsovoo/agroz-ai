@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { api, formatUzbekPhone, cleanPhone } from '../lib/api';
+import React, { useState, useEffect, useRef } from 'react';
+import { api, setToken, setUser, formatUzbekPhone, cleanPhone } from '../lib/api';
 import { BiznesGoLogo } from '../components/BiznesGoLogo';
 import {
   Pill,
@@ -13,7 +13,9 @@ import {
   Send,
   Lock,
   ArrowLeft,
-  RotateCw
+  RotateCw,
+  Loader2,
+  ExternalLink
 } from 'lucide-react';
 
 interface AuthViewProps {
@@ -22,7 +24,7 @@ interface AuthViewProps {
 
 export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
   const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
+  const [step, setStep] = useState<'phone' | 'otp' | 'waiting_bot'>('phone');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
@@ -39,6 +41,11 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
   const [registerPhone, setRegisterPhone] = useState('+998 ');
   const [address, setAddress] = useState('');
 
+  // Waiting Bot Session state
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [sessionBotUrl, setSessionBotUrl] = useState<string | null>(null);
+  const pollIntervalRef = useRef<any>(null);
+
   // Cooldown timer for OTP
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -47,6 +54,13 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
     }, 1000);
     return () => clearInterval(interval);
   }, [cooldown]);
+
+  // Clean polling interval on unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    };
+  }, []);
 
   // Telegram WebApp ichida ochilganda avtomatik autentifikatsiya
   useEffect(() => {
@@ -76,21 +90,15 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
     }
   };
 
-  // 1. Telefon kiritilgach OTP kod so'rash
-  const handleSendOtp = async (e: React.FormEvent) => {
+  // 1. KIRISH: Telefon kiritilgach Telegram bot orqali OTP so'rash
+  const handleSendLoginOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setInfoMessage(null);
 
-    const targetPhone = mode === 'login' ? loginPhone : registerPhone;
-    const cleaned = cleanPhone(targetPhone);
+    const cleaned = cleanPhone(loginPhone);
     if (!cleaned || cleaned.length < 13) {
       setError('Iltimos, telefon raqamni to\'liq kiriting (+998 90 000 0000)');
-      return;
-    }
-
-    if (mode === 'register' && !pharmacyName.trim()) {
-      setError('Dorixona nomini kiritishingiz shart');
       return;
     }
 
@@ -103,7 +111,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
       setInfoMessage(
         res.sent_to_bot
           ? 'Tasdiqlash kodi Telegram botingizga (@biznesgo_bot) yuborildi'
-          : 'Tasdiqlash kodi tayyorlandi. Telegramda @biznesgo_bot ga /start bosing.'
+          : 'Tasdiqlash kodi tayyorlandi. @biznesgo_bot ga /start bosing.'
       );
     } catch (err: any) {
       setError(err.message || 'Tasdiqlash kodini yuborishda xatolik yuz berdi');
@@ -112,14 +120,12 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
     }
   };
 
-  // 2. OTP kodni tasdiqlash va kirish
-  const handleVerifyOtp = async (e: React.FormEvent) => {
+  // 2. KIRISH: OTP kodni tasdiqlash
+  const handleVerifyLoginOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    const targetPhone = mode === 'login' ? loginPhone : registerPhone;
-    const cleaned = cleanPhone(targetPhone);
-
+    const cleaned = cleanPhone(loginPhone);
     if (!otpCode.trim() || otpCode.trim().length < 6) {
       setError('Iltimos, 6 xonali tasdiqlash kodini to\'liq kiriting');
       return;
@@ -127,17 +133,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
 
     setLoading(true);
     try {
-      // Agar yangi ro'yxatdan o'tish bo'lsa, avval do'kon ma'lumotlarini saqlash
-      if (mode === 'register') {
-        try {
-          await api.register({
-            name: pharmacyName.trim(),
-            phone: cleaned,
-            address: address.trim() || undefined
-          });
-        } catch (_) {}
-      }
-
       const res = await api.verifyOtp(cleaned, otpCode.trim(), rememberDevice);
       onAuthSuccess(res.tenant, res.token);
     } catch (err: any) {
@@ -147,10 +142,65 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
     }
   };
 
+  // 3. RO'YXATDAN O'TISH: Ma'lumotlarni kiritib, to'g'ridan-to'g'ri Telegram Botga o'tish
+  const handleRegisterToBot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!pharmacyName.trim()) {
+      setError('Dorixona nomini kiritishingiz shart');
+      return;
+    }
+
+    const cleaned = cleanPhone(registerPhone);
+    if (!cleaned || cleaned.length < 13) {
+      setError('Aloqa telefon raqamini to\'liq kiriting (+998 90 000 0000)');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const session = await api.createRegisterSession({
+        name: pharmacyName.trim(),
+        owner_name: ownerName.trim() || undefined,
+        phone: cleaned,
+        address: address.trim() || undefined
+      });
+
+      setSessionToken(session.token);
+      setSessionBotUrl(session.bot_url);
+      setStep('waiting_bot');
+
+      // Botga o'tish (yangi oynada ochish)
+      window.open(session.bot_url, '_blank');
+
+      // Brauzerda tasdiqlashni kutish (har 2 soniyada tekshirish)
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = setInterval(async () => {
+        try {
+          const statusRes = await api.checkSessionStatus(session.token);
+          if (statusRes.status === 'approved' && statusRes.token && statusRes.tenant) {
+            clearInterval(pollIntervalRef.current);
+            setToken(statusRes.token, rememberDevice);
+            setUser(statusRes.tenant, rememberDevice);
+            onAuthSuccess(statusRes.tenant, statusRes.token);
+          } else if (statusRes.status === 'expired') {
+            clearInterval(pollIntervalRef.current);
+            setError('Tasdiqlash vaqti tugadi. Iltimos qaytadan urinib ko\'ring.');
+            setStep('phone');
+          }
+        } catch (_) {}
+      }, 2000);
+    } catch (err: any) {
+      setError(err.message || 'Ro\'yxatdan o\'tish sessiyasini yaratishda xatolik');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleResendOtp = async () => {
     if (cooldown > 0 || loading) return;
-    const targetPhone = mode === 'login' ? loginPhone : registerPhone;
-    const cleaned = cleanPhone(targetPhone);
+    const cleaned = cleanPhone(loginPhone);
     setLoading(true);
     setError(null);
     try {
@@ -184,20 +234,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
           </p>
         </div>
 
-        {/* Telegram Havolasi */}
-        <div className="space-y-2 pt-1">
-          <a
-            href="https://t.me/biznesgo_bot"
-            target="_blank"
-            rel="noreferrer"
-            className="w-full py-2.5 px-4 rounded-2xl bg-[#229ED9] hover:bg-[#1e8ec3] text-white font-bold text-xs shadow-md shadow-sky-500/15 transition flex items-center justify-center space-x-2 cursor-pointer active:scale-98"
-          >
-            <Send className="w-4 h-4" />
-            <span className="font-mono tracking-tight">t.me/biznesgo_bot</span>
-          </a>
-        </div>
-
-        {/* Tab Switcher: Kirish yoki Ro'yxatdan o'tish (faqat 1-bosqichda ko'rinadi) */}
+        {/* Tab Switcher: Faqat oddiy qadamda ko'rinadi */}
         {step === 'phone' && (
           <div className="flex bg-slate-100 p-1 rounded-2xl">
             <button
@@ -247,166 +284,67 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
           </div>
         )}
 
-        {/* 1-QADAM: TELEFON RAQAM KIRITISH */}
-        {step === 'phone' && (
-          <>
-            {mode === 'login' ? (
-              <form onSubmit={handleSendOtp} className="space-y-3.5 text-xs">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Telefon Raqam
-                  </label>
-                  <div className="relative">
-                    <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="tel"
-                      required
-                      placeholder="+998 90 000 0000"
-                      value={loginPhone}
-                      onKeyDown={handlePhoneKeyDown}
-                      onChange={(e) => setLoginPhone(formatUzbekPhone(e.target.value))}
-                      className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl font-mono font-bold text-slate-900 text-xs focus:outline-hidden focus:ring-2 focus:ring-black tracking-wide"
-                    />
-                  </div>
-                  <span className="text-[10px] text-slate-400 mt-1 block">
-                    Tasdiqlash kodi Telegram (@biznesgo_bot) orqali keladi
-                  </span>
-                </div>
+        {/* ========================================================================= */}
+        {/* 1. KIRISH REJIMI (Minimal: Faqat telefon + Eslab qolish + OTP)           */}
+        {/* ========================================================================= */}
+        {mode === 'login' && step === 'phone' && (
+          <form onSubmit={handleSendLoginOtp} className="space-y-3.5 text-xs">
+            <div>
+              <label className="font-bold text-slate-700 block mb-1">
+                Telefon Raqam
+              </label>
+              <div className="relative">
+                <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="tel"
+                  required
+                  placeholder="+998 90 000 0000"
+                  value={loginPhone}
+                  onKeyDown={handlePhoneKeyDown}
+                  onChange={(e) => setLoginPhone(formatUzbekPhone(e.target.value))}
+                  className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl font-mono font-bold text-slate-900 text-xs focus:outline-hidden focus:ring-2 focus:ring-black tracking-wide"
+                />
+              </div>
+              <span className="text-[10px] text-slate-400 mt-1 block">
+                Tasdiqlash kodi Telegram (@biznesgo_bot) orqali keladi
+              </span>
+            </div>
 
-                {/* Qurilmani eslab qolish katakchasi */}
-                <div className="flex items-center space-x-2 pt-1 select-none">
-                  <input
-                    type="checkbox"
-                    id="remember_login"
-                    checked={rememberDevice}
-                    onChange={(e) => setRememberDevice(e.target.checked)}
-                    className="w-4 h-4 rounded text-black border-slate-300 focus:ring-black cursor-pointer"
-                  />
-                  <label htmlFor="remember_login" className="text-[11px] font-medium text-slate-600 cursor-pointer">
-                    Ushbu qurilmani eslab qolish
-                  </label>
-                </div>
+            {/* Qurilmani eslab qolish katakchasi */}
+            <div className="flex items-center space-x-2 pt-1 select-none">
+              <input
+                type="checkbox"
+                id="remember_login"
+                checked={rememberDevice}
+                onChange={(e) => setRememberDevice(e.target.checked)}
+                className="w-4 h-4 rounded text-black border-slate-300 focus:ring-black cursor-pointer"
+              />
+              <label htmlFor="remember_login" className="text-[11px] font-medium text-slate-600 cursor-pointer">
+                Ushbu qurilmani eslab qolish
+              </label>
+            </div>
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-3 rounded-2xl bg-black hover:bg-slate-800 text-white font-bold text-xs shadow-xs transition flex items-center justify-center space-x-1.5 cursor-pointer active:scale-98 disabled:opacity-50"
-                >
-                  <span>{loading ? 'Yuborilmoqda...' : 'Kodni Olish'}</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={handleSendOtp} className="space-y-3 text-xs">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Dorixona Nomi <span className="text-rose-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <Store className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      required
-                      placeholder="Masalan: Agro-Vet Markaz"
-                      value={pharmacyName}
-                      onChange={(e) => setPharmacyName(e.target.value)}
-                      className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-900 text-xs"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Mas'ul Shaxs F.I.Sh.
-                  </label>
-                  <div className="relative">
-                    <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      placeholder="Masalan: Rustam Qodirov"
-                      value={ownerName}
-                      onChange={(e) => setOwnerName(e.target.value)}
-                      className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Telefon Raqam <span className="text-rose-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="tel"
-                      required
-                      placeholder="+998 90 000 0000"
-                      value={registerPhone}
-                      onKeyDown={handlePhoneKeyDown}
-                      onChange={(e) => setRegisterPhone(formatUzbekPhone(e.target.value))}
-                      className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-2xl font-mono font-bold text-slate-900 text-xs tracking-wide"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Manzil
-                  </label>
-                  <div className="relative">
-                    <MapPin className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      placeholder="Viloyat, tuman..."
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs"
-                    />
-                  </div>
-                </div>
-
-                {/* Qurilmani eslab qolish katakchasi */}
-                <div className="flex items-center space-x-2 pt-1 select-none">
-                  <input
-                    type="checkbox"
-                    id="remember_register"
-                    checked={rememberDevice}
-                    onChange={(e) => setRememberDevice(e.target.checked)}
-                    className="w-4 h-4 rounded text-emerald-600 border-slate-300 focus:ring-emerald-500 cursor-pointer"
-                  />
-                  <label htmlFor="remember_register" className="text-[11px] font-medium text-slate-600 cursor-pointer">
-                    Ushbu qurilmani eslab qolish
-                  </label>
-                </div>
-
-                <div className="p-2 bg-emerald-50/70 border border-emerald-200 rounded-2xl flex items-center space-x-2 text-[11px] text-emerald-800">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Veterinariya kassa va FEFO monitoringi biriktiriladi</span>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition flex items-center justify-center space-x-1.5 cursor-pointer active:scale-98 disabled:opacity-50"
-                >
-                  <span>{loading ? 'Yuborilmoqda...' : 'Tasdiqlash Kodini Olish'}</span>
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                </button>
-              </form>
-            )}
-          </>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 rounded-2xl bg-black hover:bg-slate-800 text-white font-bold text-xs shadow-xs transition flex items-center justify-center space-x-1.5 cursor-pointer active:scale-98 disabled:opacity-50"
+            >
+              <span>{loading ? 'Yuborilmoqda...' : 'Kodni Olish'}</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </form>
         )}
 
-        {/* 2-QADAM: TELEGRAM BOT OTP KODINI KIRITISH */}
-        {step === 'otp' && (
-          <form onSubmit={handleVerifyOtp} className="space-y-4 text-xs animate-in fade-in duration-200">
+        {/* KIRISH: OTP KODINI KIRITISH */}
+        {mode === 'login' && step === 'otp' && (
+          <form onSubmit={handleVerifyLoginOtp} className="space-y-4 text-xs animate-in fade-in duration-200">
             <div className="text-center space-y-1">
               <div className="w-10 h-10 rounded-full bg-sky-50 border border-sky-200 text-[#229ED9] flex items-center justify-center mx-auto mb-2">
                 <Lock className="w-5 h-5 text-[#229ED9]" />
               </div>
               <h3 className="font-bold text-slate-900 text-sm">Telegram Kodini Kiriting</h3>
               <p className="text-[11px] text-slate-500">
-                <span className="font-bold text-slate-700">{mode === 'login' ? loginPhone : registerPhone}</span> raqamiga biriktirilgan Telegram (@biznesgo_bot) hisobiga kod yuborildi.
+                <span className="font-bold text-slate-700">{loginPhone}</span> raqamiga biriktirilgan Telegram (@biznesgo_bot) hisobiga kod yuborildi.
               </p>
             </div>
 
@@ -457,6 +395,159 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
               </button>
             </div>
           </form>
+        )}
+
+        {/* ========================================================================= */}
+        {/* 2. YANGI DORIXONA REJIMI (Barcha ma'lumotlar + Eng tagida Bot Tasdiqlash) */}
+        {/* ========================================================================= */}
+        {mode === 'register' && step === 'phone' && (
+          <form onSubmit={handleRegisterToBot} className="space-y-3 text-xs">
+            <div>
+              <label className="font-bold text-slate-700 block mb-1">
+                Dorixona Nomi <span className="text-rose-500">*</span>
+              </label>
+              <div className="relative">
+                <Store className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  required
+                  placeholder="Masalan: Agro-Vet Markaz"
+                  value={pharmacyName}
+                  onChange={(e) => setPharmacyName(e.target.value)}
+                  className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-900 text-xs"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="font-bold text-slate-700 block mb-1">
+                Mas'ul Shaxs F.I.Sh.
+              </label>
+              <div className="relative">
+                <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Masalan: Rustam Qodirov"
+                  value={ownerName}
+                  onChange={(e) => setOwnerName(e.target.value)}
+                  className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="font-bold text-slate-700 block mb-1">
+                Aloqa Telefon Raqam <span className="text-rose-500">*</span>
+              </label>
+              <div className="relative">
+                <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="tel"
+                  required
+                  placeholder="+998 90 000 0000"
+                  value={registerPhone}
+                  onKeyDown={handlePhoneKeyDown}
+                  onChange={(e) => setRegisterPhone(formatUzbekPhone(e.target.value))}
+                  className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-2xl font-mono font-bold text-slate-900 text-xs tracking-wide"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="font-bold text-slate-700 block mb-1">
+                Manzil
+              </label>
+              <div className="relative">
+                <MapPin className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Viloyat, tuman..."
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs"
+                />
+              </div>
+            </div>
+
+            {/* Qurilmani eslab qolish katakchasi */}
+            <div className="flex items-center space-x-2 pt-1 select-none">
+              <input
+                type="checkbox"
+                id="remember_register"
+                checked={rememberDevice}
+                onChange={(e) => setRememberDevice(e.target.checked)}
+                className="w-4 h-4 rounded text-emerald-600 border-slate-300 focus:ring-emerald-500 cursor-pointer"
+              />
+              <label htmlFor="remember_register" className="text-[11px] font-medium text-slate-600 cursor-pointer">
+                Ushbu qurilmani eslab qolish
+              </label>
+            </div>
+
+            <div className="p-2 bg-emerald-50/70 border border-emerald-200 rounded-2xl flex items-center space-x-2 text-[11px] text-emerald-800">
+              <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Veterinariya kassa va FEFO monitoringi biriktiriladi (toza 0 holatda)</span>
+            </div>
+
+            {/* ENG TAGIDA: TELEGRAM BOTGA O'TIB TASDIQLASH TUGMASI */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 rounded-2xl bg-[#229ED9] hover:bg-[#1e8ec3] text-white font-bold text-xs shadow-md shadow-sky-500/20 transition flex items-center justify-center space-x-2 cursor-pointer active:scale-98 disabled:opacity-50 mt-1"
+            >
+              <Send className="w-4 h-4" />
+              <span>{loading ? 'Bog\'lanmoqda...' : 'Telegram Botda Tasdiqlash va Ochish'}</span>
+            </button>
+          </form>
+        )}
+
+        {/* RO'YXATDAN O'TISH: TELEGRAM BOTDA TASDIQLASHNI KUTISH */}
+        {mode === 'register' && step === 'waiting_bot' && (
+          <div className="space-y-4 text-center py-2 animate-in fade-in duration-200">
+            <div className="w-14 h-14 rounded-full bg-sky-50 border-2 border-sky-200 text-[#229ED9] flex items-center justify-center mx-auto relative">
+              <Send className="w-7 h-7 text-[#229ED9] -translate-x-0.5 translate-y-0.5" />
+              <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center">
+                <Loader2 className="w-3 h-3 text-white animate-spin" />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="font-bold text-slate-900 text-sm">Telegram orqali Tasdiqlash Kutilmoqda...</h3>
+              <p className="text-[11px] text-slate-500">
+                <span className="font-bold text-slate-700">{pharmacyName}</span> dorixonasi ma'lumotlari botga uzatildi.
+              </p>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 text-[11px] text-slate-600 text-left space-y-1 font-mono">
+              <div>🏢 Dorixona: <span className="font-bold text-slate-800">{pharmacyName}</span></div>
+              <div>📱 Telefon: <span className="font-bold text-slate-800">{registerPhone}</span></div>
+              <div className="text-[10px] text-emerald-700 pt-1">
+                Botda "Tasdiqlash" bosilishi bilan brauzer avtomatik toza 0 holatda ochiladi.
+              </div>
+            </div>
+
+            {sessionBotUrl && (
+              <a
+                href={sessionBotUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="w-full py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition flex items-center justify-center space-x-1.5 cursor-pointer"
+              >
+                <span>Telegram Botni Qayta Ochish</span>
+                <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+              </a>
+            )}
+
+            <button
+              type="button"
+              onClick={() => {
+                if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+                setStep('phone');
+              }}
+              className="text-xs text-slate-400 hover:text-slate-600 font-semibold pt-1"
+            >
+              &larr; Orqaga qaytish va tahrirlash
+            </button>
+          </div>
         )}
 
       </div>

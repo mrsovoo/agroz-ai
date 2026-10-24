@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { pool, jwtSecret, telegramBotToken } = require('../../config');
 const { SECTORS, getAllSectors, isValidSector, getSector } = require('../../core/sectors');
-const { sendOtpToTelegram } = require('../../services/telegramBot');
+const { sendOtpToTelegram, registrationSessions, finalizeRegistration } = require('../../services/telegramBot');
 
 // In-memory OTP ombori: cleanPhone -> { code, expiresAt, attempts }
 const otpStorage = new Map();
@@ -218,6 +218,69 @@ router.post('/register', async (req, res) => {
     console.error('Registration error:', err);
     res.status(500).json({ error: 'Ro\'yxatdan o\'tishda xatolik yuz berdi' });
   }
+});
+
+// 2.0. Ro'yxatdan o'tish sessiyasini yaratish (Telegram bot deep link uchun)
+router.post('/register-session', (req, res) => {
+  const { name, owner_name, phone, address, sector_type } = req.body;
+  if (!name || !phone) {
+    return res.status(400).json({ success: false, error: 'Dorixona nomi va telefon raqami kiritilishi shart' });
+  }
+
+  const token = 'reg_' + crypto.randomBytes(8).toString('hex');
+  const sessionData = {
+    token,
+    name: name.trim(),
+    owner_name: (owner_name || '').trim(),
+    phone: phone.trim(),
+    address: (address || '').trim(),
+    sector_type: isValidSector(sector_type) ? sector_type : 'agro_vet',
+    status: 'pending',
+    createdAt: Date.now(),
+    expiresAt: Date.now() + 15 * 60 * 1000 // 15 daqiqa
+  };
+
+  registrationSessions.set(token, sessionData);
+
+  return res.json({
+    success: true,
+    token,
+    bot_url: `https://t.me/biznesgo_bot?start=${token}`
+  });
+});
+
+// 2.0.1. Sessiya holatini tekshirish (Brauzer pollingi uchun)
+router.get('/session/status', (req, res) => {
+  const { token } = req.query;
+  if (!token) {
+    return res.status(400).json({ success: false, error: 'Token kiritilishi shart' });
+  }
+
+  const session = registrationSessions.get(token);
+  if (!session) {
+    return res.status(404).json({ success: false, status: 'expired', error: 'Tasdiqlash sessiyasi topilmadi yoki eskirgan' });
+  }
+
+  if (Date.now() > session.expiresAt) {
+    registrationSessions.delete(token);
+    return res.status(410).json({ success: false, status: 'expired', error: 'Sessiya muddati tugagan' });
+  }
+
+  if (session.status === 'approved') {
+    return res.json({
+      success: true,
+      status: 'approved',
+      token: session.jwtToken,
+      tenant: session.tenant,
+      merchant: session.tenant
+    });
+  }
+
+  return res.json({
+    success: true,
+    status: 'pending',
+    message: 'Telegram bot orqali tasdiqlash kutilmoqda'
+  });
 });
 
 // 2.1. Telegram orqali OTP kod yuborish
