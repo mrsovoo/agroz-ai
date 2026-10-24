@@ -9,11 +9,13 @@ import { TenantsView } from './views/TenantsView';
 import { Sidebar } from './components/Layout/Sidebar';
 import { TopBar } from './components/Layout/TopBar';
 import { VersionFooter } from './components/Layout/VersionFooter';
+import { ProfileSettingsModal } from './components/ProfileSettingsModal';
 
 export function App() {
   const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
   const [loading, setLoading] = useState<boolean>(true);
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
   useEffect(() => {
     const token = authStorage.getToken();
@@ -87,6 +89,7 @@ export function App() {
           title={getTabTitle()}
           user={currentUser}
           onLogout={handleLogout}
+          onOpenSettings={() => setIsSettingsOpen(true)}
         />
 
         <main className="flex-1 p-8 overflow-y-auto">
@@ -99,6 +102,14 @@ export function App() {
         </main>
 
         <VersionFooter />
+
+        {/* Profil va Xavfsizlik Sozlamalari Modali */}
+        <ProfileSettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          user={currentUser}
+          onUserUpdated={(updated) => setCurrentUser(updated)}
+        />
       </div>
     </div>
   );

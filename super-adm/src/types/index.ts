@@ -5,10 +5,12 @@ export type AdminStatus = 'active' | 'suspended';
 export interface AdminUser {
   id: string;
   email: string;
+  username?: string;
   full_name: string;
   role: AdminRole;
   status: AdminStatus;
   two_factor_enabled: boolean;
+  is_2fa_enabled?: boolean;
   last_login_at?: string;
   created_at: string;
 }

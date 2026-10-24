@@ -85,6 +85,25 @@ export const adminApi = {
     }>('/v1/admin/auth/me');
   },
 
+  async updateProfile(payload: {
+    current_password?: string;
+    new_password?: string;
+    name?: string;
+    full_name?: string;
+    username?: string;
+    email?: string;
+    is_2fa_enabled?: boolean;
+  }) {
+    return apiRequest<{
+      success: boolean;
+      message: string;
+      user: AdminUser;
+    }>('/v1/admin/auth/profile', {
+      method: 'PATCH',
+      body: JSON.stringify(payload)
+    });
+  },
+
   // Admins Management
   async listAdmins() {
     return apiRequest<{
