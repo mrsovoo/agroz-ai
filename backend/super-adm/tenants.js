@@ -295,3 +295,4 @@ router.patch('/:id/status', requireAdminAuth, requirePermission('tenants:manage'
 });
 
 module.exports = router;
+

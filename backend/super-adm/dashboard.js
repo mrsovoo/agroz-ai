@@ -227,3 +227,4 @@ router.get('/metrics', requireAdminAuth, requirePermission('dashboard:view'), as
 });
 
 module.exports = router;
+

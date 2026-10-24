@@ -353,3 +353,4 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateToTenant
     </div>
   );
 };
+

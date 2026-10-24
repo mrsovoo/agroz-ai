@@ -222,16 +222,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
     <div className="min-h-screen w-full bg-[#fafafa] flex items-center justify-center p-4 sm:p-6 font-['Plus_Jakarta_Sans',sans-serif]">
       <div className="w-full max-w-sm bg-white rounded-3xl border border-slate-200/90 shadow-xl p-6 sm:p-7 space-y-5 animate-in fade-in zoom-in-95 duration-200">
         
-        {/* Yuqori Qism: Logo va Sektor Belgisi */}
-        <div className="flex flex-col items-center text-center space-y-2">
+        {/* Yuqori Qism: Faqat Logo */}
+        <div className="flex flex-col items-center text-center pb-1">
           <BiznesGoLogo className="h-8 w-auto" />
-          <div className="inline-flex items-center space-x-1.5 px-3 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold">
-            <Pill className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Agro-Vet Dorixona</span>
-          </div>
-          <p className="text-[11px] text-slate-400 font-medium">
-            Kassa, ombor va muddat monitoringi
-          </p>
         </div>
 
         {/* Tab Switcher: Faqat oddiy qadamda ko'rinadi */}
