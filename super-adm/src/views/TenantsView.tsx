@@ -11,7 +11,15 @@ import {
   Receipt, 
   X, 
   Loader2,
-  DollarSign
+  DollarSign,
+  Archive,
+  Database,
+  Copy,
+  Check,
+  Calendar,
+  Phone,
+  MapPin,
+  Tag
 } from 'lucide-react';
 import { ResourceTable } from '../components/ResourceTable';
 import { Tenant, ResourceConfig } from '../types';
@@ -26,6 +34,10 @@ export const TenantsView: React.FC = () => {
   // Detail Modal State
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+
+  // Neon Arxiv Modali State
+  const [selectedArchiveTenant, setSelectedArchiveTenant] = useState<Tenant | null>(null);
+  const [copiedJson, setCopiedJson] = useState(false);
 
   const fetchTenants = async () => {
     setLoading(true);
@@ -55,6 +67,17 @@ export const TenantsView: React.FC = () => {
     }
   };
 
+  const handleOpenArchive = (tenant: Tenant) => {
+    setSelectedArchiveTenant(tenant);
+    setCopiedJson(false);
+  };
+
+  const handleCopyJson = (data: any) => {
+    navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+    setCopiedJson(true);
+    setTimeout(() => setCopiedJson(false), 2000);
+  };
+
   const handleToggleStatus = async (tenant: Tenant) => {
     const nextStatus = tenant.status === 'active' ? 'suspended' : 'active';
     const reason = window.prompt(
@@ -74,6 +97,9 @@ export const TenantsView: React.FC = () => {
       await fetchTenants();
       if (selectedTenant && selectedTenant.id === tenant.id) {
         setSelectedTenant(prev => prev ? ({ ...prev, status: nextStatus, is_active: nextStatus === 'active' }) : null);
+      }
+      if (selectedArchiveTenant && selectedArchiveTenant.id === tenant.id) {
+        setSelectedArchiveTenant(prev => prev ? ({ ...prev, status: nextStatus, is_active: nextStatus === 'active' }) : null);
       }
     } catch (err: any) {
       alert(err.message || 'Holatni o\'zgartirishda xatolik yuz berdi');
@@ -212,13 +238,24 @@ export const TenantsView: React.FC = () => {
         loading={loading}
         onRefresh={fetchTenants}
         actions={(tenant) => (
-          <div className="flex items-center justify-end space-x-2">
+          <div className="flex items-center justify-end space-x-1.5">
+            {/* Arxiv tugmasi: Neon PostgreSQL ro'yxatdan o'tgan foydalanuvchilar ma'lumotlarini ochadi */}
+            <button
+              onClick={() => handleOpenArchive(tenant)}
+              className="px-2 py-1 bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 border border-amber-800/60 rounded text-xs font-medium transition-colors flex items-center space-x-1 shadow-sm"
+              title="Neon bazadagi arxiv ma'lumotlarini ko'rish"
+            >
+              <Archive className="w-3.5 h-3.5" />
+              <span className="hidden md:inline text-[11px]">Arxiv</span>
+            </button>
+
             <button
               onClick={() => handleOpenDetail(tenant.id)}
               className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded text-xs font-medium transition-colors"
             >
               Batafsil
             </button>
+
             <button
               onClick={() => handleToggleStatus(tenant)}
               className={`p-1 rounded border transition-colors ${
@@ -233,6 +270,153 @@ export const TenantsView: React.FC = () => {
           </div>
         )}
       />
+
+      {/* Neon PostgreSQL Ro'yxatdan O'tganlar Arxiv Modali */}
+      {selectedArchiveTenant && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-amber-900/50 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-amber-950/20">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                  <Archive className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h3 className="font-bold text-white text-sm">Neon DB — Ro'yxatdan O'tish Arxiv Kartochkasi</h3>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-950 border border-amber-800/70 text-amber-300 font-mono font-semibold">
+                      PostgreSQL
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    ID: <span className="font-mono text-slate-300">{selectedArchiveTenant.id}</span>
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setSelectedArchiveTenant(null)}
+                className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-4 text-xs text-slate-300">
+              {/* Asosiy Arxiv Ma'lumotlari */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="bg-slate-800/50 border border-slate-700/60 rounded-xl p-3.5 space-y-1">
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider flex items-center space-x-1">
+                    <Building2 className="w-3 h-3 text-amber-400" />
+                    <span>Do'kon / Dorixona Nomi</span>
+                  </span>
+                  <p className="font-semibold text-white text-sm">{selectedArchiveTenant.name}</p>
+                  <p className="text-[11px] text-slate-400">
+                    Mas'ul: <span className="text-slate-200 font-medium">{selectedArchiveTenant.archive_data?.owner_name || selectedArchiveTenant.name}</span>
+                  </p>
+                </div>
+
+                <div className="bg-slate-800/50 border border-slate-700/60 rounded-xl p-3.5 space-y-1">
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider flex items-center space-x-1">
+                    <Phone className="w-3 h-3 text-sky-400" />
+                    <span>Telefon Raqami</span>
+                  </span>
+                  <p className="font-mono font-bold text-sky-300 text-sm">
+                    {selectedArchiveTenant.phone || selectedArchiveTenant.masked_phone}
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    Holati: <span className={`font-semibold ${selectedArchiveTenant.status === 'active' ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {selectedArchiveTenant.status === 'active' ? 'Faol' : 'To\'xtatilgan'}
+                    </span>
+                  </p>
+                </div>
+
+                <div className="bg-slate-800/50 border border-slate-700/60 rounded-xl p-3.5 space-y-1">
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider flex items-center space-x-1">
+                    <Send className="w-3 h-3 text-sky-400" />
+                    <span>Manba va Telegram ID</span>
+                  </span>
+                  <p className="font-medium text-slate-200">{selectedArchiveTenant.source_label}</p>
+                  <p className="text-[11px] text-slate-400 font-mono">
+                    Telegram Chat ID: <span className="text-sky-300">{selectedArchiveTenant.archive_data?.telegram_chat_id || 'Mavjud emas'}</span>
+                  </p>
+                </div>
+
+                <div className="bg-slate-800/50 border border-slate-700/60 rounded-xl p-3.5 space-y-1">
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider flex items-center space-x-1">
+                    <Calendar className="w-3 h-3 text-emerald-400" />
+                    <span>Ro'yxatdan O'tgan Vaqti</span>
+                  </span>
+                  <p className="font-mono text-slate-200">
+                    {new Date(selectedArchiveTenant.created_at).toLocaleString('uz-UZ')}
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    Sektor: <span className="text-amber-300 font-medium">{selectedArchiveTenant.archive_data?.sector_type || 'agro_vet'}</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Manzil */}
+              <div className="bg-slate-800/40 border border-slate-800 rounded-xl p-3.5 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase tracking-wider flex items-center space-x-1">
+                  <MapPin className="w-3 h-3 text-red-400" />
+                  <span>Hudud va Manzil</span>
+                </span>
+                <p className="text-xs text-slate-200">
+                  <span className="font-semibold text-white">{selectedArchiveTenant.region}</span> — {selectedArchiveTenant.address}
+                </p>
+              </div>
+
+              {/* Xom Neon Baza Yozuvi (JSON) */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider flex items-center space-x-1">
+                    <Database className="w-3 h-3 text-purple-400" />
+                    <span>Neon PostgreSQL Xom Yozuvi (Raw Record)</span>
+                  </span>
+
+                  <button
+                    onClick={() => handleCopyJson(selectedArchiveTenant.archive_data?.raw_neon_record || selectedArchiveTenant)}
+                    className="flex items-center space-x-1 px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[11px] transition-colors border border-slate-700"
+                  >
+                    {copiedJson ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    <span>{copiedJson ? 'Nusxalandi!' : 'JSON Nusxa Olish'}</span>
+                  </button>
+                </div>
+
+                <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 overflow-x-auto max-h-56 font-mono text-[11px] text-slate-300 leading-relaxed shadow-inner">
+                  <pre>
+                    {JSON.stringify(selectedArchiveTenant.archive_data?.raw_neon_record || {
+                      tenant_id: selectedArchiveTenant.id,
+                      name: selectedArchiveTenant.name,
+                      phone: selectedArchiveTenant.phone,
+                      address: selectedArchiveTenant.address,
+                      source: selectedArchiveTenant.source,
+                      created_at: selectedArchiveTenant.created_at,
+                      status: selectedArchiveTenant.status
+                    }, null, 2)}
+                  </pre>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between">
+              <span className="text-[11px] text-slate-500">
+                Ma'lumotlar Neon PostgreSQL bazasidan real-vaqtda olingan
+              </span>
+
+              <button
+                onClick={() => setSelectedArchiveTenant(null)}
+                className="px-4 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition-colors border border-slate-700 font-medium"
+              >
+                Yopish
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Dorixona Batafsil Kartochkasi Modali */}
       {selectedTenant && (
@@ -254,12 +438,25 @@ export const TenantsView: React.FC = () => {
                 </div>
               </div>
 
-              <button
-                onClick={() => setSelectedTenant(null)}
-                className="text-slate-400 hover:text-white transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => {
+                    handleOpenArchive(selectedTenant);
+                    setSelectedTenant(null);
+                  }}
+                  className="px-2 py-1 bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 border border-amber-800/60 rounded text-xs font-medium transition-colors flex items-center space-x-1"
+                  title="Arxiv ma'lumotlarini ko'rish"
+                >
+                  <Archive className="w-3.5 h-3.5" />
+                  <span>Arxiv</span>
+                </button>
+                <button
+                  onClick={() => setSelectedTenant(null)}
+                  className="text-slate-400 hover:text-white transition-colors p-1"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Modal Body */}

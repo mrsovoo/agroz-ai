@@ -212,6 +212,13 @@ export const adminApi = {
     }>(`/v1/admin/tenants/${id}`);
   },
 
+  async getTenantArchive(id: string) {
+    return apiRequest<{
+      success: boolean;
+      archive: any;
+    }>(`/v1/admin/tenants/${id}/archive`);
+  },
+
   async toggleTenantStatus(id: string, status: 'active' | 'suspended', reason?: string) {
     return apiRequest<{
       success: boolean;

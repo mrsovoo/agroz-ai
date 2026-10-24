@@ -281,7 +281,27 @@ export const api = {
       const res = await authFetch(`${API_BASE}/dashboard/metrics`);
       if (res.ok) return await res.json();
     } catch (_) {}
-    return demoStore.metrics;
+    return {
+      today_revenue: 0,
+      cash_revenue: 0,
+      card_revenue: 0,
+      debt_revenue: 0,
+      today_profit: 0,
+      total_receipts: 0,
+      expired_count: 0,
+      critical_7_count: 0,
+      critical_expiry_count: 0,
+      warning_60_count: 0,
+      warning_90_count: 0,
+      out_of_stock_count: 0,
+      low_stock_count: 0,
+      total_debt: 0,
+      debtor_count: 0,
+      overdue_debt: 0,
+      overdue_debtors_count: 0,
+      sector_type: 'agro_vet',
+      urgent_expiry_drugs: []
+    };
   },
 
   async getSalesHistory(): Promise<{ sales: any[] }> {
@@ -289,23 +309,24 @@ export const api = {
       const res = await authFetch(`${API_BASE}/sales/history`);
       if (res.ok) return await res.json();
     } catch (_) {}
-    return { sales: demoStore.sales };
+    return { sales: [] };
   },
 
-  // 2. Mahsulotlar (Agro-Vet Dorixona)
+  // 2. Mahsulotlar (Agro-Vet Dorixona) - 0 full holatda bo'lishi ta'minlangan
   async getProducts(search?: string, filter?: string, sectorType?: SectorType): Promise<{ products: Product[]; sector_type?: string }> {
     try {
       const params = new URLSearchParams();
       if (search) params.append('search', search);
       if (filter) params.append('filter', filter);
-      params.append('sector_type', 'agro_vet');
+      params.append('sector_type', sectorType || 'agro_vet');
       const res = await authFetch(`${API_BASE}/products?${params.toString()}`);
       if (res.ok) {
         const json = await res.json();
-        if (json.products && json.products.length > 0) return json;
+        if (Array.isArray(json.products)) return json;
       }
     } catch (_) {}
-    return { products: demoStore.getProducts(search, filter), sector_type: 'agro_vet' };
+    // Agar serverda tovarlar bo'lmasa, do'kon toza 0 full holatda bo'ladi
+    return { products: [], sector_type: sectorType || 'agro_vet' };
   },
 
   async createProduct(data: {
@@ -374,10 +395,10 @@ export const api = {
       const res = await authFetch(`${API_BASE}/debts/customers`);
       if (res.ok) {
         const json = await res.json();
-        if (json.customers && json.customers.length > 0) return json;
+        if (Array.isArray(json.customers)) return json;
       }
     } catch (_) {}
-    return { customers: demoStore.customers };
+    return { customers: [] };
   },
 
   async createCustomer(data: {
@@ -463,10 +484,10 @@ export const api = {
       const res = await authFetch(`${API_BASE}/inventory/batches?${params.toString()}`);
       if (res.ok) {
         const json = await res.json();
-        if (json.batches && json.batches.length > 0) return json;
+        if (json.batches) return json;
       }
     } catch (_) {}
-    return { batches: demoStore.batches };
+    return { batches: [] };
   },
 
   async recallBatch(data: {
@@ -488,8 +509,8 @@ export const api = {
     return {
       message: 'Partiya karantinga olindi',
       batch: b,
-      affected_sales_count: 2,
-      affected_customers: [{ name: 'Rustam Qodirov', phone: '+998901234567' }]
+      affected_sales_count: 0,
+      affected_customers: []
     };
   },
 

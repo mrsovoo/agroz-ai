@@ -67,6 +67,22 @@ export interface Tenant {
   is_active: boolean;
   status: 'active' | 'suspended';
   created_at: string;
+  archive_data?: {
+    tenant_id: string;
+    store_name: string;
+    owner_name?: string;
+    phone: string;
+    masked_phone: string;
+    telegram_chat_id?: string | null;
+    source: TenantSource;
+    source_label: string;
+    sector_type: string;
+    address: string;
+    region: string;
+    registered_at: string;
+    is_active: boolean;
+    raw_neon_record?: any;
+  };
   stats?: {
     total_revenue: number;
     sales_count: number;

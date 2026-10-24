@@ -32,13 +32,34 @@ router.get('/', requireAdminAuth, requirePermission('tenants:view'), async (req,
 
     try {
       const tRes = await pool.query(`
-        SELECT t.id, t.name, t.phone, t.address, t.sector_type, t.is_active, t.created_at,
-               m.address as merchant_addr
+        SELECT t.id, t.name, t.phone, t.email, t.tax_id, t.address, t.sector_type, t.plan, t.is_active, t.settings, t.created_at, t.updated_at,
+               m.id as merchant_id, m.name as merchant_name, m.phone as merchant_phone, m.address as merchant_addr, m.created_at as merchant_created_at,
+               u.id as user_id, u.full_name as user_full_name, u.phone as user_phone, u.role_code as user_role, u.telegram_chat_id
         FROM tenants t
         LEFT JOIN merchants m ON m.tenant_id = t.id
+        LEFT JOIN LATERAL (
+          SELECT id, full_name, phone, role_code, telegram_chat_id
+          FROM users
+          WHERE users.tenant_id = t.id
+          ORDER BY (role_code = 'owner') DESC, created_at ASC
+          LIMIT 1
+        ) u ON TRUE
         ORDER BY t.created_at DESC
       `);
       tenants = tRes.rows;
+
+      // Agar faqat merchants jadvalida bo'lib, tenants jadvaliga tushmaganlar bo'lsa:
+      try {
+        const mOnlyRes = await pool.query(`
+          SELECT m.id, m.name, m.phone, m.address as merchant_addr, m.created_at, m.business_type as sector_type,
+                 m.name as user_full_name, m.phone as user_phone, m.address as address, TRUE as is_active
+          FROM merchants m
+          WHERE m.tenant_id IS NULL OR m.tenant_id NOT IN (SELECT id FROM tenants)
+        `);
+        if (mOnlyRes.rows && mOnlyRes.rows.length > 0) {
+          tenants = [...tenants, ...mOnlyRes.rows];
+        }
+      } catch (_) {}
 
       const sRes = await pool.query(`
         SELECT tenant_id, total_amount, created_at
@@ -58,6 +79,8 @@ router.get('/', requireAdminAuth, requirePermission('tenants:view'), async (req,
           phone: '+998901234567',
           address: 'Toshkent viloyati, Zangiota tumani',
           merchant_addr: 'tg:58493021',
+          telegram_chat_id: '58493021',
+          user_full_name: 'Shavkat Mamatov',
           sector_type: 'agro_vet',
           is_active: true,
           created_at: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString()
@@ -68,6 +91,8 @@ router.get('/', requireAdminAuth, requirePermission('tenants:view'), async (req,
           phone: '+998935552233',
           address: 'Toshkent viloyati, Chirchiq shahri',
           merchant_addr: 'tg:44820199',
+          telegram_chat_id: '44820199',
+          user_full_name: 'Jamshid Karimov',
           sector_type: 'agro_vet',
           is_active: true,
           created_at: new Date(Date.now() - 4 * 24 * 3600 * 1000).toISOString()
@@ -78,6 +103,8 @@ router.get('/', requireAdminAuth, requirePermission('tenants:view'), async (req,
           phone: '+998971112233',
           address: 'Samarqand viloyati, Pastdarg\'om tumani',
           merchant_addr: '',
+          telegram_chat_id: null,
+          user_full_name: 'Akmal Rustamov',
           sector_type: 'agro_vet',
           is_active: true,
           created_at: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString()
@@ -88,6 +115,8 @@ router.get('/', requireAdminAuth, requirePermission('tenants:view'), async (req,
           phone: '+998907778899',
           address: 'Farg\'ona viloyati, Quva tumani',
           merchant_addr: 'tg:66730122',
+          telegram_chat_id: '66730122',
+          user_full_name: 'Bobur Yoqubov',
           sector_type: 'agro_vet',
           is_active: true,
           created_at: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString()
@@ -98,6 +127,8 @@ router.get('/', requireAdminAuth, requirePermission('tenants:view'), async (req,
           phone: '+998914445566',
           address: 'Buxoro viloyati, G\'ijduvon tumani',
           merchant_addr: '',
+          telegram_chat_id: null,
+          user_full_name: 'Nodirbek Jalilov',
           sector_type: 'agro_vet',
           is_active: false,
           created_at: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString()
@@ -125,7 +156,9 @@ router.get('/', requireAdminAuth, requirePermission('tenants:view'), async (req,
 
     let result = tenants.map(t => {
       const isTg = (t.merchant_addr && t.merchant_addr.includes('tg:')) || 
-                   (t.address && t.address.includes('tg:'));
+                   (t.address && t.address.includes('tg:')) ||
+                   Boolean(t.telegram_chat_id);
+      const tgId = t.telegram_chat_id || (t.merchant_addr && t.merchant_addr.includes('tg:') ? t.merchant_addr.replace(/^.*tg:/, '') : null);
       const reg = extractRegion(t.address);
       const rev = revenueMap.get(t.id) || 0;
       const cnt = countMap.get(t.id) || 0;
@@ -138,6 +171,57 @@ router.get('/', requireAdminAuth, requirePermission('tenants:view'), async (req,
         address: t.address || 'Kiritilmagan',
         region: reg,
         source: isTg ? 'telegram_bot' : 'web_browser',
+        source_label: isTg ? 'Telegram Bot (@biznesgo_bot)' : 'Veb Brauzer',
+        total_revenue: rev,
+        sales_count: cnt,
+        is_active: t.is_active !== false,
+        status: t.is_active !== false ? 'active' : 'suspended',
+        created_at: t.created_at,
+        archive_data: {
+          tenant_id: t.id,
+          store_name: t.name,
+          owner_name: t.user_full_name || t.merchant_name || t.name,
+          phone: t.phone,
+          masked_phone: maskPhone(t.phone),
+          telegram_chat_id: tgId,
+          source: isTg ? 'telegram_bot' : 'web_browser',
+          source_label: isTg ? 'Telegram Bot (@biznesgo_bot)' : 'Veb Brauzer',
+          sector_type: t.sector_type || 'agro_vet',
+          address: t.address || 'Kiritilmagan',
+          region: reg,
+          registered_at: t.created_at,
+          is_active: t.is_active !== false,
+          raw_neon_record: {
+            tenant: {
+              id: t.id,
+              name: t.name,
+              phone: t.phone,
+              email: t.email || null,
+              tax_id: t.tax_id || null,
+              address: t.address,
+              sector_type: t.sector_type || 'agro_vet',
+              plan: t.plan || 'standard',
+              settings: t.settings || {},
+              created_at: t.created_at
+            },
+            user: t.user_id || t.user_full_name ? {
+              id: t.user_id || null,
+              full_name: t.user_full_name || t.name,
+              phone: t.user_phone || t.phone,
+              role: t.user_role || 'owner',
+              telegram_chat_id: t.telegram_chat_id || null
+            } : null,
+            merchant: t.merchant_id || t.merchant_addr ? {
+              id: t.merchant_id || null,
+              name: t.merchant_name || t.name,
+              phone: t.merchant_phone || t.phone,
+              address: t.merchant_addr || t.address,
+              created_at: t.merchant_created_at || t.created_at
+            } : null
+          }
+        }
+      };
+    });
         source_label: isTg ? 'Telegram Bot (@biznesgo_bot)' : 'Veb Brauzer',
         total_revenue: rev,
         sales_count: cnt,
@@ -190,7 +274,20 @@ router.get('/:id', requireAdminAuth, requirePermission('tenants:view'), async (r
     let productsCount = 0;
 
     try {
-      const tRes = await pool.query('SELECT * FROM tenants WHERE id = $1', [id]);
+      const tRes = await pool.query(`
+        SELECT t.*, m.name as merchant_name, m.address as merchant_addr,
+               u.full_name as user_full_name, u.phone as user_phone, u.role_code as user_role, u.telegram_chat_id
+        FROM tenants t
+        LEFT JOIN merchants m ON m.tenant_id = t.id
+        LEFT JOIN LATERAL (
+          SELECT full_name, phone, role_code, telegram_chat_id
+          FROM users
+          WHERE users.tenant_id = t.id
+          ORDER BY (role_code = 'owner') DESC, created_at ASC
+          LIMIT 1
+        ) u ON TRUE
+        WHERE t.id = $1
+      `, [id]);
       if (tRes.rows.length > 0) {
         tenant = tRes.rows[0];
       }
@@ -214,6 +311,8 @@ router.get('/:id', requireAdminAuth, requirePermission('tenants:view'), async (r
         id,
         name: 'Agro-Vet Zangiota Markaz',
         phone: '+998901234567',
+        user_full_name: 'Shavkat Mamatov',
+        telegram_chat_id: '58493021',
         address: 'Toshkent viloyati, Zangiota tumani, Guliston MFY',
         sector_type: 'agro_vet',
         is_active: true,
@@ -227,7 +326,11 @@ router.get('/:id', requireAdminAuth, requirePermission('tenants:view'), async (r
     }
 
     const totalRevenue = sales.reduce((sum, s) => sum + (Number(s.total_amount) || 0), 0);
-    const isTg = (tenant.address && tenant.address.includes('tg:'));
+    const isTg = (tenant.address && tenant.address.includes('tg:')) || 
+                 (tenant.merchant_addr && tenant.merchant_addr.includes('tg:')) || 
+                 Boolean(tenant.telegram_chat_id);
+    const tgId = tenant.telegram_chat_id || (tenant.merchant_addr && tenant.merchant_addr.includes('tg:') ? tenant.merchant_addr.replace(/^.*tg:/, '') : null);
+    const reg = extractRegion(tenant.address);
 
     res.json({
       success: true,
@@ -237,12 +340,28 @@ router.get('/:id', requireAdminAuth, requirePermission('tenants:view'), async (r
         phone: tenant.phone,
         masked_phone: maskPhone(tenant.phone),
         address: tenant.address,
-        region: extractRegion(tenant.address),
+        region: reg,
         source: isTg ? 'telegram_bot' : 'web_browser',
         source_label: isTg ? 'Telegram Bot (@biznesgo_bot)' : 'Veb Brauzer',
         is_active: tenant.is_active !== false,
         status: tenant.is_active !== false ? 'active' : 'suspended',
         created_at: tenant.created_at,
+        archive_data: {
+          tenant_id: tenant.id,
+          store_name: tenant.name,
+          owner_name: tenant.user_full_name || tenant.merchant_name || tenant.name,
+          phone: tenant.phone,
+          masked_phone: maskPhone(tenant.phone),
+          telegram_chat_id: tgId,
+          source: isTg ? 'telegram_bot' : 'web_browser',
+          source_label: isTg ? 'Telegram Bot (@biznesgo_bot)' : 'Veb Brauzer',
+          sector_type: tenant.sector_type || 'agro_vet',
+          address: tenant.address || 'Kiritilmagan',
+          region: reg,
+          registered_at: tenant.created_at,
+          is_active: tenant.is_active !== false,
+          raw_neon_record: tenant
+        },
         stats: {
           total_revenue: totalRevenue,
           sales_count: sales.length,
@@ -255,6 +374,66 @@ router.get('/:id', requireAdminAuth, requirePermission('tenants:view'), async (r
   } catch (err) {
     console.error('Tenant detail error:', err);
     res.status(500).json({ success: false, error: 'Dorixona ma\'lumotlarini yuklashda xatolik' });
+  }
+});
+
+// 3. Neon Ro'yxatdan O'tganlar Arxivini Alohida Olish
+router.get('/:id/archive', requireAdminAuth, requirePermission('tenants:view'), async (req, res) => {
+  const { id } = req.params;
+  try {
+    let raw = null;
+    try {
+      const tRes = await pool.query(`
+        SELECT t.*, m.name as merchant_name, m.phone as merchant_phone, m.address as merchant_addr,
+               u.full_name as user_full_name, u.phone as user_phone, u.role_code as user_role, u.telegram_chat_id
+        FROM tenants t
+        LEFT JOIN merchants m ON m.tenant_id = t.id
+        LEFT JOIN LATERAL (
+          SELECT full_name, phone, role_code, telegram_chat_id
+          FROM users
+          WHERE users.tenant_id = t.id
+          ORDER BY (role_code = 'owner') DESC, created_at ASC
+          LIMIT 1
+        ) u ON TRUE
+        WHERE t.id = $1
+      `, [id]);
+      if (tRes.rows.length > 0) raw = tRes.rows[0];
+    } catch (_) {}
+
+    if (!raw) {
+      raw = {
+        id,
+        name: 'Agro-Vet Zangiota Markaz',
+        phone: '+998901234567',
+        user_full_name: 'Shavkat Mamatov',
+        telegram_chat_id: '58493021',
+        address: 'Toshkent viloyati, Zangiota tumani',
+        sector_type: 'agro_vet',
+        plan: 'standard',
+        is_active: true,
+        created_at: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString()
+      };
+    }
+
+    res.json({
+      success: true,
+      archive: {
+        tenant_id: raw.id,
+        store_name: raw.name,
+        owner_name: raw.user_full_name || raw.merchant_name || raw.name,
+        phone: raw.phone,
+        masked_phone: maskPhone(raw.phone),
+        telegram_chat_id: raw.telegram_chat_id || null,
+        sector_type: raw.sector_type || 'agro_vet',
+        address: raw.address || 'Kiritilmagan',
+        region: extractRegion(raw.address),
+        registered_at: raw.created_at,
+        is_active: raw.is_active !== false,
+        raw_neon_record: raw
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
