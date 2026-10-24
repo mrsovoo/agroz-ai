@@ -28,122 +28,88 @@ router.get('/', requireAdminAuth, requirePermission('tenants:view'), async (req,
 
   try {
     let tenants = [];
+    let merchantsList = [];
+    let usersList = [];
     let sales = [];
 
     try {
-      const tRes = await pool.query(`
-        SELECT t.id, t.name, t.phone, t.email, t.tax_id, t.address, t.sector_type, t.plan, t.is_active, t.settings, t.created_at, t.updated_at,
-               m.id as merchant_id, m.name as merchant_name, m.phone as merchant_phone, m.address as merchant_addr, m.created_at as merchant_created_at,
-               u.id as user_id, u.full_name as user_full_name, u.phone as user_phone, u.role_code as user_role, u.telegram_chat_id
-        FROM tenants t
-        LEFT JOIN merchants m ON m.tenant_id = t.id
-        LEFT JOIN LATERAL (
-          SELECT id, full_name, phone, role_code, telegram_chat_id
-          FROM users
-          WHERE users.tenant_id = t.id
-          ORDER BY (role_code = 'owner') DESC, created_at ASC
-          LIMIT 1
-        ) u ON TRUE
-        ORDER BY t.created_at DESC
-      `);
-      tenants = tRes.rows;
+      const tRes = await pool.query(`SELECT * FROM tenants ORDER BY created_at DESC`);
+      tenants = tRes.rows || [];
+    } catch (_) {}
 
-      // Agar faqat merchants jadvalida bo'lib, tenants jadvaliga tushmaganlar bo'lsa:
-      try {
-        const mOnlyRes = await pool.query(`
-          SELECT m.id, m.name, m.phone, m.address as merchant_addr, m.created_at, m.business_type as sector_type,
-                 m.name as user_full_name, m.phone as user_phone, m.address as address, TRUE as is_active
-          FROM merchants m
-          WHERE m.tenant_id IS NULL OR m.tenant_id NOT IN (SELECT id FROM tenants)
-        `);
-        if (mOnlyRes.rows && mOnlyRes.rows.length > 0) {
-          tenants = [...tenants, ...mOnlyRes.rows];
-        }
-      } catch (_) {}
+    try {
+      const mRes = await pool.query(`SELECT * FROM merchants ORDER BY created_at DESC`);
+      merchantsList = mRes.rows || [];
+    } catch (_) {}
 
-      const sRes = await pool.query(`
-        SELECT tenant_id, total_amount, created_at
-        FROM sales
-        WHERE status = 'completed'
-      `);
-      sales = sRes.rows;
-    } catch (dbErr) {
-      console.warn('[Super Admin Tenants DB fallback]:', dbErr.message);
+    try {
+      const uRes = await pool.query(`SELECT * FROM users ORDER BY created_at ASC`);
+      usersList = uRes.rows || [];
+    } catch (_) {}
+
+    try {
+      const sRes = await pool.query(`SELECT * FROM sales`);
+      sales = (sRes.rows || [])
+        .filter(s => !s.status || s.status === 'completed')
+        .map(s => ({
+          ...s,
+          tenant_id: s.tenant_id || s.merchant_id
+        }));
+    } catch (_) {}
+
+    // Merchants va Users ma'lumotlarini tenants bilan birlashtirish
+    const merchantByTenantId = new Map();
+    const merchantByPhone = new Map();
+    merchantsList.forEach(m => {
+      if (m.tenant_id) merchantByTenantId.set(m.tenant_id, m);
+      if (m.phone) merchantByPhone.set(m.phone, m);
+    });
+
+    const userByTenantId = new Map();
+    const userByPhone = new Map();
+    usersList.forEach(u => {
+      if (u.tenant_id && !userByTenantId.has(u.tenant_id)) userByTenantId.set(u.tenant_id, u);
+      if (u.phone && !userByPhone.has(u.phone)) userByPhone.set(u.phone, u);
+    });
+
+    const existingPhones = new Set(tenants.map(t => t.phone));
+    for (const m of merchantsList) {
+      if (!existingPhones.has(m.phone)) {
+        tenants.push({
+          id: m.tenant_id || m.id,
+          name: m.name,
+          phone: m.phone,
+          address: m.address,
+          sector_type: m.business_type || 'agro_vet',
+          is_active: true,
+          created_at: m.created_at,
+          merchant_id: m.id,
+          merchant_name: m.name,
+          merchant_phone: m.phone,
+          merchant_addr: m.address,
+          merchant_created_at: m.created_at
+        });
+        existingPhones.add(m.phone);
+      }
     }
 
-    if (tenants.length === 0) {
-      tenants = [
-        {
-          id: 't-pilot-01',
-          name: 'Agro-Vet Zangiota Markaz',
-          phone: '+998901234567',
-          address: 'Toshkent viloyati, Zangiota tumani',
-          merchant_addr: 'tg:58493021',
-          telegram_chat_id: '58493021',
-          user_full_name: 'Shavkat Mamatov',
-          sector_type: 'agro_vet',
-          is_active: true,
-          created_at: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString()
-        },
-        {
-          id: 't-pilot-02',
-          name: 'Chirchiq Baraka Veterinariya',
-          phone: '+998935552233',
-          address: 'Toshkent viloyati, Chirchiq shahri',
-          merchant_addr: 'tg:44820199',
-          telegram_chat_id: '44820199',
-          user_full_name: 'Jamshid Karimov',
-          sector_type: 'agro_vet',
-          is_active: true,
-          created_at: new Date(Date.now() - 4 * 24 * 3600 * 1000).toISOString()
-        },
-        {
-          id: 't-pilot-03',
-          name: 'Samarqand Agro-Dori Plyus',
-          phone: '+998971112233',
-          address: 'Samarqand viloyati, Pastdarg\'om tumani',
-          merchant_addr: '',
-          telegram_chat_id: null,
-          user_full_name: 'Akmal Rustamov',
-          sector_type: 'agro_vet',
-          is_active: true,
-          created_at: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString()
-        },
-        {
-          id: 't-pilot-04',
-          name: 'Farg\'ona Vodiy Vet Servis',
-          phone: '+998907778899',
-          address: 'Farg\'ona viloyati, Quva tumani',
-          merchant_addr: 'tg:66730122',
-          telegram_chat_id: '66730122',
-          user_full_name: 'Bobur Yoqubov',
-          sector_type: 'agro_vet',
-          is_active: true,
-          created_at: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString()
-        },
-        {
-          id: 't-pilot-05',
-          name: 'Buxoro Ziyo Veterinariya',
-          phone: '+998914445566',
-          address: 'Buxoro viloyati, G\'ijduvon tumani',
-          merchant_addr: '',
-          telegram_chat_id: null,
-          user_full_name: 'Nodirbek Jalilov',
-          sector_type: 'agro_vet',
-          is_active: false,
-          created_at: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString()
-        }
-      ];
-
-      sales = [
-        { tenant_id: 't-pilot-01', total_amount: 14500000 },
-        { tenant_id: 't-pilot-01', total_amount: 8200000 },
-        { tenant_id: 't-pilot-02', total_amount: 18900000 },
-        { tenant_id: 't-pilot-03', total_amount: 6700000 },
-        { tenant_id: 't-pilot-04', total_amount: 22400000 },
-        { tenant_id: 't-pilot-05', total_amount: 4500000 }
-      ];
-    }
+    tenants = tenants.map(t => {
+      const m = merchantByTenantId.get(t.id) || merchantByPhone.get(t.phone) || {};
+      const u = userByTenantId.get(t.id) || userByPhone.get(t.phone) || {};
+      return {
+        ...t,
+        merchant_id: t.merchant_id || m.id || null,
+        merchant_name: t.merchant_name || m.name || null,
+        merchant_phone: t.merchant_phone || m.phone || null,
+        merchant_addr: t.merchant_addr || m.address || null,
+        merchant_created_at: t.merchant_created_at || m.created_at || null,
+        user_id: t.user_id || u.id || null,
+        user_full_name: t.user_full_name || u.full_name || m.name || t.name,
+        user_phone: t.user_phone || u.phone || t.phone,
+        user_role: t.user_role || u.role_code || u.role || 'owner',
+        telegram_chat_id: t.telegram_chat_id || u.telegram_chat_id || null
+      };
+    });
 
     const revenueMap = new Map();
     const countMap = new Map();
@@ -256,65 +222,101 @@ router.get('/', requireAdminAuth, requirePermission('tenants:view'), async (req,
   }
 });
 
+// Helper: bitta korxonani (tenants yoki merchants + users) xavfsiz qidirish
+async function findTenantOrMerchantById(id) {
+  let tenant = null;
+
+  try {
+    const tRes = await pool.query('SELECT * FROM tenants WHERE id = $1', [id]);
+    if (tRes.rows.length > 0) {
+      tenant = { ...tRes.rows[0] };
+    }
+  } catch (_) {}
+
+  try {
+    const mRes = await pool.query(
+      'SELECT * FROM merchants WHERE id = $1 OR tenant_id = $1 OR ($2::text IS NOT NULL AND phone = $2) LIMIT 1',
+      [id, tenant?.phone || null]
+    );
+    if (mRes.rows.length > 0) {
+      const m = mRes.rows[0];
+      if (!tenant) {
+        tenant = {
+          id: m.tenant_id || m.id,
+          merchant_id: m.id,
+          name: m.name,
+          phone: m.phone,
+          address: m.address,
+          merchant_name: m.name,
+          merchant_phone: m.phone,
+          merchant_addr: m.address,
+          merchant_created_at: m.created_at,
+          sector_type: 'agro_vet',
+          is_active: true,
+          created_at: m.created_at
+        };
+      } else {
+        tenant.merchant_id = m.id;
+        tenant.merchant_name = m.name;
+        tenant.merchant_phone = m.phone;
+        tenant.merchant_addr = m.address;
+        tenant.merchant_created_at = m.created_at;
+        if (!tenant.address && m.address) tenant.address = m.address;
+      }
+    }
+  } catch (_) {}
+
+  if (tenant) {
+    try {
+      const uRes = await pool.query(
+        'SELECT full_name, phone, role_code, telegram_chat_id FROM users WHERE tenant_id = $1 OR phone = $2 ORDER BY created_at ASC LIMIT 1',
+        [tenant.id, tenant.phone || '']
+      );
+      if (uRes.rows.length > 0) {
+        tenant.user_full_name = uRes.rows[0].full_name;
+        tenant.user_phone = uRes.rows[0].phone;
+        tenant.user_role = uRes.rows[0].role_code;
+        tenant.telegram_chat_id = uRes.rows[0].telegram_chat_id;
+      }
+    } catch (_) {}
+  }
+
+  return tenant;
+}
+
 // 2. Bitta Dorixonaning To'liq Kartochkasi (Detail)
 router.get('/:id', requireAdminAuth, requirePermission('tenants:view'), async (req, res) => {
   const { id } = req.params;
 
   try {
-    let tenant = null;
+    let tenant = await findTenantOrMerchantById(id);
     let sales = [];
     let productsCount = 0;
 
-    try {
-      const tRes = await pool.query(`
-        SELECT t.*, m.name as merchant_name, m.address as merchant_addr,
-               u.full_name as user_full_name, u.phone as user_phone, u.role_code as user_role, u.telegram_chat_id
-        FROM tenants t
-        LEFT JOIN merchants m ON m.tenant_id = t.id
-        LEFT JOIN LATERAL (
-          SELECT full_name, phone, role_code, telegram_chat_id
-          FROM users
-          WHERE users.tenant_id = t.id
-          ORDER BY (role_code = 'owner') DESC, created_at ASC
-          LIMIT 1
-        ) u ON TRUE
-        WHERE t.id = $1
-      `, [id]);
-      if (tRes.rows.length > 0) {
-        tenant = tRes.rows[0];
-      }
+    if (tenant) {
+      const lookupIds = [tenant.id, tenant.merchant_id].filter(Boolean);
+      try {
+        const sRes = await pool.query(`
+          SELECT id, receipt_number, total_amount, payment_type, status, created_at
+          FROM sales
+          WHERE tenant_id = ANY($1::uuid[]) OR merchant_id = ANY($1::uuid[])
+          ORDER BY created_at DESC
+          LIMIT 20
+        `, [lookupIds]);
+        sales = sRes.rows;
+      } catch (_) {}
 
-      const sRes = await pool.query(`
-        SELECT id, receipt_number, total_amount, payment_type, status, created_at
-        FROM sales
-        WHERE tenant_id = $1
-        ORDER BY created_at DESC
-        LIMIT 20
-      `, [id]);
-      sales = sRes.rows;
-
-      const pRes = await pool.query('SELECT COUNT(*) FROM products WHERE tenant_id = $1', [id]);
-      productsCount = Number(pRes.rows[0]?.count) || 0;
-    } catch (_) {}
+      try {
+        const pRes = await pool.query(
+          'SELECT COUNT(*) FROM products WHERE tenant_id = ANY($1::uuid[]) OR merchant_id = ANY($1::uuid[])',
+          [lookupIds]
+        );
+        productsCount = Number(pRes.rows[0]?.count) || 0;
+      } catch (_) {}
+    }
 
     if (!tenant) {
-      // Demo fallback
-      tenant = {
-        id,
-        name: 'Agro-Vet Zangiota Markaz',
-        phone: '+998901234567',
-        user_full_name: 'Shavkat Mamatov',
-        telegram_chat_id: '58493021',
-        address: 'Toshkent viloyati, Zangiota tumani, Guliston MFY',
-        sector_type: 'agro_vet',
-        is_active: true,
-        created_at: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString()
-      };
-      sales = [
-        { id: 's-1', receipt_number: 'CH-1001', total_amount: 14500000, payment_type: 'cash', status: 'completed', created_at: new Date().toISOString() },
-        { id: 's-2', receipt_number: 'CH-1002', total_amount: 8200000, payment_type: 'card', status: 'completed', created_at: new Date().toISOString() }
-      ];
-      productsCount = 14;
+      return res.status(404).json({ success: false, error: 'Dorixona topilmadi' });
     }
 
     const totalRevenue = sales.reduce((sum, s) => sum + (Number(s.total_amount) || 0), 0);
@@ -373,38 +375,10 @@ router.get('/:id', requireAdminAuth, requirePermission('tenants:view'), async (r
 router.get('/:id/archive', requireAdminAuth, requirePermission('tenants:view'), async (req, res) => {
   const { id } = req.params;
   try {
-    let raw = null;
-    try {
-      const tRes = await pool.query(`
-        SELECT t.*, m.name as merchant_name, m.phone as merchant_phone, m.address as merchant_addr,
-               u.full_name as user_full_name, u.phone as user_phone, u.role_code as user_role, u.telegram_chat_id
-        FROM tenants t
-        LEFT JOIN merchants m ON m.tenant_id = t.id
-        LEFT JOIN LATERAL (
-          SELECT full_name, phone, role_code, telegram_chat_id
-          FROM users
-          WHERE users.tenant_id = t.id
-          ORDER BY (role_code = 'owner') DESC, created_at ASC
-          LIMIT 1
-        ) u ON TRUE
-        WHERE t.id = $1
-      `, [id]);
-      if (tRes.rows.length > 0) raw = tRes.rows[0];
-    } catch (_) {}
+    const raw = await findTenantOrMerchantById(id);
 
     if (!raw) {
-      raw = {
-        id,
-        name: 'Agro-Vet Zangiota Markaz',
-        phone: '+998901234567',
-        user_full_name: 'Shavkat Mamatov',
-        telegram_chat_id: '58493021',
-        address: 'Toshkent viloyati, Zangiota tumani',
-        sector_type: 'agro_vet',
-        plan: 'standard',
-        is_active: true,
-        created_at: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString()
-      };
+      return res.status(404).json({ success: false, error: 'Arxiv yozuvi topilmadi' });
     }
 
     res.json({

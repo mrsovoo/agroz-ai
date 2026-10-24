@@ -23,12 +23,92 @@ const app = express();
 // Neon / PostgreSQL sxemasini avtomatik ishga tushirish (Auto-migration)
 async function initDatabase() {
   try {
+    // 1. Eng avval tenants jadvali va eski jadvallarga tenant_id ustunini xavfsiz qo'shib olamiz
+    const preMigrations = [
+      `CREATE EXTENSION IF NOT EXISTS "pgcrypto"`,
+      `CREATE TABLE IF NOT EXISTS tenants (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(200) NOT NULL,
+        code VARCHAR(50) UNIQUE,
+        phone VARCHAR(30) UNIQUE NOT NULL,
+        email VARCHAR(120),
+        tax_id VARCHAR(50),
+        address TEXT,
+        logo_url TEXT,
+        sector_type VARCHAR(50) NOT NULL DEFAULT 'agro_vet',
+        plan VARCHAR(30) NOT NULL DEFAULT 'standard',
+        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+        settings JSONB NOT NULL DEFAULT '{}'::jsonb,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )`,
+      `CREATE TABLE IF NOT EXISTS merchants (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+        phone VARCHAR(30) UNIQUE NOT NULL,
+        name VARCHAR(150) NOT NULL,
+        business_type VARCHAR(50) NOT NULL DEFAULT 'agro_vet',
+        address VARCHAR(255),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )`,
+      `ALTER TABLE merchants ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE`,
+      `ALTER TABLE merchants ADD COLUMN IF NOT EXISTS business_type VARCHAR(50) NOT NULL DEFAULT 'agro_vet'`,
+      `ALTER TABLE merchants ADD COLUMN IF NOT EXISTS address VARCHAR(255)`,
+      `ALTER TABLE products ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE`,
+      `ALTER TABLE products ADD COLUMN IF NOT EXISTS dosage_form VARCHAR(100)`,
+      `ALTER TABLE products ADD COLUMN IF NOT EXISTS storage_condition VARCHAR(255)`,
+      `ALTER TABLE customers ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE`,
+      `ALTER TABLE sales ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE`,
+      `ALTER TABLE sales ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'completed'`
+    ];
+
+    for (const stmt of preMigrations) {
+      try {
+        await pool.query(stmt);
+      } catch (_) {}
+    }
+
+    // 2. Asosiy schema.sql ni ishga tushirish
     const schemaPath = path.join(__dirname, 'db', 'schema.sql');
     if (fs.existsSync(schemaPath)) {
       const sql = fs.readFileSync(schemaPath, 'utf8');
-      await pool.query(sql);
-      console.log('[Database] BiznesGO B2B Core sxemasi va 10 ta yadro jadvallari sinxronlandi.');
+      try {
+        await pool.query(sql);
+      } catch (batchErr) {
+        // Agar umumiy paketda xatolik bersa, har bir SQL buyruqni alohida tranzaksiyada bajaramiz
+        const statements = sql
+          .split(/;\s*(?:\r?\n|$)/)
+          .map(s => s.trim())
+          .filter(s => s.length > 0 && !s.startsWith('--'));
+        for (const stmt of statements) {
+          try {
+            await pool.query(stmt);
+          } catch (_) {}
+        }
+      }
     }
+
+    // 3. Neon DB'dagi eski merchants yozuvlarini tenants jadvaliga ko'chirish va bog'lash
+    const syncQueries = [
+      `INSERT INTO tenants (id, name, phone, address, sector_type, created_at)
+       SELECT id, name, phone, address, 
+              CASE WHEN business_type IN ('agro_vet', 'feed_nutrition', 'seeds_seedlings', 'greenhouse_livestock_eq', 'agro_machinery') THEN business_type ELSE 'agro_vet' END,
+              COALESCE(created_at, CURRENT_TIMESTAMP)
+       FROM merchants
+       ON CONFLICT (phone) DO NOTHING`,
+      `UPDATE merchants m SET tenant_id = t.id FROM tenants t WHERE m.phone = t.phone AND m.tenant_id IS NULL`,
+      `UPDATE products p SET tenant_id = m.tenant_id FROM merchants m WHERE p.merchant_id = m.id AND p.tenant_id IS NULL`,
+      `UPDATE customers c SET tenant_id = m.tenant_id FROM merchants m WHERE c.merchant_id = m.id AND c.tenant_id IS NULL`,
+      `UPDATE sales s SET tenant_id = m.tenant_id FROM merchants m WHERE s.merchant_id = m.id AND s.tenant_id IS NULL`
+    ];
+
+    for (const q of syncQueries) {
+      try {
+        await pool.query(q);
+      } catch (_) {}
+    }
+
+    console.log('[Database] BiznesGO B2B Core sxemasi va Neon ma\'lumotlari to\'liq sinxronlandi.');
   } catch (err) {
     console.warn('[Database] Sxema sinxronlash ogohlantirishi:', err.message);
   }

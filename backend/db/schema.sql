@@ -46,6 +46,10 @@ CREATE TABLE IF NOT EXISTS merchants (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE;
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS business_type VARCHAR(50) NOT NULL DEFAULT 'agro_vet';
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS address VARCHAR(255);
+
 -- Filiallar
 CREATE TABLE IF NOT EXISTS branches (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -162,6 +166,33 @@ CREATE TABLE IF NOT EXISTS products (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE products ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS merchant_id UUID REFERENCES merchants(id) ON DELETE CASCADE;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS branch_id UUID REFERENCES branches(id) ON DELETE SET NULL;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS sku VARCHAR(100);
+ALTER TABLE products ADD COLUMN IF NOT EXISTS barcode VARCHAR(100);
+ALTER TABLE products ADD COLUMN IF NOT EXISTS category_id UUID;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS category VARCHAR(100) DEFAULT 'Umumiy';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS brand VARCHAR(150);
+ALTER TABLE products ADD COLUMN IF NOT EXISTS unit VARCHAR(30) DEFAULT 'dona';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url TEXT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS cost_price NUMERIC(15, 2) DEFAULT 0;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS price NUMERIC(15, 2) NOT NULL DEFAULT 0;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS stock NUMERIC(12, 2) NOT NULL DEFAULT 0;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS min_stock NUMERIC(12, 2) DEFAULT 5;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS reorder_level NUMERIC(12, 2) DEFAULT 10;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS is_out_of_stock BOOLEAN DEFAULT FALSE;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS sector_type VARCHAR(50) NOT NULL DEFAULT 'agro_vet';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS sector_attributes JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS active_ingredient VARCHAR(255);
+ALTER TABLE products ADD COLUMN IF NOT EXISTS dosage_form VARCHAR(100);
+ALTER TABLE products ADD COLUMN IF NOT EXISTS storage_condition VARCHAR(255);
+ALTER TABLE products ADD COLUMN IF NOT EXISTS batch_number VARCHAR(100);
+ALTER TABLE products ADD COLUMN IF NOT EXISTS expiry_date DATE;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
 
 CREATE INDEX IF NOT EXISTS idx_products_tenant ON products(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode);
@@ -295,6 +326,16 @@ CREATE TABLE IF NOT EXISTS customers (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE;
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS merchant_id UUID REFERENCES merchants(id) ON DELETE CASCADE;
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS customer_type VARCHAR(30) DEFAULT 'fermer';
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS farm_profile VARCHAR(255);
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS credit_limit NUMERIC(15, 2) DEFAULT 10000000;
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS debt_balance NUMERIC(15, 2) NOT NULL DEFAULT 0;
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS due_date DATE;
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'active';
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS notes TEXT;
+
 CREATE INDEX IF NOT EXISTS idx_customers_tenant ON customers(tenant_id);
 
 CREATE TABLE IF NOT EXISTS debts (
@@ -379,6 +420,21 @@ CREATE TABLE IF NOT EXISTS sales (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS merchant_id UUID REFERENCES merchants(id) ON DELETE CASCADE;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS branch_id UUID REFERENCES branches(id) ON DELETE SET NULL;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS warehouse_id UUID REFERENCES warehouses(id) ON DELETE SET NULL;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS shift_id UUID REFERENCES shifts(id) ON DELETE SET NULL;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS cashier_id UUID REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_id UUID REFERENCES customers(id) ON DELETE SET NULL;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS receipt_number VARCHAR(50);
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS discount_amount NUMERIC(15, 2) DEFAULT 0;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS cash_amount NUMERIC(15, 2) DEFAULT 0;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS card_amount NUMERIC(15, 2) DEFAULT 0;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS debt_amount NUMERIC(15, 2) DEFAULT 0;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'completed';
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS notes TEXT;
+
 CREATE INDEX IF NOT EXISTS idx_sales_tenant_date ON sales(tenant_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_sales_receipt ON sales(receipt_number);
 
@@ -399,6 +455,15 @@ CREATE TABLE IF NOT EXISTS sale_items (
     total NUMERIC(15, 2) NOT NULL,
     sector_attributes JSONB DEFAULT '{}'::jsonb
 );
+
+ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS batch_id UUID;
+ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS active_ingredient VARCHAR(255);
+ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS batch_number VARCHAR(100);
+ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS expiry_date DATE;
+ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS unit VARCHAR(30) DEFAULT 'dona';
+ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS cost_price NUMERIC(15, 2) DEFAULT 0;
+ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS discount NUMERIC(15, 2) DEFAULT 0;
+ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS sector_attributes JSONB DEFAULT '{}'::jsonb;
 
 CREATE TABLE IF NOT EXISTS payments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -549,4 +614,33 @@ ALTER TABLE stock_batches ADD COLUMN IF NOT EXISTS recalled_at TIMESTAMP WITH TI
 ALTER TABLE stock_batches ADD COLUMN IF NOT EXISTS production_date DATE;
 ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS disposal_method VARCHAR(100);
 ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS protocol_number VARCHAR(100);
+
+-- Neon DB'da oldindan merchants jadvalida ro'yxatdan o'tgan foydalanuvchilarni tenants jadvaliga ko'chirish va bog'lash
+INSERT INTO tenants (id, name, phone, address, sector_type, created_at)
+SELECT id, name, phone, address, 
+       CASE WHEN business_type IN ('agro_vet', 'feed_nutrition', 'seeds_seedlings', 'greenhouse_livestock_eq', 'agro_machinery') THEN business_type ELSE 'agro_vet' END,
+       COALESCE(created_at, CURRENT_TIMESTAMP)
+FROM merchants
+ON CONFLICT (phone) DO NOTHING;
+
+UPDATE merchants m
+SET tenant_id = t.id
+FROM tenants t
+WHERE m.phone = t.phone AND m.tenant_id IS NULL;
+
+UPDATE products p
+SET tenant_id = m.tenant_id
+FROM merchants m
+WHERE p.merchant_id = m.id AND p.tenant_id IS NULL;
+
+UPDATE customers c
+SET tenant_id = m.tenant_id
+FROM merchants m
+WHERE c.merchant_id = m.id AND c.tenant_id IS NULL;
+
+UPDATE sales s
+SET tenant_id = m.tenant_id
+FROM merchants m
+WHERE s.merchant_id = m.id AND s.tenant_id IS NULL;
+
 

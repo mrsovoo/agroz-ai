@@ -3,19 +3,25 @@ const { Pool } = require('pg');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
+let rawDbUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/biznesgo';
+
 let sslConfig = false;
 if (process.env.DATABASE_URL) {
   if (process.env.DATABASE_URL.includes('railway.internal')) {
     sslConfig = false;
-  } else if (process.env.DATABASE_URL.includes('sslmode=require') || process.env.DATABASE_URL.includes('neon.tech') || process.env.DATABASE_URL.includes('supabase.co')) {
+  } else if (process.env.DATABASE_URL.includes('sslmode=') || process.env.DATABASE_URL.includes('neon.tech') || process.env.DATABASE_URL.includes('supabase.co')) {
     sslConfig = { rejectUnauthorized: false };
+    // pg-connection-string v3 SSL warningini oldini olish uchun uselibpqcompat=true qo'shamiz
+    if (rawDbUrl.includes('sslmode=') && !rawDbUrl.includes('uselibpqcompat=')) {
+      rawDbUrl = rawDbUrl.replace(/sslmode=(prefer|require|verify-ca)/, 'uselibpqcompat=true&sslmode=$1');
+    }
   } else if (isProduction && !process.env.DATABASE_URL.includes('localhost') && !process.env.DATABASE_URL.includes('127.0.0.1')) {
     sslConfig = { rejectUnauthorized: false };
   }
 }
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/biznesgo',
+  connectionString: rawDbUrl,
   ssl: sslConfig
 });
 

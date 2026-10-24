@@ -34,85 +34,37 @@ router.get('/metrics', requireAdminAuth, requirePermission('dashboard:view'), as
         SELECT t.id, t.name, t.phone, t.address, t.sector_type, t.is_active, t.created_at,
                m.address as merchant_addr
         FROM tenants t
-        LEFT JOIN merchants m ON m.tenant_id = t.id
+        LEFT JOIN merchants m ON m.tenant_id = t.id OR m.phone = t.phone
         ORDER BY t.created_at DESC
       `);
       tenants = tRes.rows;
+    } catch (_) {}
 
-      const sRes = await pool.query(`
-        SELECT id, tenant_id, total_amount, payment_type, status, created_at
-        FROM sales
-        WHERE status = 'completed'
+    // Agar merchants jadvalida alohida ro'yxatdan o'tganlar bo'lsa, ularni ham birlashtiramiz
+    try {
+      const mRes = await pool.query(`
+        SELECT id, name, phone, address, address as merchant_addr, COALESCE(business_type, 'agro_vet') as sector_type, TRUE as is_active, created_at
+        FROM merchants
+        ORDER BY created_at DESC
       `);
-      sales = sRes.rows;
-    } catch (dbErr) {
-      console.warn('[Super Admin Dashboard DB fallback]:', dbErr.message);
-    }
-
-    // Fallback/Seed pilot dorixonalar (agar baza bo'sh yoki ulanish bo'lmasa)
-    if (tenants.length === 0) {
-      tenants = [
-        {
-          id: 't-pilot-01',
-          name: 'Agro-Vet Zangiota Markaz',
-          phone: '+998901234567',
-          address: 'Toshkent viloyati, Zangiota tumani',
-          merchant_addr: 'tg:58493021',
-          sector_type: 'agro_vet',
-          is_active: true,
-          created_at: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString()
-        },
-        {
-          id: 't-pilot-02',
-          name: 'Chirchiq Baraka Veterinariya',
-          phone: '+998935552233',
-          address: 'Toshkent viloyati, Chirchiq shahri',
-          merchant_addr: 'tg:44820199',
-          sector_type: 'agro_vet',
-          is_active: true,
-          created_at: new Date(Date.now() - 4 * 24 * 3600 * 1000).toISOString()
-        },
-        {
-          id: 't-pilot-03',
-          name: 'Samarqand Agro-Dori Plyus',
-          phone: '+998971112233',
-          address: 'Samarqand viloyati, Pastdarg\'om tumani',
-          merchant_addr: '', // Veb brauzer orqali
-          sector_type: 'agro_vet',
-          is_active: true,
-          created_at: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString()
-        },
-        {
-          id: 't-pilot-04',
-          name: 'Farg\'ona Vodiy Vet Servis',
-          phone: '+998907778899',
-          address: 'Farg\'ona viloyati, Quva tumani',
-          merchant_addr: 'tg:66730122',
-          sector_type: 'agro_vet',
-          is_active: true,
-          created_at: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString()
-        },
-        {
-          id: 't-pilot-05',
-          name: 'Buxoro Ziyo Veterinariya',
-          phone: '+998914445566',
-          address: 'Buxoro viloyati, G\'ijduvon tumani',
-          merchant_addr: '', // Veb brauzer orqali
-          sector_type: 'agro_vet',
-          is_active: true,
-          created_at: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString()
+      const existingPhones = new Set(tenants.map(t => t.phone));
+      for (const m of mRes.rows) {
+        if (!existingPhones.has(m.phone)) {
+          tenants.push(m);
+          existingPhones.add(m.phone);
         }
-      ];
+      }
+    } catch (_) {}
 
-      sales = [
-        { id: 's-1', tenant_id: 't-pilot-01', total_amount: 14500000, created_at: new Date().toISOString() },
-        { id: 's-2', tenant_id: 't-pilot-01', total_amount: 8200000, created_at: new Date().toISOString() },
-        { id: 's-3', tenant_id: 't-pilot-02', total_amount: 18900000, created_at: new Date().toISOString() },
-        { id: 's-4', tenant_id: 't-pilot-03', total_amount: 6700000, created_at: new Date().toISOString() },
-        { id: 's-5', tenant_id: 't-pilot-04', total_amount: 22400000, created_at: new Date().toISOString() },
-        { id: 's-6', tenant_id: 't-pilot-05', total_amount: 4500000, created_at: new Date().toISOString() }
-      ];
-    }
+    try {
+      const sRes = await pool.query(`SELECT * FROM sales`);
+      sales = (sRes.rows || [])
+        .filter(s => !s.status || s.status === 'completed')
+        .map(s => ({
+          ...s,
+          tenant_id: s.tenant_id || s.merchant_id
+        }));
+    } catch (_) {}
 
     // 1. Manbalar bo'yicha tahlil (Telegram Bot vs Veb Brauzer)
     let telegramCount = 0;
