@@ -18,6 +18,7 @@ pool.on('error', (err) => {
 module.exports = {
   pool,
   port: process.env.PORT || 5001,
-  jwtSecret: process.env.JWT_SECRET || 'biznesgo_agro_vet_jwt_secret_key_2026'
+  jwtSecret: process.env.JWT_SECRET || 'biznesgo_agro_vet_jwt_secret_key_2026',
+  telegramBotToken: process.env.TELEGRAM_BOT_TOKEN || '8546564636:AAE8WDjtaFDMr4Mb35KX4uBfPD5b-dB28LM'
 };
 

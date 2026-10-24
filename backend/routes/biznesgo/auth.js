@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { pool, jwtSecret } = require('../../config');
+const { pool, jwtSecret, telegramBotToken } = require('../../config');
 
 // Telegram WebApp initData HMAC-SHA256 xavfsiz tekshiruvi
 function verifyTelegramWebAppData(initDataStr, botToken) {
@@ -37,7 +37,7 @@ function verifyTelegramWebAppData(initDataStr, botToken) {
 // 1. Telegram orqali xavfsiz kirish (HMAC-SHA256)
 router.post('/telegram', async (req, res) => {
   const { initData } = req.body;
-  const botToken = process.env.TELEGRAM_BOT_TOKEN || 'mock_bot_token';
+  const botToken = telegramBotToken;
 
   let tgUser = verifyTelegramWebAppData(initData, botToken);
   // Demo yoki sinov uchun fallback

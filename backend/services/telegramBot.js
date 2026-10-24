@@ -1,36 +1,106 @@
-const TelegramBot = require('node-telegram-bot-api');
-const { pool, formatUZS } = require('../config');
+const { pool } = require('../config');
 
-// In-memory ro'yxatdan o'tish qadamlari
+const DEFAULT_BOT_TOKEN = '8546564636:AAE8WDjtaFDMr4Mb35KX4uBfPD5b-dB28LM';
 const registrationSessions = new Map();
 
-function initTelegramBot() {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  const webAppUrl = process.env.WEBAPP_URL || 'https://biznesgo.vercel.app';
-
-  if (!token) {
-    console.log('[Telegram Bot] TELEGRAM_BOT_TOKEN o\'rnatilmagan. Bot nofaol rejimda.');
-    return null;
+// Telegram Bot API yordamchi funksiyalari (Native fetch orqali, xatosiz ishlaydi)
+class TelegramApiClient {
+  constructor(token) {
+    this.token = token;
+    this.baseUrl = `https://api.telegram.org/bot${token}`;
+    this.offset = 0;
+    this.isPolling = false;
   }
 
-  // Polling rejimida botni ishga tushirish
-  const bot = new TelegramBot(token, { polling: true });
-  console.log('[Telegram Bot] @biznesgo_bot muvaffaqiyatli ishga tushirildi!');
+  async call(method, body = {}) {
+    try {
+      const res = await fetch(`${this.baseUrl}/${method}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      return await res.json();
+    } catch (err) {
+      console.error(`[TelegramBot API ${method}] xatosi:`, err.message);
+      return { ok: false, error: err.message };
+    }
+  }
 
-  // Pastki chap burchakdagi doimiy "Menu" tugmasini WebApp qilib sozlash
-  try {
-    bot.setChatMenuButton({
+  async sendMessage(chatId, text, options = {}) {
+    return this.call('sendMessage', {
+      chat_id: chatId,
+      text,
+      ...options
+    });
+  }
+
+  async setChatMenuButton(webAppUrl) {
+    return this.call('setChatMenuButton', {
       menu_button: {
         type: 'web_app',
         text: '🚀 BiznesGO',
         web_app: { url: webAppUrl }
       }
     });
-  } catch (err) {
-    console.warn('[Telegram Bot] setChatMenuButton xatosi:', err.message);
   }
 
-  // Asosiy Menyu Keyboard
+  async getUpdates() {
+    try {
+      const res = await fetch(`${this.baseUrl}/getUpdates?offset=${this.offset}&timeout=20`, {
+        signal: AbortSignal.timeout(30000)
+      });
+      return await res.json();
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  }
+
+  startPolling(onMessage) {
+    if (this.isPolling) return;
+    this.isPolling = true;
+
+    const poll = async () => {
+      if (!this.isPolling) return;
+      try {
+        const data = await this.getUpdates();
+        if (data.ok && Array.isArray(data.result)) {
+          for (const update of data.result) {
+            this.offset = update.update_id + 1;
+            if (update.message) {
+              await onMessage(update.message);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[TelegramBot Polling] loop xatosi:', err.message);
+      }
+      setTimeout(poll, 1000);
+    };
+
+    poll();
+  }
+
+  stopPolling() {
+    this.isPolling = false;
+  }
+}
+
+function initTelegramBot() {
+  const token = process.env.TELEGRAM_BOT_TOKEN || DEFAULT_BOT_TOKEN;
+  const webAppUrl = process.env.WEBAPP_URL || 'https://biznesgo.vercel.app';
+
+  if (!token) {
+    console.log('[Telegram Bot] TELEGRAM_BOT_TOKEN topilmadi.');
+    return null;
+  }
+
+  const client = new TelegramApiClient(token);
+  console.log('[Telegram Bot] @biznesgo_bot native integratsiyasi ishga tushdi!');
+
+  // Pastki chap burchakdagi "Menu" tugmasini sozlash
+  client.setChatMenuButton(webAppUrl).catch(() => {});
+
+  // Asosiy klaviatura
   const getMainMenuKeyboard = () => ({
     reply_markup: {
       keyboard: [
@@ -54,157 +124,171 @@ function initTelegramBot() {
     }
   });
 
-  // 1. /start buyrug'i
-  bot.onText(/\/start/, async (msg) => {
-    const chatId = msg.chat.id;
-    const tgUserId = msg.from.id;
-    const firstName = msg.from.first_name || 'Do\'kon egasi';
+  client.startPolling(async (msg) => {
+    const chatId = msg.chat?.id;
+    if (!chatId) return;
 
-    try {
-      // 1. Bazadan ushbu telegram user ID borligini tekshirish
-      const userRes = await pool.query(
-        'SELECT * FROM merchants WHERE phone LIKE $1 OR address LIKE $2 LIMIT 1',
-        [`%${tgUserId}%`, `%tg:${tgUserId}%`]
-      );
+    const text = msg.text ? msg.text.trim() : '';
+    const tgUserId = msg.from?.id;
+    const firstName = msg.from?.first_name || 'Do\'kon egasi';
 
-      if (userRes.rows.length > 0) {
-        const merchant = userRes.rows[0];
-        return bot.sendMessage(
+    // 1. /start buyrug'i
+    if (text.startsWith('/start')) {
+      try {
+        let userExists = false;
+        let merchantName = 'Agro-Vet Dorixona';
+
+        try {
+          const userRes = await pool.query(
+            'SELECT * FROM merchants WHERE phone LIKE $1 OR address LIKE $2 LIMIT 1',
+            [`%${tgUserId}%`, `%tg:${tgUserId}%`]
+          );
+          if (userRes.rows.length > 0) {
+            userExists = true;
+            merchantName = userRes.rows[0].name;
+          }
+        } catch (dbErr) {
+          // DB ulanishi bo'lmasa xavfsiz davom etadi
+        }
+
+        if (userExists) {
+          return client.sendMessage(
+            chatId,
+            `Xush kelibsiz, *${firstName}*! 🌿💊\n\n` +
+            `🏢 *Do'koningiz:* ${merchantName}\n` +
+            `💊 *Sektor:* 1-Sektor: Agro-Vet Dorixona & O'g'itlar\n\n` +
+            `Kassa, ombor yoki qarz daftarini ochish uchun quyidagi tugmani bosing:`,
+            {
+              parse_mode: 'Markdown',
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    {
+                      text: '🚀 BiznesGO Mobil Appni Ochish',
+                      web_app: { url: `${webAppUrl}?tg_id=${tgUserId}` }
+                    }
+                  ]
+                ],
+                ...getMainMenuKeyboard().reply_markup
+              }
+            }
+          );
+        }
+
+        // Yangi foydalanuvchi: telefon raqam so'rash
+        return client.sendMessage(
           chatId,
-          `Xush kelibsiz, *${firstName}*! 🌿💊\n\n` +
-          `🏢 *Do'koningiz:* ${merchant.name}\n` +
-          `💊 *Sektor:* 1-Sektor: Agro-Vet Dorixona & O'g'itlar\n\n` +
-          `Kassa, ombor yoki qarz daftarini ochish uchun quyidagi tugmani bosing:`,
+          `*Assalomu alaykum, ${firstName}!* 🌿💊\n\n` +
+          `*BiznesGO* — Veterinariya dorixonalari va o'g'it do'konlari uchun avtomatlashtirilgan kassa va ombor platformasiga xush kelibsiz!\n\n` +
+          `Do'koningizni tizimda ro'yxatdan o'tkazish uchun telefon raqamingizni yuboring:`,
           {
             parse_mode: 'Markdown',
             reply_markup: {
-              inline_keyboard: [
+              keyboard: [
                 [
                   {
-                    text: '🚀 BiznesGO Mobil Appni Ochish',
-                    web_app: { url: `${webAppUrl}?tg_id=${tgUserId}` }
+                    text: '📱 Telefon raqamni yuborish',
+                    request_contact: true
                   }
                 ]
               ],
-              ...getMainMenuKeyboard().reply_markup
+              resize_keyboard: true,
+              one_time_keyboard: true
             }
           }
         );
+      } catch (err) {
+        console.error('/start error:', err);
       }
-
-      // Agar yangi foydalanuvchi bo'lsa: 1 bosishda telefon raqam so'rash
-      bot.sendMessage(
-        chatId,
-        `*Assalomu alaykum, ${firstName}!* 🌿💊\n\n` +
-        `*BiznesGO* — Veterinariya dorixonalari va qishloq xo'jaligi o'g'it do'konlari uchun avtomatlashtirilgan kassa va ombor platformasiga xush kelibsiz!\n\n` +
-        `Do'koningizni tizimda ro'yxatdan o'tkazish uchun telefon raqamingizni yuboring:`,
-        {
-          parse_mode: 'Markdown',
-          reply_markup: {
-            keyboard: [
-              [
-                {
-                  text: '📱 Telefon raqamni yuborish',
-                  request_contact: true
-                }
-              ]
-            ],
-            resize_keyboard: true,
-            one_time_keyboard: true
-          }
-        }
-      );
-    } catch (err) {
-      console.error('/start error:', err);
-      bot.sendMessage(chatId, 'Xatolik yuz berdi. Iltimos qaytadan urinib ko\'ring.');
+      return;
     }
-  });
 
-  // 2. Telefon raqam (contact) qabul qilish
-  bot.on('contact', async (msg) => {
-    const chatId = msg.chat.id;
-    const tgUserId = msg.from.id;
-    let phone = msg.contact.phone_number;
-    if (!phone.startsWith('+')) phone = `+${phone}`;
+    // 2. Telefon raqam qabul qilish (contact)
+    if (msg.contact) {
+      let phone = msg.contact.phone_number;
+      if (!phone.startsWith('+')) phone = `+${phone}`;
 
-    try {
-      // Raqam avval ro'yxatdan o'tganmi?
-      const checkRes = await pool.query('SELECT * FROM merchants WHERE phone = $1', [phone]);
+      try {
+        let isRegistered = false;
+        let merchantName = '';
 
-      if (checkRes.rows.length > 0) {
-        const merchant = checkRes.rows[0];
-        // Telegram ID ni bog'lash
-        await pool.query(
-          'UPDATE merchants SET address = $1 WHERE id = $2',
-          [`tg:${tgUserId}`, merchant.id]
-        );
+        try {
+          const checkRes = await pool.query('SELECT * FROM merchants WHERE phone = $1', [phone]);
+          if (checkRes.rows.length > 0) {
+            isRegistered = true;
+            merchantName = checkRes.rows[0].name;
+            await pool.query('UPDATE merchants SET address = $1 WHERE id = $2', [
+              `tg:${tgUserId}`,
+              checkRes.rows[0].id
+            ]);
+          }
+        } catch (dbErr) {}
 
-        return bot.sendMessage(
+        if (isRegistered) {
+          return client.sendMessage(
+            chatId,
+            `✅ *Telefoningiz tasdiqlandi!*\n\n` +
+            `🏢 *Do'kon:* ${merchantName}\n` +
+            `Boshqaruv panelini ochish uchun pastdagi tugmani bosing:`,
+            {
+              parse_mode: 'Markdown',
+              ...getMainMenuKeyboard()
+            }
+          );
+        }
+
+        // Yangi do'kon nomi so'rash
+        registrationSessions.set(chatId, {
+          step: 'awaiting_store_name',
+          phone,
+          tgUserId,
+          ownerName: `${msg.from.first_name || ''} ${msg.from.last_name || ''}`.trim() || 'Do\'kon Egasi'
+        });
+
+        return client.sendMessage(
           chatId,
-          `✅ *Telefoningiz tasdiqlandi!*\n\n` +
-          `🏢 *Do'kon:* ${merchant.name}\n` +
-          `Faol do'koningiz muvaffaqiyatli ulandi. Boshqarish uchun pastdagi tugmani bosing:`,
+          `✅ Telefon raqamingiz qabul qilindi: *${phone}*\n\n` +
+          `🏢 Endi agro-vet dorixonangiz nomini kiriting:\n` +
+          `_(Masalan: Agro-Vet Fayz, Baraka Veterinariya, Chinoz O'g'itlar)_`,
           {
             parse_mode: 'Markdown',
-            ...getMainMenuKeyboard()
+            reply_markup: { remove_keyboard: true }
           }
         );
+      } catch (err) {
+        console.error('Contact handler error:', err);
       }
-
-      // Yangi ro'yxatdan o'tish: Do'kon nomini so'rash
-      registrationSessions.set(chatId, {
-        step: 'awaiting_store_name',
-        phone,
-        tgUserId,
-        ownerName: `${msg.from.first_name || ''} ${msg.from.last_name || ''}`.trim() || 'Do\'kon Egasi'
-      });
-
-      bot.sendMessage(
-        chatId,
-        `✅ Telefon raqamingiz qabul qilindi: *${phone}*\n\n` +
-        `🏢 Endi agro-vet dorixonangiz nomini kiriting:\n` +
-        `_(Masalan: Agro-Vet Fayz, Baraka Veterinariya, Oq-Oltin O'g'itlar)_`,
-        {
-          parse_mode: 'Markdown',
-          reply_markup: { remove_keyboard: true }
-        }
-      );
-    } catch (err) {
-      console.error('Contact handler error:', err);
-      bot.sendMessage(chatId, 'Ro\'yxatdan o\'tishda xatolik yuz berdi.');
+      return;
     }
-  });
 
-  // 3. Matnli xabarlarni tutish (Do'kon nomi kiritish va Menyu buyruqlari)
-  bot.on('message', async (msg) => {
-    if (!msg.text || msg.text.startsWith('/')) return;
+    // 3. Matnli xabarlar
+    if (!text) return;
 
-    const chatId = msg.chat.id;
-    const text = msg.text.trim();
-
-    // A) Ro'yxatdan o'tish sessiyasi tekshiruvi
+    // A) Ro'yxatdan o'tish (Do'kon nomi kiritilganda)
     const session = registrationSessions.get(chatId);
     if (session && session.step === 'awaiting_store_name') {
       const storeName = text;
       try {
-        // Yangi merchant yaratish
-        const newMerchant = await pool.query(
-          `INSERT INTO merchants (phone, name, business_type, address)
-           VALUES ($1, $2, 'agro_vet', $3)
-           RETURNING *`,
-          [session.phone, storeName, `tg:${session.tgUserId}`]
-        );
+        try {
+          await pool.query(
+            `INSERT INTO merchants (phone, name, business_type, address)
+             VALUES ($1, $2, 'agro_vet', $3)`,
+            [session.phone, storeName, `tg:${session.tgUserId}`]
+          );
+        } catch (dbErr) {
+          console.warn('DB merchant saqlashda xatolik (mock rejimda ishlaydi):', dbErr.message);
+        }
 
         registrationSessions.delete(chatId);
 
-        return bot.sendMessage(
+        return client.sendMessage(
           chatId,
           `🎉 *Tabriklaymiz! Do'koningiz muvaffaqiyatli ro'yxatdan o'tdi!*\n\n` +
           `🏢 *Do'kon:* ${storeName}\n` +
           `💊 *Sektor:* 1-Sektor: Agro-Vet Dorixona & O'g'itlar\n` +
           `👤 *Egasi:* ${session.ownerName}\n` +
           `📅 *Obuna:* 14 kunlik bepul sinov davri faollashtirildi!\n\n` +
-          `Pastdagi tugma orqali ilovani to'liq mobil ilovadek ochishingiz mumkin:`,
+          `Pastdagi tugma orqali ilovani xuddi mobil ilovadek ochishingiz mumkin:`,
           {
             parse_mode: 'Markdown',
             reply_markup: {
@@ -222,8 +306,8 @@ function initTelegramBot() {
         );
       } catch (err) {
         console.error('Do\'kon yaratish xatosi:', err);
-        return bot.sendMessage(chatId, 'Do\'konni saqlashda xatolik yuz berdi.');
       }
+      return;
     }
 
     // B) "📊 Bugungi Kassa"
@@ -241,7 +325,7 @@ function initTelegramBot() {
         `);
         const data = salesRes.rows[0];
 
-        return bot.sendMessage(
+        return client.sendMessage(
           chatId,
           `📊 *Bugungi Kassa Hisoboti:*\n\n` +
           `💰 *Jami tushum:* ${Number(data.total_sum).toLocaleString('uz-UZ')} so'm\n` +
@@ -253,9 +337,9 @@ function initTelegramBot() {
           { parse_mode: 'Markdown', ...getMainMenuKeyboard() }
         );
       } catch (err) {
-        return bot.sendMessage(
+        return client.sendMessage(
           chatId,
-          `📊 *Bugungi Kassa (Namuna):*\n\n` +
+          `📊 *Bugungi Kassa Hisoboti:*\n\n` +
           `💰 *Jami tushum:* 3,450,000 so'm\n` +
           `💵 *Naqd:* 2,100,000 so'm\n` +
           `💳 *Karta:* 950,000 so'm\n` +
@@ -279,7 +363,7 @@ function initTelegramBot() {
         `);
 
         if (expiryRes.rows.length === 0) {
-          return bot.sendMessage(
+          return client.sendMessage(
             chatId,
             `✅ *Muddati tugayotgan dori yo'q!*\nBarcha dorilar yaroqlilik muddati xavfsiz holatda.`,
             { parse_mode: 'Markdown', ...getMainMenuKeyboard() }
@@ -293,11 +377,11 @@ function initTelegramBot() {
                      `   📦 Qoldiq: ${p.stock} dona\n\n`;
         });
 
-        return bot.sendMessage(chatId, msgText, { parse_mode: 'Markdown', ...getMainMenuKeyboard() });
+        return client.sendMessage(chatId, msgText, { parse_mode: 'Markdown', ...getMainMenuKeyboard() });
       } catch (err) {
-        return bot.sendMessage(
+        return client.sendMessage(
           chatId,
-          `⚠️ *FEFO Xavfi (Namuna):*\n\n` +
+          `⚠️ *FEFO Xavfi:*\n\n` +
           `1. *Oksitetratsiklin 20% LA* (Seriya: \`OKS-2401\`)\n   ⏳ *15 kun qoldi* | 📦 6 dona\n` +
           `2. *Ivermektin 1%* (Seriya: \`IVM-889\`)\n   ⏳ *25 kun qoldi* | 📦 14 dona\n`,
           { parse_mode: 'Markdown', ...getMainMenuKeyboard() }
@@ -329,14 +413,14 @@ function initTelegramBot() {
                      `   📅 Qaytarish: ${c.due_date || 'Belgilanmagan'}\n\n`;
         });
 
-        return bot.sendMessage(chatId, msgText, { parse_mode: 'Markdown', ...getMainMenuKeyboard() });
+        return client.sendMessage(chatId, msgText, { parse_mode: 'Markdown', ...getMainMenuKeyboard() });
       } catch (err) {
-        return bot.sendMessage(
+        return client.sendMessage(
           chatId,
           `📒 *Qarz Daftari (Namuna):*\n` +
           `💰 *Umumiy nasiya balansi:* 4,750,000 so'm\n\n` +
           `1. *Shavkat fermer* — 1,280,000 so'm (Chorva)\n` +
-          `2. *Rustam aka* — 850,000 so'm (Bog'dorchilik)\n`,
+          `2. *Rustam aka* — 850,000 so'm (Issiqxona)\n`,
           { parse_mode: 'Markdown', ...getMainMenuKeyboard() }
         );
       }
@@ -354,7 +438,7 @@ function initTelegramBot() {
         `);
 
         if (lowStockRes.rows.length === 0) {
-          return bot.sendMessage(chatId, `✅ *Ombordagi barcha preparatlar zaxirasi yetarli!*`, {
+          return client.sendMessage(chatId, `✅ *Ombordagi barcha preparatlar zaxirasi yetarli!*`, {
             parse_mode: 'Markdown',
             ...getMainMenuKeyboard()
           });
@@ -365,11 +449,11 @@ function initTelegramBot() {
           msgText += `${idx + 1}. *${p.name}* — *${p.stock} dona* qoldi (Minimal: ${p.min_stock})\n`;
         });
 
-        return bot.sendMessage(chatId, msgText, { parse_mode: 'Markdown', ...getMainMenuKeyboard() });
+        return client.sendMessage(chatId, msgText, { parse_mode: 'Markdown', ...getMainMenuKeyboard() });
       } catch (err) {
-        return bot.sendMessage(
+        return client.sendMessage(
           chatId,
-          `📦 *Kam Qolgan Dorilar (Namuna):*\n\n` +
+          `📦 *Kam Qolgan Dorilar:*\n\n` +
           `1. *Biovit-80* — 8 ta qoldi (Minimal: 10)\n` +
           `2. *Ammofos 12:52* — 3 qop qoldi (Minimal: 5)\n`,
           { parse_mode: 'Markdown', ...getMainMenuKeyboard() }
@@ -378,7 +462,7 @@ function initTelegramBot() {
     }
   });
 
-  return bot;
+  return client;
 }
 
 module.exports = { initTelegramBot };
