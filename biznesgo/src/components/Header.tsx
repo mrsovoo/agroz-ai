@@ -23,10 +23,9 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center space-x-3">
           <BiznesGoLogo className="h-8 w-auto shrink-0" />
           <div className="hidden sm:block border-l border-slate-200 pl-3">
-            <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+            <span className="px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200">
               Agro-Vet Dorixona
             </span>
-            <p className="text-[10px] text-slate-400 font-medium">B2B 1-Sektor</p>
           </div>
         </div>
 

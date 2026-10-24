@@ -8,7 +8,11 @@ import {
   Clock,
   ArrowRight,
   ChevronDown,
-  Check
+  Check,
+  AlertOctagon,
+  ShieldAlert,
+  PackageX,
+  CreditCard
 } from 'lucide-react';
 
 interface DashboardViewProps {
@@ -61,12 +65,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Haftalik savdo grafik ustunlari (Agro-Vet kassa dinamikasi)
   const weeklyData = [
-    { label: 'Mon', value: 42, amount: '1.2M', isPeak: false },
-    { label: 'Tue', value: 65, amount: '1.9M', isPeak: false },
-    { label: 'Wed', value: 50, amount: '1.5M', isPeak: false },
-    { label: 'Thu', value: 100, amount: '3.45M', isPeak: true }, // Bugun eng yuqori
-    { label: 'Fri', value: 38, amount: '980K', isPeak: false },
-    { label: 'Sat', value: 58, amount: '1.7M', isPeak: false },
+    { label: 'Dush', value: 42, amount: '1.2M', isPeak: false },
+    { label: 'Sesh', value: 65, amount: '1.9M', isPeak: false },
+    { label: 'Chor', value: 50, amount: '1.5M', isPeak: false },
+    { label: 'Pay', value: 100, amount: '3.45M', isPeak: true }, // Bugun eng yuqori
+    { label: 'Juma', value: 38, amount: '980K', isPeak: false },
+    { label: 'Shan', value: 58, amount: '1.7M', isPeak: false },
   ];
 
   // Faqat lokal sinov (Local Dev) uchun fallback, productionda toza bo'ladi
@@ -99,9 +103,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   };
 
   const periodDescriptions = {
-    today: 'Agro-Vet dorixona bugungi kassa tushumi va FEFO muddat tahlili',
-    week: 'Agro-Vet dorixona haftalik aylanmasi va dinamika tahlili',
-    month: 'Agro-Vet dorixona oylik jamlama kassa va moliyaviy hisoboti'
+    today: 'Bugungi kassa tushumi, to\'lovlar va ombor qoldig\'i tahlili',
+    week: 'Haftalik savdo aylanmasi va moliyaviy dinamika tahlili',
+    month: 'Oylik jamlama kassa va foyda hisoboti'
   };
 
   return (
@@ -183,16 +187,109 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           {/* Eksport Tugmasi */}
           <button
-            onClick={() => alert(`${periodLabels[period]}lik kassa hisoboti CSV shaklida eksport qilindi!`)}
+            onClick={() => alert(`${periodLabels[period]}lik kassa hisoboti CSV shaklida yuklab olindi!`)}
             className="flex items-center space-x-1.5 bg-black hover:bg-slate-800 text-white px-4 py-2 rounded-full text-xs font-bold shadow-xs transition active:scale-95"
           >
-            <span>Eksport CSV</span>
+            <span>Yuklab olish (CSV)</span>
             <ArrowUpRight className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
-      {/* 2. TOP METRIK KARTALARI (3 ta toza asosiy karta) */}
+      {/* 2. AGRO-VET TEZKOR OGOHLANTIRISHLAR (MINIMAL) */}
+      {metrics && ((metrics.expired_count || 0) > 0 || (metrics.overdue_debt || 0) > 0 || (metrics.critical_expiry_count || 0) > 0 || (metrics.low_stock_count || 0) > 0) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+          {/* 🔴 Muddati o'tgan */}
+          {(metrics.expired_count || 0) > 0 && (
+            <div
+              onClick={() => onNavigateTab('products')}
+              className="bg-white hover:bg-rose-50/40 border border-rose-200/80 rounded-2xl p-3 flex items-center justify-between transition cursor-pointer shadow-2xs group"
+            >
+              <div className="flex items-center space-x-2.5 min-w-0">
+                <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-[11px] font-bold text-slate-900 truncate">
+                    {metrics.expired_count} ta dori muddati o'tgan
+                  </div>
+                  <div className="text-[10px] text-rose-600 font-medium">Kassada bloklangan</div>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold text-slate-400 group-hover:text-rose-600 transition flex items-center shrink-0 ml-1">
+                <span>Ko'rish</span>
+                <ArrowRight className="w-3 h-3 ml-0.5" />
+              </span>
+            </div>
+          )}
+
+          {/* 🟠 Kechikkan qarz */}
+          {(metrics.overdue_debt || 0) > 0 && (
+            <div
+              onClick={() => onNavigateTab('debts')}
+              className="bg-white hover:bg-amber-50/40 border border-amber-200/80 rounded-2xl p-3 flex items-center justify-between transition cursor-pointer shadow-2xs group"
+            >
+              <div className="flex items-center space-x-2.5 min-w-0">
+                <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-[11px] font-bold text-slate-900 truncate">
+                    {formatUZS(metrics.overdue_debt || 0)}
+                  </div>
+                  <div className="text-[10px] text-amber-700 font-medium">{metrics.overdue_debtors_count || 0} ta kechikkan qarz</div>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold text-slate-400 group-hover:text-amber-700 transition flex items-center shrink-0 ml-1">
+                <span>Qarzlar</span>
+                <ArrowRight className="w-3 h-3 ml-0.5" />
+              </span>
+            </div>
+          )}
+
+          {/* 🟡 FEFO Muddat xavfi */}
+          {((metrics.critical_7_count || 0) > 0 || (metrics.critical_expiry_count || 0) > 0) && (
+            <div
+              onClick={() => onNavigateTab('products')}
+              className="bg-white hover:bg-yellow-50/40 border border-yellow-200/80 rounded-2xl p-3 flex items-center justify-between transition cursor-pointer shadow-2xs group"
+            >
+              <div className="flex items-center space-x-2.5 min-w-0">
+                <span className="w-2 h-2 rounded-full bg-yellow-500 shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-[11px] font-bold text-slate-900 truncate">
+                    FEFO: {metrics.critical_expiry_count || 0} ta dori
+                  </div>
+                  <div className="text-[10px] text-yellow-700 font-medium">30 kun ichida tugaydi</div>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold text-slate-400 group-hover:text-yellow-700 transition flex items-center shrink-0 ml-1">
+                <span>FEFO</span>
+                <ArrowRight className="w-3 h-3 ml-0.5" />
+              </span>
+            </div>
+          )}
+
+          {/* 🔵 Kam qoldiq */}
+          {((metrics.out_of_stock_count || 0) > 0 || (metrics.low_stock_count || 0) > 0) && (
+            <div
+              onClick={() => onNavigateTab('products')}
+              className="bg-white hover:bg-blue-50/40 border border-blue-200/80 rounded-2xl p-3 flex items-center justify-between transition cursor-pointer shadow-2xs group"
+            >
+              <div className="flex items-center space-x-2.5 min-w-0">
+                <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-[11px] font-bold text-slate-900 truncate">
+                    {metrics.low_stock_count} ta dori kam qolgan
+                  </div>
+                  <div className="text-[10px] text-blue-700 font-medium">Zaxirani to'ldirish</div>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold text-slate-400 group-hover:text-blue-700 transition flex items-center shrink-0 ml-1">
+                <span>Ombor</span>
+                <ArrowRight className="w-3 h-3 ml-0.5" />
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 3. TOP METRIK KARTALARI (3 ta toza asosiy karta) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* KARTA 1: HERO BLACK CARD */}
         <div className="bg-[#111111] text-white rounded-[28px] p-5 sm:p-6 flex flex-col justify-between shadow-lg relative overflow-hidden group">

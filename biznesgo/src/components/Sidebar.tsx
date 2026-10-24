@@ -12,7 +12,8 @@ import {
   Check,
   X,
   CreditCard,
-  Clock
+  Clock,
+  LogOut
 } from 'lucide-react';
 import { ActiveTab } from './Navbar';
 import { BiznesGoLogo } from './BiznesGoLogo';
@@ -23,6 +24,8 @@ interface SidebarProps {
   criticalCount?: number;
   isOpen?: boolean;
   onClose?: () => void;
+  storeName?: string;
+  onLogout?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -30,18 +33,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onTabChange,
   criticalCount = 0,
   isOpen = false,
-  onClose
+  onClose,
+  storeName,
+  onLogout
 }) => {
   const [isTariffModalOpen, setIsTariffModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [selectedTariff, setSelectedTariff] = useState<'standard' | 'basic' | 'pro'>('standard');
   const [extendSuccess, setExtendSuccess] = useState(false);
+
+  const pharmacyName = storeName || 'Agro-Vet Dorixona';
+  const initials = pharmacyName
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(w => w[0].toUpperCase())
+    .join('') || 'AV';
 
   // Asosiy bo'limlar (Qarz daftari tagiga Hisobotlar qo'shildi)
   const mainNavItems = [
     {
       id: 'dashboard' as ActiveTab,
       icon: <LayoutGrid className="w-4 h-4 shrink-0" />,
-      label: 'Dashboard'
+      label: 'Boshqaruv Paneli'
     },
     {
       id: 'pos' as ActiveTab,
@@ -51,7 +65,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       id: 'products' as ActiveTab,
       icon: <Package className="w-4 h-4 shrink-0" />,
-      label: 'Ombor & Dorilar'
+      label: 'Ombor & Mahsulotlar'
     },
     {
       id: 'debts' as ActiveTab,
@@ -134,24 +148,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </nav>
         </div>
 
-        {/* Pastki Qism: Soddalashtirilgan Dorixona va Tarif Kartasi */}
+        {/* Pastki Qism: Faqat Dorixona Nomi Kartasi (Profilni ochish) */}
         <div className="pt-3 border-t border-slate-100">
           <div
-            onClick={() => setIsTariffModalOpen(true)}
-            className="p-3 bg-slate-50 hover:bg-slate-100/90 transition-all rounded-2xl border border-slate-200/80 cursor-pointer text-xs group shadow-2xs"
+            onClick={() => setIsProfileModalOpen(true)}
+            className="p-3 bg-slate-50 hover:bg-slate-100/90 transition-all rounded-2xl border border-slate-200/80 text-xs shadow-2xs cursor-pointer active:scale-98 group"
+            title="Do'kon ma'lumotlari & Profil"
           >
             <div className="flex items-center space-x-2.5">
-              <div className="w-9 h-9 rounded-xl bg-[#111111] text-[#35ca56] flex items-center justify-center font-bold font-mono text-xs shrink-0">
-                AV
+              <div className="w-9 h-9 rounded-xl bg-[#111111] text-[#35ca56] flex items-center justify-center font-bold font-mono text-xs shrink-0 group-hover:bg-black transition">
+                {initials}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between">
-                  <span className="font-extrabold text-slate-900 truncate">Agro-Vet Dorixona</span>
-                  <span className="w-2 h-2 rounded-full bg-[#35ca56] animate-pulse shrink-0" title="Kassa faol"></span>
-                </div>
-                <div className="text-[11px] text-slate-500 font-medium truncate mt-0.5 flex items-center justify-between">
-                  <span>Standart • 15.10 — 15.11</span>
-                  <span className="text-[10px] text-emerald-700 font-bold group-hover:underline">Tarif</span>
+                  <span className="font-extrabold text-slate-900 truncate">{pharmacyName}</span>
+                  <span className="w-2 h-2 rounded-full bg-[#35ca56] animate-pulse shrink-0" title="Faol"></span>
                 </div>
               </div>
             </div>
@@ -367,6 +378,65 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span>Tarifni 1 oyga uzaytirish (290,000 so'm)</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Do'kon Profili Modali (Agro-Vet Dorixona bosilganda ochiladi) */}
+      {isProfileModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h4 className="font-extrabold text-sm text-slate-900">Do'kon Ma'lumotlari</h4>
+              <button
+                onClick={() => setIsProfileModalOpen(false)}
+                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="p-3 bg-emerald-50/80 rounded-xl border border-emerald-200 flex items-center space-x-2.5">
+                <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+                <div className="font-bold text-emerald-950">{pharmacyName}</div>
+              </div>
+
+              <div className="space-y-2 text-slate-600">
+                <div className="flex justify-between py-1 border-b border-slate-100">
+                  <span className="text-slate-400">Do'kon nomi:</span>
+                  <span className="font-bold text-slate-900">{pharmacyName}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-100">
+                  <span className="text-slate-400">Telefon:</span>
+                  <span className="font-mono text-slate-900">+998 90 123 45 67</span>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-slate-400">Kassa holati:</span>
+                  <span className="text-emerald-700 font-bold">Faol (PostgreSQL)</span>
+                </div>
+              </div>
+            </div>
+
+            {onLogout && (
+              <button
+                onClick={() => {
+                  setIsProfileModalOpen(false);
+                  onLogout();
+                }}
+                className="w-full py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl font-bold text-xs transition cursor-pointer flex items-center justify-center space-x-1.5"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Hisobdan Chiqish</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => setIsProfileModalOpen(false)}
+              className="w-full py-2 bg-slate-900 text-white rounded-xl font-bold text-xs hover:bg-slate-800 transition cursor-pointer"
+            >
+              Yopish
+            </button>
           </div>
         </div>
       )}

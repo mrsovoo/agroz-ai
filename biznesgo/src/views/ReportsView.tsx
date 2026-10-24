@@ -90,7 +90,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ onNavigateTab }) => {
             Hisobotlar & Tahlil
           </h1>
           <p className="text-xs text-slate-400 font-medium mt-0.5">
-            Agro-Vet do'koni moliyaviy, ombor qoldig'i, FEFO muddat va nasiya tahlili
+            Biznes moliyaviy, ombor qoldig'i, to'lovlar va nasiya tahlili
           </p>
         </div>
 
@@ -163,7 +163,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ onNavigateTab }) => {
             className="flex items-center space-x-1.5 bg-black hover:bg-slate-800 text-white px-4 py-2 rounded-full text-xs font-bold shadow-xs transition active:scale-95"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Excel / CSV</span>
+            <span>Yuklab olish (CSV)</span>
           </button>
         </div>
       </div>
@@ -228,7 +228,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ onNavigateTab }) => {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-extrabold text-base text-slate-900">
-              Eng Ko'p Sotilgan Agro-Vet Dorilar
+              Eng Ko'p Sotilgan Mahsulotlar
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
               Davr bo'yicha eng yuqori tushum va hajm keltirgan preparatlar reytingi
@@ -243,8 +243,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ onNavigateTab }) => {
           <table className="w-full min-w-[620px] text-left text-xs text-slate-600">
             <thead className="bg-slate-50/80 text-[11px] uppercase font-bold text-slate-400 border-b border-slate-100">
               <tr>
-                <th className="py-3 px-4">Preparat Nomi</th>
-                <th className="py-3 px-4">Faol Moddasi</th>
+                <th className="py-3 px-4">Mahsulot Nomi</th>
+                <th className="py-3 px-4">Xususiyat / Doza</th>
                 <th className="py-3 px-4">Kategoriya</th>
                 <th className="py-3 px-4 text-center">Sotilgan Miqdor</th>
                 <th className="py-3 px-4 text-right">Jami Tushum</th>

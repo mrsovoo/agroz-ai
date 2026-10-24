@@ -19,7 +19,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const tabs = [
     {
       id: 'dashboard' as ActiveTab,
-      label: 'Dashboard',
+      label: 'Boshqaruv Paneli',
       icon: <LayoutDashboard className="w-4 h-4" />,
       badge: criticalCount > 0 ? `${criticalCount} ta xavf` : undefined,
       badgeColor: 'bg-rose-500 text-white'

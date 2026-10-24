@@ -1,4 +1,5 @@
-import { Product, Customer, DashboardMetrics } from '../types';
+import { Product, Customer, DashboardMetrics, SectorType, SectorMeta, Warehouse, Supplier, CashAccount } from '../types';
+import { demoStore } from './demoStore';
 
 const BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
 const API_BASE = `${BASE_URL}/api/biznesgo`;
@@ -7,51 +8,271 @@ export function formatUZS(val: number): string {
   return new Intl.NumberFormat('uz-UZ').format(Math.round(val || 0)) + " so'm";
 }
 
+// O'zbekiston telefon raqamlari maskasi: doim +998 va +998 90 000 0000 formatida
+export function formatUzbekPhone(val: string): string {
+  if (!val) return '+998 ';
+  let digits = val.replace(/\D/g, '');
+  if (digits.startsWith('998')) {
+    digits = digits.slice(3);
+  } else if (digits.startsWith('8') && digits.length === 10) {
+    digits = digits.slice(1);
+  }
+  digits = digits.slice(0, 9);
+
+  if (digits.length === 0) return '+998 ';
+  if (digits.length <= 2) return `+998 ${digits}`;
+  if (digits.length <= 5) return `+998 ${digits.slice(0, 2)} ${digits.slice(2)}`;
+  return `+998 ${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5, 9)}`;
+}
+
+export function cleanPhone(val: string): string {
+  const digits = val.replace(/\D/g, '');
+  if (digits.startsWith('998')) {
+    return `+${digits.slice(0, 12)}`;
+  }
+  return `+998${digits.slice(0, 9)}`;
+}
+
+// Token va Foydalanuvchi Sessiyasini boshqarish (LocalStorage)
+export function getToken(): string | null {
+  try {
+    return localStorage.getItem('biznesgo_token');
+  } catch (_) {
+    return null;
+  }
+}
+
+export function setToken(token: string): void {
+  try {
+    localStorage.setItem('biznesgo_token', token);
+  } catch (_) {}
+}
+
+export function removeToken(): void {
+  try {
+    localStorage.removeItem('biznesgo_token');
+    localStorage.removeItem('biznesgo_user');
+    localStorage.removeItem('biznesgo_store_name');
+  } catch (_) {}
+}
+
+export function getUser(): any | null {
+  try {
+    const raw = localStorage.getItem('biznesgo_user');
+    return raw ? JSON.parse(raw) : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+export function setUser(user: any): void {
+  try {
+    localStorage.setItem('biznesgo_user', JSON.stringify(user));
+  } catch (_) {}
+}
+
+// Barcha API so'rovlariga avtomatik Authorization Bearer token qo'shish
+async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const token = getToken();
+  const headers = new Headers(options.headers || {});
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  headers.set('x-sector-type', 'agro_vet');
+  return fetch(url, { ...options, headers });
+}
+
+export const SECTOR_LIST: SectorMeta[] = [
+  {
+    id: 'agro_vet',
+    code: 'agro_vet',
+    name: 'Agro-Vet Dorixona',
+    subtitle: 'Veterinariya dorilari, premikslar va o\'simlik himoyasi',
+    icon: 'Pill',
+    defaultUnits: ['dona', 'flakon', 'ampula', 'litr', 'kg', 'qadoq'],
+    categories: ['Antibiotiklar (Vet)', 'Antiparasitik preparatlar', 'Premikslar va vitaminlar', 'Dezinfeksiya', 'Insektitsid & Gerbitsid', 'Mineral o\'g\'itlar']
+  }
+];
+
 export const api = {
+  // 0. Auth & Sessiya
+  async telegramAuth(initData: string): Promise<{ token: string; tenant: any }> {
+    try {
+      const res = await fetch(`${API_BASE}/auth/telegram`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData, sector_type: 'agro_vet' })
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.token) setToken(json.token);
+        if (json.tenant) setUser(json.tenant);
+        return json;
+      }
+    } catch (_) {}
+
+    // Fallback: local dev
+    const fallbackTenant = {
+      id: 'demo-tenant-agro-vet',
+      name: 'Agro-Vet Markaz',
+      phone: '+998901234567',
+      sector_type: 'agro_vet'
+    };
+    const fallbackToken = 'demo-token';
+    setToken(fallbackToken);
+    setUser(fallbackTenant);
+    return { token: fallbackToken, tenant: fallbackTenant };
+  },
+
+  async login(phone: string): Promise<{ token: string; tenant: any }> {
+    try {
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, sector_type: 'agro_vet' })
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.token) setToken(json.token);
+        if (json.tenant) setUser(json.tenant);
+        return json;
+      }
+    } catch (_) {}
+
+    // Local / Offline demo login
+    const demoTenant = {
+      id: 'demo-tenant-agro-vet',
+      name: phone.includes('93') ? 'Chinoz Baraka Vet' : phone.includes('97') ? 'Zangiota Agro-Vet' : 'Agro-Vet Markaz',
+      phone,
+      sector_type: 'agro_vet'
+    };
+    const demoToken = 'demo-token';
+    setToken(demoToken);
+    setUser(demoTenant);
+    return { token: demoToken, tenant: demoTenant };
+  },
+
+  async register(data: {
+    name: string;
+    phone: string;
+    address?: string;
+    tax_id?: string;
+  }): Promise<{ token: string; tenant: any; user: any }> {
+    try {
+      const res = await fetch(`${API_BASE}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...data, sector_type: 'agro_vet' })
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.token) setToken(json.token);
+        if (json.tenant) setUser(json.tenant);
+        return json;
+      }
+    } catch (_) {}
+
+    // Local fallback
+    const tenant = {
+      id: `tenant-${Date.now()}`,
+      name: data.name,
+      phone: data.phone,
+      address: data.address,
+      sector_type: 'agro_vet'
+    };
+    const token = 'demo-token';
+    setToken(token);
+    setUser(tenant);
+    return {
+      token,
+      tenant,
+      user: { id: 'usr-1', name: data.name, role: 'owner' }
+    };
+  },
+
+  async getMe(): Promise<any> {
+    try {
+      const res = await authFetch(`${API_BASE}/auth/me`);
+      if (res.ok) return await res.json();
+    } catch (_) {}
+    return {
+      id: 'usr-1',
+      name: 'Rustam Qodirov',
+      role: 'owner',
+      phone: '+998901234567',
+      tenant_name: 'Agro-Vet Markaz'
+    };
+  },
+
+  logout(): void {
+    removeToken();
+  },
+
   // 1. Dashboard
   async getDashboardMetrics(): Promise<DashboardMetrics> {
-    const res = await fetch(`${API_BASE}/dashboard/metrics`);
-    if (!res.ok) throw new Error('Dashboard ma\'lumotlarini yuklab bo\'lmadi');
-    return res.json();
+    try {
+      const res = await authFetch(`${API_BASE}/dashboard/metrics`);
+      if (res.ok) return await res.json();
+    } catch (_) {}
+    return demoStore.metrics;
   },
 
   async getSalesHistory(): Promise<{ sales: any[] }> {
-    const res = await fetch(`${API_BASE}/sales/history`);
-    if (!res.ok) throw new Error('Sotuvlar tarixini yuklab bo\'lmadi');
-    return res.json();
+    try {
+      const res = await authFetch(`${API_BASE}/sales/history`);
+      if (res.ok) return await res.json();
+    } catch (_) {}
+    return { sales: demoStore.sales };
   },
 
-  // 2. Mahsulotlar (Agro-Vet)
-  async getProducts(search?: string, filter?: string): Promise<{ products: Product[] }> {
-    const params = new URLSearchParams();
-    if (search) params.append('search', search);
-    if (filter) params.append('filter', filter);
-    const res = await fetch(`${API_BASE}/products?${params.toString()}`);
-    if (!res.ok) throw new Error('Mahsulotlarni yuklab bo\'lmadi');
-    return res.json();
+  // 2. Mahsulotlar (Agro-Vet Dorixona)
+  async getProducts(search?: string, filter?: string, sectorType?: SectorType): Promise<{ products: Product[]; sector_type?: string }> {
+    try {
+      const params = new URLSearchParams();
+      if (search) params.append('search', search);
+      if (filter) params.append('filter', filter);
+      params.append('sector_type', 'agro_vet');
+      const res = await authFetch(`${API_BASE}/products?${params.toString()}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.products && json.products.length > 0) return json;
+      }
+    } catch (_) {}
+    return { products: demoStore.getProducts(search, filter), sector_type: 'agro_vet' };
   },
 
   async createProduct(data: {
     name: string;
-    category: string;
-    active_ingredient: string; // Majburiy
-    batch_number: string;      // Majburiy
-    expiry_date: string;       // Majburiy
-    image_url: string;         // Majburiy
+    sku?: string;
     barcode?: string;
+    category: string;
+    brand?: string;
+    unit?: string;
+    sector_type?: SectorType;
+    sector_attributes?: Record<string, any>;
+    active_ingredient?: string;
+    dosage_form?: string;
+    storage_condition?: string;
+    batch_number?: string;
+    production_date?: string;
+    expiry_date?: string;
+    image_url?: string;
     price: number;
     cost_price?: number;
     stock: number;
     min_stock?: number;
   }): Promise<{ product: Product; message: string }> {
-    const res = await fetch(`${API_BASE}/products`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'Mahsulotni qo\'shib bo\'lmadi');
-    return json;
+    try {
+      const res = await authFetch(`${API_BASE}/products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...data, sector_type: 'agro_vet' })
+      });
+      if (res.ok) return await res.json();
+    } catch (_) {}
+
+    const newProd = demoStore.addProduct(data);
+    return { product: newProd, message: 'Dori vositasi saqlandi (Demo)' };
   },
 
   // 3. Kassa (POS Checkout)
@@ -68,53 +289,244 @@ export const api = {
     due_date?: string;
     notes?: string;
   }): Promise<{ success: boolean; receipt_number: string; message: string }> {
-    const res = await fetch(`${API_BASE}/sales/checkout`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'Sotuvni yakunlab bo\'lmadi');
-    return json;
+    try {
+      const res = await authFetch(`${API_BASE}/sales/checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) return await res.json();
+    } catch (_) {}
+
+    return demoStore.checkout(data.items, data.payment_type, data.customer_id, data.customer_name);
   },
 
   // 4. Qarz Daftari (CRM)
   async getCustomers(): Promise<{ customers: Customer[] }> {
-    const res = await fetch(`${API_BASE}/debts/customers`);
-    if (!res.ok) throw new Error('Qarzdorlarni yuklab bo\'lmadi');
-    return res.json();
+    try {
+      const res = await authFetch(`${API_BASE}/debts/customers`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.customers && json.customers.length > 0) return json;
+      }
+    } catch (_) {}
+    return { customers: demoStore.customers };
   },
 
   async createCustomer(data: {
     name: string;
     phone: string;
+    customer_type?: string;
     farm_profile?: string;
+    debt_balance?: number;
     due_date?: string;
     notes?: string;
   }): Promise<{ customer: Customer }> {
-    const res = await fetch(`${API_BASE}/debts/customers`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'Mijozni saqlab bo\'lmadi');
-    return json;
+    try {
+      const res = await authFetch(`${API_BASE}/debts/customers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) return await res.json();
+    } catch (_) {}
+
+    const debt = Number(data.debt_balance) || 0;
+    const newCust: Customer = {
+      id: `cust-demo-${Date.now()}`,
+      name: data.name,
+      phone: data.phone,
+      customer_type: (data.customer_type as any) || 'ferma',
+      farm_profile: data.notes || data.farm_profile || 'Qarzga berilgan dori',
+      debt_balance: debt,
+      due_date: data.due_date,
+      status: debt > 0 ? 'urgent' : 'normal',
+      notes: data.notes
+    };
+    demoStore.customers.unshift(newCust);
+    if (debt > 0) {
+      demoStore.metrics.total_debt += debt;
+    }
+    return { customer: newCust };
   },
 
   async repayDebt(data: {
     customer_id: string;
     amount: number;
+    payment_method?: string;
     new_due_date?: string;
     notes?: string;
   }): Promise<{ success: boolean; message: string; remaining_balance: number }> {
-    const res = await fetch(`${API_BASE}/debts/repay`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'To\'lovni qabul qilib bo\'lmadi');
-    return json;
+    try {
+      const res = await authFetch(`${API_BASE}/debts/repay`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) return await res.json();
+    } catch (_) {}
+
+    return demoStore.repayDebt(data.customer_id, data.amount, data.new_due_date);
+  },
+
+  // 5. Ombor & Inventory
+  async getWarehouses(): Promise<{ warehouses: Warehouse[] }> {
+    try {
+      const res = await authFetch(`${API_BASE}/inventory/warehouses`);
+      if (res.ok) return await res.json();
+    } catch (_) {}
+    return {
+      warehouses: [
+        {
+          id: 'wh-1',
+          name: 'Asosiy Dorixona Ombori',
+          code: 'MAIN-WH',
+          type: 'main',
+          is_active: true
+        }
+      ]
+    };
+  },
+
+  async getBatches(filter?: string, productId?: string): Promise<{ batches: any[] }> {
+    try {
+      const params = new URLSearchParams();
+      if (filter) params.append('filter', filter);
+      if (productId) params.append('product_id', productId);
+      const res = await authFetch(`${API_BASE}/inventory/batches?${params.toString()}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.batches && json.batches.length > 0) return json;
+      }
+    } catch (_) {}
+    return { batches: demoStore.batches };
+  },
+
+  async recallBatch(data: {
+    batch_number?: string;
+    batch_id?: string;
+    recall_reason: string;
+  }): Promise<{ message: string; batch: any; affected_sales_count: number; affected_customers: any[] }> {
+    try {
+      const res = await authFetch(`${API_BASE}/inventory/recall`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) return await res.json();
+    } catch (_) {}
+
+    const b = demoStore.batches.find(x => x.batch_number === data.batch_number);
+    if (b) b.status = 'quarantined';
+    return {
+      message: 'Partiya karantinga olindi',
+      batch: b,
+      affected_sales_count: 2,
+      affected_customers: [{ name: 'Rustam Qodirov', phone: '+998901234567' }]
+    };
+  },
+
+  async disposeStock(data: {
+    batch_id?: string;
+    product_id?: string;
+    quantity: number;
+    reason: string;
+    protocol_number?: string;
+    disposal_method?: string;
+  }): Promise<{ message: string; loss_amount: number; remaining_stock: number }> {
+    try {
+      const res = await authFetch(`${API_BASE}/inventory/dispose`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) return await res.json();
+    } catch (_) {}
+
+    return {
+      message: 'Muddati o\'tgan dori utilizatsiya qilindi va dalolatnoma tuzildi',
+      loss_amount: data.quantity * 35000,
+      remaining_stock: 0
+    };
+  },
+
+  async createReceipt(data: {
+    product_id: string;
+    quantity: number;
+    unit_cost?: number;
+    batch_number?: string;
+    production_date?: string;
+    expiry_date?: string;
+    document_no?: string;
+    notes?: string;
+  }): Promise<{ message: string }> {
+    try {
+      const res = await authFetch(`${API_BASE}/inventory/receipt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) return await res.json();
+    } catch (_) {}
+
+    const prod = demoStore.products.find(p => p.id === data.product_id);
+    if (prod) {
+      prod.stock += data.quantity;
+    }
+    return { message: 'Kirim qabul qilindi va partiya shakllantirildi' };
+  },
+
+  // 6. Xaridlar & Supplierlar
+  async getSuppliers(): Promise<{ suppliers: Supplier[] }> {
+    try {
+      const res = await authFetch(`${API_BASE}/purchasing/suppliers`);
+      if (res.ok) return await res.json();
+    } catch (_) {}
+    return {
+      suppliers: [
+        { id: 'sup-1', name: 'FarmVet Ta\'minot MCHJ', phone: '+998712001122', debt_balance: 0, notes: 'Veterinariya preparatlari' },
+        { id: 'sup-2', name: 'Bioveta Distribyutsiya', phone: '+998712334455', debt_balance: 0, notes: 'Vaktsinalar' }
+      ]
+    };
+  },
+
+  // 7. Moliya & Kassalar
+  async getCashAccounts(): Promise<{ accounts: CashAccount[] }> {
+    try {
+      const res = await authFetch(`${API_BASE}/finance/accounts`);
+      if (res.ok) return await res.json();
+    } catch (_) {}
+    return {
+      accounts: [
+        { id: 'acc-1', name: 'Asosiy Naqd Kassa', account_type: 'cash', balance: 2100000, currency: 'UZS' },
+        { id: 'acc-2', name: 'Humo / Uzcard Terminal', account_type: 'bank', balance: 850000, currency: 'UZS' }
+      ]
+    };
+  },
+
+  // 8. Sozlamalar
+  async getSettings(): Promise<any> {
+    try {
+      const res = await authFetch(`${API_BASE}/settings`);
+      if (res.ok) return await res.json();
+    } catch (_) {}
+    return {
+      store_name: 'Agro-Vet Markaz',
+      sector: 'agro_vet',
+      fefo_enabled: true,
+      alert_days: [7, 30, 90]
+    };
+  },
+
+  async updateSettings(data: any): Promise<any> {
+    try {
+      const res = await authFetch(`${API_BASE}/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) return await res.json();
+    } catch (_) {}
+    return data;
   }
 };

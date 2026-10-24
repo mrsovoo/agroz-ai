@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { api, formatUZS } from '../lib/api';
+import { api, formatUZS, formatUzbekPhone, cleanPhone } from '../lib/api';
 import { Product, CartItem, Customer } from '../types';
 import {
   Search,
@@ -180,7 +180,7 @@ export const PosView: React.FC = () => {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Preparat nomi, faol moddasi yoki partiyasi orqali qidirish... (masalan: iver)"
+            placeholder="Mahsulot nomi, shtrix-kod yoki partiya orqali qidirish..."
             className="w-full pl-10 pr-9 py-3 bg-white border border-slate-200/90 rounded-2xl text-xs focus:ring-2 focus:ring-black shadow-2xs font-medium placeholder:text-slate-400"
           />
           {search && (
@@ -196,7 +196,7 @@ export const PosView: React.FC = () => {
         {search && (
           <div className="text-[11px] font-semibold text-slate-500 px-1 flex items-center justify-between">
             <span>
-              "{search}" bo'yicha: <strong className="text-slate-900">{products.length} ta</strong> dori topildi
+              "{search}" bo'yicha: <strong className="text-slate-900">{products.length} ta</strong> mahsulot topildi
             </span>
           </div>
         )}
@@ -474,23 +474,17 @@ export const PosView: React.FC = () => {
                       />
                       <input
                         type="tel"
-                        placeholder="+998 90 123 45 67"
+                        placeholder="+998 90 000 0000"
                         value={newCustomerPhone}
-                        onChange={(e) => setNewCustomerPhone(e.target.value)}
+                        onChange={(e) => setNewCustomerPhone(formatUzbekPhone(e.target.value))}
                         className="p-2.5 bg-white border border-amber-300 rounded-xl font-mono"
                       />
                     </div>
 
-                    {/* Ekin yoki Chorva profili */}
-                    <div className="flex items-center space-x-1.5 bg-white p-2 border border-amber-300 rounded-xl">
-                      <Tractor className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                      <input
-                        type="text"
-                        placeholder="Ekin / Chorva profili: 50 qoramol, 10 ga paxta..."
-                        value={farmProfile}
-                        onChange={(e) => setFarmProfile(e.target.value)}
-                        className="w-full border-0 focus:outline-hidden text-xs"
-                      />
+                    {/* Qarzga yozilayotgan dorilar eslatmasi */}
+                    <div className="flex items-center space-x-1.5 bg-amber-50/80 p-2.5 border border-amber-200 rounded-xl text-[11px] text-amber-900 font-medium">
+                      <Layers className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <span>Savatdagi {cart.length} ta mahsulot yangi fermer nomiga qarzga yoziladi</span>
                     </div>
                   </div>
                 )}
@@ -498,7 +492,7 @@ export const PosView: React.FC = () => {
                 {/* Qarzni qaytarish qat'iy muddati */}
                 <div>
                   <label className="text-[11px] font-bold text-amber-900 block mb-1">
-                    Qaytarish qat'iy muddati (Due date):
+                    Qaytarish qat'iy muddati:
                   </label>
                   <input
                     type="date"
@@ -540,9 +534,9 @@ export const PosView: React.FC = () => {
             </div>
             <div>
               <h3 className="text-sm font-extrabold text-slate-900">Sotuv Muvaffaqiyatli Yakunlandi!</h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">Ombor qoldig'i PostgreSQL da avtomatik kamaytirildi.</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Ombor qoldig'i avtomatik kamaytirildi.</p>
               <div className="mt-2.5 p-2 bg-slate-50 rounded-xl text-xs font-mono font-bold text-slate-800">
-                Chek: {successReceipt}
+                Chek raqami: {successReceipt}
               </div>
             </div>
             <button

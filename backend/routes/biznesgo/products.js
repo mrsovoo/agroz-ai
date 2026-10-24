@@ -1,312 +1,374 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../../config');
+const { getSector, isValidSector } = require('../../core/sectors');
 
-// In-memory fallback do'kon mahsulotlari (Agro-Vet 1-Sektor)
-const fallbackProducts = [
-  {
-    id: 'demo-p-1',
-    name: 'Oksitetratsiklin 20% LA',
-    active_ingredient: 'Oxytetracycline dihydrate 200 mg/ml',
-    category: 'Antibiotik (Veterinariya)',
-    batch_number: 'OKS-2401',
-    expiry_date: new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0],
-    image_url: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=300',
-    barcode: '478000123001',
-    price: 45000,
-    cost_price: 32000,
-    stock: 8,
-    min_stock: 5,
-    is_out_of_stock: false,
-    days_to_expiry: 15,
-    expiry_status: 'critical'
-  },
-  {
-    id: 'demo-p-2',
-    name: 'Ivermektin 1%',
-    active_ingredient: 'Ivermectin 10 mg/ml',
-    category: 'Antiparasitik',
-    batch_number: 'IVM-889',
-    expiry_date: new Date(Date.now() + 25 * 86400000).toISOString().split('T')[0],
-    image_url: 'https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=300',
-    barcode: '478000123002',
-    price: 38000,
-    cost_price: 27000,
-    stock: 14,
-    min_stock: 5,
-    is_out_of_stock: false,
-    days_to_expiry: 25,
-    expiry_status: 'critical'
-  },
-  {
-    id: 'demo-p-2b',
-    name: 'Ivervet Forte 2%',
-    active_ingredient: 'Ivermectin 20 mg + Clorsulon 100 mg/ml',
-    category: 'Antiparasitik (Katta qoramol)',
-    batch_number: 'IVF-102',
-    expiry_date: new Date(Date.now() + 180 * 86400000).toISOString().split('T')[0],
-    image_url: 'https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=300',
-    barcode: '478000123005',
-    price: 52000,
-    cost_price: 38000,
-    stock: 22,
-    min_stock: 6,
-    is_out_of_stock: false,
-    days_to_expiry: 180,
-    expiry_status: 'normal'
-  },
-  {
-    id: 'demo-p-2c',
-    name: 'Alben Granula (Albendazol 20%)',
-    active_ingredient: 'Albendazole 200 mg/g',
-    category: 'Antigelment (Qurtlarga qarshi)',
-    batch_number: 'ALB-334',
-    expiry_date: new Date(Date.now() + 240 * 86400000).toISOString().split('T')[0],
-    image_url: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=300',
-    barcode: '478000123006',
-    price: 28000,
-    cost_price: 20000,
-    stock: 40,
-    min_stock: 10,
-    is_out_of_stock: false,
-    days_to_expiry: 240,
-    expiry_status: 'normal'
-  },
-  {
-    id: 'demo-p-3',
-    name: 'Biovit-80',
-    active_ingredient: 'Chlortetracycline + Vitamin B12',
-    category: 'Vitamin & Premiks',
-    batch_number: 'BIO-102',
-    expiry_date: new Date(Date.now() + 120 * 86400000).toISOString().split('T')[0],
-    image_url: 'https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=300',
-    barcode: '478000123003',
-    price: 25000,
-    cost_price: 18000,
-    stock: 35,
-    min_stock: 10,
-    is_out_of_stock: false,
-    days_to_expiry: 120,
-    expiry_status: 'normal'
-  },
-  {
-    id: 'demo-p-4',
-    name: 'Ammofos 12:52',
-    active_ingredient: 'Azot 12% + Fosfor 52%',
-    category: 'Mineral O\'g\'itlar',
-    batch_number: 'AMF-990',
-    expiry_date: new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0],
-    image_url: 'https://images.unsplash.com/photo-1592417817098-8f3d6910985b?w=300',
-    barcode: '478000123004',
-    price: 85000,
-    cost_price: 70000,
-    stock: 50,
-    min_stock: 15,
-    is_out_of_stock: false,
-    days_to_expiry: 365,
-    expiry_status: 'normal'
-  },
-  {
-    id: 'demo-p-5',
-    name: 'Karbamid (Mochevina 46.2%)',
-    active_ingredient: 'Azot (N) 46.2%',
-    category: 'Mineral O\'g\'itlar',
-    batch_number: 'KRB-554',
-    expiry_date: new Date(Date.now() + 400 * 86400000).toISOString().split('T')[0],
-    image_url: 'https://images.unsplash.com/photo-1592417817098-8f3d6910985b?w=300',
-    barcode: '478000123007',
-    price: 110000,
-    cost_price: 92000,
-    stock: 65,
-    min_stock: 20,
-    is_out_of_stock: false,
-    days_to_expiry: 400,
-    expiry_status: 'normal'
-  }
-];
+// 0. Sektor bo'yicha toifalar va o'lchov birliklari
+router.get('/meta', (req, res) => {
+  const sectorType = req.query.sector_type || req.tenant?.sector_type || 'agro_vet';
+  const sectorInfo = getSector(sectorType);
+  res.json({
+    sector: sectorInfo,
+    units: sectorInfo.defaultUnits,
+    categories: sectorInfo.categories,
+    fields: sectorInfo.fields,
+    rules: sectorInfo.rules
+  });
+});
 
-// 1. Mahsulotlar ro'yxati (POS va Ombor uchun)
+// 1. Mahsulotlar ro'yxati (Agro-Vet dorixona va dori xavfsizligi maydonlari bilan)
 router.get('/', async (req, res) => {
-  const merchantId = req.merchant.id;
-  const { search, category, filter } = req.query;
+  const tenantId = req.tenant?.id || req.merchant?.id;
+  const { search, category, filter, sector_type } = req.query;
+  const activeSector = sector_type || req.tenant?.sector_type || 'agro_vet';
 
   try {
     let query = `
       SELECT 
-        id, name, category, active_ingredient, batch_number, 
+        id, name, sku, barcode, category, unit, brand,
+        active_ingredient, dosage_form, storage_condition, batch_number, 
         TO_CHAR(expiry_date, 'YYYY-MM-DD') as expiry_date,
-        image_url, barcode, price, cost_price, stock, min_stock, is_out_of_stock,
-        (expiry_date - CURRENT_DATE) as days_to_expiry,
+        image_url, price, cost_price, stock, min_stock, reorder_level,
+        is_out_of_stock, sector_type, sector_attributes,
         CASE 
+          WHEN expiry_date IS NOT NULL THEN (expiry_date - CURRENT_DATE)
+          ELSE NULL 
+        END as days_to_expiry,
+        CASE 
+          WHEN expiry_date IS NULL THEN 'normal'
           WHEN expiry_date < CURRENT_DATE THEN 'expired'
+          WHEN (expiry_date - CURRENT_DATE) <= 7 THEN 'critical_7'
           WHEN (expiry_date - CURRENT_DATE) <= 30 THEN 'critical'
-          WHEN (expiry_date - CURRENT_DATE) <= 60 THEN 'warning'
+          WHEN (expiry_date - CURRENT_DATE) <= 60 THEN 'warning_60'
+          WHEN (expiry_date - CURRENT_DATE) <= 90 THEN 'warning_90'
           ELSE 'normal'
         END as expiry_status
       FROM products 
-      WHERE merchant_id = $1
+      WHERE (tenant_id = $1 OR merchant_id = $1)
     `;
-    const params = [merchantId];
+    const params = [tenantId];
+
+    if (sector_type) {
+      params.push(sector_type);
+      query += ` AND sector_type = $${params.length}`;
+    }
 
     if (search) {
       params.push(`%${search}%`);
-      query += ` AND (name ILIKE $${params.length} OR active_ingredient ILIKE $${params.length} OR barcode ILIKE $${params.length} OR batch_number ILIKE $${params.length})`;
+      query += ` AND (
+        name ILIKE $${params.length} OR 
+        barcode ILIKE $${params.length} OR 
+        sku ILIKE $${params.length} OR 
+        active_ingredient ILIKE $${params.length} OR 
+        batch_number ILIKE $${params.length} OR
+        brand ILIKE $${params.length}
+      )`;
     }
 
-    if (filter === 'expired_or_critical') {
-      query += ` AND (expiry_date - CURRENT_DATE) <= 30`;
+    if (category) {
+      params.push(category);
+      query += ` AND category = $${params.length}`;
+    }
+
+    if (filter === 'expired') {
+      query += ` AND expiry_date IS NOT NULL AND expiry_date < CURRENT_DATE`;
+    } else if (filter === 'critical_7') {
+      query += ` AND expiry_date IS NOT NULL AND expiry_date >= CURRENT_DATE AND (expiry_date - CURRENT_DATE) <= 7`;
+    } else if (filter === 'expired_or_critical') {
+      query += ` AND expiry_date IS NOT NULL AND (expiry_date - CURRENT_DATE) <= 30`;
+    } else if (filter === 'warning_60') {
+      query += ` AND expiry_date IS NOT NULL AND (expiry_date - CURRENT_DATE) > 30 AND (expiry_date - CURRENT_DATE) <= 60`;
+    } else if (filter === 'warning_90') {
+      query += ` AND expiry_date IS NOT NULL AND (expiry_date - CURRENT_DATE) > 60 AND (expiry_date - CURRENT_DATE) <= 90`;
     } else if (filter === 'low_stock') {
       query += ` AND stock <= min_stock`;
     }
 
-    // FEFO tartibida saralash (muddati eng yaqin partiya birinchi)
-    query += ` ORDER BY expiry_date ASC, stock DESC`;
+    // FEFO: Muddati eng yaqin partiyalar birinchi keladi
+    query += ` ORDER BY expiry_date ASC NULLS LAST, stock DESC`;
 
     const result = await pool.query(query, params);
-    res.json({ products: result.rows });
+    res.json({ products: result.rows, sector_type: activeSector });
   } catch (error) {
     console.error('Products fetch error:', error.message);
-    
-    // Production muhitida hech qanday demo mahsulotlar ko'rsatilmaydi
-    if (process.env.NODE_ENV === 'production') {
-      return res.json({ products: [] });
+    res.json({ products: [], sector_type: activeSector });
+  }
+});
+
+// 2. Yangi Mahsulot qo'shish (Dori xavfsizligi qat'iy tekshiriladi)
+router.post('/', async (req, res) => {
+  const tenantId = req.tenant?.id || req.merchant?.id;
+  const {
+    name,
+    sku,
+    barcode,
+    category = 'Antibiotiklar (Vet)',
+    brand,
+    unit = 'dona',
+    image_url,
+    price,
+    cost_price = 0,
+    stock = 0,
+    min_stock = 5,
+    reorder_level = 10,
+    sector_type = 'agro_vet',
+    sector_attributes = {},
+    // 1-Sektor Dori xavfsizligi majburiy maydonlari:
+    active_ingredient,
+    dosage_form,
+    storage_condition,
+    batch_number,
+    expiry_date
+  } = req.body;
+
+  // 1. Mahsulot nomi majburiy
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Dori / preparat nomi kiritilishi shart' });
+  }
+
+  // 2. Narx tekshiruvi
+  const numPrice = Number(price);
+  if (isNaN(numPrice) || numPrice <= 0) {
+    return res.status(400).json({ error: 'Sotish narxi 0 dan katta bo\'lishi shart' });
+  }
+
+  // 3. 1-Sektor: Dori Xavfsizligi Qat'iy Validatsiyasi
+  if (sector_type === 'agro_vet') {
+    if (!active_ingredient || !active_ingredient.trim()) {
+      return res.status(400).json({ 
+        error: 'Dori xavfsizligi qoidasi: Faol moddasi va dozasi (active_ingredient) kiritilishi majburiy!' 
+      });
     }
+    if (!dosage_form || !dosage_form.trim()) {
+      return res.status(400).json({ 
+        error: 'Dori xavfsizligi qoidasi: Dori shakli (dosage_form: inyeksiya, granula, premiks, tabletka va h.k.) kiritilishi majburiy!' 
+      });
+    }
+    if (!storage_condition || !storage_condition.trim()) {
+      return res.status(400).json({ 
+        error: 'Dori xavfsizligi qoidasi: Saqlash sharti (storage_condition: +2°C...+8°C sovutgichda yoki +15°C...+25°C quruq joyda) kiritilishi majburiy!' 
+      });
+    }
+    if (!batch_number || !batch_number.trim()) {
+      return res.status(400).json({ 
+        error: 'Partiya nazorati qoidasi: Partiya yoki seriya raqami (batch_number) kiritilishi majburiy!' 
+      });
+    }
+    if (!expiry_date) {
+      return res.status(400).json({ 
+        error: 'FEFO qoidasi: Yaroqlilik muddati (expiry_date) kiritilishi majburiy!' 
+      });
+    }
+    if (!image_url || !image_url.trim()) {
+      return res.status(400).json({ 
+        error: 'Dori xavfsizligi qoidasi: Mahsulot rasmi yuklanishi shart (noto\'g\'ri dori berilishining oldini olish uchun)!' 
+      });
+    }
+  }
 
-    // Faqat lokal sinov (Local Dev) uchun:
-    let filtered = [...fallbackProducts];
+  const numStock = Number(stock) || 0;
+  const numCost = Number(cost_price) || 0;
+  const numMin = Number(min_stock) || 5;
+  const numReorder = Number(reorder_level) || 10;
+  const isOutOfStock = numStock <= 0;
 
-    if (search) {
-      const s = search.toLowerCase().trim();
-      filtered = filtered.filter(p => 
-        (p.name && p.name.toLowerCase().includes(s)) ||
-        (p.active_ingredient && p.active_ingredient.toLowerCase().includes(s)) ||
-        (p.batch_number && p.batch_number.toLowerCase().includes(s)) ||
-        (p.barcode && p.barcode.toLowerCase().includes(s))
+  const mergedAttributes = {
+    ...sector_attributes,
+    active_ingredient: active_ingredient?.trim() || null,
+    dosage_form: dosage_form?.trim() || null,
+    storage_condition: storage_condition?.trim() || null,
+    batch_number: batch_number?.trim() || null,
+    expiry_date: expiry_date || null
+  };
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const result = await client.query(
+      `INSERT INTO products (
+        tenant_id, merchant_id, name, sku, barcode, category, brand, unit,
+        active_ingredient, dosage_form, storage_condition, batch_number, expiry_date, image_url,
+        price, cost_price, stock, min_stock, reorder_level, is_out_of_stock,
+        sector_type, sector_attributes
+      ) VALUES ($1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+      RETURNING *, TO_CHAR(expiry_date, 'YYYY-MM-DD') as expiry_date`,
+      [
+        tenantId,
+        name.trim(),
+        sku || null,
+        barcode || null,
+        category,
+        brand || null,
+        unit,
+        active_ingredient?.trim(),
+        dosage_form?.trim(),
+        storage_condition?.trim(),
+        batch_number?.trim(),
+        expiry_date,
+        image_url?.trim(),
+        numPrice,
+        numCost,
+        numStock,
+        numMin,
+        numReorder,
+        isOutOfStock,
+        sector_type,
+        JSON.stringify(mergedAttributes)
+      ]
+    );
+
+    const createdProduct = result.rows[0];
+
+    // Partiyani stock_batches jadvaliga ham ro'yxatdan o'tkazish
+    if (batch_number && numStock > 0) {
+      await client.query(
+        `INSERT INTO stock_batches (
+          tenant_id, product_id, batch_number, production_date, expiry_date, quantity, cost_price
+        ) VALUES ($1, $2, $3, CURRENT_DATE, $4, $5, $6)`,
+        [tenantId, createdProduct.id, batch_number.trim(), expiry_date, numStock, numCost]
+      );
+
+      // Ombor harakati audit logi
+      await client.query(
+        `INSERT INTO inventory_movements (
+          tenant_id, product_id, movement_type, document_no, quantity, unit_cost, notes
+        ) VALUES ($1, $2, 'receipt', $3, $4, $5, 'Dastlabki qoldiq kiritildi')`,
+        [tenantId, createdProduct.id, `INIT-${batch_number}`, numStock, numCost]
       );
     }
 
-    if (filter === 'expired_or_critical') {
-      filtered = filtered.filter(p => p.days_to_expiry <= 30);
-    } else if (filter === 'low_stock') {
-      filtered = filtered.filter(p => p.stock <= p.min_stock);
-    }
+    // Audit log
+    await client.query(
+      `INSERT INTO audit_logs (tenant_id, action, entity_type, entity_id, new_values)
+       VALUES ($1, 'product.create', 'product', $2, $3)`,
+      [tenantId, createdProduct.id, JSON.stringify({ name: createdProduct.name, batch_number, expiry_date, stock: numStock })]
+    );
 
-    res.json({ products: filtered });
+    await client.query('COMMIT');
+
+    res.status(201).json({
+      message: 'Preparat muvaffaqiyatli saqlandi',
+      product: createdProduct
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Product create error:', error.message);
+    res.status(500).json({ error: 'Mahsulotni saqlashda xatolik yuz berdi: ' + error.message });
+  } finally {
+    client.release();
   }
 });
 
-// 2. Yangi Agro-Vet mahsulot qo'shish (Majburiy maydonlar: active_ingredient, batch_number, expiry_date, image_url)
-router.post('/', async (req, res) => {
-  const merchantId = req.merchant.id;
+// 3. Mahsulotni yangilash
+router.put('/:id', async (req, res) => {
+  const tenantId = req.tenant?.id || req.merchant?.id;
+  const productId = req.params.id;
   const {
     name,
-    category,
-    active_ingredient,
-    batch_number,
-    expiry_date,
-    image_url,
-    barcode,
     price,
     cost_price,
     stock,
-    min_stock
+    min_stock,
+    category,
+    unit,
+    active_ingredient,
+    dosage_form,
+    storage_condition,
+    batch_number,
+    expiry_date
   } = req.body;
 
-  // Qat'iy maydonlar validatsiyasi
-  if (!name || !name.trim()) {
-    return res.status(400).json({ error: 'Mahsulot nomi kiritilishi shart' });
-  }
-  if (!active_ingredient || !active_ingredient.trim()) {
-    return res.status(400).json({ error: 'Agro-Vet: Faol moddasi va dozasi (active_ingredient) kiritilishi majburiy!' });
-  }
-  if (!batch_number || !batch_number.trim()) {
-    return res.status(400).json({ error: 'Agro-Vet: Partiya yoki seriya raqami kiritilishi majburiy!' });
-  }
-  if (!expiry_date) {
-    return res.status(400).json({ error: 'Agro-Vet: Yaroqlilik muddati kiritilishi majburiy!' });
-  }
-  if (!image_url || !image_url.trim()) {
-    return res.status(400).json({ error: 'Agro-Vet: Mahsulot rasmi yuklanishi qat\'iy majburiy (Required)!' });
-  }
-  if (price === undefined || price < 0) {
-    return res.status(400).json({ error: 'Sotish narxi to\'g\'ri kiritilishi shart' });
-  }
-
-  const initialStock = Number(stock) || 0;
-  const isOutOfStock = initialStock <= 0;
-
   try {
-    const insertQuery = `
-      INSERT INTO products (
-        merchant_id, name, category, active_ingredient, batch_number, expiry_date, image_url, 
-        barcode, price, cost_price, stock, min_stock, is_out_of_stock
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-      RETURNING *
-    `;
-    const result = await pool.query(insertQuery, [
-      merchantId,
-      name.trim(),
-      category || 'Agro-Vet Dori',
-      active_ingredient.trim(),
-      batch_number.trim(),
-      expiry_date,
-      image_url.trim(),
-      barcode ? barcode.trim() : null,
-      Number(price),
-      Number(cost_price) || 0,
-      initialStock,
-      Number(min_stock) || 5,
-      isOutOfStock
-    ]);
+    const existingRes = await pool.query(
+      `SELECT * FROM products WHERE id = $1 AND (tenant_id = $2 OR merchant_id = $2)`,
+      [productId, tenantId]
+    );
+    if (existingRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Mahsulot topilmadi' });
+    }
 
-    res.status(201).json({ product: result.rows[0], message: 'Agro-Vet preparati muvaffaqiyatli saqlandi' });
+    const current = existingRes.rows[0];
+    const newStock = stock !== undefined ? Number(stock) : current.stock;
+    const isOutOfStock = newStock <= 0;
+
+    const updateRes = await pool.query(
+      `UPDATE products SET
+        name = COALESCE($1, name),
+        price = COALESCE($2, price),
+        cost_price = COALESCE($3, cost_price),
+        stock = COALESCE($4, stock),
+        min_stock = COALESCE($5, min_stock),
+        category = COALESCE($6, category),
+        unit = COALESCE($7, unit),
+        active_ingredient = COALESCE($8, active_ingredient),
+        dosage_form = COALESCE($9, dosage_form),
+        storage_condition = COALESCE($10, storage_condition),
+        batch_number = COALESCE($11, batch_number),
+        expiry_date = COALESCE($12, expiry_date),
+        is_out_of_stock = $13,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $14 AND (tenant_id = $15 OR merchant_id = $15)
+      RETURNING *, TO_CHAR(expiry_date, 'YYYY-MM-DD') as expiry_date`,
+      [
+        name,
+        price !== undefined ? Number(price) : null,
+        cost_price !== undefined ? Number(cost_price) : null,
+        newStock,
+        min_stock !== undefined ? Number(min_stock) : null,
+        category,
+        unit,
+        active_ingredient,
+        dosage_form,
+        storage_condition,
+        batch_number,
+        expiry_date,
+        isOutOfStock,
+        productId,
+        tenantId
+      ]
+    );
+
+    res.json({
+      message: 'Mahsulot muvaffaqiyatli yangilandi',
+      product: updateRes.rows[0]
+    });
   } catch (error) {
-    console.error('Product create error (using fallback store):', error.message);
-    const newProduct = {
-      id: `p-${Date.now()}`,
-      merchant_id: merchantId,
-      name: name.trim(),
-      category: category || 'Agro-Vet Dori',
-      active_ingredient: active_ingredient.trim(),
-      batch_number: batch_number.trim(),
-      expiry_date: expiry_date,
-      image_url: image_url.trim(),
-      barcode: barcode ? barcode.trim() : null,
-      price: Number(price),
-      cost_price: Number(cost_price) || 0,
-      stock: initialStock,
-      min_stock: Number(min_stock) || 5,
-      is_out_of_stock: isOutOfStock,
-      days_to_expiry: Math.round((new Date(expiry_date).getTime() - Date.now()) / 86400000),
-      expiry_status: 'normal'
-    };
-    fallbackProducts.unshift(newProduct);
-    res.status(201).json({ product: newProduct, message: 'Agro-Vet preparati muvaffaqiyatli saqlandi' });
+    console.error('Product update error:', error.message);
+    res.status(500).json({ error: 'Mahsulotni yangilashda xatolik yuz berdi' });
   }
 });
 
-// 3. 30 kun ichida tugaydigan dorilar (Alerts)
-router.get('/alerts/expiry', async (req, res) => {
-  const merchantId = req.merchant.id;
+// 4. Mahsulot partiyalari (Multi-batch ko'rish)
+router.get('/:id/batches', async (req, res) => {
+  const tenantId = req.tenant?.id || req.merchant?.id;
+  const productId = req.params.id;
 
   try {
-    const query = `
-      SELECT 
-        id, name, active_ingredient, batch_number, TO_CHAR(expiry_date, 'YYYY-MM-DD') as expiry_date,
-        stock, price, (expiry_date - CURRENT_DATE) as days_to_expiry,
+    const result = await pool.query(
+      `SELECT 
+        b.id, b.batch_number, 
+        TO_CHAR(b.production_date, 'YYYY-MM-DD') as production_date,
+        TO_CHAR(b.expiry_date, 'YYYY-MM-DD') as expiry_date,
+        b.quantity, b.cost_price, b.is_recalled, b.recall_reason,
+        (b.expiry_date - CURRENT_DATE) as days_to_expiry,
         CASE 
-          WHEN expiry_date < CURRENT_DATE THEN 'expired'
-          ELSE 'critical'
-        END as alert_level
-      FROM products
-      WHERE merchant_id = $1 AND stock > 0 AND (expiry_date - CURRENT_DATE) <= 30
-      ORDER BY expiry_date ASC
-    `;
-    const result = await pool.query(query, [merchantId]);
-    res.json({ alerts: result.rows });
-  } catch (error) {
-    console.error('Expiry alerts fetch error:', error);
-    res.json({ alerts: [] });
+          WHEN b.is_recalled THEN 'recalled'
+          WHEN b.expiry_date < CURRENT_DATE THEN 'expired'
+          WHEN (b.expiry_date - CURRENT_DATE) <= 7 THEN 'critical_7'
+          WHEN (b.expiry_date - CURRENT_DATE) <= 30 THEN 'critical'
+          ELSE 'valid'
+        END as status
+      FROM stock_batches b
+      WHERE b.product_id = $1 AND b.tenant_id = $2
+      ORDER BY b.expiry_date ASC, b.quantity DESC`,
+      [productId, tenantId]
+    );
+
+    res.json({ batches: result.rows });
+  } catch (err) {
+    console.error('Batches fetch error:', err.message);
+    res.status(500).json({ error: 'Partiyalarni yuklashda xatolik yuz berdi' });
   }
 });
 

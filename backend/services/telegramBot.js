@@ -164,8 +164,7 @@ async function handleTelegramMessage(client, msg) {
         return client.sendMessage(
           chatId,
           `Xush kelibsiz, *${firstName}*! 🌿💊\n\n` +
-          `🏢 *Do'koningiz:* ${merchantName}\n` +
-          `💊 *Sektor:* 1-Sektor: Agro-Vet Dorixona & O'g'itlar\n\n` +
+          `🏢 *${merchantName}*\n\n` +
           `Kassa, ombor yoki qarz daftarini ochish uchun quyidagi tugmani bosing:`,
           {
             parse_mode: 'Markdown',
@@ -174,7 +173,7 @@ async function handleTelegramMessage(client, msg) {
                 [
                   {
                     text: '🚀 BiznesGO Mobil Appni Ochish',
-                    web_app: { url: `${webAppUrl}?tg_id=${tgUserId}` }
+                    web_app: { url: `${webAppUrl}?tg_id=${tgUserId}&store=${encodeURIComponent(merchantName)}` }
                   }
                 ]
               ],
@@ -293,10 +292,7 @@ async function handleTelegramMessage(client, msg) {
       return client.sendMessage(
         chatId,
         `🎉 *Tabriklaymiz! Do'koningiz muvaffaqiyatli ro'yxatdan o'tdi!*\n\n` +
-        `🏢 *Do'kon:* ${storeName}\n` +
-        `💊 *Sektor:* 1-Sektor: Agro-Vet Dorixona & O'g'itlar\n` +
-        `👤 *Egasi:* ${session.ownerName}\n` +
-        `📅 *Obuna:* 14 kunlik bepul sinov davri faollashtirildi!\n\n` +
+        `🏢 *${storeName}*\n\n` +
         `Pastdagi tugma orqali ilovani xuddi mobil ilovadek ochishingiz mumkin:`,
         {
           parse_mode: 'Markdown',
@@ -305,7 +301,7 @@ async function handleTelegramMessage(client, msg) {
               [
                 {
                   text: '🚀 BiznesGO Mobil Appni Ochish',
-                  web_app: { url: `${webAppUrl}?registered=1` }
+                  web_app: { url: `${webAppUrl}?store=${encodeURIComponent(storeName)}` }
                 }
               ]
             ],

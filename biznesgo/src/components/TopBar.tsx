@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Search,
   Bell,
-  ShieldCheck,
   X,
   Menu,
   FlaskConical,
@@ -15,7 +14,8 @@ import {
   Package,
   Receipt,
   CheckCheck,
-  Clock
+  Clock,
+  LogOut
 } from 'lucide-react';
 import { Product } from '../types';
 import { api, formatUZS } from '../lib/api';
@@ -37,6 +37,7 @@ interface TopBarProps {
   onOpenMobileMenu?: () => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  onLogout?: () => void;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -45,9 +46,9 @@ export const TopBar: React.FC<TopBarProps> = ({
   onNavigateTab,
   onOpenMobileMenu,
   searchQuery,
-  onSearchChange
+  onSearchChange,
+  onLogout
 }) => {
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<Product[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -102,7 +103,6 @@ export const TopBar: React.FC<TopBarProps> = ({
       if (e.key === 'Escape') {
         setShowSuggestions(false);
         setIsNotificationOpen(false);
-        setIsProfileModalOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -205,14 +205,14 @@ export const TopBar: React.FC<TopBarProps> = ({
             <div className="flex items-center space-x-2">
               <span className="font-extrabold text-sm sm:text-base text-slate-900">Tezkor Kassa</span>
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">
-                POS Faol
+                Kassa Faol
               </span>
             </div>
           ) : activeTab === 'products' ? (
             <div className="flex items-center space-x-2">
-              <span className="font-extrabold text-sm sm:text-base text-slate-900">Ombor & Dorilar</span>
-              <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold text-[10px]">
-                Agro-Vet Ombori
+              <span className="font-extrabold text-sm sm:text-base text-slate-900">Ombor & Dori Vositalari</span>
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">
+                Agro-Vet Dorixona
               </span>
             </div>
           ) : (
@@ -233,7 +233,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                   handleViewAll();
                 }
               }}
-              placeholder="Ombordagi dorilar, faol modda yoki seriyani qidirish... (masalan: iver)"
+              placeholder="Mahsulotlar, partiya yoki shtrix-kodni qidirish..."
               className="w-full bg-white pl-10 pr-9 py-2 sm:py-2.5 rounded-full border border-slate-200/90 text-xs text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-black shadow-2xs font-medium placeholder:text-slate-400"
             />
             {searchQuery && (
@@ -374,7 +374,7 @@ export const TopBar: React.FC<TopBarProps> = ({
               className="flex items-center space-x-1.5 sm:space-x-2 bg-white px-3 sm:px-4 py-2 rounded-full border border-slate-200/90 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-2xs cursor-pointer active:scale-95"
             >
               <Bell className="w-3.5 h-3.5 text-slate-600" />
-              <span className="hidden sm:inline">Notifications</span>
+              <span className="hidden sm:inline">Bildirishnomalar</span>
               {unreadCount > 0 && (
                 <span className="w-5 h-5 rounded-full bg-rose-500 text-white font-bold text-[10px] flex items-center justify-center font-mono">
                   {unreadCount}
@@ -500,69 +500,19 @@ export const TopBar: React.FC<TopBarProps> = ({
             )}
           </div>
 
-          {/* Profil Avatari */}
-          <div
-            onClick={() => setIsProfileModalOpen(true)}
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden border-2 border-white shadow-2xs cursor-pointer hover:ring-2 hover:ring-emerald-500 transition shrink-0"
-            title="Do'kon ma'lumotlari"
-          >
-            <img
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-              alt="Do'kon Egasi"
-              className="w-full h-full object-cover"
-            />
-          </div>
+          {/* Chiqish (Logout) Tugmasi - Notification bilan bir qatorda */}
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="flex items-center space-x-1.5 bg-white px-3 sm:px-3.5 py-2 rounded-full border border-slate-200/90 text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:border-rose-200 transition shadow-2xs cursor-pointer active:scale-95 shrink-0"
+              title="Hisobdan chiqish"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Chiqish</span>
+            </button>
+          )}
         </div>
       </header>
-
-      {/* Profil Kichik Modali */}
-      {isProfileModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-xl border border-slate-200 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h4 className="font-extrabold text-sm text-slate-900">Do'kon Ma'lumotlari</h4>
-              <button
-                onClick={() => setIsProfileModalOpen(false)}
-                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div className="p-3 bg-emerald-50/80 rounded-xl border border-emerald-200 flex items-center space-x-2.5">
-                <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
-                <div>
-                  <div className="font-bold text-emerald-950">1-Sektor: Agro-Vet Dorixona</div>
-                  <div className="text-[10px] text-emerald-700">Veterinariya & O'g'itlar</div>
-                </div>
-              </div>
-
-              <div className="space-y-2 text-slate-600">
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-400">Do'kon nomi:</span>
-                  <span className="font-bold text-slate-900">Agro-Vet Markaz</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-400">Telefon:</span>
-                  <span className="font-mono text-slate-900">+998 90 123 45 67</span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span className="text-slate-400">Kassa holati:</span>
-                  <span className="text-emerald-700 font-bold">Faol (PostgreSQL)</span>
-                </div>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setIsProfileModalOpen(false)}
-              className="w-full py-2 bg-slate-900 text-white rounded-xl font-bold text-xs hover:bg-slate-800 transition"
-            >
-              Yopish
-            </button>
-          </div>
-        </div>
-      )}
     </>
   );
 };
