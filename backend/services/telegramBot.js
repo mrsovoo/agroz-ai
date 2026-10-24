@@ -155,6 +155,10 @@ async function handleTelegramMessage(client, msg) {
         [
           { text: '📒 Qarz Daftari' },
           { text: '📦 Kam Qolgan Dorilar' }
+        ],
+        [
+          { text: '👤 Profilim' },
+          { text: 'ℹ️ Yordam va Qo\'llab-quvvatlash' }
         ]
       ],
       resize_keyboard: true,
@@ -567,6 +571,137 @@ async function handleTelegramMessage(client, msg) {
       );
     }
   }
+
+  // F) "👤 Profilim" yoki "/profil"
+  if (text === '👤 Profilim' || text === '/profil' || text.toLowerCase() === 'profil') {
+    try {
+      let store = null;
+      let user = null;
+
+      try {
+        const merchantRes = await pool.query(
+          `SELECT m.*, t.sector_type, t.plan, t.created_at as reg_date 
+           FROM merchants m 
+           LEFT JOIN tenants t ON m.tenant_id = t.id 
+           WHERE m.address LIKE $1 OR m.phone LIKE $2 
+           LIMIT 1`,
+          [`%${tgUserId}%`, `%${tgUserId}%`]
+        );
+        if (merchantRes.rows.length > 0) {
+          store = merchantRes.rows[0];
+        }
+      } catch (dbErr) {
+        console.warn('DB profile query error:', dbErr.message);
+      }
+
+      if (!store) {
+        // Chat mappingdan qidirib ko'ramiz
+        for (const [p, cId] of phoneChatMap.entries()) {
+          if (cId === chatId) {
+            try {
+              const res = await pool.query('SELECT * FROM merchants WHERE phone LIKE $1 LIMIT 1', [`%${p.slice(-9)}%`]);
+              if (res.rows.length > 0) store = res.rows[0];
+            } catch (_) {}
+            break;
+          }
+        }
+      }
+
+      if (store) {
+        const regDate = store.reg_date ? new Date(store.reg_date).toLocaleDateString('uz-UZ') : 'Yaqinda';
+        const sectorNames = {
+          agro_vet: 'Agro-Vet Dorixona',
+          feed_nutrition: 'Yem va Ozuqa',
+          seeds_seedlings: "Urug' va Ko'chat",
+          greenhouse_livestock_eq: 'Issiqxona va Jihozlar',
+          agro_machinery: 'Agro Texnika'
+        };
+        const sectorLabel = sectorNames[store.sector_type || store.business_type] || 'Agro-Vet Dorixona';
+
+        return client.sendMessage(
+          chatId,
+          `👤 *Foydalanuvchi va Do'kon Profili:*\n\n` +
+          `🏢 *Do'kon:* ${store.name}\n` +
+          `🏷 *Soha (Sektor):* ${sectorLabel}\n` +
+          `📱 *Telefon:* \`${store.phone}\`\n` +
+          (store.address && !store.address.startsWith('tg:') ? `📍 *Manzil:* ${store.address}\n` : '') +
+          `⭐️ *Tarif:* ${store.plan ? store.plan.toUpperCase() : 'STANDARD B2B'}\n` +
+          `📅 *Ro'yxatdan o'tgan sana:* ${regDate}\n` +
+          `🆔 *Telegram ID:* \`${tgUserId || chatId}\`\n\n` +
+          `_Kassani brauzerda yoki ushbu bot ichida ochishingiz mumkin._`,
+          {
+            parse_mode: 'Markdown',
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  {
+                    text: '🚀 BiznesGO Ilovasini Ochish',
+                    web_app: { url: `${webAppUrl}?tg_id=${tgUserId}&store=${encodeURIComponent(store.name)}` }
+                  }
+                ],
+                [
+                  {
+                    text: '🔄 Ma\'lumotlarni Yangilash',
+                    callback_data: 'refresh_profile'
+                  }
+                ]
+              ]
+            }
+          }
+        );
+      }
+
+      // Agar hali do'kon topilmasa yoki biriktirilmagan bo'lsa
+      return client.sendMessage(
+        chatId,
+        `👤 *Sizning Profilingiz:*\n\n` +
+        `👤 *Ism:* ${firstName}\n` +
+        `🆔 *Telegram ID:* \`${tgUserId || chatId}\`\n` +
+        `⚠️ *Holat:* Sizning Telegram hisobingizga hozircha do'kon biriktirilmagan.\n\n` +
+        `Do'koningizni ro'yxatdan o'tkazish yoki ulash uchun pastdagi tugmani bosing:`,
+        {
+          parse_mode: 'Markdown',
+          reply_markup: {
+            keyboard: [
+              [
+                {
+                  text: '📱 Telefon raqamni yuborish',
+                  request_contact: true
+                }
+              ],
+              [
+                { text: 'ℹ️ Yordam va Qo\'llab-quvvatlash' }
+              ]
+            ],
+            resize_keyboard: true,
+            one_time_keyboard: true
+          }
+        }
+      );
+    } catch (err) {
+      console.error('Profile handler error:', err);
+      return client.sendMessage(chatId, `❌ Profilni yuklashda xatolik yuz berdi. Iltimos qaytadan urinib ko'ring.`, getMainMenuKeyboard());
+    }
+  }
+
+  // G) "ℹ️ Yordam va Qo'llab-quvvatlash" yoki "/yordam"
+  if (text === 'ℹ️ Yordam va Qo\'llab-quvvatlash' || text === '/yordam' || text.toLowerCase() === 'yordam' || text === '/help') {
+    return client.sendMessage(
+      chatId,
+      `ℹ️ *BiznesGO B2B Yordam Markazi* 🌿💊\n\n` +
+      `BiznesGO — Agro-veterinariya dorixonalari va qishloq xo'jaligi do'konlari uchun maxsus ishlab chiqilgan avtomatlashtirilgan boshqaruv tizimi.\n\n` +
+      `📌 *Mavjud buyruqlar va imkoniyatlar:*\n` +
+      `• *🚀 BiznesGO Kassani Ochish* — To'liq kassa va omborni ilova sifatida ochish\n` +
+      `• *📊 Bugungi Kassa* — Kunlik naqd, karta, nasiya va tushum hisoboti\n` +
+      `• *⚠️ FEFO Xavfi* — Muddati 30 kunda tugaydigan dorilar monitoringi\n` +
+      `• *📒 Qarz Daftari* — Fermerlarning jami qarzi va muddatlari\n` +
+      `• *📦 Kam Qolgan Dorilar* — Ombor zaxirasi tugayotgan tovarlar\n` +
+      `• *👤 Profilim* — Do'kon, tarif va mas'ul shaxs ma'lumotlari\n\n` +
+      `☎️ *Qo'llab-quvvatlash xizmati:* @sohibjon_dev\n` +
+      `🌐 *Rasmiy veb-sayt:* https://biznesgo.vercel.app`,
+      { parse_mode: 'Markdown', ...getMainMenuKeyboard() }
+    );
+  }
 }
 
 // Ro'yxatdan o'tishni tasdiqlash va toza 0-holatdagi do'konni yaratish
@@ -702,6 +837,16 @@ async function handleTelegramCallbackQuery(client, cb) {
     } catch (err) {
       console.error('Approve error:', err);
       await client.answerCallbackQuery(cbId, 'Xatolik: ' + err.message, true);
+    }
+  } else if (data === 'refresh_profile') {
+    await client.answerCallbackQuery(cbId, '🔄 Profil ma\'lumotlari yangilandi', false);
+    // Profilni qayta chaqirish
+    if (chatId) {
+      await handleTelegramMessage(client, {
+        chat: { id: chatId },
+        from: cb.from,
+        text: '/profil'
+      });
     }
   }
 }
