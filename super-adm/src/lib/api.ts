@@ -1,4 +1,4 @@
-import { AdminUser, AuditLog, AdminRole } from '../types';
+import { AdminUser, AuditLog, AdminRole, Tenant, DashboardData } from '../types';
 
 const TOKEN_KEY = 'biznesgo_admin_token';
 const USER_KEY = 'biznesgo_admin_user';
@@ -144,6 +144,51 @@ export const adminApi = {
         field_name: fieldName,
         reason
       })
+    });
+  },
+
+  // Dashboard Katta Data Metrikalari
+  async getDashboardMetrics() {
+    return apiRequest<{
+      success: boolean;
+      summary: DashboardData['summary'];
+      sources: DashboardData['sources'];
+      regions: DashboardData['regions'];
+      top_tenants: DashboardData['top_tenants'];
+      recent_tenants: DashboardData['recent_tenants'];
+    }>('/v1/admin/dashboard/metrics');
+  },
+
+  // B2B Dorixonalar va Bizneslar
+  async listTenants(params?: { search?: string; source?: string; status?: string; region?: string }) {
+    const query = new URLSearchParams();
+    if (params?.search) query.set('search', params.search);
+    if (params?.source) query.set('source', params.source);
+    if (params?.status) query.set('status', params.status);
+    if (params?.region) query.set('region', params.region);
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return apiRequest<{
+      success: boolean;
+      tenants: Tenant[];
+    }>(`/v1/admin/tenants${qs}`);
+  },
+
+  async getTenantDetail(id: string) {
+    return apiRequest<{
+      success: boolean;
+      tenant: Tenant;
+    }>(`/v1/admin/tenants/${id}`);
+  },
+
+  async toggleTenantStatus(id: string, status: 'active' | 'suspended', reason?: string) {
+    return apiRequest<{
+      success: boolean;
+      message: string;
+      is_active: boolean;
+      status: 'active' | 'suspended';
+    }>(`/v1/admin/tenants/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, reason })
     });
   },
 

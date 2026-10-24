@@ -39,6 +39,48 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onTabChange, user 
 
       {/* Navigation Sections */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6 text-xs">
+        {/* Phase 2: Boshqaruv & Katta Data Paneli */}
+        <div>
+          <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-2 mb-2">
+            Boshqaruv &amp; Katta Data
+          </div>
+          <div className="space-y-1">
+            <button
+              onClick={() => onTabChange('dashboard')}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg font-medium transition-all ${
+                currentTab === 'dashboard'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                  : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+              }`}
+            >
+              <div className="flex items-center space-x-2.5">
+                <Layers className="w-4 h-4" />
+                <span>Katta Data Paneli</span>
+              </div>
+              <span className="text-[9px] bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded font-mono">
+                Data
+              </span>
+            </button>
+
+            <button
+              onClick={() => onTabChange('tenants')}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg font-medium transition-all ${
+                currentTab === 'tenants'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                  : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+              }`}
+            >
+              <div className="flex items-center space-x-2.5">
+                <Building2 className="w-4 h-4" />
+                <span>Bizneslar &amp; Daromad</span>
+              </div>
+              <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-mono">
+                B2B
+              </span>
+            </button>
+          </div>
+        </div>
+
         {/* Phase 1 Core Foundation */}
         <div>
           <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-2 mb-2">
@@ -79,42 +121,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onTabChange, user 
               <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-mono">
                 Log
               </span>
-            </button>
-          </div>
-        </div>
-
-        {/* Phase 2: Boshqaruv */}
-        <div>
-          <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-2 mb-2">
-            Boshqaruv (2-bosqich)
-          </div>
-          <div className="space-y-1">
-            <button
-              onClick={() => onTabChange('dashboard')}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg font-medium transition-all ${
-                currentTab === 'dashboard'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                  : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
-              }`}
-            >
-              <div className="flex items-center space-x-2.5">
-                <Layers className="w-4 h-4" />
-                <span>Boshqaruv Paneli</span>
-              </div>
-            </button>
-
-            <button
-              onClick={() => onTabChange('tenants')}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg font-medium transition-all ${
-                currentTab === 'tenants'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                  : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
-              }`}
-            >
-              <div className="flex items-center space-x-2.5">
-                <Building2 className="w-4 h-4" />
-                <span>Bizneslar (Dorixonalar...)</span>
-              </div>
             </button>
           </div>
         </div>

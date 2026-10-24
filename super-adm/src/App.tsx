@@ -4,14 +4,15 @@ import { AdminUser } from './types';
 import { LoginView } from './views/LoginView';
 import { AdminsView } from './views/AdminsView';
 import { AuditView } from './views/AuditView';
-import { DashboardPlaceholder } from './views/DashboardPlaceholder';
+import { DashboardView } from './views/DashboardView';
+import { TenantsView } from './views/TenantsView';
 import { Sidebar } from './components/Layout/Sidebar';
 import { TopBar } from './components/Layout/TopBar';
 import { VersionFooter } from './components/Layout/VersionFooter';
 
 export function App() {
   const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
-  const [currentTab, setCurrentTab] = useState<string>('admins');
+  const [currentTab, setCurrentTab] = useState<string>('dashboard');
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
@@ -58,14 +59,14 @@ export function App() {
 
   const getTabTitle = () => {
     switch (currentTab) {
+      case 'dashboard':
+        return 'B2B Katta Data va Boshqaruv Paneli';
+      case 'tenants':
+        return 'B2B Dorixonalar va Bizneslar (Aylanma & Manba)';
       case 'admins':
         return 'Adminlar va Rollar (RBAC)';
       case 'audit':
         return 'Audit Jurnali va Xavfsizlik';
-      case 'dashboard':
-        return 'Boshqaruv Paneli';
-      case 'tenants':
-        return 'Bizneslar (Dorixonalar)';
       default:
         return 'Super Admin';
     }
@@ -89,14 +90,12 @@ export function App() {
         />
 
         <main className="flex-1 p-8 overflow-y-auto">
+          {currentTab === 'dashboard' && (
+            <DashboardView onNavigateToTenants={() => setCurrentTab('tenants')} />
+          )}
+          {currentTab === 'tenants' && <TenantsView />}
           {currentTab === 'admins' && <AdminsView />}
           {currentTab === 'audit' && <AuditView />}
-          {(currentTab === 'dashboard' || currentTab === 'tenants') && (
-            <DashboardPlaceholder
-              user={currentUser}
-              onNavigateToAdmins={() => setCurrentTab('admins')}
-            />
-          )}
         </main>
 
         <VersionFooter />

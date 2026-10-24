@@ -49,6 +49,81 @@ export interface FilterDef {
   options?: { label: string; value: string }[];
 }
 
+export type TenantSource = 'telegram_bot' | 'web_browser';
+
+export interface Tenant {
+  id: string;
+  name: string;
+  phone: string;
+  masked_phone: string;
+  address: string;
+  region: string;
+  source: TenantSource;
+  source_label: string;
+  total_revenue: number;
+  sales_count: number;
+  is_active: boolean;
+  status: 'active' | 'suspended';
+  created_at: string;
+  stats?: {
+    total_revenue: number;
+    sales_count: number;
+    products_count: number;
+    average_check: number;
+  };
+  recent_sales?: Array<{
+    id: string;
+    receipt_number: string;
+    total_amount: number;
+    payment_type: string;
+    status: string;
+    created_at: string;
+  }>;
+}
+
+export interface DashboardData {
+  summary: {
+    total_tenants: number;
+    active_tenants: number;
+    total_revenue: number;
+    today_revenue: number;
+    total_sales_count: number;
+    average_check: number;
+  };
+  sources: {
+    telegram_bot: number;
+    web_browser: number;
+    telegram_percentage: number;
+    web_percentage: number;
+  };
+  regions: Array<{
+    region: string;
+    tenant_count: number;
+    total_revenue: number;
+  }>;
+  top_tenants: Array<{
+    id: string;
+    name: string;
+    phone: string;
+    masked_phone: string;
+    region: string;
+    source: TenantSource;
+    total_revenue: number;
+    sales_count: number;
+    created_at: string;
+  }>;
+  recent_tenants: Array<{
+    id: string;
+    name: string;
+    phone: string;
+    masked_phone: string;
+    region: string;
+    source: TenantSource;
+    total_revenue: number;
+    created_at: string;
+  }>;
+}
+
 export interface ResourceConfig<T> {
   name: string;
   title: string;
