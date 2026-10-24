@@ -17,7 +17,7 @@ export const TopBar: React.FC<TopBarProps> = ({ title, user, onLogout, onOpenSet
       <div>
         <h2 className="text-lg font-bold text-white tracking-tight">{title}</h2>
         <div className="flex items-center space-x-2 text-[11px] text-slate-400">
-          <span>admin.biznesgo.uz</span>
+          <span>sohibjon.biznesgo.uz</span>
           <span>/</span>
           <span className="text-blue-400 font-medium">{title}</span>
         </div>

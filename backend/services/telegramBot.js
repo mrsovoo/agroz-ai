@@ -698,7 +698,8 @@ async function handleTelegramMessage(client, msg) {
       `• *📦 Kam Qolgan Dorilar* — Ombor zaxirasi tugayotgan tovarlar\n` +
       `• *👤 Profilim* — Do'kon, tarif va mas'ul shaxs ma'lumotlari\n\n` +
       `☎️ *Qo'llab-quvvatlash xizmati:* @sohibjon_dev\n` +
-      `🌐 *Rasmiy veb-sayt:* https://biznesgo.vercel.app`,
+      `🌐 *Rasmiy platforma:* https://biznesgo.uz\n` +
+      `🛡 *Super Admin boshqaruv:* https://sohibjon.biznesgo.uz`,
       { parse_mode: 'Markdown', ...getMainMenuKeyboard() }
     );
   }
