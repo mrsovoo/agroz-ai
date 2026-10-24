@@ -10,7 +10,7 @@ const productsRoutes = require('./routes/biznesgo/products');
 const salesRoutes = require('./routes/biznesgo/sales');
 const debtsRoutes = require('./routes/biznesgo/debts');
 const dashboardRoutes = require('./routes/biznesgo/dashboard');
-const { initTelegramBot } = require('./services/telegramBot');
+const { initTelegramBot, handleTelegramUpdate } = require('./services/telegramBot');
 
 const app = express();
 
@@ -31,6 +31,18 @@ async function initDatabase() {
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Telegram Bot Webhook (Railway va Telegram o'rtasida real-time aloqa)
+app.post(['/api/biznesgo/telegram/webhook', '/api/biznesgo/bot/webhook'], async (req, res) => {
+  res.status(200).send('OK');
+  if (req.body) {
+    try {
+      await handleTelegramUpdate(req.body);
+    } catch (err) {
+      console.error('[Telegram Webhook Error]:', err.message);
+    }
+  }
+});
 
 // Health Check (Railway, Vercel va monitoring barcha yo'llari uchun)
 const healthHandler = (req, res) => {
