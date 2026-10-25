@@ -184,7 +184,7 @@ async function runPilotUAT() {
       // To'g'ri kirimni bazaga yozamiz
       await client.query(
         `INSERT INTO stock_batches (tenant_id, warehouse_id, product_id, batch_number, production_date, expiry_date, quantity, cost_price)
-         VALUES ($1, $2, $3, 'ENR-BATCH-A', '2024-05-01', '2026-05-01', 20, 35000)`,
+         VALUES ($1, $2, $3, 'ENR-BATCH-A', '2026-01-01', '2028-05-01', 20, 35000)`,
         [testTenantId, testWarehouseId, testProductId]
       );
 
@@ -202,7 +202,7 @@ async function runPilotUAT() {
       // Ikkinchi partiyani kiritamiz (muddati yaqinroq: FEFO bo'yicha birinchi chiqishi shart)
       await client.query(
         `INSERT INTO stock_batches (tenant_id, warehouse_id, product_id, batch_number, production_date, expiry_date, quantity, cost_price)
-         VALUES ($1, $2, $3, 'ENR-BATCH-URGENT', '2024-01-01', '2025-12-01', 5, 35000)`,
+         VALUES ($1, $2, $3, 'ENR-BATCH-URGENT', '2026-01-01', '2027-01-01', 5, 35000)`,
         [testTenantId, testWarehouseId, testProductId]
       );
       await client.query(`UPDATE products SET stock = stock + 5 WHERE id = $1`, [testProductId]);
