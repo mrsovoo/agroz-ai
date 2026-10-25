@@ -15,7 +15,9 @@ import {
   Zap,
   Eye,
   X,
-  RefreshCw
+  RefreshCw,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 import { adminApi } from '../lib/api';
 
@@ -75,7 +77,11 @@ export const ArchiveView: React.FC = () => {
   };
 
   const filteredItems = items.filter((item) => {
-    if (activeCategory !== 'all' && item.category !== activeCategory) {
+    if (activeCategory === 'deleted_profile') {
+      if (item.category !== 'deleted_profile' && !item.delete_reason) {
+        return false;
+      }
+    } else if (activeCategory !== 'all' && item.category !== activeCategory) {
       return false;
     }
     if (searchQuery.trim()) {
@@ -86,7 +92,8 @@ export const ArchiveView: React.FC = () => {
       const matchTg = String(item.telegram_id || '').toLowerCase().includes(q);
       const matchRegion = String(item.region || '').toLowerCase().includes(q);
       const matchAddr = String(item.address || '').toLowerCase().includes(q);
-      return matchName || matchOwner || matchPhone || matchTg || matchRegion || matchAddr;
+      const matchDeleteReason = String(item.delete_reason || '').toLowerCase().includes(q);
+      return matchName || matchOwner || matchPhone || matchTg || matchRegion || matchAddr || matchDeleteReason;
     }
     return true;
   });
@@ -98,6 +105,12 @@ export const ArchiveView: React.FC = () => {
       label: "BiznesGO Do'konlari",
       count: items.filter((i) => i.category === 'biznesgo_store').length,
       icon: Building2
+    },
+    {
+      id: 'deleted_profile',
+      label: "O'chirilgan Profillar (Bot)",
+      count: items.filter((i) => i.category === 'deleted_profile' || Boolean(i.delete_reason)).length,
+      icon: Trash2
     },
     {
       id: 'farmer_user',
@@ -185,13 +198,20 @@ export const ArchiveView: React.FC = () => {
       )}
 
       {/* Summary KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4">
           <div className="text-[11px] text-slate-400">BiznesGO Do'konlari</div>
           <div className="text-2xl font-bold text-emerald-400 mt-1">
             {summary?.biznesgo_stores_count ?? 0} ta
           </div>
           <div className="text-[10px] text-slate-500 mt-1 font-mono">biznesgo_merchants</div>
+        </div>
+        <div className="bg-slate-900/90 border border-rose-500/30 rounded-xl p-4">
+          <div className="text-[11px] text-rose-300">O'chirilgan Profillar (Bot)</div>
+          <div className="text-2xl font-bold text-rose-400 mt-1">
+            {summary?.deleted_profiles_count ?? 0} ta
+          </div>
+          <div className="text-[10px] text-rose-400/70 mt-1 font-mono">deleted_profiles + sabab</div>
         </div>
         <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4">
           <div className="text-[11px] text-slate-400">Bot / Fermer Foydalanuvchilar</div>
@@ -315,7 +335,9 @@ export const ArchiveView: React.FC = () => {
                     <td className="py-3.5 px-4">
                       <span
                         className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-medium border ${
-                          item.category === 'biznesgo_store'
+                          item.category === 'deleted_profile'
+                            ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+                            : item.category === 'biznesgo_store'
                             ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
                             : item.category === 'specialist'
                             ? 'bg-purple-500/10 text-purple-300 border-purple-500/30'
@@ -331,6 +353,11 @@ export const ArchiveView: React.FC = () => {
                       <div className="text-[10px] text-slate-500 mt-1 font-mono">
                         Tur: {item.role_or_type}
                       </div>
+                      {item.delete_reason && (
+                        <div className="mt-1.5 px-2 py-1 rounded bg-rose-950/70 border border-rose-500/30 text-[10px] text-rose-200 max-w-xs">
+                          <span className="font-semibold text-rose-400">O'chirish sababi:</span> {item.delete_reason}
+                        </div>
+                      )}
                     </td>
 
                     <td className="py-3.5 px-4 font-mono">
@@ -361,7 +388,12 @@ export const ArchiveView: React.FC = () => {
                     </td>
 
                     <td className="py-3.5 px-4">
-                      {item.is_biznesgo_active ? (
+                      {item.category === 'deleted_profile' || item.delete_reason ? (
+                        <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-rose-500/15 text-rose-300 border border-rose-500/30">
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Botdan O'chirilgan</span>
+                        </span>
+                      ) : item.is_biznesgo_active ? (
                         <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           <span>BiznesGO Faol (0-holat)</span>
@@ -463,6 +495,23 @@ export const ArchiveView: React.FC = () => {
                     {selectedItem.region} — {selectedItem.address}
                   </div>
                 </div>
+                {selectedItem.delete_reason && (
+                  <div className="bg-rose-950/50 border border-rose-500/40 rounded-xl p-4 sm:col-span-2 space-y-1.5">
+                    <div className="flex items-center space-x-2 text-rose-300 font-bold text-xs">
+                      <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                      <span>Profil Telegram Bot Orqali O'chirilgan</span>
+                    </div>
+                    <div className="text-xs text-rose-100">
+                      <span className="text-rose-400 font-semibold">Keltirilgan sabab:</span>{' '}
+                      {selectedItem.delete_reason}
+                    </div>
+                    {selectedItem.deleted_at && (
+                      <div className="text-[11px] text-rose-300/80 font-mono">
+                        O'chirilgan vaqti: {new Date(selectedItem.deleted_at).toLocaleString('uz-UZ')}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div>

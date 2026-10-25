@@ -168,14 +168,21 @@ export const TenantsView: React.FC<TenantsViewProps> = ({ onNavigateToArchive })
         key: 'status',
         header: 'Holati',
         render: (item) => (
-          <span className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-medium border ${
-            item.status === 'active'
-              ? 'bg-emerald-950/50 text-emerald-300 border-emerald-800/60'
-              : 'bg-red-950/50 text-red-300 border-red-800/60'
-          }`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${item.status === 'active' ? 'bg-emerald-400' : 'bg-red-400'}`} />
-            <span>{item.status === 'active' ? 'Faol' : 'To\'xtatilgan'}</span>
-          </span>
+          <div className="space-y-1">
+            <span className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-medium border ${
+              item.status === 'active'
+                ? 'bg-emerald-950/50 text-emerald-300 border-emerald-800/60'
+                : 'bg-red-950/50 text-red-300 border-red-800/60'
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${item.status === 'active' ? 'bg-emerald-400' : 'bg-red-400'}`} />
+              <span>{item.status === 'active' ? 'Faol' : (item.is_deleted ? 'Botdan O\'chirilgan' : 'To\'xtatilgan')}</span>
+            </span>
+            {item.delete_reason && (
+              <div className="text-[10px] text-rose-300 bg-rose-950/60 border border-rose-800/50 rounded px-1.5 py-0.5 max-w-[200px] truncate" title={`Sabab: ${item.delete_reason}`}>
+                Sabab: {item.delete_reason}
+              </div>
+            )}
+          </div>
         )
       },
       {
@@ -381,6 +388,22 @@ export const TenantsView: React.FC<TenantsViewProps> = ({ onNavigateToArchive })
                   <span className="font-semibold text-white">{selectedArchiveTenant.region}</span> — {selectedArchiveTenant.address}
                 </p>
               </div>
+
+              {(selectedArchiveTenant.delete_reason || selectedArchiveTenant.archive_data?.delete_reason) && (
+                <div className="bg-rose-950/50 border border-rose-500/40 rounded-xl p-3.5 space-y-1">
+                  <span className="text-[10px] text-rose-400 uppercase tracking-wider font-bold block">
+                    🗑️ Profil Bot Orqali O'chirilgan — Keltirilgan Sabab:
+                  </span>
+                  <p className="text-xs text-rose-100 font-medium">
+                    {selectedArchiveTenant.delete_reason || selectedArchiveTenant.archive_data?.delete_reason}
+                  </p>
+                  {(selectedArchiveTenant.deleted_at || selectedArchiveTenant.archive_data?.deleted_at) && (
+                    <p className="text-[10px] text-rose-300/80 font-mono">
+                      O'chirilgan vaqt: {new Date((selectedArchiveTenant.deleted_at || selectedArchiveTenant.archive_data?.deleted_at) as string).toLocaleString('uz-UZ')}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Xom Neon Baza Yozuvi (JSON) */}
               <div>

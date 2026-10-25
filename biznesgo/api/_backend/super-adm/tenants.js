@@ -22,6 +22,19 @@ function extractRegion(address) {
   return address.split(',')[0].trim() || 'Boshqa hudud';
 }
 
+function parseJsonSafe(val) {
+  if (!val) return {};
+  if (typeof val === 'object') return val;
+  if (typeof val === 'string') {
+    try {
+      return JSON.parse(val);
+    } catch (_) {
+      return {};
+    }
+  }
+  return {};
+}
+
 // 1. Barcha B2B Dorixonalar Ro'yxati (Filtr, qidiruv va aylanmalar bilan)
 router.get('/', requireAdminAuth, requirePermission('tenants:view'), async (req, res) => {
   const { search, source, status, region } = req.query;
@@ -32,10 +45,16 @@ router.get('/', requireAdminAuth, requirePermission('tenants:view'), async (req,
     let biznesgoMerchants = [];
     let usersList = [];
     let sales = [];
+    let deletedProfiles = [];
 
     try {
       const tRes = await pool.query(`SELECT * FROM tenants ORDER BY created_at DESC`);
       tenants = tRes.rows || [];
+    } catch (_) {}
+
+    try {
+      const dpRes = await pool.query(`SELECT * FROM deleted_profiles ORDER BY deleted_at DESC`);
+      deletedProfiles = dpRes.rows || [];
     } catch (_) {}
 
     try {
@@ -107,15 +126,24 @@ router.get('/', requireAdminAuth, requirePermission('tenants:view'), async (req,
       }
     }
 
+    const deletedByPhoneMap = new Map();
+    const deletedByTenantIdMap = new Map();
+    deletedProfiles.forEach(dp => {
+      if (dp.tenant_id) deletedByTenantIdMap.set(String(dp.tenant_id), dp);
+      const p9 = String(dp.phone || '').replace(/\D/g, '').slice(-9);
+      if (p9 && !deletedByPhoneMap.has(p9)) deletedByPhoneMap.set(p9, dp);
+    });
+
     tenants = tenants.map(t => {
       const p9 = String(t.phone || '').replace(/\D/g, '').slice(-9);
       const m = merchantByTenantId.get(t.id) || merchantByPhone.get(p9) || {};
       const bm = bmByPhone.get(p9) || {};
       const u = userByTenantId.get(t.id) || userByPhone.get(p9) || {};
-      const settingsObj = typeof t.settings === 'object' && t.settings ? t.settings : {};
+      const settingsObj = parseJsonSafe(t.settings);
 
       return {
         ...t,
+        settings: settingsObj,
         merchant_id: t.merchant_id || m.id || bm.id || null,
         merchant_name: t.merchant_name || bm.shop_name || m.name || null,
         merchant_phone: t.merchant_phone || bm.phone || m.phone || null,
@@ -140,6 +168,8 @@ router.get('/', requireAdminAuth, requirePermission('tenants:view'), async (req,
     });
 
     let result = tenants.map(t => {
+      const p9 = String(t.phone || '').replace(/\D/g, '').slice(-9);
+      const dpRec = deletedByTenantIdMap.get(String(t.id)) || deletedByPhoneMap.get(p9) || null;
       const isTg = (t.merchant_addr && String(t.merchant_addr).includes('tg:')) || 
                    (t.address && String(t.address).includes('tg:')) ||
                    Boolean(t.telegram_chat_id);
@@ -147,6 +177,10 @@ router.get('/', requireAdminAuth, requirePermission('tenants:view'), async (req,
       const reg = extractRegion(t.address);
       const rev = revenueMap.get(t.id) || 0;
       const cnt = countMap.get(t.id) || 0;
+      const settingsObj = parseJsonSafe(t.settings);
+      const deleteReason = (dpRec && dpRec.delete_reason) || settingsObj.delete_reason || null;
+      const deletedAt = (dpRec && dpRec.deleted_at) || settingsObj.deleted_at || null;
+      const isDeleted = Boolean(dpRec || settingsObj.is_deleted || deleteReason);
 
       return {
         id: t.id,
@@ -161,6 +195,9 @@ router.get('/', requireAdminAuth, requirePermission('tenants:view'), async (req,
         sales_count: cnt,
         is_active: t.is_active !== false,
         status: t.is_active !== false ? 'active' : 'suspended',
+        is_deleted: isDeleted,
+        delete_reason: deleteReason,
+        deleted_at: deletedAt,
         created_at: t.created_at,
         archive_data: {
           tenant_id: t.id,
@@ -176,6 +213,9 @@ router.get('/', requireAdminAuth, requirePermission('tenants:view'), async (req,
           region: reg,
           registered_at: t.created_at,
           is_active: t.is_active !== false,
+          is_deleted: isDeleted,
+          delete_reason: deleteReason,
+          deleted_at: deletedAt,
           raw_neon_record: {
             tenant: {
               id: t.id,
@@ -315,6 +355,7 @@ router.get('/neon-archive/all', requireAdminAuth, requirePermission('tenants:vie
     let consents = [];
     let botStates = [];
     let botRegSessions = [];
+    let deletedProfiles = [];
 
     try { const r = await pool.query('SELECT * FROM tenants ORDER BY created_at DESC'); tenants = r.rows || []; } catch (_) {}
     try { const r = await pool.query('SELECT * FROM biznesgo_merchants ORDER BY id ASC'); biznesgoMerchants = r.rows || []; } catch (_) {}
@@ -324,20 +365,78 @@ router.get('/neon-archive/all', requireAdminAuth, requirePermission('tenants:vie
     try { const r = await pool.query('SELECT * FROM data_consents ORDER BY id DESC'); consents = r.rows || []; } catch (_) {}
     try { const r = await pool.query('SELECT * FROM bot_states ORDER BY updated_at DESC'); botStates = r.rows || []; } catch (_) {}
     try { const r = await pool.query('SELECT * FROM bot_registration_sessions ORDER BY created_at DESC'); botRegSessions = r.rows || []; } catch (_) {}
+    try { const r = await pool.query('SELECT * FROM deleted_profiles ORDER BY deleted_at DESC'); deletedProfiles = r.rows || []; } catch (_) {}
 
     const activeTenantPhones = new Map();
+    const deletedByPhone = new Map();
+    deletedProfiles.forEach(dp => {
+      const p9 = String(dp.phone || '').replace(/\D/g, '').slice(-9);
+      if (p9 && !deletedByPhone.has(p9)) deletedByPhone.set(p9, dp);
+    });
     tenants.forEach(t => {
       const p9 = String(t.phone || '').replace(/\D/g, '').slice(-9);
+      const sObj = parseJsonSafe(t.settings);
+      t.settings = sObj;
       if (p9) activeTenantPhones.set(p9, t);
+      if (sObj.delete_reason && p9 && !deletedByPhone.has(p9)) {
+        deletedByPhone.set(p9, {
+          id: `del-${t.id}`,
+          tenant_id: t.id,
+          store_name: t.name,
+          owner_name: sObj.owner_name || t.name,
+          phone: t.phone,
+          telegram_id: sObj.telegram_id || null,
+          sector_type: t.sector_type || 'agro_vet',
+          address: t.address,
+          delete_reason: sObj.delete_reason,
+          deleted_by: sObj.deleted_by || 'telegram_bot',
+          deleted_at: sObj.deleted_at || t.updated_at
+        });
+      }
     });
 
     // Barcha yagona ro'yxat ("all_people") ni shakllantirish
     const archiveItems = [];
 
+    // 0. Bot orqali o'chirilgan profillar va ularning sabablari (deleted_profiles)
+    for (const dp of Array.from(deletedByPhone.values())) {
+      const p9 = String(dp.phone || '').replace(/\D/g, '').slice(-9);
+      const matchedTenant = activeTenantPhones.get(p9) || null;
+      archiveItems.push({
+        uid: `del-${dp.id || p9}`,
+        category: 'deleted_profile',
+        category_label: 'Botdan O\'chirilgan Profil (deleted_profiles)',
+        name: dp.store_name || dp.owner_name || 'O\'chirilgan Do\'kon',
+        owner_name: dp.owner_name || dp.store_name || '',
+        phone: dp.phone || '',
+        masked_phone: maskPhone(dp.phone || ''),
+        telegram_id: dp.telegram_id ? String(dp.telegram_id) : null,
+        region: extractRegion(dp.address),
+        district: '',
+        address: dp.address || 'Kiritilmagan',
+        role_or_type: `Sabab: ${dp.delete_reason}`,
+        delete_reason: dp.delete_reason,
+        deleted_at: dp.deleted_at || dp.created_at,
+        deleted_by: dp.deleted_by || 'telegram_bot',
+        is_biznesgo_active: matchedTenant ? matchedTenant.is_active !== false : false,
+        tenant_id: dp.tenant_id || (matchedTenant ? matchedTenant.id : null),
+        created_at: dp.deleted_at || dp.created_at,
+        raw_data: {
+          source_table: 'deleted_profiles',
+          delete_reason: dp.delete_reason,
+          deleted_at: dp.deleted_at,
+          deleted_by: dp.deleted_by || 'telegram_bot',
+          record: dp,
+          linked_tenant: matchedTenant
+        }
+      });
+    }
+
     // 1. BiznesGO Merchants (4 ta do'kon + neon_legacy_merchants)
     for (const bm of biznesgoMerchants) {
       const p9 = String(bm.phone || '').replace(/\D/g, '').slice(-9);
       const matchedTenant = activeTenantPhones.get(p9) || null;
+      const delInfo = deletedByPhone.get(p9) || null;
       const fullAddr = [bm.region, bm.district, bm.mahalla, bm.address].filter(Boolean).join(', ');
       archiveItems.push({
         uid: `bm-${bm.id}`,
@@ -352,13 +451,16 @@ router.get('/neon-archive/all', requireAdminAuth, requirePermission('tenants:vie
         district: bm.district || '',
         address: fullAddr || 'Kiritilmagan',
         role_or_type: bm.activity_type || 'agro_vet',
-        is_biznesgo_active: Boolean(matchedTenant),
+        delete_reason: delInfo ? delInfo.delete_reason : (matchedTenant && matchedTenant.settings ? matchedTenant.settings.delete_reason || null : null),
+        deleted_at: delInfo ? delInfo.deleted_at : (matchedTenant && matchedTenant.settings ? matchedTenant.settings.deleted_at || null : null),
+        is_biznesgo_active: matchedTenant ? matchedTenant.is_active !== false : false,
         tenant_id: matchedTenant ? matchedTenant.id : null,
         created_at: bm.created_at,
         raw_data: {
           source_table: 'biznesgo_merchants',
           record: bm,
-          linked_tenant: matchedTenant
+          linked_tenant: matchedTenant,
+          deletion_info: delInfo
         }
       });
     }
@@ -487,7 +589,8 @@ router.get('/neon-archive/all', requireAdminAuth, requirePermission('tenants:vie
         farmer_users_count: usersList.length,
         specialists_count: specialists.length,
         consents_count: consents.length,
-        bot_sessions_count: botStates.length + botRegSessions.length
+        bot_sessions_count: botStates.length + botRegSessions.length,
+        deleted_profiles_count: deletedByPhone.size
       },
       items: archiveItems,
       tables: {
@@ -497,7 +600,8 @@ router.get('/neon-archive/all', requireAdminAuth, requirePermission('tenants:vie
         specialists,
         data_consents: consents,
         bot_states: botStates,
-        bot_registration_sessions: botRegSessions
+        bot_registration_sessions: botRegSessions,
+        deleted_profiles: Array.from(deletedByPhone.values())
       }
     });
   } catch (err) {

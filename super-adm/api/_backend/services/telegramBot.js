@@ -170,6 +170,9 @@ async function handleTelegramMessage(client, msg) {
         ],
         [
           { text: '👤 Profilim' },
+          { text: '🗑️ Profilni o\'chirish' }
+        ],
+        [
           { text: 'ℹ️ Yordam va Qo\'llab-quvvatlash' }
         ]
       ],
@@ -505,6 +508,34 @@ async function handleTelegramMessage(client, msg) {
     return;
   }
 
+  // A.2) Profilni o'chirish sababi matn sifatida yuborilganda
+  if (session && session.step === 'awaiting_delete_reason' && !text.startsWith('/')) {
+    const menuButtons = [
+      '🚀 BiznesGO Kassani Ochish',
+      '📊 Bugungi Kassa',
+      '⚠️ FEFO Xavfi',
+      '📒 Qarz Daftari',
+      '📦 Kam Qolgan Dorilar',
+      '👤 Profilim',
+      '🗑️ Profilni o\'chirish',
+      'ℹ️ Yordam va Qo\'llab-quvvatlash'
+    ];
+    if (!menuButtons.includes(text)) {
+      if (text === '❌ Bekor qilish') {
+        registrationSessions.delete(chatId);
+        return client.sendMessage(
+          chatId,
+          `✅ *Profilni o'chirish bekor qilindi.*\nDo'koningiz odatdagidek faol ishlamoqda.`,
+          { parse_mode: 'Markdown', ...getMainMenuKeyboard() }
+        );
+      }
+      session.step = 'awaiting_delete_confirm';
+      session.deleteReason = text;
+      registrationSessions.set(chatId, session);
+      return promptConfirmDeleteProfile(client, chatId, tgUserId, session.store, text);
+    }
+  }
+
   // B) "📊 Bugungi Kassa"
   if (text === '📊 Bugungi Kassa') {
     try {
@@ -768,6 +799,10 @@ async function handleTelegramMessage(client, msg) {
                   {
                     text: '🔄 Ma\'lumotlarni Yangilash',
                     callback_data: 'refresh_profile'
+                  },
+                  {
+                    text: '🗑️ Profilni O\'chirish',
+                    callback_data: 'start_delete_profile'
                   }
                 ]
               ]
@@ -809,6 +844,16 @@ async function handleTelegramMessage(client, msg) {
     }
   }
 
+  // F.2) "🗑️ Profilni o'chirish" yoki "/delete_profile" yoki "/ochirish"
+  if (
+    text === '🗑️ Profilni o\'chirish' ||
+    text === '/delete_profile' ||
+    text === '/ochirish' ||
+    text === '/delete'
+  ) {
+    return startProfileDeletionFlow(client, chatId, tgUserId, firstName, getMainMenuKeyboard);
+  }
+
   // G) "ℹ️ Yordam va Qo'llab-quvvatlash" yoki "/yordam"
   if (text === 'ℹ️ Yordam va Qo\'llab-quvvatlash' || text === '/yordam' || text.toLowerCase() === 'yordam' || text === '/help') {
     return client.sendMessage(
@@ -821,13 +866,316 @@ async function handleTelegramMessage(client, msg) {
       `• *⚠️ FEFO Xavfi* — Muddati 30 kunda tugaydigan dorilar monitoringi\n` +
       `• *📒 Qarz Daftari* — Fermerlarning jami qarzi va muddatlari\n` +
       `• *📦 Kam Qolgan Dorilar* — Ombor zaxirasi tugayotgan tovarlar\n` +
-      `• *👤 Profilim* — Do'kon, tarif va mas'ul shaxs ma'lumotlari\n\n` +
+      `• *👤 Profilim* — Do'kon, tarif va mas'ul shaxs ma'lumotlari\n` +
+      `• *🗑️ Profilni o'chirish* — Do'kon profilini sababini ko'rsatgan holda o'chirish\n\n` +
       `☎️ *Qo'llab-quvvatlash xizmati:* @sohibjon_dev\n` +
       `🌐 *Rasmiy platforma:* https://biznesgo.uz\n` +
       `🛡 *Super Admin boshqaruv:* https://sohibjon.biznesgo.uz`,
       { parse_mode: 'Markdown', ...getMainMenuKeyboard() }
     );
   }
+}
+
+const DELETE_REASONS_MAP = {
+  delreason_store_closed: "Do'kon faoliyati vaqtincha yoki butunlay to'xtatildi",
+  delreason_phone_change: "Boshqa telefon raqam yoki yangi profilga o'tyapman",
+  delreason_test_only: "Tizimni faqat sinab ko'rish (test) uchun ochgan edim",
+  delreason_ux_issue: "Tizimdan foydalanishda tushunmovchilik yoki noqulaylik bo'ldi"
+};
+
+async function findStoreForTelegramUser(tgUserId, chatId) {
+  let store = null;
+  const tgStr = String(tgUserId || chatId);
+
+  try {
+    const tRes = await pool.query(`SELECT * FROM tenants`);
+    const foundT = (tRes.rows || []).find((t) => {
+      const sTg = t.settings && t.settings.telegram_id ? String(t.settings.telegram_id) : null;
+      const addrTg = t.address && String(t.address).includes(`tg:${tgStr}`);
+      return sTg === tgStr || addrTg || String(t.phone || '').includes(tgStr);
+    });
+    if (foundT) {
+      store = {
+        id: foundT.id,
+        tenant_id: foundT.id,
+        name: foundT.name,
+        owner_name: (foundT.settings && foundT.settings.owner_name) || foundT.name,
+        phone: foundT.phone,
+        sector_type: foundT.sector_type || 'agro_vet',
+        address: foundT.address,
+        is_active: foundT.is_active !== false
+      };
+    }
+  } catch (_) {}
+
+  if (!store) {
+    try {
+      const mRes = await pool.query(`SELECT * FROM merchants`);
+      const foundM = (mRes.rows || []).find(
+        (m) => (m.address && String(m.address).includes(tgStr)) || (m.phone && String(m.phone).includes(tgStr))
+      );
+      if (foundM) {
+        store = {
+          id: foundM.tenant_id || foundM.id,
+          tenant_id: foundM.tenant_id || foundM.id,
+          name: foundM.name || foundM.store_name || 'Agro-Vet Dorixona',
+          owner_name: foundM.name || 'Do\'kon Egasi',
+          phone: foundM.phone,
+          sector_type: foundM.business_type || 'agro_vet',
+          address: foundM.address,
+          is_active: true
+        };
+      }
+    } catch (_) {}
+  }
+
+  if (!store) {
+    try {
+      const bmRes = await pool.query(`SELECT * FROM biznesgo_merchants`);
+      const foundBm = (bmRes.rows || []).find((bm) => String(bm.telegram_id) === tgStr);
+      if (foundBm) {
+        store = {
+          id: null,
+          tenant_id: null,
+          name: foundBm.shop_name || foundBm.organization_name || foundBm.name,
+          owner_name: foundBm.owner_name || foundBm.name,
+          phone: foundBm.phone,
+          sector_type: foundBm.activity_type || 'agro_vet',
+          address: foundBm.address || foundBm.region || '',
+          is_active: true
+        };
+      }
+    } catch (_) {}
+  }
+
+  if (!store) {
+    for (const [p, cId] of phoneChatMap.entries()) {
+      if (String(cId) === String(chatId) && p.length >= 9) {
+        const last9 = p.slice(-9);
+        try {
+          const tRes = await pool.query(`SELECT * FROM tenants`);
+          const foundT = (tRes.rows || []).find((t) => String(t.phone || '').replace(/\D/g, '').slice(-9) === last9);
+          if (foundT) {
+            store = {
+              id: foundT.id,
+              tenant_id: foundT.id,
+              name: foundT.name,
+              owner_name: (foundT.settings && foundT.settings.owner_name) || foundT.name,
+              phone: foundT.phone,
+              sector_type: foundT.sector_type || 'agro_vet',
+              address: foundT.address,
+              is_active: foundT.is_active !== false
+            };
+            break;
+          }
+        } catch (_) {}
+      }
+    }
+  }
+
+  return store;
+}
+
+async function startProfileDeletionFlow(client, chatId, tgUserId, firstName, getMainMenuKeyboard) {
+  const store = await findStoreForTelegramUser(tgUserId, chatId);
+
+  if (!store) {
+    return client.sendMessage(
+      chatId,
+      `⚠️ *Sizda hozircha faol ro'yxatdan o'tgan do'kon profili topilmadi.*\n\n` +
+      `Yangi do'kon ochish uchun /start buyrug'ini bosing.`,
+      { parse_mode: 'Markdown', ...(getMainMenuKeyboard ? getMainMenuKeyboard() : {}) }
+    );
+  }
+
+  registrationSessions.set(chatId, {
+    step: 'awaiting_delete_reason',
+    store,
+    tgUserId: tgUserId || chatId,
+    firstName
+  });
+
+  return client.sendMessage(
+    chatId,
+    `🗑️ *Profilni O'chirish Bo'limi — Diqqat bilan o'qing!*\n\n` +
+    `🏢 *Do'kon:* ${store.name}\n` +
+    `👤 *Mas'ul:* ${store.owner_name || firstName}\n` +
+    `📱 *Telefon:* \`${store.phone}\`\n\n` +
+    `📋 *Profilni o'chirish shartlari:*\n` +
+    `1. Do'koningizning faol B2B kassa va ombor kirishi to'xtatiladi.\n` +
+    `2. O'chirish sababingiz va profil tarixingiz Super Admin arxivida qayd etiladi.\n` +
+    `3. Keyinchalik istalgan vaqtda qayta tiklashingiz yoki yangidan ro'yxatdan o'tishingiz mumkin.\n\n` +
+    `❓ *Iltimos, profilni o'chirish sababini tanlang yoki pastda o'z sababingizni yozib yuboring:*`,
+    {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: '🏪 Do\'kon faoliyati to\'xtatildi',
+              callback_data: 'delreason_store_closed'
+            }
+          ],
+          [
+            {
+              text: '📱 Boshqa raqam / profilga o\'tyapman',
+              callback_data: 'delreason_phone_change'
+            }
+          ],
+          [
+            {
+              text: '🧪 Sinov (test) uchun ochgan edim',
+              callback_data: 'delreason_test_only'
+            }
+          ],
+          [
+            {
+              text: '⚙️ Tizimda tushunmovchilik bo\'ldi',
+              callback_data: 'delreason_ux_issue'
+            }
+          ],
+          [
+            {
+              text: '✍️ Boshqa sabab (Matn yozish)',
+              callback_data: 'delreason_custom'
+            }
+          ],
+          [
+            {
+              text: '❌ Bekor qilish',
+              callback_data: 'delreason_cancel'
+            }
+          ]
+        ]
+      }
+    }
+  );
+}
+
+async function promptConfirmDeleteProfile(client, chatId, tgUserId, store, reason) {
+  return client.sendMessage(
+    chatId,
+    `⚠️ *Profilni o'chirishni tasdiqlaysizmi?*\n\n` +
+    `🏢 *Do'kon:* ${store.name}\n` +
+    `📱 *Telefon:* \`${store.phone}\`\n` +
+    `📝 *Keltirilgan sabab:* _"${reason}"_\n\n` +
+    `Tasdiqlasangiz, ushbu ma'lumot va sabab Super Admin paneliga yuboriladi hamda profilingiz o'chiriladi:`,
+    {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: '✅ Ha, profilimni o\'chirish',
+              callback_data: 'confirm_delete_profile'
+            }
+          ],
+          [
+            {
+              text: '❌ Yo\'q, bekor qilish',
+              callback_data: 'delreason_cancel'
+            }
+          ]
+        ]
+      }
+    }
+  );
+}
+
+async function executeProfileDeletion(client, chatId, tgUserId, store, reason) {
+  const deletedAt = new Date().toISOString();
+  const tgStr = String(tgUserId || chatId);
+  const last9 = String(store.phone || '').replace(/\D/g, '').slice(-9);
+
+  try {
+    // 1. deleted_profiles jadvaliga yozish
+    await pool.query(
+      `INSERT INTO deleted_profiles (tenant_id, store_name, owner_name, phone, telegram_id, sector_type, address, delete_reason, deleted_by, raw_snapshot, deleted_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'telegram_bot', $9::jsonb, $10)`,
+      [
+        store.tenant_id || store.id || null,
+        store.name,
+        store.owner_name || store.name,
+        store.phone,
+        tgStr,
+        store.sector_type || 'agro_vet',
+        store.address || null,
+        reason,
+        JSON.stringify({ store, deleted_at: deletedAt, telegram_id: tgStr }),
+        deletedAt
+      ]
+    );
+  } catch (err) {
+    console.warn('[executeProfileDeletion insert error]:', err.message);
+  }
+
+  try {
+    // 2. tenants jadvalida is_active = FALSE va settings ga delete_reason, deleted_at yozish
+    const tRes = await pool.query(`SELECT * FROM tenants`);
+    const matchedTenant = (tRes.rows || []).find(
+      (t) =>
+        (store.id && String(t.id) === String(store.id)) ||
+        (last9 && String(t.phone || '').replace(/\D/g, '').slice(-9) === last9)
+    );
+    if (matchedTenant) {
+      const updatedSettings = {
+        ...(matchedTenant.settings || {}),
+        is_deleted: true,
+        delete_reason: reason,
+        deleted_at: deletedAt,
+        deleted_by: 'telegram_bot'
+      };
+      await pool.query(
+        `UPDATE tenants SET is_active = FALSE, settings = $1::jsonb WHERE id = $2`,
+        [JSON.stringify(updatedSettings), matchedTenant.id]
+      );
+    }
+  } catch (err) {
+    console.warn('[executeProfileDeletion update tenant error]:', err.message);
+  }
+
+  try {
+    // 3. Audit logga yozish
+    await pool.query(
+      `INSERT INTO audit_logs (tenant_id, action, entity_type, new_values)
+       VALUES ($1, $2, $3, $4::jsonb)`,
+      [
+        store.tenant_id || store.id || null,
+        'bot:profile_deleted',
+        'tenants',
+        JSON.stringify({
+          store_name: store.name,
+          owner_name: store.owner_name,
+          phone: store.phone,
+          telegram_id: tgStr,
+          delete_reason: reason,
+          deleted_at: deletedAt
+        })
+      ]
+    );
+  } catch (_) {}
+
+  registrationSessions.delete(chatId);
+
+  return client.sendMessage(
+    chatId,
+    `🗑️ *Profilingiz muvaffaqiyatli o'chirildi.*\n\n` +
+    `🏢 *Do'kon:* ${store.name}\n` +
+    `📱 *Telefon:* \`${store.phone}\`\n` +
+    `📝 *Qayd etilgan sabab:* _"${reason}"_\n` +
+    `🕒 *Vaqt:* ${new Date(deletedAt).toLocaleString('uz-UZ')}\n\n` +
+    `Fikringiz va hamkorligingiz uchun rahmat! Istalgan vaqt yangidan ro'yxatdan o'tish uchun /start tugmasini bosishingiz mumkin.`,
+    {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        keyboard: [
+          [{ text: '/start' }],
+          [{ text: 'ℹ️ Yordam va Qo\'llab-quvvatlash' }]
+        ],
+        resize_keyboard: true
+      }
+    }
+  );
 }
 
 // Ro'yxatdan o'tishni tasdiqlash va toza 0-holatdagi do'konni yaratish
@@ -982,7 +1330,6 @@ async function handleTelegramCallbackQuery(client, cb) {
     }
   } else if (data === 'refresh_profile') {
     await client.answerCallbackQuery(cbId, '🔄 Profil ma\'lumotlari yangilandi', false);
-    // Profilni qayta chaqirish
     if (chatId) {
       await handleTelegramMessage(client, {
         chat: { id: chatId },
@@ -990,6 +1337,63 @@ async function handleTelegramCallbackQuery(client, cb) {
         text: '/profil'
       });
     }
+  } else if (data === 'start_delete_profile') {
+    await client.answerCallbackQuery(cbId, '🗑️ Profilni o\'chirish bo\'limi', false);
+    if (chatId) {
+      await startProfileDeletionFlow(client, chatId, cb.from?.id, cb.from?.first_name || 'Do\'kon egasi', null);
+    }
+  } else if (DELETE_REASONS_MAP[data]) {
+    const selectedReason = DELETE_REASONS_MAP[data];
+    await client.answerCallbackQuery(cbId, 'Sabab tanlandi', false);
+    let session = registrationSessions.get(chatId);
+    if (!session || !session.store) {
+      const store = await findStoreForTelegramUser(cb.from?.id, chatId);
+      if (!store) {
+        return client.sendMessage(chatId, '⚠️ Faol do\'kon profili topilmadi.');
+      }
+      session = { step: 'awaiting_delete_confirm', store, tgUserId: cb.from?.id || chatId, deleteReason: selectedReason };
+    } else {
+      session.step = 'awaiting_delete_confirm';
+      session.deleteReason = selectedReason;
+    }
+    registrationSessions.set(chatId, session);
+    return promptConfirmDeleteProfile(client, chatId, cb.from?.id, session.store, selectedReason);
+  } else if (data === 'delreason_custom') {
+    await client.answerCallbackQuery(cbId, '✍️ Sababni yozib yuboring', false);
+    let session = registrationSessions.get(chatId);
+    if (!session || !session.store) {
+      const store = await findStoreForTelegramUser(cb.from?.id, chatId);
+      if (store) {
+        registrationSessions.set(chatId, { step: 'awaiting_delete_reason', store, tgUserId: cb.from?.id || chatId });
+      }
+    } else {
+      session.step = 'awaiting_delete_reason';
+      registrationSessions.set(chatId, session);
+    }
+    return client.sendMessage(
+      chatId,
+      `✍️ *Iltimos, profilni o'chirish sababingizni xabar sifatida yozib yuboring:*\n` +
+      `_(Masalan: Do'kon manzilini o'zgartiryapmiz, vaqtincha yopdik va h.k.)_`,
+      { parse_mode: 'Markdown' }
+    );
+  } else if (data === 'delreason_cancel') {
+    registrationSessions.delete(chatId);
+    await client.answerCallbackQuery(cbId, 'Bekor qilindi', false);
+    return client.sendMessage(
+      chatId,
+      `✅ *Profilni o'chirish bekor qilindi.*\nDo'koningiz odatdagidek faol holatda ishlamoqda.`,
+      { parse_mode: 'Markdown' }
+    );
+  } else if (data === 'confirm_delete_profile') {
+    const session = registrationSessions.get(chatId);
+    const store = (session && session.store) || (await findStoreForTelegramUser(cb.from?.id, chatId));
+    if (!store) {
+      await client.answerCallbackQuery(cbId, 'Do\'kon topilmadi', true);
+      return;
+    }
+    const reason = (session && session.deleteReason) || 'Foydalanuvchi o\'z xohishi bilan bot orqali profilni o\'chirdi';
+    await client.answerCallbackQuery(cbId, '🗑️ Profilingiz o\'chirilmoqda...', false);
+    return executeProfileDeletion(client, chatId, cb.from?.id, store, reason);
   }
 }
 
@@ -1147,5 +1551,6 @@ module.exports = {
   registrationSessions,
   finalizeRegistration,
   handleTelegramCallbackQuery,
-  getWebhookSecretToken
+  getWebhookSecretToken,
+  executeProfileDeletion
 };

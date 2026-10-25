@@ -610,6 +610,23 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 
 CREATE INDEX IF NOT EXISTS idx_audit_logs_tenant ON audit_logs(tenant_id, created_at DESC);
 
+-- Bot orqali yoki foydalanuvchi tomonidan o'chirilgan profillar va ularning sabablari arxivi
+CREATE TABLE IF NOT EXISTS deleted_profiles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID,
+    store_name VARCHAR(200),
+    owner_name VARCHAR(150),
+    phone VARCHAR(30),
+    telegram_id VARCHAR(50),
+    sector_type VARCHAR(50) DEFAULT 'agro_vet',
+    address TEXT,
+    delete_reason TEXT NOT NULL,
+    deleted_by VARCHAR(50) DEFAULT 'telegram_bot',
+    raw_snapshot JSONB DEFAULT '{}'::jsonb,
+    deleted_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Idempotent migrations for Agro-Vet Pilot fields
 ALTER TABLE products ADD COLUMN IF NOT EXISTS dosage_form VARCHAR(100);
 ALTER TABLE products ADD COLUMN IF NOT EXISTS storage_condition VARCHAR(255);

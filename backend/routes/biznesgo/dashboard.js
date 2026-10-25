@@ -3,7 +3,7 @@ const router = express.Router();
 const { pool } = require('../../config');
 
 // Agro-Vet Dorixona Pilot Dashboard tahlili va Xavf Bannerlari
-router.get('/metrics', async (req, res) => {
+router.get(['/', '/metrics'], async (req, res) => {
   const tenantId = req.tenant?.id || req.merchant?.id;
 
   try {

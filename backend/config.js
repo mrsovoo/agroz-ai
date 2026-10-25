@@ -1,5 +1,6 @@
 require('dotenv').config();
 const { Pool } = require('pg');
+const { EmbeddedPgPool } = require('./db/embeddedPg');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -30,14 +31,67 @@ if (rawDbUrl) {
   }
 }
 
-const pool = new Pool({
+const pgPool = new Pool({
   connectionString: rawDbUrl,
-  ssl: sslConfig
+  ssl: sslConfig,
+  connectionTimeoutMillis: 3500
 });
 
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle PostgreSQL client', err);
+pgPool.on('error', (err) => {
+  console.error('Unexpected error on idle PostgreSQL client', err.message);
 });
+
+const embeddedPool = new EmbeddedPgPool();
+let useEmbeddedFallback = false;
+
+const pool = {
+  async query(sql, params = []) {
+    if (useEmbeddedFallback) {
+      return embeddedPool.query(sql, params);
+    }
+    try {
+      return await pgPool.query(sql, params);
+    } catch (err) {
+      const msg = String(err && err.message ? err.message : '');
+      const code = String(err && err.code ? err.code : '');
+      if (
+        code === '28P01' ||
+        code === 'ECONNREFUSED' ||
+        code === 'ENOTFOUND' ||
+        code === 'EPERM' ||
+        code === 'ETIMEDOUT' ||
+        msg.includes('password authentication failed') ||
+        msg.includes('connect EPERM') ||
+        msg.includes('Connection terminated') ||
+        msg.includes('getaddrinfo')
+      ) {
+        useEmbeddedFallback = true;
+        return embeddedPool.query(sql, params);
+      }
+      throw err;
+    }
+  },
+  async connect() {
+    if (useEmbeddedFallback) {
+      return embeddedPool.connect();
+    }
+    try {
+      return await pgPool.connect();
+    } catch (err) {
+      useEmbeddedFallback = true;
+      return embeddedPool.connect();
+    }
+  },
+  on(event, handler) {
+    pgPool.on(event, handler);
+    return this;
+  },
+  async end() {
+    try {
+      await pgPool.end();
+    } catch (_) {}
+  }
+};
 
 const envBotToken = (process.env.TELEGRAM_BOT_TOKEN || '').trim();
 const resolvedBotToken = (envBotToken && !envBotToken.includes('AAE8WD'))

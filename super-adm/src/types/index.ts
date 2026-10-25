@@ -65,6 +65,9 @@ export interface Tenant {
   total_revenue: number;
   sales_count: number;
   is_active: boolean;
+  is_deleted?: boolean;
+  delete_reason?: string | null;
+  deleted_at?: string | null;
   status: 'active' | 'suspended';
   created_at: string;
   archive_data?: {
@@ -81,6 +84,9 @@ export interface Tenant {
     region: string;
     registered_at: string;
     is_active: boolean;
+    is_deleted?: boolean;
+    delete_reason?: string | null;
+    deleted_at?: string | null;
     raw_neon_record?: any;
   };
   stats?: {
