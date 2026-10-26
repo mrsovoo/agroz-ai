@@ -381,7 +381,11 @@ if (require.main === module) {
   app.listen(primaryPort, '0.0.0.0', () => {
     console.log(`[BiznesGO B2B Core] Server listening on port ${primaryPort}`);
     initDatabase();
-    initTelegramBot();
+    if (process.env.ENABLE_INTERNAL_BOT === 'true') {
+      initTelegramBot();
+    } else {
+      console.log('[BiznesGO B2B Core] Telegram Bot alohida microservice (apps/telegram-bot) orqali boshqarilmoqda.');
+    }
   });
 
   // Railway Public Domain proxy port mosligini kafolatlash (5001 / 8080 / 3000)
