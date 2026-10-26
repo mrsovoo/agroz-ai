@@ -30,15 +30,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // 1. Agar Telegram Launch App orqali parametrlar bilan ochilgan bo'lsa
       if (typeof window !== 'undefined' && window.location.search) {
         const urlParams = new URLSearchParams(window.location.search);
-        const urlName = urlParams.get('name');
+        const urlName = urlParams.get('name') || urlParams.get('store_name');
         const urlSector = urlParams.get('sector');
         const urlPhone = urlParams.get('phone');
+        const urlRegion = urlParams.get('region');
 
         if (urlName && urlSector) {
           const profile: BusinessProfile = {
             name: decodeURIComponent(urlName),
             sector: urlSector as SectorCode,
             phone: urlPhone ? decodeURIComponent(urlPhone) : '+998 90 123 45 67',
+            address: urlRegion ? decodeURIComponent(urlRegion) : undefined,
           };
           localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
           return profile;

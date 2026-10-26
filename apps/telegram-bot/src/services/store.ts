@@ -8,10 +8,12 @@ export interface UserBusinessState {
   firstName: string;
   lastName?: string;
   username?: string;
-  step: 'START' | 'WAITING_PHONE' | 'WAITING_STORE_NAME' | 'WAITING_SECTOR' | 'COMPLETED';
+  fullName?: string;
   phone?: string;
-  storeName?: string;
   sector?: SectorType;
+  storeName?: string;
+  region?: string;
+  step: 'WAITING_NAME' | 'WAITING_PHONE' | 'WAITING_SECTOR' | 'WAITING_STORE_NAME' | 'WAITING_REGION' | 'COMPLETED';
   createdAt: string;
 }
 
@@ -66,11 +68,15 @@ class BusinessStore {
     this.saveToFile();
   }
 
+  delete(telegramId: number) {
+    this.users.delete(telegramId);
+    this.saveToFile();
+  }
+
   isRegistered(telegramId: number): boolean {
     const user = this.users.get(telegramId);
-    return Boolean(user && user.step === 'COMPLETED' && user.storeName && user.sector);
+    return !!(user && user.step === 'COMPLETED' && user.storeName && user.sector);
   }
 }
 
 export const businessStore = new BusinessStore();
-
