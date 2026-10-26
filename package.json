@@ -1,26 +1,16 @@
 {
-  "name": "biznesgo-project",
-  "version": "1.0.0",
+  "name": "agroz-ai",
   "private": true,
-  "description": "BiznesGO B2B Platform - Phase 1: Agro-Vet Sector Only",
+  "description": "AgrozGO (B2C) & BiznesGO (B2B) Ekotizimi",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "postinstall": "cd backend && npm install",
-    "build": "cd biznesgo && npm install && npm run build",
-    "start": "cd backend && npm start",
-    "start:backend": "cd backend && npm start",
-    "dev:backend": "cd backend && npm run dev",
-    "build:frontend": "cd biznesgo && npm install && npm run build",
-    "build:super-adm": "cd super-adm && npm install && npm run build",
-    "build:all": "cd backend && npm install && cd ../biznesgo && npm install && npm run build && cd ../super-adm && npm install && npm run build",
-    "build:vercel": "cd biznesgo && npm install && npm run build && cd ../super-adm && npm install && npm run build && rm -rf ../dist_combined && mkdir -p ../dist_combined/admin && cp -r ../biznesgo/dist/* ../dist_combined/ && cp -r ../super-adm/dist/* ../dist_combined/admin/"
-  },
-  "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.21.1",
-    "jsonwebtoken": "^9.0.2",
-    "pg": "^8.13.1"
+    "dev:biznesgo": "npm run dev --workspace=apps/biznesgo-web",
+    "dev:agrozgo": "npm run dev --workspace=apps/agrozgo-client",
+    "dev:super-admin": "npm run dev --workspace=apps/super-admin",
+    "dev:api": "npm run start:dev --workspace=apps/api-backend",
+    "dev:bot": "npm run dev --workspace=apps/telegram-bot"
   }
 }
-

@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-green: #35ca56;
+  --color-brand-green-hover: #2cb24a;
+  --color-brand-green-dark: #249b3e;
+  --color-brand-green-light: #eafaf0;
+  --color-brand-green-subtle: #d2f5dc;
+  --color-brand-charcoal: #383838;
+  --color-brand-obsidian: #111215;
+  --color-brand-canvas: #f6f8f6;
+  --color-brand-surface: #ffffff;
+}
+
+@layer base {
+  :root {
+    --brand-primary: #35ca56;
+    --brand-primary-hover: #2cb24a;
+    --brand-charcoal: #383838;
+    --brand-obsidian: #111215;
+    --brand-accent: #35ca56;
+    --brand-accent-light: #eafaf0;
+    --brand-accent-subtle: #d2f5dc;
+    --brand-warning: #f59e0b;
+    --brand-danger: #ef4444;
+  }
+
+  body {
+    background-color: #f6f8f6;
+    color: #111215;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Zamonaviy silliq scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #d4d4d8;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #a1a1aa;
+  }
+}
