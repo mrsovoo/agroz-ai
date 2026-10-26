@@ -367,10 +367,10 @@ export const MainLayout: React.FC = () => {
       {/* ======================================================== */}
       {/* 2. ASOSIY ISH MAYDONI: Header va jonli qidiruv          */}
       {/* ======================================================== */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 h-dvh max-h-dvh overflow-hidden">
         
-        {/* YUQORI HEADER */}
-        <header className="px-6 lg:px-9 py-4 bg-transparent flex items-center justify-between gap-4 flex-shrink-0">
+        {/* YUQORI HEADER (MOBILDA NATIVE APP BAR VA DESKTOPDA HEADER) */}
+        <header className="px-3 sm:px-6 lg:px-9 py-2.5 sm:py-4 bg-white/80 md:bg-transparent backdrop-blur-md md:backdrop-blur-none border-b border-neutral-200/50 md:border-0 flex items-center justify-between gap-3 flex-shrink-0 z-30">
           
           {/* ======================================================== */}
           {/* CHAP: DORI VA TOVARLARNI JONLI QIDIRISH MAYDONI          */}
@@ -382,7 +382,23 @@ export const MainLayout: React.FC = () => {
           location.pathname.startsWith('/debts') ||
           location.pathname.startsWith('/reports') ||
           location.pathname.startsWith('/settings') ? (
-            <div className="flex-1" />
+            <div className="flex items-center gap-2 md:flex-1">
+              {/* Mobil App Bar: Do'kon nomi va status */}
+              <div className="flex items-center gap-2.5 md:hidden">
+                <div className="w-8 h-8 rounded-xl bg-neutral-100 shadow-2xs flex items-center justify-center text-[#111215] flex-shrink-0">
+                  <ItemIcon type={business.sector} className="h-4 w-4 text-[#111215]" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-black text-[#111215] truncate max-w-[140px]">{business.name}</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#35ca56] shadow-[0_0_6px_#35ca56]" />
+                  </div>
+                  <span className="text-[10px] font-semibold text-neutral-400 block -mt-0.5 truncate max-w-[140px]">
+                    {sectorLabels[business.sector] ?? business.sector}
+                  </span>
+                </div>
+              </div>
+            </div>
           ) : (
             <div className="flex items-center flex-1 max-w-lg relative" ref={searchRef}>
               <div className="relative w-full">
@@ -396,12 +412,12 @@ export const MainLayout: React.FC = () => {
                     setSearchDropdownOpen(true);
                   }}
                   placeholder="Dori nomi yoki tovarni yozing (masalan: enro, vita, kombi)..."
-                  className="w-full bg-white rounded-full py-3 pl-11 pr-10 text-xs font-semibold text-[#111215] placeholder:text-neutral-400 shadow-2xs border-0 focus:outline-none focus:ring-2 focus:ring-[#111215]/20 transition-all"
+                  className="w-full bg-white rounded-full py-2.5 sm:py-3 pl-11 pr-10 text-xs font-semibold text-[#111215] placeholder:text-neutral-400 shadow-2xs border-0 focus:outline-none focus:ring-2 focus:ring-[#111215]/20 transition-all"
                 />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-3.5 top-3 p-1 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+                    className="absolute right-3.5 top-2.5 sm:top-3 p-1 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -795,7 +811,7 @@ export const MainLayout: React.FC = () => {
         )}
 
         {/* SAHIFA MAZMUNI */}
-        <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-9 pb-24 md:pb-8">
+        <main className="flex-1 overflow-y-auto px-3.5 sm:px-6 lg:px-9 pb-28 md:pb-8">
           <Outlet />
         </main>
       </div>
@@ -803,7 +819,7 @@ export const MainLayout: React.FC = () => {
       {/* ======================================================== */}
       {/* 3. TELEGRAM LAUNCH APP / MOBIL PASTKI NAVIGATSIYA        */}
       {/* ======================================================== */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-neutral-200/80 px-2 py-1.5 flex items-center justify-around shadow-lg pb-[calc(env(safe-area-inset-bottom)+6px)]">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-neutral-200/80 px-2 py-1.5 flex items-center justify-around shadow-lg pb-[calc(env(safe-area-inset-bottom)+8px)]">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.to;
@@ -811,7 +827,11 @@ export const MainLayout: React.FC = () => {
             <NavLink
               key={item.to}
               to={item.to}
-              onClick={() => haptic.selection()}
+              onClick={() => {
+                try {
+                  haptic.selection();
+                } catch (_) {}
+              }}
               className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all cursor-pointer select-none relative ${
                 isActive
                   ? 'text-[#111215] font-black'

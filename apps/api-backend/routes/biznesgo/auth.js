@@ -376,6 +376,104 @@ router.post('/register-session', async (req, res) => {
   });
 });
 
+// 2.0.2. Brauzer orqali telefon bilan Telegram tasdiqlash sessiyasini yaratish (Login)
+router.post('/login-session', async (req, res) => {
+  const { phone, sector_type } = req.body;
+  if (!phone) {
+    return res.status(400).json({ success: false, error: 'Telefon raqam kiritilishi shart' });
+  }
+
+  const cleanDigits = String(phone).replace(/\D/g, '');
+  const last9 = cleanDigits.slice(-9);
+  const formattedPhone = last9.length === 9 ? `+998${last9}` : (phone.startsWith('+') ? phone : `+${phone}`);
+  const requestedSector = isValidSector(sector_type) ? sector_type : 'agro_vet';
+
+  // 6 xonali OTP kod
+  const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+  otpStorage.set(cleanDigits, {
+    code: otpCode,
+    expiresAt: Date.now() + 10 * 60 * 1000,
+    attempts: 0
+  });
+
+  const token = 'login_' + crypto.randomBytes(8).toString('hex');
+  const sessionData = {
+    token,
+    type: 'login',
+    phone: formattedPhone,
+    otpCode,
+    sector_type: requestedSector,
+    status: 'pending',
+    createdAt: Date.now(),
+    expiresAt: Date.now() + 15 * 60 * 1000 // 15 daqiqa
+  };
+
+  registrationSessions.set(token, sessionData);
+
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS biznesgo_reg_sessions (token TEXT PRIMARY KEY, data JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW())`);
+    await pool.query(
+      `INSERT INTO biznesgo_reg_sessions (token, data) VALUES ($1, $2::jsonb)
+       ON CONFLICT (token) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+      [token, JSON.stringify(sessionData)]
+    );
+  } catch (_) {}
+
+  // Foydalanuvchini DB dan qidirib, agar telegram_id bo'lsa push xabar yuborish
+  let targetTgId = null;
+  let tenantName = 'BiznesGO Do‘kon';
+  try {
+    const tRes = await pool.query(
+      `SELECT name, settings, address FROM tenants
+       WHERE (LENGTH($1) = 9 AND REGEXP_REPLACE(phone, '\\D', '', 'g') LIKE '%' || $1)
+          OR phone = $2
+       LIMIT 1`,
+      [last9, formattedPhone]
+    );
+    if (tRes.rows.length > 0) {
+      const t = tRes.rows[0];
+      tenantName = t.name || tenantName;
+      targetTgId = t.settings?.telegram_id || (t.address?.startsWith('tg:') ? t.address.slice(3) : null);
+    }
+  } catch (_) {}
+
+  if (targetTgId && telegramBotToken) {
+    try {
+      await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: targetTgId,
+          text: `🔐 <b>BiznesGO Web Kirish So‘rovi</b>\n\n` +
+                `Do‘kon: <b>${tenantName}</b>\n` +
+                `Telefon: <code>${formattedPhone}</code>\n` +
+                `Tasdiqlash kodi: <code>${otpCode}</code>\n\n` +
+                `Brauzer orqali tizimga kirishni tasdiqlaysizmi?`,
+          parse_mode: 'HTML',
+          reply_markup: {
+            inline_keyboard: [
+              [
+                { text: '✅ Tasdiqlash', callback_data: `approve_${token}` },
+                { text: '❌ Rad etish', callback_data: `reject_${token}` }
+              ]
+            ]
+          }
+        })
+      });
+    } catch (pushErr) {
+      console.warn('[login-session telegram push warning]:', pushErr.message);
+    }
+  }
+
+  return res.json({
+    success: true,
+    token,
+    phone: formattedPhone,
+    otpCode: (process.env.NODE_ENV !== 'production' || !targetTgId) ? otpCode : undefined,
+    bot_url: `https://t.me/biznesgo_bot?start=${token}`
+  });
+});
+
 // 2.0.1. Sessiya holatini tekshirish (Brauzer pollingi uchun)
 router.get('/session/status', async (req, res) => {
   const { token } = req.query;

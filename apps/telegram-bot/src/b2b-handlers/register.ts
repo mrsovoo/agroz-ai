@@ -1,13 +1,15 @@
 import { TelegramBot, type TelegramMessage, type TelegramCallbackQuery } from '../bot.ts';
-import { businessStore, type SectorType } from '../services/store.ts';
+import { businessStore, type SectorType, type UserBusinessState } from '../services/store.ts';
+import { dbService, type TenantData } from '../services/db.ts';
 import { config } from '../config.ts';
 
-const SECTOR_LABELS: Record<SectorType, string> = {
+const SECTOR_LABELS: Record<string, string> = {
   pharmacy: 'Vet & Agro Dorixona',
   feed: 'Yem-xashak & Ozuqa Ombori',
   seeds: 'Urug‘ & Ko‘chat Do‘koni',
   greenhouse: 'Issiqxona & Sug‘orish Jihozlari',
   machinery: 'Qishloq Xo‘jalik Texnikasi & Ehtiyot Qismlar',
+  agro_vet: 'Vet & Agro Dorixona',
 };
 
 const REGIONS = [
@@ -27,6 +29,10 @@ const REGIONS = [
   'Qoraqalpog‘iston R.',
 ];
 
+function formatMoney(amount: number): string {
+  return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+
 function buildRegionKeyboard() {
   const keyboard: Array<Array<{ text: string; callback_data: string }>> = [];
   for (let i = 0; i < REGIONS.length; i += 2) {
@@ -39,61 +45,115 @@ function buildRegionKeyboard() {
   return keyboard;
 }
 
+// Tezkor hisobotlar va Launch App uchun pastki menyu tugmalari
+function getMainKeyboard(appUrl: string) {
+  return {
+    keyboard: [
+      [
+        {
+          text: '🚀 BiznesGO Launch App',
+          web_app: { url: appUrl },
+        },
+      ],
+      [
+        { text: '📊 Kunlik hisobot' },
+        { text: '💳 Qarzlar holati' },
+      ],
+      [
+        { text: '📦 Ombor holati' },
+        { text: '👤 Mening profilim' },
+      ],
+      [
+        { text: 'ℹ️ Yordam markazi' },
+      ],
+    ],
+    resize_keyboard: true,
+    persistent: true,
+  };
+}
+
 export function registerB2BHandlers(bot: TelegramBot) {
-  
+
   // ========================================================
-  // 1. /start BUYRUG'I
+  // 1. /start BUYRUG'I VA DEEP LINK TASDIQLASH
   // ========================================================
   bot.onCommand('start', async (msg: TelegramMessage) => {
     const chatId = msg.chat.id;
     const userId = msg.from?.id || chatId;
     const tgFirstName = msg.from?.first_name || 'Hurmatli tadbirkor';
 
-    // Agar foydalanuvchi allaqachon to'liq ro'yxatdan o'tgan bo'lsa
-    if (businessStore.isRegistered(userId)) {
-      const store = businessStore.get(userId)!;
-      const sectorName = SECTOR_LABELS[store.sector!] || store.sector;
-      
-      const appUrl = `${config.webAppUrl}?tg_id=${userId}&name=${encodeURIComponent(store.storeName || '')}&sector=${store.sector}&phone=${encodeURIComponent(store.phone || '')}&region=${encodeURIComponent(store.region || '')}`;
+    const parts = (msg.text || '').trim().split(' ');
+    const startPayload = parts.length > 1 ? parts[1].trim() : '';
 
-      // Doimiy menyu tugmasini sozlash
+    // A) Agar start payload Web Login yoki Ro'yxatdan o'tish sessiyasi bo'lsa (login_... yoki reg_...)
+    if (startPayload && (startPayload.startsWith('login_') || startPayload.startsWith('reg_'))) {
+      const session = await dbService.getSession(startPayload);
+      if (session) {
+        const isLogin = startPayload.startsWith('login_');
+        const sessionPhone = session.phone || 'Kiritilgan raqam';
+
+        await bot.sendMessage(
+          chatId,
+          `🔐 <b>BiznesGO Web Kirish So‘rovi</b>\n\n` +
+          `Brauzer orqali tizimga kirish so‘ralmoqda.\n` +
+          `Telefon: <code>${sessionPhone}</code>\n` +
+          (session.otpCode ? `Tasdiqlash kodi: <code>${session.otpCode}</code>\n\n` : `\n`) +
+          `Tizimga kirishni tasdiqlaysizmi?`,
+          {
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  {
+                    text: '✅ Ha, tasdiqlayman',
+                    callback_data: `approve_${startPayload}`,
+                  },
+                  {
+                    text: '❌ Bekor qilish',
+                    callback_data: `reject_${startPayload}`,
+                  },
+                ],
+              ],
+            },
+          }
+        );
+        return;
+      }
+    }
+
+    // B) Foydalanuvchini DB yoki store dan tekshiramiz
+    let tenant = await dbService.findTenant(userId);
+    let storeState = businessStore.get(userId);
+
+    if (tenant || (storeState && storeState.step === 'COMPLETED')) {
+      const storeName = tenant?.name || storeState?.storeName || 'BiznesGO Do‘kon';
+      const sectorCode = tenant?.sector_type || storeState?.sector || 'pharmacy';
+      const sectorName = SECTOR_LABELS[sectorCode] || sectorCode;
+      const phone = tenant?.phone || storeState?.phone || '+998';
+      const region = (tenant?.settings?.region || tenant?.address || storeState?.region || 'O‘zbekiston').replace('tg:' + userId, '');
+      const ownerName = tenant?.settings?.owner_name || storeState?.fullName || tgFirstName;
+
+      const appUrl = `${config.webAppUrl}?tg_id=${userId}&name=${encodeURIComponent(storeName)}&sector=${sectorCode}&phone=${encodeURIComponent(phone)}&region=${encodeURIComponent(region)}`;
+
       await bot.setChatMenuButton(chatId, appUrl, 'BiznesGO');
 
       await bot.sendMessage(
         chatId,
-        `Assalomu alaykum, <b>${store.fullName || tgFirstName}</b>!\n\n` +
-        `Sizning <b>«${store.storeName}»</b> (${sectorName}) hisobingiz faol holatda.\n` +
-        `Hudud: <b>${store.region || 'O‘zbekiston'}</b>\n` +
-        `Telefon: <b>${store.phone}</b>\n\n` +
-        `Kassa, tovarlar qoldig‘i, nasiyalar va hisobotlar bilan ishlash uchun quyidagi tugmani bosing:`,
+        `Assalomu alaykum, <b>${ownerName}</b>!\n\n` +
+        `Sizning <b>«${storeName}»</b> (${sectorName}) hisobingiz faol holatda.\n` +
+        `Hudud: <b>${region}</b>\n` +
+        `Telefon: <b>${phone}</b>\n\n` +
+        `Tezkor ko‘rsatkichlar (hisobot, qarzlar, ombor) pastki tugmalarda mavjud.\n` +
+        `To‘liq boshqaruv va kassa (POS) uchun <b>Launch App</b> tugmasini bosing:`,
         {
           parse_mode: 'HTML',
-          reply_markup: {
-            inline_keyboard: [
-              [
-                {
-                  text: 'BiznesGO ilovasini ochish',
-                  web_app: { url: appUrl },
-                },
-              ],
-              [
-                {
-                  text: 'Do‘kon ma’lumotlari',
-                  callback_data: 'action:info',
-                },
-                {
-                  text: 'Qayta ro‘yxatdan o‘tish',
-                  callback_data: 'action:reset',
-                },
-              ],
-            ],
-          },
+          reply_markup: getMainKeyboard(appUrl),
         }
       );
       return;
     }
 
-    // 1-QADAM: Yangi foydalanuvchidan ISM so'rash
+    // C) Yangi foydalanuvchi: 1-QADAM - Ism so'rash
     businessStore.set(userId, {
       telegramId: userId,
       firstName: tgFirstName,
@@ -107,7 +167,7 @@ export function registerB2BHandlers(bot: TelegramBot) {
       chatId,
       `Assalomu alaykum!\n\n` +
       `<b>BiznesGO</b> — Agro va Savdo korxonangizni boshqarish platformasiga xush kelibsiz.\n\n` +
-      `Ro‘yxatdan o‘tish uchun <b>ism va familiyangizni</b> kiriting:`,
+      `Platformadan to‘liq foydalanish uchun <b>ism va familiyangizni</b> kiriting:`,
       {
         parse_mode: 'HTML',
         reply_markup: {
@@ -118,7 +178,7 @@ export function registerB2BHandlers(bot: TelegramBot) {
   });
 
   // ========================================================
-  // 2. KONTAKT (TELEFON RAQAM)NI TUGMA ORQALI QABUL QILISH
+  // 2. KONTAKT (TELEFON RAQAM)NI QABUL QILISH
   // ========================================================
   bot.onContact(async (msg: TelegramMessage) => {
     const chatId = msg.chat.id;
@@ -136,30 +196,19 @@ export function registerB2BHandlers(bot: TelegramBot) {
     state.step = 'WAITING_SECTOR';
     businessStore.set(userId, state);
 
-    // 3-QADAM: Sektor tanlashni so'rash (Inline tugmalar)
     await bot.sendMessage(
       chatId,
-      `Telefon raqamingiz saqlandi: <b>${phone}</b>\n\n` +
+      `Telefon raqamingiz qabul qilindi: <b>${phone}</b>\n\n` +
       `Qaysi yo‘nalishda faoliyat yuritishingizni tanlang:`,
       {
         parse_mode: 'HTML',
-        reply_markup: {
-          remove_keyboard: true,
-        },
-      }
-    );
-
-    await bot.sendMessage(
-      chatId,
-      `Faoliyat sohasini tanlang:`,
-      {
         reply_markup: {
           inline_keyboard: [
             [{ text: 'Vet & Agro Dorixona', callback_data: 'sector:pharmacy' }],
             [{ text: 'Yem-xashak & Ozuqa Ombori', callback_data: 'sector:feed' }],
             [{ text: 'Urug‘ & Ko‘chat Do‘koni', callback_data: 'sector:seeds' }],
-            [{ text: 'Issiqxona & Sug‘orish Jihozlari', callback_data: 'sector:greenhouse' }],
-            [{ text: 'Qishloq Xo‘jalik Texnikasi', callback_data: 'sector:machinery' }],
+            [{ text: 'Issiqxona & Sug‘orish Mollari', callback_data: 'sector:greenhouse' }],
+            [{ text: 'Qishloq Xo‘jalik Texnikasi & Ehtiyot Qismlar', callback_data: 'sector:machinery' }],
           ],
         },
       }
@@ -167,35 +216,61 @@ export function registerB2BHandlers(bot: TelegramBot) {
   });
 
   // ========================================================
-  // 3. MATNLI XABARLARNI QAYTA ISHLASH (ISM, TELEFON, NOM, HUDUD)
+  // 3. MATNLI XABARLAR (ISM, NOMER, DO'KON NOMI, TEZKOR TUGMALAR)
   // ========================================================
   bot.onText(async (msg: TelegramMessage) => {
     const chatId = msg.chat.id;
     const userId = msg.from?.id || chatId;
-    const text = msg.text?.trim() || '';
+    const text = (msg.text || '').trim();
 
-    // Buyruqlarni e'tiborsiz qoldiramiz
+    // Maxsus buyruqlarni o'tkazib yuborish
     if (text.startsWith('/')) return;
 
+    // --- TEZKOR VIZUAL HISOBOT MENYULARI ---
+    if (text === '📊 Kunlik hisobot' || text.toLowerCase() === 'kunlik hisobot') {
+      await sendDailyReport(bot, chatId, userId);
+      return;
+    }
+
+    if (text === '💳 Qarzlar holati' || text.toLowerCase() === 'qarzlar holati') {
+      await sendDebtReport(bot, chatId, userId);
+      return;
+    }
+
+    if (text === '📦 Ombor holati' || text.toLowerCase() === 'ombor holati') {
+      await sendInventoryReport(bot, chatId, userId);
+      return;
+    }
+
+    if (text === '👤 Mening profilim' || text.toLowerCase() === 'profilim') {
+      await sendProfileInfo(bot, chatId, userId);
+      return;
+    }
+
+    if (text === 'ℹ️ Yordam markazi' || text.toLowerCase() === 'yordam') {
+      await sendHelp(bot, chatId);
+      return;
+    }
+
+    // --- ONBOARDING BOSQICHLARI ---
     const state = businessStore.get(userId);
     if (!state) return;
 
-    // A) 1-QADAM: ISM QABUL QILINDI -> TELEFON RAQAM SO'RASH
+    // 1-QADAM: Ismni qabul qilish -> 2-QADAM: Nomer so'rash
     if (state.step === 'WAITING_NAME') {
       if (text.length < 2) {
-        await bot.sendMessage(chatId, 'Iltimos, ismingizni to‘liqroq yozing:');
+        await bot.sendMessage(chatId, 'Iltimos, haqiqiy ism va familiyangizni kiriting:');
         return;
       }
-
       state.fullName = text;
       state.step = 'WAITING_PHONE';
       businessStore.set(userId, state);
 
-      // Telefon raqam so'rash
       await bot.sendMessage(
         chatId,
-        `Rahmat, <b>${text}</b>.\n\n` +
-        `Endi pastdagi tugma orqali <b>telefon raqamingizni yuboring</b> yoki xabar shaklida kiriting (+998901234567):`,
+        `Rahmat, <b>${text}</b>!\n\n` +
+        `Endi <b>telefon raqamingizni</b> yuboring.\n` +
+        `Quyidagi tugmani bosishingiz yoki <code>+998901234567</code> formatida yozishingiz mumkin:`,
         {
           parse_mode: 'HTML',
           reply_markup: {
@@ -215,67 +290,55 @@ export function registerB2BHandlers(bot: TelegramBot) {
       return;
     }
 
-    // B) 2-QADAM (QO'LDA TELEFON YOZILSA) -> SEKTOR SO'RASH
+    // 2-QADAM: Matn shaklida telefon raqam
     if (state.step === 'WAITING_PHONE') {
-      const cleanPhone = text.replace(/[\s\-()]/g, '');
-      if (cleanPhone.length < 9) {
+      let cleanPhone = text.replace(/[^\d+]/g, '');
+      if (cleanPhone.length >= 9) {
+        if (!cleanPhone.startsWith('+')) cleanPhone = `+${cleanPhone}`;
+        state.phone = cleanPhone;
+        state.step = 'WAITING_SECTOR';
+        businessStore.set(userId, state);
+
         await bot.sendMessage(
           chatId,
-          'Iltimos, to‘g‘ri telefon raqam kiriting (masalan: +998901234567):'
+          `Telefon raqamingiz saqlandi: <b>${cleanPhone}</b>\n\n` +
+          `Qaysi yo‘nalishda faoliyat yuritishingizni tanlang:`,
+          {
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: 'Vet & Agro Dorixona', callback_data: 'sector:pharmacy' }],
+                [{ text: 'Yem-xashak & Ozuqa Ombori', callback_data: 'sector:feed' }],
+                [{ text: 'Urug‘ & Ko‘chat Do‘koni', callback_data: 'sector:seeds' }],
+                [{ text: 'Issiqxona & Sug‘orish Mollari', callback_data: 'sector:greenhouse' }],
+                [{ text: 'Qishloq Xo‘jalik Texnikasi & Ehtiyot Qismlar', callback_data: 'sector:machinery' }],
+              ],
+            },
+          }
         );
-        return;
+      } else {
+        await bot.sendMessage(
+          chatId,
+          `Telefon raqam noto‘g‘ri kiritildi. Iltimos <code>+998901234567</code> shaklida yozing:`
+        );
       }
-
-      state.phone = cleanPhone.startsWith('+') ? cleanPhone : `+${cleanPhone}`;
-      state.step = 'WAITING_SECTOR';
-      businessStore.set(userId, state);
-
-      await bot.sendMessage(
-        chatId,
-        `Telefon raqamingiz saqlandi: <b>${state.phone}</b>\n\n` +
-        `Quyidagi ro‘yxatdan faoliyat sohasini tanlang:`,
-        {
-          parse_mode: 'HTML',
-          reply_markup: {
-            remove_keyboard: true,
-          },
-        }
-      );
-
-      await bot.sendMessage(
-        chatId,
-        `Faoliyat sohasini tanlang:`,
-        {
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: 'Vet & Agro Dorixona', callback_data: 'sector:pharmacy' }],
-              [{ text: 'Yem-xashak & Ozuqa Ombori', callback_data: 'sector:feed' }],
-              [{ text: 'Urug‘ & Ko‘chat Do‘koni', callback_data: 'sector:seeds' }],
-              [{ text: 'Issiqxona & Sug‘orish Jihozlari', callback_data: 'sector:greenhouse' }],
-              [{ text: 'Qishloq Xo‘jalik Texnikasi', callback_data: 'sector:machinery' }],
-            ],
-          },
-        }
-      );
       return;
     }
 
-    // C) 4-QADAM: DO'KON NOMI QABUL QILINDI -> HUDUDNI SO'RASH
+    // 4-QADAM: Do'kon / Biznes nomini qabul qilish -> 5-QADAM: Hudud tanlash
     if (state.step === 'WAITING_STORE_NAME') {
       if (text.length < 2) {
-        await bot.sendMessage(chatId, 'Iltimos, do‘kon nomini to‘liqroq yozing:');
+        await bot.sendMessage(chatId, 'Iltimos, do‘koningiz yoki korxonangiz nomini to‘liqroq yozing:');
         return;
       }
-
       state.storeName = text;
       state.step = 'WAITING_REGION';
       businessStore.set(userId, state);
 
-      // 5-QADAM: Hududni so'rash
       await bot.sendMessage(
         chatId,
-        `Do‘kon nomi: <b>«${text}»</b>\n\n` +
-        `Do‘koningiz joylashgan <b>hududni tanlang</b> yoki tumaningiz nomini yozing:`,
+        `Do‘kon nomi: <b>${text}</b>\n\n` +
+        `Do‘koningiz joylashgan <b>viloyat yoki hududni</b> tanlang:`,
         {
           parse_mode: 'HTML',
           reply_markup: {
@@ -285,30 +348,48 @@ export function registerB2BHandlers(bot: TelegramBot) {
       );
       return;
     }
-
-    // D) 5-QADAM (QO'LDA HUDUD YOZILSA) -> YAKUNLASH
-    if (state.step === 'WAITING_REGION') {
-      state.region = text;
-      state.step = 'COMPLETED';
-      businessStore.set(userId, state);
-
-      await finishRegistration(bot, chatId, userId, state);
-      return;
-    }
   });
 
   // ========================================================
-  // 4. INLINE CALLBACK SO'ROVLARI (SEKTOR VA HUDUD TANLANGANDA)
+  // 4. CALLBACK QUERIES (SEKTOR, HUDUD, LOGIN APPROVAL)
   // ========================================================
   bot.onCallbackQuery(async (query: TelegramCallbackQuery) => {
-    const data = query.data || '';
     const chatId = query.message?.chat.id || query.from.id;
     const userId = query.from.id;
-    const state = businessStore.get(userId);
+    const data = query.data || '';
 
-    // 3-QADAM: Sektor tanlanganda -> DO'KON NOMINI SO'RASH
+    // A) WEB LOGINNI TASDIQLASH (approve_login_... yoki approve_reg_...)
+    if (data.startsWith('approve_')) {
+      const token = data.replace('approve_', '');
+      const result = await dbService.approveSession(token, userId);
+
+      if (result) {
+        await bot.answerCallbackQuery(query.id, 'Tizimga kirish tasdiqlandi!');
+        await bot.sendMessage(
+          chatId,
+          `✅ <b>Kirish muvaffaqiyatli tasdiqlandi!</b>\n\n` +
+          `Brauzeringizda boshqaruv paneli avtomatik ochilmoqda. Xush kelibsiz!`,
+          {
+            parse_mode: 'HTML',
+          }
+        );
+      } else {
+        await bot.answerCallbackQuery(query.id, 'Sessiya eskirgan yoki topilmadi', true);
+      }
+      return;
+    }
+
+    // B) WEB LOGINNI RAD ETISH
+    if (data.startsWith('reject_')) {
+      await bot.answerCallbackQuery(query.id, 'Kirish so‘rovi bekor qilindi');
+      await bot.sendMessage(chatId, 'Kirish so‘rovi bekor qilindi.');
+      return;
+    }
+
+    // C) 3-QADAM: Sektor tanlanganda -> 4-QADAM: Do'kon nomini so'rash
     if (data.startsWith('sector:')) {
       const sector = data.split(':')[1] as SectorType;
+      const state = businessStore.get(userId);
 
       if (state) {
         state.sector = sector;
@@ -316,7 +397,7 @@ export function registerB2BHandlers(bot: TelegramBot) {
         businessStore.set(userId, state);
 
         const sectorName = SECTOR_LABELS[sector] || sector;
-        await bot.answerCallbackQuery(query.id, `Soha tanlandi: ${sectorName}`);
+        await bot.answerCallbackQuery(query.id, `Tanlandi: ${sectorName}`);
 
         await bot.sendMessage(
           chatId,
@@ -331,9 +412,10 @@ export function registerB2BHandlers(bot: TelegramBot) {
       return;
     }
 
-    // 5-QADAM: Hudud tanlanganda -> RO'YXATDAN O'TISHNI YAKUNLASH
+    // D) 5-QADAM: Hudud tanlanganda -> RO'YXATDAN O'TISHNI YAKUNLASH
     if (data.startsWith('region:')) {
       const region = data.split(':')[1];
+      const state = businessStore.get(userId);
 
       if (state) {
         state.region = region;
@@ -346,25 +428,14 @@ export function registerB2BHandlers(bot: TelegramBot) {
       return;
     }
 
-    // Do'kon ma'lumotlari
+    // E) Do'kon ma'lumotlari
     if (data === 'action:info') {
-      if (state) {
-        await bot.answerCallbackQuery(query.id);
-        await bot.sendMessage(
-          chatId,
-          `Do‘kon nomi: <b>${state.storeName}</b>\n` +
-          `Egasi: <b>${state.fullName || state.firstName}</b>\n` +
-          `Soha: <b>${SECTOR_LABELS[state.sector!] || state.sector}</b>\n` +
-          `Hudud: <b>${state.region || 'Ko‘rsatilmagan'}</b>\n` +
-          `Telefon: <b>${state.phone}</b>\n` +
-          `Telegram ID: <code>${state.telegramId}</code>`,
-          { parse_mode: 'HTML' }
-        );
-      }
+      await bot.answerCallbackQuery(query.id);
+      await sendProfileInfo(bot, chatId, userId);
       return;
     }
 
-    // Qayta sozlash
+    // F) Qayta ro'yxatdan o'tish
     if (data === 'action:reset') {
       await bot.answerCallbackQuery(query.id, 'Qayta ro‘yxatdan o‘tish boshlandi');
       businessStore.set(userId, {
@@ -385,58 +456,205 @@ export function registerB2BHandlers(bot: TelegramBot) {
   });
 
   // ========================================================
-  // 5. /app VA /help QO'SHIMCHA BUYRUQLAR
+  // 5. BUYRUQLAR: /hisobot, /qarz, /ombor, /profil, /help
   // ========================================================
-  bot.onCommand('app', async (msg: TelegramMessage) => {
-    const chatId = msg.chat.id;
-    const userId = msg.from?.id || chatId;
-    const state = businessStore.get(userId);
+  bot.onCommand('hisobot', async (msg: TelegramMessage) => {
+    await sendDailyReport(bot, msg.chat.id, msg.from?.id || msg.chat.id);
+  });
 
-    const appUrl = state?.storeName
-      ? `${config.webAppUrl}?tg_id=${userId}&name=${encodeURIComponent(state.storeName)}&sector=${state.sector}&phone=${encodeURIComponent(state.phone || '')}&region=${encodeURIComponent(state.region || '')}`
-      : config.webAppUrl;
+  bot.onCommand('qarz', async (msg: TelegramMessage) => {
+    await sendDebtReport(bot, msg.chat.id, msg.from?.id || msg.chat.id);
+  });
 
-    await bot.sendMessage(
-      chatId,
-      'BiznesGO ilovasini ochish:',
-      {
-        reply_markup: {
-          inline_keyboard: [
-            [
-              {
-                text: 'BiznesGO ilovasini ochish',
-                web_app: { url: appUrl },
-              },
-            ],
-          ],
-        },
-      }
-    );
+  bot.onCommand('ombor', async (msg: TelegramMessage) => {
+    await sendInventoryReport(bot, msg.chat.id, msg.from?.id || msg.chat.id);
+  });
+
+  bot.onCommand('profil', async (msg: TelegramMessage) => {
+    await sendProfileInfo(bot, msg.chat.id, msg.from?.id || msg.chat.id);
   });
 
   bot.onCommand('help', async (msg: TelegramMessage) => {
-    await bot.sendMessage(
-      msg.chat.id,
-      `<b>BiznesGO Yordam Markazi</b>\n\n` +
-      `Platforma orqali siz:\n` +
-      `• Kassa va savdo cheklarini chiqarish (POS)\n` +
-      `• Shtrix-kod skaneri orqali tovar qo‘shish\n` +
-      `• Qarz daftarini avtomatlashtirish va mijozlar hisobi\n` +
-      `• Kunlik va oylik foyda hisobotlarini ko‘rishingiz mumkin.\n\n` +
-      `Murojaat uchun: Email info@biznesgo.uz yoki tel: +998 90 8383772`,
-      { parse_mode: 'HTML' }
-    );
+    await sendHelp(bot, msg.chat.id);
   });
 }
 
-// Ro'yxatdan o'tishni muvaffaqiyatli yakunlash funksiyasi
+// ========================================================
+// YORDAMCHI VIZUAL HISOBOT FUNKSIYALARI
+// ========================================================
+
+async function sendDailyReport(bot: TelegramBot, chatId: number, userId: number) {
+  const tenant = await dbService.findTenant(userId);
+  const store = businessStore.get(userId);
+
+  const tenantId = tenant?.id || `tenant_${userId}`;
+  const storeName = tenant?.name || store?.storeName || 'BiznesGO Do‘kon';
+  const sectorCode = tenant?.sector_type || store?.sector || 'pharmacy';
+
+  const sales = await dbService.getTodaySales(tenantId);
+  const todayStr = new Date().toLocaleDateString('uz-UZ', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  const appUrl = `${config.webAppUrl}?tg_id=${userId}&name=${encodeURIComponent(storeName)}&sector=${sectorCode}`;
+
+  await bot.sendMessage(
+    chatId,
+    `📊 <b>Kunlik Savdo Hisoboti</b>\n` +
+    `Sana: <b>${todayStr}</b>\n` +
+    `Do‘kon: <b>${storeName}</b>\n\n` +
+    `• Jami savdo tushumi: <b>${formatMoney(sales.total)} so‘m</b>\n` +
+    `  - Naqd to‘lovlar: <b>${formatMoney(sales.cash)} so‘m</b>\n` +
+    `  - Bank kartasi (terminal): <b>${formatMoney(sales.card)} so‘m</b>\n` +
+    `  - Nasiyaga (qarzga): <b>${formatMoney(sales.debt)} so‘m</b>\n\n` +
+    `• Savdo cheklari soni: <b>${sales.count} ta</b>\n` +
+    `• O‘rtacha chek: <b>${formatMoney(sales.avgCheck)} so‘m</b>\n\n` +
+    `<i>Batafsil cheklar, kassa operatsiyalari va rentabellik tahlili Launch Appda:</i>`,
+    {
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '🚀 BiznesGO Launch Appni ochish', web_app: { url: appUrl } }],
+        ],
+      },
+    }
+  );
+}
+
+async function sendDebtReport(bot: TelegramBot, chatId: number, userId: number) {
+  const tenant = await dbService.findTenant(userId);
+  const store = businessStore.get(userId);
+
+  const tenantId = tenant?.id || `tenant_${userId}`;
+  const storeName = tenant?.name || store?.storeName || 'BiznesGO Do‘kon';
+  const sectorCode = tenant?.sector_type || store?.sector || 'pharmacy';
+
+  const debt = await dbService.getDebtSummary(tenantId);
+  const appUrl = `${config.webAppUrl}/debts?tg_id=${userId}&name=${encodeURIComponent(storeName)}&sector=${sectorCode}`;
+
+  await bot.sendMessage(
+    chatId,
+    `💳 <b>Nasiya va Qarzlar Daftari</b>\n` +
+    `Do‘kon: <b>${storeName}</b>\n\n` +
+    `• Jami ochiq nasiyalar: <b>${formatMoney(debt.totalDebt)} so‘m</b>\n` +
+    `• Qarzdor mijozlar soni: <b>${debt.debtorCount} nafar</b>\n` +
+    `• Kechikkan (muddati o‘tgan) qarzlar: <b>${formatMoney(debt.overdueDebt)} so‘m (${debt.overdueCount} ta)</b>\n\n` +
+    `<i>Mijozlar ro‘yxati, to‘lov kiritish va SMS eslatma yuborish Launch Appda:</i>`,
+    {
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '🚀 Qarzlar daftarini ochish', web_app: { url: appUrl } }],
+        ],
+      },
+    }
+  );
+}
+
+async function sendInventoryReport(bot: TelegramBot, chatId: number, userId: number) {
+  const tenant = await dbService.findTenant(userId);
+  const store = businessStore.get(userId);
+
+  const tenantId = tenant?.id || `tenant_${userId}`;
+  const storeName = tenant?.name || store?.storeName || 'BiznesGO Do‘kon';
+  const sectorCode = tenant?.sector_type || store?.sector || 'pharmacy';
+
+  const inv = await dbService.getInventorySummary(tenantId);
+  const appUrl = `${config.webAppUrl}/inventory?tg_id=${userId}&name=${encodeURIComponent(storeName)}&sector=${sectorCode}`;
+
+  await bot.sendMessage(
+    chatId,
+    `📦 <b>Ombor va Tovarlar Holati</b>\n` +
+    `Do‘kon: <b>${storeName}</b>\n\n` +
+    `• Ombordagi jami tovarlar: <b>${inv.totalProducts} xil</b>\n` +
+    `• Qoldig‘i tugagan tovarlar: <b>${inv.outOfStock} ta</b>\n` +
+    `• Qoldig‘i kam qolgan tovarlar (xavf): <b>${inv.lowStock} ta</b>\n` +
+    `• Muddati kelayotgan partiyalar (30 kun): <b>${inv.expiringSoon} ta</b>\n\n` +
+    `<i>Tovar qabul qilish, narxlarni o‘zgartirish va shtrix-kodlar bilan ishlash Launch Appda:</i>`,
+    {
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '🚀 Ombor bo‘limini ochish', web_app: { url: appUrl } }],
+        ],
+      },
+    }
+  );
+}
+
+async function sendProfileInfo(bot: TelegramBot, chatId: number, userId: number) {
+  const tenant = await dbService.findTenant(userId);
+  const store = businessStore.get(userId);
+
+  const storeName = tenant?.name || store?.storeName || 'BiznesGO Do‘kon';
+  const sectorCode = tenant?.sector_type || store?.sector || 'pharmacy';
+  const sectorName = SECTOR_LABELS[sectorCode] || sectorCode;
+  const phone = tenant?.phone || store?.phone || '+998';
+  const region = (tenant?.settings?.region || tenant?.address || store?.region || 'O‘zbekiston').replace('tg:' + userId, '');
+  const ownerName = tenant?.settings?.owner_name || store?.fullName || 'Tadbirkor';
+
+  const appUrl = `${config.webAppUrl}?tg_id=${userId}&name=${encodeURIComponent(storeName)}&sector=${sectorCode}&phone=${encodeURIComponent(phone)}&region=${encodeURIComponent(region)}`;
+
+  await bot.sendMessage(
+    chatId,
+    `👤 <b>Mening Profilim</b>\n\n` +
+    `• Do‘kon nomi: <b>${storeName}</b>\n` +
+    `• Mas'ul: <b>${ownerName}</b>\n` +
+    `• Soha (sektor): <b>${sectorName}</b>\n` +
+    `• Hudud: <b>${region}</b>\n` +
+    `• Telefon: <b>${phone}</b>\n` +
+    `• Telegram ID: <code>${userId}</code>\n` +
+    `• Tizim holati: <b>Faol (Cloud B2B)</b>`,
+    {
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '🚀 BiznesGO Launch Appni ochish', web_app: { url: appUrl } }],
+          [{ text: 'Qayta ro‘yxatdan o‘tish', callback_data: 'action:reset' }],
+        ],
+      },
+    }
+  );
+}
+
+async function sendHelp(bot: TelegramBot, chatId: number) {
+  await bot.sendMessage(
+    chatId,
+    `<b>BiznesGO Yordam Markazi</b>\n\n` +
+    `BiznesGO orqali siz quyidagilarni boshqarasiz:\n` +
+    `1. Kassa va savdo cheklarini chiqarish (POS)\n` +
+    `2. Shtrix-kod skaneri va tovar qoldig‘i\n` +
+    `3. Qarz daftari (nasiyalar) va SMS xabarnoma\n` +
+    `4. Kunlik va oylik foyda hisoboti\n\n` +
+    `Savollar va takliflar uchun:\n` +
+    `Telefon: +998 90 8383772\n` +
+    `Email: info@biznesgo.uz\n` +
+    `Bot username: @biznesgo_bot`,
+    { parse_mode: 'HTML' }
+  );
+}
+
+// Ro'yxatdan o'tishni yakunlash va Neon DB ga saqlash
 async function finishRegistration(
   bot: TelegramBot,
   chatId: number,
   userId: number,
-  state: any
+  state: UserBusinessState
 ) {
   const sectorName = SECTOR_LABELS[state.sector as SectorType] || state.sector;
+
+  // Neon DB ga saqlash
+  try {
+    await dbService.registerTenant({
+      telegramId: userId,
+      fullName: state.fullName || state.firstName,
+      phone: state.phone || '+998',
+      sector: state.sector || 'pharmacy',
+      storeName: state.storeName || 'BiznesGO Do‘kon',
+      region: state.region || 'O‘zbekiston',
+    });
+  } catch (err) {
+    console.warn('[finishRegistration DB err]:', err);
+  }
+
   const appUrl = `${config.webAppUrl}?tg_id=${userId}&name=${encodeURIComponent(state.storeName || '')}&sector=${state.sector}&phone=${encodeURIComponent(state.phone || '')}&region=${encodeURIComponent(state.region || '')}`;
 
   // Doimiy chat menyu tugmasini o'rnatish
@@ -448,19 +666,10 @@ async function finishRegistration(
     `Sizning <b>«${state.storeName}»</b> (${sectorName}) korxonangiz muvaffaqiyatli ro‘yxatdan o‘tkazildi.\n\n` +
     `Hudud: <b>${state.region}</b>\n` +
     `Telefon: <b>${state.phone}</b>\n\n` +
-    `Barcha kassa, tovarlar qoldig‘i, nasiya daftari va tahliliy hisobotlar bilan ishlash uchun pastdagi tugmani bosing:`,
+    `Tezkor ko‘rsatkichlar pastki menyu tugmalarida joylashdi. To‘liq do‘koningizni boshqarish uchun pastdagi tugmani bosing:`,
     {
       parse_mode: 'HTML',
-      reply_markup: {
-        inline_keyboard: [
-          [
-            {
-              text: 'BiznesGO ilovasini ochish',
-              web_app: { url: appUrl },
-            },
-          ],
-        ],
-      },
+      reply_markup: getMainKeyboard(appUrl),
     }
   );
 }

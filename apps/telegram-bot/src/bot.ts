@@ -99,10 +99,11 @@ export class TelegramBot {
     });
   }
 
-  async answerCallbackQuery(callbackQueryId: string, text?: string) {
+  async answerCallbackQuery(callbackQueryId: string, text?: string, showAlert?: boolean) {
     return this.callApi('answerCallbackQuery', {
       callback_query_id: callbackQueryId,
       text,
+      show_alert: showAlert,
     });
   }
 

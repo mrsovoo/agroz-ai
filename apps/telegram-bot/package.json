@@ -7,6 +7,14 @@
     "start": "node --experimental-strip-types src/index.ts",
     "dev": "node --experimental-strip-types src/index.ts",
     "build": "tsc"
+  },
+  "dependencies": {
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0"
   }
 }
+
 
