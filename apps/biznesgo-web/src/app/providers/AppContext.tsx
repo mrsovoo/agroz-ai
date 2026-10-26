@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { SectorCode } from '@agroz/types';
+import type { SectorCode } from '../../core/types';
 import { initTelegramApp, type TelegramWebAppUser } from '../../core/platform/telegram';
 
 export interface BusinessProfile {

@@ -9,8 +9,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@agroz/types": "*",
-    "@agroz/utils": "*",
     "@hookform/resolvers": "^5.9.2",
     "clsx": "^2.1.1",
     "lucide-react": "^1.61.0",

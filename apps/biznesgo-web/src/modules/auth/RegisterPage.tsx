@@ -19,7 +19,7 @@ import {
   Phone,
   Lock,
 } from 'lucide-react';
-import type { SectorCode } from '@agroz/types';
+import type { SectorCode } from '../../core/types';
 
 export const RegisterPage: React.FC = () => {
   const { registerBusiness } = useApp();
