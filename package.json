@@ -7,6 +7,8 @@
     "packages/*"
   ],
   "scripts": {
+    "start": "node apps/api-backend/server.js",
+    "build": "npm run build --workspace=apps/biznesgo-web",
     "dev:biznesgo": "npm run dev --workspace=apps/biznesgo-web",
     "dev:agrozgo": "npm run dev --workspace=apps/agrozgo-client",
     "dev:super-admin": "npm run dev --workspace=apps/super-admin",
