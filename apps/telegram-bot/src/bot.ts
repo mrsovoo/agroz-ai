@@ -135,6 +135,10 @@ export class TelegramBot {
 
   async startPolling() {
     this.isRunning = true;
+    console.log('[BiznesGO Telegram Bot] Webhook tozalanmoqda va Polling ishga tushirilmoqda...');
+    try {
+      await this.callApi('deleteWebhook', { drop_pending_updates: false });
+    } catch (_) {}
     console.log('[BiznesGO Telegram Bot] Polling started...');
 
     while (this.isRunning) {

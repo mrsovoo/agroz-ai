@@ -1411,6 +1411,9 @@ async function handleTelegramUpdate(update) {
 }
 
 function initTelegramBot() {
+  if (process.env.ENABLE_INTERNAL_BOT !== 'true') {
+    return null;
+  }
   const token = getBotToken();
   const webAppUrl = process.env.WEBAPP_URL || 'https://biznesgo.vercel.app';
 
